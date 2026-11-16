@@ -73,8 +73,14 @@ const link = (token: string, rest = ''): string =>
 
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types -- return types are inferred from `post`. */
 export const localAuth = {
-  setup: (body: { setupCode: string; email: string; name: string; password: string }) =>
-    post<SignedIn>('/auth/local/setup', body),
+  setup: (body: {
+    setupCode: string;
+    email: string;
+    name: string;
+    password: string;
+    returnTo?: string;
+    native?: string;
+  }) => post<SignedIn>('/auth/local/setup', body),
   signIn: (body: { email: string; password: string; returnTo?: string; native?: string }) =>
     post<SignedIn | SecondStep>('/auth/local/sign-in', body),
   totp: (challengeId: string, code: string) =>

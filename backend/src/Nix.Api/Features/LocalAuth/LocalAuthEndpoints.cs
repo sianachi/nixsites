@@ -65,6 +65,13 @@ internal static class LocalAuthEndpoints
             return LocalAuthProblems.Refuse(httpContext, StatusCodes.Status403Forbidden, "invalid_setup_code", "Setup code is wrong", "The setup code did not match.");
         }
 
+        // Checked before the account exists: a first run started from the phone or desktop app ends in
+        // its handoff, and a malformed challenge must not leave an account behind a refusal.
+        if (request.Native is not null && !NativeHandoffCoordinator.IsChallenge(request.Native))
+        {
+            return BrowserAuthEndpoints.Problem(httpContext, BrowserAuthFailure.InvalidState);
+        }
+
         if (!TryReadPerson(request.Email, request.Name, request.Password, httpContext, out var email, out var name, out var invalid))
         {
             return invalid!;
@@ -78,7 +85,7 @@ internal static class LocalAuthEndpoints
         var result = await provisioner.CreateFirstAdminAsync(tenant, email, name, hasher.Hash(request.Password!), ct).ConfigureAwait(false);
         return result.Outcome switch
         {
-            LocalProvisionOutcome.Created => await completer.CompleteAsync(httpContext, result.Principal!.Id, null, null).ConfigureAwait(false),
+            LocalProvisionOutcome.Created => await completer.CompleteAsync(httpContext, result.Principal!.Id, request.ReturnTo, request.Native).ConfigureAwait(false),
             _ => LocalAuthProblems.Refuse(httpContext, StatusCodes.Status409Conflict, "setup_closed", "Setup is finished", "The first account already exists."),
         };
     }

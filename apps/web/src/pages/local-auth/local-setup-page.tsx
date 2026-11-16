@@ -30,15 +30,28 @@ export function LocalSetupPage(): ReactNode {
     }
     setBusy(true);
     setError(null);
-    localAuth.setup({ setupCode, email: email.trim(), name: name.trim(), password }).then(
-      (result) => {
-        finishSignIn(result.redirectTo);
-      },
-      (cause: unknown) => {
-        setError(describeError(cause));
-        setBusy(false);
-      },
-    );
+    // A first run started from the phone or desktop app carries its handoff challenge, so setup
+    // ends back in the app and not signed in inside the system's sign-in sheet.
+    const returnTo = params.get('returnTo');
+    const native = params.get('native');
+    localAuth
+      .setup({
+        setupCode,
+        email: email.trim(),
+        name: name.trim(),
+        password,
+        ...(returnTo === null ? {} : { returnTo }),
+        ...(native === null ? {} : { native }),
+      })
+      .then(
+        (result) => {
+          finishSignIn(result.redirectTo);
+        },
+        (cause: unknown) => {
+          setError(describeError(cause));
+          setBusy(false);
+        },
+      );
   };
 
   return (

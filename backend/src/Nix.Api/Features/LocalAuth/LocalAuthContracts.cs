@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Nix.Features.LocalAuth;
 
 /// <summary>First-run setup: the operator's code plus the first account.</summary>
-internal sealed record LocalSetupRequest(string? SetupCode, string? Email, string? Name, string? Password);
+internal sealed record LocalSetupRequest(string? SetupCode, string? Email, string? Name, string? Password, string? ReturnTo = null, string? Native = null);
 
 /// <summary>Password sign-in.</summary>
 internal sealed record LocalSignInRequest(string? Email, string? Password, string? ReturnTo, string? Native);
