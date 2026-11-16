@@ -16,7 +16,6 @@ import { Command } from 'commander';
 import { registerConversationCommands } from './commands/conversations.ts';
 import { readHealth } from './commands/health.ts';
 import { outputOptions, printError, ExitCode, type OutputOptions } from './output.ts';
-import { runWorkspaceMcpServer } from './mcp.ts';
 
 import { registerAccountCommands } from './commands/register-account.ts';
 import { registerWorkspaceCommands } from './commands/register-workspace.ts';
@@ -121,6 +120,9 @@ export function buildProgram(): Command {
         const flags = globalFlags(command);
         const listen = options.listen ?? process.env.NIX_MCP_LISTEN;
         if (listen === undefined) {
+          // Loaded here, not at the top: the MCP stack is a large share of the module graph, and
+          // `--help` and every other command start without it.
+          const { runWorkspaceMcpServer } = await import('./mcp.ts');
           await run(() => runWorkspaceMcpServer(flags.profile));
           return;
         }
