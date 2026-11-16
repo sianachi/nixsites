@@ -38,4 +38,24 @@ describe('the search index', () => {
     expect(built.partial).toBe(true);
     expect(Object.keys((JSON.parse(built.json) as SearchIndex).terms)).toEqual(['home', 'page']);
   });
+
+  it('counts the index exactly: it fits at its own size and falls back one byte under', () => {
+    const documents = [
+      { path: '/zeta/', title: 'Zêta — 客户 notes', text: 'alpha beta beta gamma 12 x' },
+      { path: '/alpha/', title: 'Alpha', text: 'beta délta épsilon alpha' },
+      { path: '/ünï/', title: 'Ünïcode "quoted" title', text: 'gamma gamma zeta' },
+      ...Array.from({ length: 12 }, (_, n) => ({
+        path: `/page-${String(n)}/`,
+        title: `Page ${String(n)}`,
+        text: `shared word${String(n)} beta`,
+      })),
+    ];
+    const whole = buildSearchIndex(documents, Number.MAX_SAFE_INTEGER);
+    const size = Buffer.byteLength(whole.json);
+    expect(whole.partial).toBe(false);
+    expect(buildSearchIndex(documents, size)).toEqual(whole);
+    const under = buildSearchIndex(documents, size - 1);
+    expect(under.partial).toBe(true);
+    expect(Object.keys((JSON.parse(under.json) as { terms: object }).terms)).not.toContain('gamma');
+  });
 });
