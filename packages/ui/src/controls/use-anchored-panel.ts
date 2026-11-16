@@ -102,26 +102,39 @@ export function useAnchoredPanel(
       panel.style.setProperty('transform', placement.above ? 'translateY(-100%)' : 'none');
       panel.scrollTop = scrollTop;
     };
+    // Scroll, resize and viewport events arrive in bursts, and each placement reads and writes
+    // layout: one placement per frame covers them all. The first placement is not deferred.
+    let queued = false;
+    let frame = 0;
+    const schedule = (): void => {
+      if (queued) return;
+      queued = true;
+      frame = requestAnimationFrame(() => {
+        queued = false;
+        place();
+      });
+    };
     const onScroll = (event: Event): void => {
       if (event.target instanceof Node && panel.contains(event.target)) return;
-      place();
+      schedule();
     };
 
     place();
     // Content that grows after opening (a thread's replies, a composer) re-places the panel.
-    const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
+    const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
     resized?.observe(panel);
     const viewport = window.visualViewport;
-    window.addEventListener('resize', place);
+    window.addEventListener('resize', schedule);
     document.addEventListener('scroll', onScroll, true);
-    viewport?.addEventListener('resize', place);
-    viewport?.addEventListener('scroll', place);
+    viewport?.addEventListener('resize', schedule);
+    viewport?.addEventListener('scroll', schedule);
     return () => {
+      if (queued) cancelAnimationFrame(frame);
       resized?.disconnect();
-      window.removeEventListener('resize', place);
+      window.removeEventListener('resize', schedule);
       document.removeEventListener('scroll', onScroll, true);
-      viewport?.removeEventListener('resize', place);
-      viewport?.removeEventListener('scroll', place);
+      viewport?.removeEventListener('resize', schedule);
+      viewport?.removeEventListener('scroll', schedule);
     };
   }, [panelRef, remeasure]);
 }

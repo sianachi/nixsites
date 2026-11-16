@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useRef } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { FloatingMenuAnchor } from '../primitives/placement';
 import { useAnchoredPanel } from './use-anchored-panel';
@@ -37,7 +37,42 @@ function viewport(desktop: boolean) {
 }
 
 describe('useAnchoredPanel', () => {
+  // A frame that runs at once, so each test reads the placement right after its event.
+  beforeEach(() => {
+    vi.stubGlobal('requestAnimationFrame', (run: FrameRequestCallback) => {
+      run(0);
+      return 0;
+    });
+  });
   afterEach(() => vi.unstubAllGlobals());
+
+  it('places once per frame for a burst of scroll and resize events, and not after closing', () => {
+    viewport(true);
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (run: FrameRequestCallback) => frames.push(run));
+    const cancelled = vi.fn();
+    vi.stubGlobal('cancelAnimationFrame', cancelled);
+    let top = 140;
+    const anchor = vi.fn(() => ({ left: 40, top, bottom: top + 20 }));
+    const view = render(<Panel anchor={anchor} />);
+    const panel = screen.getByRole('dialog', { name: 'Tools' });
+    const placedAtOpen = anchor.mock.calls.length;
+    expect(panel.style.top).toBe('164px');
+
+    top = 150;
+    fireEvent.scroll(screen.getByRole('region', { name: 'Scroller' }));
+    window.dispatchEvent(new Event('resize'));
+    fireEvent.scroll(screen.getByRole('region', { name: 'Scroller' }));
+    expect(frames).toHaveLength(1);
+    expect(panel.style.top).toBe('164px');
+    frames.shift()?.(0);
+    expect(panel.style.top).toBe('174px');
+    expect(anchor.mock.calls.length).toBe(placedAtOpen + 1);
+
+    window.dispatchEvent(new Event('resize'));
+    view.unmount();
+    expect(cancelled).toHaveBeenCalledTimes(1);
+  });
 
   it('places mobile sheets inside the visual viewport above the keyboard and updates its size', () => {
     const bounds = viewport(false);
