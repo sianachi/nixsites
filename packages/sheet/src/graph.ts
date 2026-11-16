@@ -100,6 +100,12 @@ export function orderFormulas(
     }
   }
 
+  // Sorted by column, so a range reads only the span of a row it covers: a narrow range over a
+  // wide sheet otherwise tests every formula in each of its rows.
+  for (const bucket of byRow.values()) {
+    bucket.sort((left, right) => left.col - right.col);
+  }
+
   try {
     for (const [key, deps] of formulas) {
       const precedents = new Set<string>();
@@ -117,10 +123,22 @@ export function orderFormulas(
           if (bucket === undefined) {
             continue;
           }
-          for (const candidate of bucket) {
-            if (candidate.col >= range.startCol && candidate.col <= range.endCol) {
-              precedents.add(candidate.key);
+          let low = 0;
+          let high = bucket.length;
+          while (low < high) {
+            const middle = (low + high) >> 1;
+            if ((bucket[middle]?.col ?? 0) < range.startCol) {
+              low = middle + 1;
+            } else {
+              high = middle;
             }
+          }
+          for (let at = low; at < bucket.length; at += 1) {
+            const candidate = bucket[at];
+            if (candidate === undefined || candidate.col > range.endCol) {
+              break;
+            }
+            precedents.add(candidate.key);
           }
         }
       }

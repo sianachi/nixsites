@@ -46,6 +46,24 @@ describe('ordering', () => {
     expect(sorted.indexOf('B1')).toBeLessThan(sorted.indexOf('C1'));
   });
 
+  it('takes only the formulas inside a narrow range of a wide row as precedents', () => {
+    // A1 sits in the range's row but outside its columns, and depends on the range's reader: were
+    // it taken as a precedent the two would form a cycle.
+    const { order: sorted, cyclic } = order({
+      H1: '1',
+      A1: 'Z1+1',
+      E1: '2',
+      C1: '3',
+      D1: '4',
+      Z1: 'SUM(C1:E1)',
+    });
+    expect(cyclic.size).toBe(0);
+    for (const precedent of ['C1', 'D1', 'E1'])
+      expect(sorted.indexOf(precedent)).toBeLessThan(sorted.indexOf('Z1'));
+    expect(sorted.indexOf('Z1')).toBeLessThan(sorted.indexOf('A1'));
+    expect(sorted).toEqual(['H1', 'E1', 'C1', 'D1', 'Z1', 'A1']);
+  });
+
   it('handles a diamond without duplicating work', () => {
     const { order: sorted, cyclic } = order({
       D1: 'B1+C1',
