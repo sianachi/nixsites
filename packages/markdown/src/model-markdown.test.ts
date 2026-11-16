@@ -64,6 +64,47 @@ describe('Markdown parser additions', () => {
     expect(convert('- [ ] one\n- plain').content?.[0]?.type).toBe('bulletList');
   });
 
+  it('reads task lists nested in ordinary lists, and ordinary lists nested in task lists', () => {
+    const kinds = (node: Json | undefined): unknown =>
+      node === undefined
+        ? null
+        : [
+            node.type,
+            ...(node.type === 'taskItem' ? [node.attrs?.checked] : []),
+            ...(node.content ?? [])
+              .filter((child) => /List|Item$/.test(child.type))
+              .map((child) => kinds(child)),
+          ];
+    const doc = convert(
+      [
+        '- plain',
+        '  - [x] done',
+        '  - [ ] open',
+        '    - [ ] deeper',
+        '      1. numbered',
+        '      2. [x] not a task',
+        '- [ ] top',
+        '  - only a bullet',
+      ].join('\n'),
+    );
+    expect(kinds(doc.content?.[0])).toEqual([
+      'bulletList',
+      [
+        'listItem',
+        [
+          'taskList',
+          ['taskItem', true],
+          [
+            'taskItem',
+            false,
+            ['taskList', ['taskItem', false, ['orderedList', ['listItem'], ['listItem']]]],
+          ],
+        ],
+      ],
+      ['listItem', ['bulletList', ['listItem']]],
+    ]);
+  });
+
   it('reads a callout marker that opens the first paragraph', () => {
     const doc = convert('> [!warning] Careful\n> now');
     const callout = doc.content?.[0];

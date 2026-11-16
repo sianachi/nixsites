@@ -127,58 +127,62 @@ tokenizer.inline.ruler.before('emphasis', 'nix_strong', (state, silent) => {
 const TASK_BOX = /^\[([ xX])\](?:\s+|$)/;
 tokenizer.core.ruler.after('text_join', 'nix_task_lists', (state) => {
   const all = state.tokens;
+  // One pass with a frame per open bullet list, holding where its own items open and close.
+  // Scanning from each list's opening to its close instead re-read every nested list once per
+  // level above it.
+  const open: { at: number; level: number; items: number[]; closes: number[] }[] = [];
   for (let index = 0; index < all.length; index += 1) {
-    const open = all[index];
-    if (open?.type !== 'bullet_list_open') {
+    const token = all[index];
+    if (token === undefined) {
       continue;
     }
-    const items: number[] = [];
-    let close = index + 1;
-    while (close < all.length) {
-      const token = all[close];
-      if (token?.type === 'bullet_list_close' && token.level === open.level) {
-        break;
-      }
-      if (token?.type === 'list_item_open' && token.level === open.level + 1) {
-        items.push(close);
-      }
-      close += 1;
-    }
-    const inlines = items.map((item) => all[item + 2]);
-    if (
-      items.length === 0 ||
-      !inlines.every((inline) => inline?.type === 'inline' && TASK_BOX.test(inline.content))
-    ) {
+    if (token.type === 'bullet_list_open') {
+      open.push({ at: index, level: token.level, items: [], closes: [] });
       continue;
     }
-    open.type = 'task_list_open';
-    const closing = all[close];
-    if (closing !== undefined) {
-      closing.type = 'task_list_close';
+    const list = open.at(-1);
+    if (list === undefined) {
+      continue;
     }
-    items.forEach((item, at) => {
-      const inline = inlines[at];
-      const itemOpen = all[item];
-      const checked = inline !== undefined && /^\[[xX]]/.test(inline.content);
-      itemOpen?.attrSet('checked', checked ? 'true' : 'false');
-      if (itemOpen !== undefined) {
-        itemOpen.type = 'task_item_open';
+    if (token.type === 'list_item_open' && token.level === list.level + 1) {
+      list.items.push(index);
+    } else if (token.type === 'list_item_close' && token.level === list.level + 1) {
+      list.closes.push(index);
+    } else if (token.type === 'bullet_list_close' && token.level === list.level) {
+      open.pop();
+      const inlines = list.items.map((item) => all[item + 2]);
+      if (
+        list.items.length === 0 ||
+        !inlines.every((inline) => inline?.type === 'inline' && TASK_BOX.test(inline.content))
+      ) {
+        continue;
       }
-      if (inline !== undefined) {
-        inline.content = inline.content.replace(TASK_BOX, '');
-        const first = inline.children?.[0];
-        if (first?.type === 'text') {
-          first.content = first.content.replace(TASK_BOX, '');
+      const opening = all[list.at];
+      if (opening !== undefined) {
+        opening.type = 'task_list_open';
+      }
+      token.type = 'task_list_close';
+      list.items.forEach((item, at) => {
+        const inline = inlines[at];
+        const itemOpen = all[item];
+        const checked = inline !== undefined && /^\[[xX]]/.test(inline.content);
+        itemOpen?.attrSet('checked', checked ? 'true' : 'false');
+        if (itemOpen !== undefined) {
+          itemOpen.type = 'task_item_open';
         }
-      }
-      for (let end = item; end < close; end += 1) {
-        const token = all[end];
-        if (token?.type === 'list_item_close' && token.level === open.level + 1) {
-          token.type = 'task_item_close';
-          break;
+        if (inline !== undefined) {
+          inline.content = inline.content.replace(TASK_BOX, '');
+          const first = inline.children?.[0];
+          if (first?.type === 'text') {
+            first.content = first.content.replace(TASK_BOX, '');
+          }
         }
-      }
-    });
+        const itemClose = all[list.closes[at] ?? -1];
+        if (itemClose !== undefined) {
+          itemClose.type = 'task_item_close';
+        }
+      });
+    }
   }
 });
 
