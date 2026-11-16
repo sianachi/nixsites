@@ -51,7 +51,7 @@ export {
   type ParseResult,
 } from './schema.js';
 export { FIXTURE_DOCUMENT, NODE_FIXTURES, VERSION_1_DOCUMENT } from './fixtures.js';
-export { BASE_SCHEMA_VERSION, requiredSchemaVersion } from './versions.js';
+export { BASE_SCHEMA_VERSION, measureDocument, requiredSchemaVersion } from './versions.js';
 
 export { TEXT_ALIGNMENTS, readTextAlignment } from './text-alignment.js';
 export { rejectAllSuggestions } from './reject-suggestions.js';

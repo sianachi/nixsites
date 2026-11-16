@@ -104,7 +104,19 @@ export function requiredSchemaVersion(
   document: ProseMirrorNode,
   tables: MinimumVersions = MIN_VERSIONS,
 ): number {
+  return measureDocument(document, tables).schemaVersion;
+}
+
+/**
+ * {@link requiredSchemaVersion} and the node count (`countNodes`: every descendant plus the root)
+ * from one walk. Collab wants both for every accepted update, and each used to walk the tree.
+ */
+export function measureDocument(
+  document: ProseMirrorNode,
+  tables: MinimumVersions = MIN_VERSIONS,
+): { readonly nodes: number; readonly schemaVersion: number } {
   let required = BASE_SCHEMA_VERSION;
+  let nodes = 1;
 
   const visit = (node: ProseMirrorNode): void => {
     const nodeMinimum = tables.nodes[node.type.name];
@@ -171,9 +183,10 @@ export function requiredSchemaVersion(
   // type were ever versioned would otherwise be missed entirely.
   visit(document);
   document.descendants((node) => {
+    nodes += 1;
     visit(node);
     return true;
   });
 
-  return required;
+  return { nodes, schemaVersion: required };
 }

@@ -2,7 +2,8 @@ import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { nixSchema, parseDocument } from './schema.js';
 import { readTextAlignment, setTextAlignTr } from './text-alignment.js';
-import { requiredSchemaVersion } from './versions.js';
+import { countNodes } from './schema.js';
+import { measureDocument, requiredSchemaVersion } from './versions.js';
 
 describe('poem alignment', () => {
   it('justifies selected blocks together without changing their words or line breaks', () => {
@@ -41,6 +42,12 @@ describe('poem alignment', () => {
     expect(reopened.ok && reopened.document.eq(tr.doc)).toBe(true);
     expect(requiredSchemaVersion(tr.doc)).toBe(5);
     expect(requiredSchemaVersion(doc)).toBe(1);
+    // One walk answers both facts collab measures, and agrees with the two separate walks.
+    for (const measured of [doc, tr.doc])
+      expect(measureDocument(measured)).toEqual({
+        nodes: countNodes(measured),
+        schemaVersion: requiredSchemaVersion(measured),
+      });
   });
   it('aligns only the paragraph containing a caret', () => {
     const doc = nixSchema.node('doc', null, [

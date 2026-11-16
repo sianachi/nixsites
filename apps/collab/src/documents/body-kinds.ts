@@ -1,9 +1,4 @@
-import {
-  BASE_SCHEMA_VERSION,
-  countNodes,
-  nixSchema,
-  requiredSchemaVersion,
-} from '@nix/editor-schema';
+import { BASE_SCHEMA_VERSION, measureDocument, nixSchema } from '@nix/editor-schema';
 import {
   SHEET_ITEM_TYPE,
   SHEET_LIMITS,
@@ -53,10 +48,8 @@ export interface BodyKindStrategy {
    * parse as this kind at all.
    *
    * `schemaVersion` is part of the measurement rather than a second method because both
-   * facts are wanted at the same moment, on every accepted update, by the same caller - not
-   * because one walk answers both: `noteStrategy` walks the document twice, once for
-   * `countNodes` and once for `requiredSchemaVersion`. Fusing them saves about 0.2ms on an
-   * 18,000-node document and is not worth the API change while `JSON.stringify` below is
+   * facts are wanted at the same moment, on every accepted update, by the same caller, and
+   * `noteStrategy` reads both from one walk (`measureDocument`); `JSON.stringify` below is still
    * two thirds of this method's cost. A kind whose content is not versioned by
    * `SCHEMA_VERSION` reports the base version, which is the honest answer: nothing in it can
    * require a newer build.
@@ -151,9 +144,8 @@ export const noteStrategy: BodyKindStrategy = {
       return null;
     }
     return {
-      nodes: countNodes(document),
+      ...measureDocument(document),
       bytes: Buffer.byteLength(JSON.stringify(document.toJSON())),
-      schemaVersion: requiredSchemaVersion(document),
     };
   },
 
