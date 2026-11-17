@@ -62,8 +62,8 @@ follows semantic versioning (`0.x` pre-1.0).
   and the release tools image from 1.6 GB to 0.6 GB. The migration job image shrinks the same
   way as Core. They no longer carry development tools or the native libraries of other
   platforms.
-- The one-line install asks for about 4 GB of memory for Docker instead of 8 GB, and warns below
-  3 GiB instead of 7 GiB. The running stack was measured at about 1 GB.
+- The one-line install asks for about 2 GB of memory for Docker instead of 8 GB, and warns below
+  1.5 GiB instead of 7 GiB. The running stack was measured at about 0.6 GB in light use.
 
 - Core uses about 85 MiB less memory when nobody is searching or editing notes: the embedding model
   behind passage search loads on first use and is released after ten idle minutes, where it loaded

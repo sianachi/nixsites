@@ -30,7 +30,7 @@ as a static site.
 ## Install
 
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
-the Compose plugin, `curl`, `openssl`, `jq`, and about 4 GB of memory for Docker.
+the Compose plugin, `curl`, `openssl`, `jq`, and about 2 GB of memory for Docker.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
@@ -115,12 +115,13 @@ The short path is [Install](#install). This section is what the script runs, a p
 and what to back up.
 
 Read [deploy/install.sh](deploy/install.sh) before you pipe it to a shell. It needs Docker with
-the Compose plugin, `curl`, `openssl`, `jq`, and about 4 GB of memory for Docker. The stack runs
+the Compose plugin, `curl`, `openssl`, `jq`, and about 2 GB of memory for Docker. The stack runs
 Postgres, an object store and four Nix services (API,
 web, one Node service for collaboration, the companion and the sites worker, and the remote MCP
-server at `<origin>/mcp`). A default
-Docker Desktop VM can be as small as 2 GB, which is too little. The script stops if a tool is
-missing, and warns when Docker has less than about 4 GB.
+server at `<origin>/mcp`). It idles at about
+300 MB and was measured at about 600 MB in light use; the rest is room for imports, exports and
+more people. The script stops if a tool is missing, and warns when Docker has less than about
+1.5 GB.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
