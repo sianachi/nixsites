@@ -17,7 +17,7 @@
        the host rolls forward to newer 10.0.x runtimes automatically. -->
   <ItemGroup Label="Api">
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="11.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
     <!-- Transitive of Microsoft.AspNetCore.OpenApi, lifted to a direct reference in
          Nix.Api.csproj: the 2.0.0 that 10.0.0 resolves to carries GHSA-v5pm-xwqc-g5wc
