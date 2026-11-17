@@ -164,7 +164,32 @@ public sealed class LocalEmbedder : IDisposable
             model.Session.Dispose();
             _loaded = null;
         }
+        // An idle process allocates nothing, so nothing would collect the tokenizer and the buffers
+        // the model left behind; this hands their pages back to the system while nobody is waiting.
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+        TrimNativeHeap();
     }
+
+    /// <summary>Asks glibc to return the model's freed native memory; it keeps freed arenas otherwise.</summary>
+    private static void TrimNativeHeap()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+        try
+        {
+            _ = malloc_trim(0);
+        }
+        catch (EntryPointNotFoundException)
+        {
+            // Not glibc (musl has no malloc_trim): nothing to return.
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("libc")]
+    [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
+    private static extern int malloc_trim(nuint pad);
 
     private static float[][] Run(InferenceSession session, BertTokenizer tokenizer, IReadOnlyList<string> texts)
     {
