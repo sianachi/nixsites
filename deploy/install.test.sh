@@ -105,7 +105,7 @@ assert_lacks 'GiB available'
 [ ! -s "$called" ]
 [ ! -e "$state" ]
 
-# Under about 1.5 GiB, warn and carry on. The empty source dir is what stops the run.
+# Under about 0.75 GiB, warn and carry on. The empty source dir is what stops the run.
 docker_mem() {
   stub docker "#!/bin/sh
 if [ \"\$1\" = compose ] && [ \"\$2\" = version ]; then exit 0; fi
@@ -120,22 +120,22 @@ run_mem() {
   code=$?
   set -e
 }
-docker_mem 1073741824
+docker_mem 536870912
 run_mem
 assert_fail
-assert_has 'Docker has 1.0 GiB available. Give it about 2 GB, or the stack can run out of memory.'
+assert_has 'Docker has 0.5 GiB available. Give it at least 1 GB, or the stack can run out of memory.'
 assert_has 'NIX_SOURCE_DIR has no deploy/compose.prod.yml'
 assert_lacks 'missing'
 [ ! -s "$called" ]
 [ -d "$state" ]
 
-# 1.5 GiB is the floor (a 2 GB Docker Desktop VM reports a little less). One byte under warns.
-docker_mem 1610612735
+# 0.75 GiB is the floor (a 1 GB Docker Desktop VM reports a little less). One byte under warns.
+docker_mem 805306367
 run_mem
 assert_fail
 assert_has 'GiB available'
 
-docker_mem 1610612736
+docker_mem 805306368
 run_mem
 assert_fail
 assert_lacks 'GiB available'
