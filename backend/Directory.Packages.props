@@ -92,7 +92,7 @@
   <ItemGroup Label="Integration test harness">
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
     <!-- Transitive of Testcontainers.PostgreSql; 2025.1.0 carries GHSA-q939-rpr3-3284
          (high). Lifted here to force the patched version. -->
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
