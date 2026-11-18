@@ -7,6 +7,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Shared links to the public pages show a preview card. The web app document carries Open Graph and
+  Twitter card tags for the title, description, image, URL and site name, using
+  `apps/web/public/nix-og.png` (1200 by 630).
 - OAuth sign-in for remote MCP: hosted clients such as ChatGPT and claude.ai connect through discovery, dynamic
   client registration and an authorization-code flow with PKCE; the token they receive is an ordinary personal
   access token that expires after 90 days.
