@@ -47,6 +47,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- The landing page's macOS, Windows and Linux buttons read "Early build, from source". iOS and
+  Android still read "Coming soon".
 - New installs no longer include Zitadel and need one hostname instead of two. `NIX_AUTH_MODE`
   (`local` or `oidc`) picks the mode; when unset it is `oidc` if an issuer is configured. An
   install in `local` mode refuses tokens from an outside identity provider.

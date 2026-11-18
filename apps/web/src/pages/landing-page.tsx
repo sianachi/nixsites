@@ -5,7 +5,12 @@ import { useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactN
 import { selectIsBusy, useSessionStore } from '@nix/web-foundation/lib/session-store';
 import { ThemeButton } from '@nix/web-foundation/theme/theme-choice';
 import { findViewKind } from '@nix/web-views/core/view-kinds';
-import { APP_DOWNLOADS, APP_PLATFORMS } from './landing-apps';
+import {
+  APP_DOWNLOADS,
+  APP_PLATFORMS,
+  EARLY_SOURCE_BUILDS,
+  type AppPlatform,
+} from './landing-apps';
 
 export interface LandingPageProps {
   /** Starts the redirect to the identity provider. */
@@ -358,8 +363,14 @@ function ViewGallery(): ReactNode {
   );
 }
 
-/** A download link, or a disabled "Coming soon" button while the app has no link yet. */
-function AppButton(props: { readonly platform: string; readonly url: string | null }): ReactNode {
+/** A download link, or a disabled status while the app has no link yet. */
+function AppButton(props: {
+  readonly platform: AppPlatform;
+  readonly url: string | null;
+}): ReactNode {
+  const label = EARLY_SOURCE_BUILDS.includes(props.platform)
+    ? 'Early build, from source'
+    : 'Coming soon';
   if (props.url !== null)
     return (
       <a href={props.url} className={PRIMARY}>
@@ -370,10 +381,10 @@ function AppButton(props: { readonly platform: string; readonly url: string | nu
     <button
       type="button"
       disabled
-      aria-label={`${props.platform} app: coming soon`}
-      className={`${SECONDARY} cursor-not-allowed opacity-60`}
+      aria-label={`${props.platform} app: ${label.toLowerCase()}`}
+      className={`${SECONDARY} w-full min-w-0 cursor-not-allowed justify-center text-center whitespace-normal opacity-60`}
     >
-      Coming soon
+      <span className="w-full min-w-0 text-balance">{label}</span>
     </button>
   );
 }
