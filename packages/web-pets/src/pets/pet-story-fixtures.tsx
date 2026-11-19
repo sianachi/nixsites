@@ -3,6 +3,8 @@ import {
   createNixClient,
   petConnectionSchema,
   type NixClient,
+  type PetRunList,
+  type QueryEndpoint,
   type Workspace,
 } from '@nix/api-client';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -100,10 +102,22 @@ const phoneConnection = petConnectionSchema.parse({
   userCode: '',
 });
 
+const phoneRunList = {
+  enabled: true,
+  abilities: [
+    {
+      id: 'task.comment',
+      name: 'Post a comment',
+      description: 'Prepare a comment for review',
+    },
+  ],
+  runs: [],
+} satisfies PetRunList;
+
 function routeQuery(
   settings: unknown,
   connection: ReturnType<typeof petConnectionSchema.parse>,
-): (endpoint: { operation: string }) => Promise<unknown> {
+): (endpoint: QueryEndpoint<unknown>) => Promise<unknown> {
   return (endpoint) =>
     endpoint.operation === 'items.get'
       ? Promise.resolve({
@@ -114,9 +128,11 @@ function routeQuery(
         })
       : endpoint.operation === 'locks.get'
         ? Promise.resolve({ locked: false, unlockedUntil: null })
-        : endpoint.operation === 'pets.watchRuntime' || endpoint.operation === 'pets.connection'
-          ? Promise.resolve({ ...connection, revision: 1 })
-          : Promise.resolve(settings);
+        : endpoint.operation === 'petRuns.list' || endpoint.operation === 'petRuns.listWorkspace'
+          ? Promise.resolve(endpoint.schema.parse(phoneRunList))
+          : endpoint.operation === 'pets.watchRuntime' || endpoint.operation === 'pets.connection'
+            ? Promise.resolve({ ...connection, revision: 1 })
+            : Promise.resolve(settings);
 }
 
 export function companionStoryClient(
