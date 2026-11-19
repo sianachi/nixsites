@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Node host image: collaboration, the pet companion and the sites worker run in one process
 # (apps/node-host, roles chosen by NIX_NODE_ROLES). The image keeps the name "collab".
-FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS deps
+FROM node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS deps
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN corepack enable
 WORKDIR /repo
@@ -25,14 +25,14 @@ RUN find . -name node_modules -type d -prune -exec rm -rf {} + \
       --filter "@nix/node-host..." --filter "@nix/collab..." \
       --filter "@nix/companion-service..." --filter "@nix/sites..."
 
-FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS codex
+FROM node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS codex
 ARG CODEX_VERSION=0.153.4
 RUN npm install --global @openai/codex@${CODEX_VERSION}
 # Keep only the native runtime for this architecture; Node is build-time only here.
 RUN arch="$(uname -m)" && case "$arch" in x86_64) package_arch=x64 ;; aarch64) package_arch=arm64 ;; *) exit 1 ;; esac \
     && cp -a "/usr/local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-${package_arch}/vendor/${arch}-unknown-linux-musl" /opt/nix-codex
 
-FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS collab
+FROM node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS collab
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NODE_ENV=production
 RUN corepack enable
 WORKDIR /repo
