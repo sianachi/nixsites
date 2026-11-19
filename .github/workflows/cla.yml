@@ -28,6 +28,7 @@ jobs:
           path-to-signatures: signatures/v1/cla.json
           path-to-document: https://github.com/sianachi/nixsites/blob/main/CLA.md
           branch: cla-signatures
-          allowlist: sianachi,dependabot[bot],*[bot]
+          # Owner-opened pull requests also allow Cursor's automation account.
+          allowlist: ${{ (github.event.pull_request.user.login == github.repository_owner || github.event.issue.user.login == github.repository_owner) && 'sianachi,dependabot[bot],*[bot],cursoragent' || 'sianachi,dependabot[bot],*[bot]' }}
           custom-pr-sign-comment: I have read the Nix CLA and I hereby sign it
           lock-pullrequest-aftermerge: false
