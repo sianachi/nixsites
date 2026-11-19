@@ -7,6 +7,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Shared links to the public pages show a preview card. The web app document carries Open Graph and
+  Twitter card tags for the title, description, image, URL and site name, using
+  `apps/web/public/nix-og.png` (1200 by 630).
 - Send a work request in the pet conversation to start a job. Enabled workspaces can start with
   the current item and review or revise proposals in the conversation. Nix inbox notices link
   to pending decisions and keep job details inside the dialog. Jobs resume after a restart.
@@ -67,6 +70,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- The landing page's macOS, Windows and Linux buttons read "Early build, from source". iOS and
+  Android still read "Coming soon".
 - New installs no longer include Zitadel and need one hostname instead of two. `NIX_AUTH_MODE`
   (`local` or `oidc`) picks the mode; when unset it is `oidc` if an issuer is configured. An
   install in `local` mode refuses tokens from an outside identity provider.

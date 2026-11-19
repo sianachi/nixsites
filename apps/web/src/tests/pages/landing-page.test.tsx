@@ -137,21 +137,29 @@ describe('the landing page view gallery', () => {
 });
 
 describe('the landing page apps section', () => {
-  it('shows a disabled Coming soon button for every app without a link', () => {
+  it('shows Coming soon for the phone apps and an early source build for desktop', () => {
     render(<LandingPage onSignIn={() => undefined} demo />);
 
     const section = document.getElementById('apps');
     expect(section).not.toBeNull();
     expect(screen.getByRole('link', { name: 'Apps' })).toHaveAttribute('href', '#apps');
-    for (const platform of ['iOS', 'Android', 'macOS', 'Windows', 'Linux']) {
+    for (const platform of ['iOS', 'Android']) {
       const button = screen.getByRole('button', { name: `${platform} app: coming soon` });
       expect(button).toBeDisabled();
+      expect(section).toContainElement(button);
+    }
+    for (const platform of ['macOS', 'Windows', 'Linux']) {
+      const button = screen.getByRole('button', {
+        name: `${platform} app: early build, from source`,
+      });
+      expect(button).toBeDisabled();
+      expect(button).toHaveTextContent('Early build, from source');
       expect(section).toContainElement(button);
     }
     expect(screen.queryByRole('link', { name: /Download for/ })).toBeNull();
   });
 
-  it('links a configured app and leaves the others coming soon', () => {
+  it('links a configured app and leaves the others without a download', () => {
     downloads.iOS = 'https://example.com/nix.ipa';
     render(<LandingPage onSignIn={() => undefined} demo />);
 
@@ -161,5 +169,8 @@ describe('the landing page apps section', () => {
     );
     expect(screen.queryByRole('button', { name: 'iOS app: coming soon' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Android app: coming soon' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'macOS app: early build, from source' }),
+    ).toBeDisabled();
   });
 });
