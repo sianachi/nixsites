@@ -1,6 +1,6 @@
 # nixctl basics
 
-`nixctl` is the scriptable way into a Nix workspace. It covers items, notes, properties, views, queries, search, templates, history, imports and exports, calendar sync, habits, finance, reminders, automations and the companion. It also runs an [MCP server](nix://item/01a130b0-0e54-747b-b923-fd3b58a5891c).
+`nixctl` is the scriptable way into a Nix workspace. It covers items, notes, canvases, properties, views, queries, search, templates, history, imports and exports, files, calendar sync, habits, reminders, automations, sites and the companion. It also runs an [MCP server](nix://item/01a130b0-0e54-747b-b923-fd3b58a5891c).
 
 Output is compact JSON when piped and a readable table or pretty JSON on a terminal. `--json` forces the machine-readable shape everywhere. Errors go to stderr with an exit code a script can branch on.
 
@@ -25,7 +25,10 @@ The default sign-in opens your browser, where you approve a renewable CLI sessio
 ```sh
 nixctl auth login --api-url https://<your-domain>
 nixctl auth status
+nixctl auth logout
 ```
+
+`auth logout` revokes a browser-approved session and removes its local profile.
 
 Use `--no-browser` to print the approval link instead of opening it. For scripts and servers, sign in with a personal access token:
 
@@ -34,6 +37,8 @@ nixctl auth login --api-url https://<your-domain> --token "$NIX_TOKEN"
 ```
 
 Create tokens in the web app under **Settings > Access tokens**. Each token has independent `read`, `write` and `admin` scopes and a required expiry between 1 and 365 days. Use the narrowest scopes that do the job.
+
+To replace a token's secret without making a new token, rotate it in the same list or run `nixctl token rotate <token-id>`. The old secret stops working at once, and local profiles that used it are updated. Rotating needs a browser sign-in, not a token.
 
 Profiles live in `~/.config/nixctl/config.json` (or under `$XDG_CONFIG_HOME`) with restrictive file permissions. `--profile <name>` selects one of several saved profiles.
 
@@ -106,6 +111,10 @@ nixctl remind set <item-id> "2026-11-01 09:00" --zone Europe/London
 nixctl automations list --workspace <workspace-id>
 nixctl automations test <rule-id>
 ```
+
+## MCP
+
+`nixctl mcp` serves Nix as an MCP server. On its own it speaks over stdio and acts as your current profile. With `--listen <host:port>` it serves Streamable HTTP instead, and every request carries its own personal access token. The tools it offers are described under [MCP](nix://item/01a130b0-0e54-747b-b923-fd3b58a5891c).
 
 Run `nixctl <command> --help` for the full set of options.
 

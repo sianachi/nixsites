@@ -41,21 +41,36 @@ If you prefer not to use the script, the order matters:
 ```sh
 export NIX_IMAGE_TAG=<full-commit-sha> NIX_WEB_IMAGE_TAG=<full-commit-sha>
 dc pull
-dc up -d --wait postgres rabbitmq nix-versitygw
+dc stop nix-web nix-node nix-api
+dc up -d --wait postgres nix-versitygw
 dc --profile maintenance run --rm --no-deps nix-storage-init
 dc run --rm --no-deps nix-migrate
 dc run --rm --no-deps nix-template-presets
 dc run --rm --no-deps nix-api-init
 dc --profile maintenance run --rm --no-deps nix-collab-migrate
-dc up -d --no-deps --wait nix-api nix-collab
+dc up -d --no-deps --wait nix-api nix-node
 dc up -d --wait
 ```
 
-`dc` is the Compose shorthand from [Docker Compose](nix://item/01a130b0-156d-7ac6-99ed-ebee0b7d7dfe). If a migration fails, leave the application stopped and investigate before starting anything.
+`dc` is the Compose shorthand from [Docker Compose](nix://item/01a130b0-156d-7ac6-99ed-ebee0b7d7dfe). The script also creates the `nix_backup` database role if it is missing, which a migration needs, and removes the containers of services that older releases ran. If a migration fails, leave the application stopped and investigate before starting anything.
 
 ## On Kubernetes
 
-Check out the target commit and run `deploy/k8s/deploy.sh` again with the new `TAG`, then `deploy/k8s/verify.sh`. The script applies migrations as jobs named after the tag before it rolls out the new workloads, and waits for each rollout. There is no built-in backup step: make sure the night's backup has completed, or trigger the CronJob by hand, before you start.
+Check out the target commit and run `deploy/k8s/deploy.sh` again with the new `TAG`, then `deploy/k8s/verify.sh`. The script applies migrations as jobs named after the tag before it rolls out the new workloads, and waits for each rollout. There is no built-in backup step: make sure the night's backup has completed, or trigger the CronJob by hand, before you start. `deploy.sh` also removes workloads that older releases ran, such as the broker and the per-role workers, and keeps their volumes.
+
+## Coming from an older release
+
+Three removals are breaking. Read them before you upgrade an install made earlier.
+
+- **RabbitMQ and the Go workers are gone.** Background jobs run inside Core, and one `nix-node` service replaces `nix-collab`, `nix-companion` and `nix-sites-worker`. The deploy scripts remove the old containers or objects once and keep their volumes. Delete every `NIX_RABBITMQ_*` and `NIX_WORKER_IMAGE_TAG` line from your environment file. The old `nix-rabbitmq-data` volume (Compose) or broker volume claim (Kubernetes) stays until you delete it, and you need it only to roll back to a release that had the broker.
+- **WebAssembly plugins and the finance feature are gone.** Existing finance records stay as ordinary items, and a saved finance view becomes a sheet view. Keep money records in CSV files.
+- **Zitadel is no longer bundled or managed.** Nix signs people in itself. An install that still uses the bundled Zitadel must move before it can upgrade, and accounts, password hashes, authenticator apps and passkeys come across:
+
+  - installer: run `install.sh --migrate-local-auth --dry-run`, then without `--dry-run`. The installer stops until you do;
+  - Compose by hand, with Zitadel in its own project: run `deploy/compose/import-zitadel.sh --dry-run`, then without it, after releasing a version that has local sign-in. It needs `NIX_DEPLOY_ENV`, `NIX_IMAGE_TAG`, `NIX_AUTH_PASSKEY_RP_ID`, `NIX_ZITADEL_DB_PASSWORD` and `NIX_ZITADEL_MASTERKEY`. Then set `NIX_AUTH_MODE=local` in the environment file and release again;
+  - Kubernetes: run `deploy/k8s/deploy.sh` with `NIX_IMPORT_ZITADEL=dry-run`, then with `NIX_AUTH_MODE=local` and `NIX_IMPORT_ZITADEL=run`. `deploy.sh` refuses to run while the old `nix-zitadel` Deployment has replicas, and scales it to zero after the import.
+
+  Passkeys were registered for the old sign-in hostname, so that hostname must keep sending exactly `/.well-known/webauthn` to Nix. Keep its DNS record. The old Zitadel containers, objects and data are left for you to delete. Moving back to Zitadel needs a restore of the backup taken before the upgrade. An install that already uses an identity provider you run yourself is not affected.
 
 ## Installed apps
 

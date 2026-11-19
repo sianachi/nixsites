@@ -15,7 +15,7 @@ Open **Import** on the rail, or use `nixctl import`. Nix accepts:
 | UTF-8 text | Editable notes |
 | Nix archives (.nix) | The archived items, bodies, properties and views |
 
-Every import shows a preview first. Markdown imports report links that could not be resolved, images that could not be found and formatting that has no equivalent. Obsidian embeds that cannot be resolved are kept as text and listed. Worker-backed imports of documents and archives can be inspected, committed or cancelled by ID, and carry on if your browser disconnects. PDF text is extracted; scanned pages are not read with OCR. Bank statements in CSV are imported from the finance view, again with a preview before anything is committed.
+Every import shows a preview first. Markdown imports report links that could not be resolved, images that could not be found and formatting that has no equivalent. Obsidian embeds that cannot be resolved are kept as text and listed. Worker-backed imports of documents and archives can be inspected, committed or cancelled by ID, and carry on if your browser disconnects. PDF text is extracted; scanned pages are not read with OCR.
 
 ```sh
 nixctl import ./vault --workspace <workspace-id> --dry-run
@@ -30,7 +30,7 @@ Export a single document or a whole subtree from the editor's export menu or wit
 | --- | --- |
 | .nix | A lossless archive of items, bodies, properties, views and files that Nix can import again |
 | Markdown | Plain text you can read and edit anywhere |
-| PDF | Reading and printing, with page breaks honoured |
+| PDF | Reading and printing, with page breaks honoured. Choose A4 or Letter in the export dialog |
 | Word (DOCX) | Editing in a word processor |
 
 Exports draw an item's views into the document, so a board or a calendar appears as it does in Nix. Before you export, Nix lists anything the chosen format cannot represent.

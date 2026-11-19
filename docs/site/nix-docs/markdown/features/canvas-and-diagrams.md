@@ -8,6 +8,7 @@ A canvas is a body kind for drawing: whiteboards, sketches, flow charts and arch
 - **Images.** Drop images onto the canvas. They are stored as Nix file items that the canvas owns, never as temporary links.
 - **Your library.** Save a selection of shapes to your personal library and reuse it in any drawing.
 - **Import.** Bring in Excalidraw scenes and PNG files with an embedded scene. If an import cannot be completed, the existing drawing is left as it was.
+- **Pet drafts.** On installs where pet jobs are enabled, a pet can fit a draft to a canvas for you to review and apply, or to send back with changes. See [The companion pet](nix://item/01a130b0-0c1b-7823-89c8-888caa577a6b).
 
 Because canvas is a body kind, a canvas can also have children and views, like any other item.
 
@@ -20,9 +21,11 @@ Write a code block with the language `mermaid` in any note and Nix renders it as
 flowchart LR
   Idea --> Draft --> Review --> Published
 ```
+
 ```
 
 Uploaded `.mmd` and `.mermaid` files open in the same viewer. Diagrams render with strict security settings and follow the light or dark theme. The source is what is stored; the picture is derived from it.
+```
 
 ## Properties
 

@@ -14,23 +14,23 @@ A build starts at the root and walks down the tree. An item is left out, togethe
 
 A site whose root is locked, trashed or not visible to you cannot be published at all. A build can hold up to 5,000 pages.
 
-The build runs as the person who publishes, within what that person can read. Files are checked by the same rules: only files inside the published tree, and only PNG, JPEG, WebP and SVG images and PDF, TXT and CSV downloads, are copied.
+The build runs as the person who publishes, within what that person can read. Files are checked by the same rules: only files inside the published tree, and only PNG, JPEG, WebP and SVG images, MP4 and WebM videos, and PDF, TXT and CSV downloads, are copied.
 
 ## The lifecycle
 
 1. **Request.** A manager publishes from the Site panel or with `nixctl site publish`. The first publish, and the first after an unpublish, must confirm that the content will become public and may be copied. Only one build or activation can run at a time.
 2. **Approval, where required.** If the instance requires operator approval, that first publish waits. The manager asks for approval; an operator approves or rejects it with a note the managers can read. On approval the publish runs as the manager who asked, and their rights are checked again at that moment. Later publishes of a live site do not need approval.
 3. **The build manifest.** Core works out the eligible pages and freezes them into a build manifest: the site settings, layout, canonical address, dated collections, redirects and one row per page with its path, title, properties, views and the exact revision of its body. Once written, the manifest does not change. Edits made after this point belong to the next build.
-4. **The build.** A separate sites worker picks the job up from RabbitMQ. It reads the manifest through Core's internal routes, using a credential tied to that one job, reads each body at the pinned revision from the collaboration service, and fetches files through short-lived signed links that Core issues only for files the manifest allows. It renders every page, feed, sitemap and search index in memory. If any page body cannot be read, the build fails rather than publishing an incomplete site.
+4. **The build.** The sites worker, a role of the `nix-node` service, polls Core every few seconds for the job and leases it. It reads the manifest through Core's internal routes, using a credential tied to that one job, reads each body at the pinned revision from the collaboration service, and fetches files through short-lived signed links that Core issues only for files the manifest allows. It renders every page, feed, sitemap and search index in memory. If any page body cannot be read, the build fails rather than publishing an incomplete site.
 5. **Upload.** The worker never chooses where files go. For each file, Core derives the storage key and signs a create-only upload bound to the file's exact size and checksum. Pages are written under a directory for the build; images and downloads are stored once by their content hash and shared between builds.
 6. **Seal.** Core checks the uploaded build against what the worker reported: the number of files, the total size, the home page and the digest of the build index. Only a build that matches is sealed.
-7. **Go live.** Core writes a small host manifest for each of the site's served hostnames, naming the build to serve. The worker writes these last, so an interrupted build is never served. The serving process picks up the change within about ten seconds, and ignores a host manifest older than the one it already has.
+7. **Go live.** Core writes a small host manifest for each of the site's served hostnames, naming the build to serve. The worker writes these last, so an interrupted build is never served. The serving process picks up the change within about ten seconds, and ignores a host manifest older than the one it already has. Pages are always revalidated, so a browser that already holds the current page gets a 304 with no body, and a new build is seen at once.
 
 The previous live build becomes superseded. Nix keeps the five most recent builds by default and deletes older superseded and failed builds in the background.
 
 ## Rolling back
 
-You can roll a live site back to any superseded build that has not yet been deleted. The host manifests are rewritten to point at it, and it is served exactly as it was built, including pages that have since been locked, trashed or left out. Publish again to bring the site up to date.
+In the Site panel, use **Roll back** beside a previous build; from the terminal, run `nixctl site rollback <site-id> <build-id> --yes`. You can roll a live site back to any superseded build that has not yet been deleted. The host manifests are rewritten to point at it, and it is served exactly as it was built, including pages that have since been locked, trashed or left out. Publish again to bring the site up to date.
 
 ## Unpublishing
 

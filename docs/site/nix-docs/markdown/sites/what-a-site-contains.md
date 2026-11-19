@@ -22,7 +22,7 @@ Anything a static page cannot show is reported in the build instead of being pub
 
 ## Images
 
-PNG, JPEG and WebP images up to 10 MiB, and SVG images up to 2 MiB, are copied into the site. Raster images have their metadata removed without being re-encoded, so their quality is unchanged:
+PNG, JPEG and WebP images up to 10 MiB, and SVG images up to 2 MiB, are copied into the site. Where a page has no cover image, the build draws a 1200 by 630 link-preview card from the page title and the site's accent colour (up to 500 pages per build; the rest share the home page's card). Raster images have their metadata removed without being re-encoded, so their quality is unchanged:
 
 - **JPEG:** EXIF, XMP, comments and other application segments are removed. Colour profiles are kept, and if the image relied on an EXIF orientation, a minimal orientation-only record is written back so it still displays the right way up.
 - **PNG:** text chunks, EXIF and timestamps are removed.
@@ -36,6 +36,10 @@ A Mermaid diagram is published as a picture, not as code that runs in the reader
 
 The SVG is sanitised twice, once when it is captured and again by the build worker. A strict parser rebuilds the document from an allowlist of elements and attributes. It rejects document type declarations and entities outright, and drops scripts, `foreignObject`, embedded images, event handlers, external references, `url()` values and `@import`. If the saved drawing does not match the diagram's current source, the build publishes the source as a code block instead of a stale picture.
 
+## Videos
+
+MP4 and WebM files up to 50 MiB play in a video player where a file block stands, with a download link and the size beneath it. They are checked by their file signature and published as stored, so metadata such as location is not removed. The file server answers range requests, so players can seek.
+
 ## Downloads
 
 PDF, TXT and CSV files up to 20 MiB can be published as downloads. A PDF must really be a PDF, and text and CSV files must be valid UTF-8. Downloads are served with `Content-Disposition: attachment`, so they are saved rather than opened in the page, and a PDF is additionally sent with a sandboxing security policy.
@@ -47,19 +51,19 @@ A PDF's own document metadata, such as its author, producer, dates and embedded 
 | File | Contents |
 | --- | --- |
 | \<collection>/feed.xml | An Atom feed for each dated collection, newest first, with tags as categories |
-| sitemap.xml | Every page, with its last-modified date |
-| robots.txt | Allows all crawlers and points at the sitemap |
+| sitemap.xml | Every indexable page, with its last-modified date |
+| robots.txt | Allows all crawlers and points at the sitemap, or disallows everything when the site is hidden from search engines |
 | 404.html | The site's not-found page, marked noindex |
 | \_nix/search.json | A search index built from the rendered pages, used by the search box in the docs layout. If it would exceed 2 MiB, it falls back to titles only |
 | \_nix/redirects.json | Old paths and where they now point; answered with 308 |
 | \_nix/build.json | The build's identifier and an index of its files |
 
-Each page also carries a canonical link, Open Graph and Twitter card metadata, using a post's cover image when it has one, and links to the site's feeds.
+Each page also carries a canonical link, Open Graph and Twitter card metadata, using the page's cover image or its generated card, and links to the site's feeds.
 
 ## What a site never contains
 
 - **Cookies.** The serving process never sets one.
-- **Scripts other than the theme's.** The only script is the theme's own file, which runs the light and dark switch and the search box. Pages contain no inline scripts or styles, and the reader's theme choice is kept in the browser's local storage, not a cookie. Pages work without JavaScript.
+- **Scripts other than the theme's.** The only script is the theme's own file, which runs the light and dark switch and the search box. Pages contain no inline scripts or styles, and the reader's theme choice is kept in the browser's local storage, not a cookie. Pages work without JavaScript. A site with the custom layout publishes its own scripts and stylesheets instead, in a sandbox; see [Security model](nix://item/01a13137-b4fc-7c7f-a661-d6f8280f80ab).
 - **Third-party requests.** Fonts, styles, images and the search index all come from the site itself. There is no analytics, tracking or embedded third-party content.
 - **Links back into your workspace.** References to items become links between published pages, or plain text when the target is not published.
 - **Anything withheld.** Locked, trashed, excluded, template and future-dated items, and their files, are never in a build.
@@ -68,7 +72,7 @@ Every page is sent with this Content Security Policy:
 
 ```text
 default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self';
-font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none';
+media-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none';
 frame-ancestors 'none'
 ```
 

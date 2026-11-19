@@ -2,6 +2,40 @@
 
 # November 2026
 
+## Since 0.7.0
+
+These changes are on `main` and will be in the next version. An install made from the 0.7.0 release does not have them yet.
+
+### Sign-in
+
+- Nix signs people in itself, so a self-host no longer needs a separate identity provider. The first account is created on the setup page with a setup code. Sign-in is by email and password, with an authenticator-app code as an optional second step, or by passkey alone.
+- Administrators have a People page: add a person (they get a one-time link, valid for an hour), issue a reset link, and disable or re-enable an account.
+- Everyone has Settings > Security: change or remove your password, manage passkeys, add or remove an authenticator app, and sign out everywhere.
+- **Breaking:** the bundled Zitadel is gone. An install that still uses it must migrate when it upgrades, and accounts, passwords, authenticator apps and passkeys are carried over. See [Upgrades](nix://item/01a130b0-16c2-776e-89d2-b80f0e28db40).
+
+### Agents and MCP
+
+- Hosted clients such as ChatGPT and claude.ai connect to remote MCP by signing in with OAuth. The token they receive is an ordinary access token that expires after 90 days.
+- Send a work request in the companion conversation to start a job. Enabled workspaces can review and revise each proposal in the conversation, and jobs resume after a restart.
+- The companion can draft on a canvas for you to apply, run named routines on a schedule, watch a mail label or folder, and use scoped connections to mail, drive, messaging, calendar, issue and code services. Outbound changes are reviewed first.
+- Withhold any item from the companion in its protection settings.
+- Ten new companion appearances. Eye of Ra and Demiurge are retired; profiles that used them become Owl and keep their name, instructions and history.
+
+### Apps and offline
+
+- The phone and desktop apps show how many offline changes are waiting, say in plain words why a change was not applied, and have a Sync now button under Settings > About.
+- Offline sync is faster and more forgiving: it waits out rate limits, reruns an interrupted pass, sends a long queue without pauses, and no longer discards the offline copy when a proxy in front of the server answers instead of Nix.
+
+### Sharing
+
+- Links to the public pages show a preview card when shared.
+
+### Self-hosting
+
+- The one-line install asks for at least 1 GB of memory instead of 8 GB. A fresh install idles at about 300 MiB.
+- The images take about 4 GB less disk space in total.
+- New installs need one hostname instead of two.
+
 ## Version 0.7.0
 
 Released 14 November. This version also carries everything that was listed under 0.6.0, which was never tagged.

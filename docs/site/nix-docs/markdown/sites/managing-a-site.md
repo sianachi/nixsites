@@ -4,7 +4,7 @@ You can run a site from the Site panel in the web app or from `nixctl`. Both use
 
 ## The Site panel
 
-Open any item and choose the **Site** tab in its panel.
+Open any item and choose the **Site** tab in its panel, or choose **Publish as a site…** in the item's menu or its row menu in the sidebar. These entries are shown to workspace owners while **Show publishing on pages** in **Settings > General** is on, which it is by default.
 
 **Making a site.** On an item that is not yet a site, **Make this a site** asks for an address (the slug) and a layout: "Docs: pages with a sidebar" or "Blog: dated posts first". The site starts as a draft. Nothing is public yet.
 
@@ -18,7 +18,7 @@ Open any item and choose the **Site** tab in its panel.
 
 **Left out.** **Choose what to leave out** picks items to exclude, with everything under them.
 
-**Settings.** Site name, description, accent colour, top navigation, footer text, layout, and whether to show a "Built with Nix" link. **Publish changes** sets the republish mode: "Only when I publish", "Automatically after edits" or "With each Nix release", and, for automatic mode, how long to wait after the last edit: 1 minute, 5 minutes, 15 minutes or 1 hour.
+**Settings.** Site name, description, layout (Docs, Blog or Custom; Custom also asks for the id of the theme page), accent colour, typeface (rounded Nunito Sans, book serif Literata or Atkinson Hyperlegible Next), heading mark (square, diamond or none), spacing (compact, comfortable or airy), top navigation (one link per line, a label then a path such as `/guide/`), footer text, author, whether to hide the site from search engines, and whether to show a "Built with Nix" link. **Publish changes** sets the republish mode: "Only when I publish", "Automatically after edits" or "With each Nix release", and, for automatic mode, how long to wait after the last edit: 1 minute, 5 minutes, 15 minutes or 1 hour.
 
 **Dated collections.** For each collection, the container and the properties that hold the date, and optionally tags, a cover image and a summary.
 
@@ -39,8 +39,12 @@ nixctl site get --item <root-item-id>
 # Settings
 nixctl site update <site-id> --name "Team handbook" \
   --description "How we work" --accent "#2f5fd0" \
+  --typeface serif --heading-mark diamond --spacing airy \
   --nav "Guides=/guides/" --nav "Changelog=/changelog/" \
   --footer "Written in Nix." --no-built-with-nix
+
+# A custom layout: render from templates, CSS and JS attached to a theme page
+nixctl site update <site-id> --layout custom --theme <theme-page-id>
 
 # A dated collection: <item>:<date>[:<tags>[:<cover>[:<summary>]]]
 nixctl site update <site-id> --dated <collection-id>:date:tags:cover:summary
@@ -63,6 +67,9 @@ nixctl site build <site-id> <build-id>
 nixctl site pages <site-id>
 nixctl site path <site-id> <item-id> /guides/install/
 
+# Take it out of search engines, or let them back in
+nixctl site update <site-id> --noindex
+
 # Roll back, take down, delete
 nixctl site rollback <site-id> <build-id> --yes
 nixctl site unpublish <site-id> --yes
@@ -79,10 +86,13 @@ nixctl site hostnames list <site-id>      # status, and the records still to cre
 nixctl site hostnames verify <site-id> docs.<your-domain>
 nixctl site hostnames primary <site-id> docs.<your-domain>
 nixctl site hostnames add <site-id> www.<your-domain> --mode redirect
+nixctl site hostnames mode <site-id> www.<your-domain> redirect   # how an alias answers
 nixctl site hostnames remove <site-id> docs.<your-domain> --yes
 ```
 
 ### Approvals
+
+Operators can also decide in **Settings > Site approvals**, which only approvers see.
 
 ```sh
 # A manager asks for the first publish to be approved

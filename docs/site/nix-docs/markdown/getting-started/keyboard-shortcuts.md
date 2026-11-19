@@ -26,7 +26,7 @@ New note is Mod+Alt+N rather than Mod+N because browsers keep Mod+N for a new wi
 | / | Open the slash menu to insert a block |
 | \[\[ or @ | Insert a reference to another item |
 
-The editor can also use Vim (Normal, Visual and Visual Line modes) or Emacs (kill ring and mark) key bindings. Turn them on in settings.
+On a desktop, the editor can also use Vim or Emacs key bindings (a core set of each, not the full editors). Choose **Keyboard mode** in **Settings > Editor**.
 
 ## Views
 
@@ -54,11 +54,11 @@ The editor can also use Vim (Normal, Visual and Visual Line modes) or Emacs (kil
 | Shift+F6 | Previous pane |
 | Delete or Backspace | Close the focused tab |
 
-## Workspace tree
+## Explorer
 
 | Shortcut | Action |
 | --- | --- |
-| Alt+Enter | Open the focused row beside the current one |
+| Alt+Enter | Open the focused row beside |
 | Alt+Up | Move up among its siblings |
 | Alt+Down | Move down among its siblings |
 | Alt+Right | Move inside the row above |

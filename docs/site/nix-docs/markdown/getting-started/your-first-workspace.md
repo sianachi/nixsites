@@ -1,10 +1,16 @@
 # Your first workspace
 
+## Sign in
+
+Nobody can sign up on their own. The first account is created on the setup page (`<your-address>/setup`) with the setup code the installer printed, plus your name, email and a password. That account is the administrator, and the page closes once an account exists.
+
+An administrator adds everyone else from **Settings > People**: enter an email and a name and Nix gives you a one-time link to send them. The link works once and is valid for one hour. The person opens it and chooses a password or registers a passkey. From the same page an administrator can issue a reset link, or disable and re-enable an account. Everyone manages their own password, passkeys, authenticator app and **Sign out everywhere** in **Settings > Security**.
+
 When you first sign in, Nix creates a personal workspace for you. You can create more workspaces later, share them with other people and move items between them.
 
 ## The screen
 
-- **The rail** down the left edge holds your destinations: Notes, Daily notes, Calendar, Graph, Bookmarks, Smart lists, Templates, Automations, Import, Trash, the Pet and Settings. **Mod+K** opens search and commands from anywhere.
+- **The rail** holds your destinations: Homebase, Daily notes, Calendar, Graph, Bookmarks, Templates, Smart lists, Workspaces, Attachments, Trash, Import, Settings and the Companion. **Mod+K** opens search and commands from anywhere.
 - **The workspace tree** shows your items. Drag a row to move it, or drop it between rows to reorder. On a phone the tree becomes a drawer.
 - **The item screen** shows the selected item's body and, below or beside it, its views.
 
@@ -12,13 +18,14 @@ You can open items in tabs, pin tabs, split the screen into panes and drag tabs 
 
 ## Create something
 
-Choose **New** in the sidebar. It offers six things:
+Choose **New** in the sidebar. It offers these:
 
 | Entry | What you get |
 | --- | --- |
 | Note | A rich text page |
 | Canvas | A drawing and diagram surface |
 | Sheet | A spreadsheet body with A1 formulas |
+| Chat | A saved conversation with your companion |
 | Upload files | File items with previews and versions |
 | Structured | A container set up as a list, board, calendar, timeline, gallery, spreadsheet, form, interactive form, smart list or chart |
 | From a template | A copy of a saved template tree |
@@ -52,7 +59,7 @@ Each view keeps its own filters, sorts, grouping and column summaries. Views nev
 
 ## Share a workspace
 
-From the workspace settings you can invite people, choose their role (owner, editor or viewer), revoke invitations and remove members. Every read and write is checked against the member's role on the server, so a view or a search never shows someone an item they cannot read.
+From the workspace settings you can invite people who have an account on this install, choose their role (owner, editor, commenter or viewer), revoke invitations and remove members. Owners can be set on shared workspaces only. Every read and write is checked against the member's role on the server, so a view or a search never shows someone an item they cannot read.
 
 ## Next
 

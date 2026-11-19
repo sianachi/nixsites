@@ -19,6 +19,10 @@ Nix ships a set of managed templates, including:
 - Incident review
 - Customer feedback
 
+The library also has twelve personal templates: Habit tracker, Priority matrix, Goals, Trip plan, Reading list, People, Daily journal, Document vault, Inbox, Job hunt, Meal plan and Personal dashboard. Each opens with sample rows and several views.
+
+The built-in templates are offered in the library of every workspace. Using one adds it to that workspace first. People who cannot manage a workspace's templates do not see them.
+
 ## Making your own
 
 Capture any subtree as a template. Nix shows you what will be captured before it saves, takes the content as it stood at that moment, and validates the result. You can then edit the template's draft, preview it, save a new revision or discard the changes. Attachments travel with the template.

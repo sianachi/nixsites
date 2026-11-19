@@ -1,6 +1,6 @@
 # What Sites can grow into
 
-Everything on this page is an idea. None of it is built. Each idea is listed with where it would fit in the current design, because the design is what makes some of these cheap and others hard.
+Everything below is an idea, and none of it is built. Each idea is listed with where it would fit in the current design, because the design is what makes some of these cheap and others hard. Custom themes, link-preview images and video have shipped; see [Themes and layouts](nix://item/01a13137-b971-73b8-aee7-e08d3be44996) and [What a site contains](nix://item/01a13137-b0dd-7495-a74f-26da5fa62cc3).
 
 The constraints any of them must keep: a reader's request never reaches Core or the database, the serving process stays anonymous and read-only, and nothing becomes public without a manager publishing it.
 
@@ -12,11 +12,7 @@ The constraints any of them must keep: a reader's request never reaches Core or 
 
 ## Look and feel
 
-**User themes and custom CSS.** *Not built.* Today every site uses the built-in theme with an accent colour. Custom CSS could be published as one more file in the build. It would have to stay within the Content Security Policy, which allows styles only from the site itself, and could not add scripts.
-
-**Per-page social images.** *Not built.* Pages already carry Open Graph metadata and use a post's cover when it has one. The build worker could draw a card image for every other page from its title and the site's accent colour.
-
-**Multi-language sites.** *Not built.* A site has one language setting today. Language variants would need a property linking a page to its translations, alternate-language links in each page's head, and a language switch in the theme.
+**Multi-language sites.** *Not built.* A site has a single language today. Language variants would need a property linking a page to its translations, alternate-language links in each page's head, and a language switch in the theme.
 
 ## Readers
 
