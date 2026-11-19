@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
+import { lockDocByItem } from '../../db/documents.ts';
 import { withTenantScope } from '../../db/tenant-scope.ts';
 import { noteStrategy, strategyFor } from '../../documents/body-kinds.ts';
 import { LIMITS, rejection } from '../../documents/limits.ts';
@@ -48,20 +49,29 @@ async function readRoute(
     return notProse(reply, context.bodyKind);
   }
 
+  const revision = (request.query as { revision?: string } | undefined)?.revision === 'true';
   const read = await withTenantScope(deps.pool, context.scope, async (sql) => {
-    const doc = await openDocument(
+    const opened = await openDocument(
       sql,
       context.scope.tenantId,
       context.itemId,
       context.workspaceId,
       deps.newDocId,
     );
-    if (doc === null) {
+    if (opened === null) {
       return null;
     }
+    const doc = revision
+      ? await lockDocByItem(sql, context.scope.tenantId, context.itemId)
+      : opened;
+    if (doc?.workspace_id !== context.workspaceId) return null;
     const state = await loadDocument(sql, context.scope.tenantId, doc);
     try {
-      return { schemaVersion: doc.schema_version, body: readMarkdown(state) };
+      return {
+        schemaVersion: doc.schema_version,
+        body: readMarkdown(state),
+        ...(revision ? { revision: { documentId: doc.doc_id, headSeq: doc.head_seq } } : {}),
+      };
     } finally {
       state.destroy();
     }
@@ -76,6 +86,7 @@ async function readRoute(
     schemaVersion: read.schemaVersion,
     empty: read.body.empty,
     losses: read.body.losses,
+    ...(read.revision === undefined ? {} : { revision: read.revision }),
   });
 }
 
@@ -102,6 +113,16 @@ async function writeRoute(
   if (markdown === null) {
     return problem(reply, 400, 'invalid_body', 'Expected { markdown: string }.');
   }
+  const body = request.body as { expectedDocumentId?: unknown; expectedHeadSeq?: unknown };
+  const guarded = body.expectedDocumentId !== undefined || body.expectedHeadSeq !== undefined;
+  if (
+    guarded &&
+    (typeof body.expectedDocumentId !== 'string' ||
+      typeof body.expectedHeadSeq !== 'string' ||
+      !/^\d{1,19}$/.test(body.expectedHeadSeq))
+  ) {
+    return problem(reply, 400, 'invalid_body', 'Expected a document ID and head sequence.');
+  }
 
   // Bound and parse before the document is opened, so a body that cannot be applied never
   // spends a database round trip or creates an empty document row.
@@ -121,15 +142,23 @@ async function writeRoute(
   }
 
   const outcome = await withTenantScope(deps.pool, context.scope, async (sql) => {
-    const doc = await openDocument(
+    const opened = await openDocument(
       sql,
       context.scope.tenantId,
       context.itemId,
       context.workspaceId,
       deps.newDocId,
     );
-    if (doc === null) {
+    if (opened === null) {
       return null;
+    }
+    const doc = guarded ? await lockDocByItem(sql, context.scope.tenantId, context.itemId) : opened;
+    if (doc?.workspace_id !== context.workspaceId) return null;
+    if (
+      guarded &&
+      (doc.doc_id !== body.expectedDocumentId || doc.head_seq !== body.expectedHeadSeq)
+    ) {
+      return { kind: 'stale' as const };
     }
 
     const state = await loadDocument(sql, context.scope.tenantId, doc);
@@ -164,6 +193,14 @@ async function writeRoute(
 
   if (outcome === null) {
     return problem(reply, 404, 'document_not_found', 'No document body is visible.');
+  }
+  if (outcome.kind === 'stale') {
+    return problem(
+      reply,
+      409,
+      'document_changed',
+      'The note changed after review. Create a new preview.',
+    );
   }
   if (outcome.kind === 'rejected') {
     return outcome.tooLong

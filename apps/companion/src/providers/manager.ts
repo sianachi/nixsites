@@ -5,8 +5,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Account, ReplaceBusyError, ReplaceTargetError, STUCK_TURN_MS } from '../core/account.ts';
 import type { CompanionConfig } from '../core/config.ts';
 import { conversationKey, logSafeError, stdoutLogger } from '../shared/diagnostics.ts';
+import { readBody } from '../shared/http.ts';
 import { HttpTransport } from '../server/http-transport.ts';
 import { sendError, serveInline, writeProviderFailure } from '../tools/inline.ts';
+import { TASK_PLAN_OPERATION } from '../tools/task-plan.ts';
 import { launchCodex } from '../server/rpc.ts';
 import {
   emptyRequest,
@@ -36,18 +38,6 @@ export interface ManagerDeps {
   fetch?: typeof fetch | undefined;
   /** How often idle accounts are looked for; default the smaller of a minute and half the idle time. */
   reapIntervalMs?: number | undefined;
-}
-
-async function readBody(req: IncomingMessage, limit: number): Promise<string | undefined> {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of req) {
-    const buffer = chunk as Buffer;
-    size += buffer.length;
-    if (size > limit) return undefined;
-    chunks.push(buffer);
-  }
-  return Buffer.concat(chunks).toString('utf8');
 }
 
 export class Manager {
@@ -192,11 +182,11 @@ export class Manager {
     });
     const body = await readBody(req, MAX_BODY_BYTES).catch(() => undefined);
     const request = body === undefined ? null : parseRequest(body);
-    if (request === null || (request.operation !== 'inline' && !validRequest(request))) {
+    if (request === null) {
       sendError(res, 400, 'Invalid companion request');
       return;
     }
-    if (request.operation === 'inline') {
+    if (request.operation === 'inline' || request.operation === TASK_PLAN_OPERATION) {
       if (!UUID.test(request.tenantId) || !UUID.test(request.principalId)) {
         sendError(res, 400, 'Invalid companion request');
         return;
@@ -217,6 +207,10 @@ export class Manager {
         request,
         client.signal,
       );
+    }
+    if (!validRequest(request)) {
+      sendError(res, 400, 'Invalid companion request');
+      return;
     }
     if (request.operation === 'watch_stream') {
       return serveWatchStream(

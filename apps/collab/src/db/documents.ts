@@ -48,6 +48,57 @@ export async function findDocByItem(
   return rows[0] ?? null;
 }
 
+/** Serializes an edit which depends on the current body identity and revision. */
+export async function lockDocByItem(
+  sql: ScopedQuery,
+  tenantId: string,
+  itemId: string,
+): Promise<ContentDocRow | null> {
+  const { rows } = await sql.query<ContentDocRow>(
+    `SELECT doc_id, item_id, workspace_id, schema_version, head_seq
+     FROM content_doc
+     WHERE tenant_id = $1 AND item_id = $2
+     FOR UPDATE`,
+    [tenantId, itemId],
+  );
+
+  return rows[0] ?? null;
+}
+
+/** A retained update at the approved sequence proves whether that exact edit committed. */
+export async function findUpdateReceipt(
+  sql: ScopedQuery,
+  input: {
+    tenantId: string;
+    docId: string;
+    seq: bigint;
+    actorId: string;
+    clientId: string;
+    updateBytes: Uint8Array;
+  },
+): Promise<{ seq: string; snapshotWritten: boolean } | null> {
+  const { rows } = await sql.query<{ seq: string; snapshot_written: boolean }>(
+    `SELECT u.seq, EXISTS (
+       SELECT 1 FROM content_snapshot s
+       WHERE s.tenant_id = u.tenant_id AND s.doc_id = u.doc_id AND s.seq = u.seq
+     ) AS snapshot_written
+     FROM content_update u
+     WHERE u.tenant_id = $1 AND u.doc_id = $2 AND u.seq = $3
+       AND u.actor_id = $4 AND u.client_id = $5 AND u.update_bytes = $6`,
+    [
+      input.tenantId,
+      input.docId,
+      input.seq.toString(),
+      input.actorId,
+      input.clientId,
+      Buffer.from(input.updateBytes),
+    ],
+  );
+
+  const row = rows[0];
+  return row === undefined ? null : { seq: row.seq, snapshotWritten: row.snapshot_written };
+}
+
 /**
  * Creates the document body for an item.
  *

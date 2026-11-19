@@ -16,6 +16,7 @@ export function Composer({
   scopeLabel,
   input,
   draft,
+  readOnly = false,
   onDraftChange,
   touchLikeComposer,
   slash,
@@ -43,6 +44,7 @@ export function Composer({
   readonly scopeLabel: string;
   readonly input: RefObject<HTMLTextAreaElement | null>;
   readonly draft: string;
+  readonly readOnly?: boolean;
   readonly onDraftChange: (text: string) => void;
   readonly touchLikeComposer: boolean;
   readonly slash: ReturnType<typeof useSlashMenu>;
@@ -233,6 +235,7 @@ export function Composer({
           rows={1}
           maxLength={8000}
           value={draft}
+          readOnly={readOnly}
           placeholder={`Message ${petName}`}
           enterKeyHint={touchLikeComposer ? undefined : 'send'}
           resize="none"

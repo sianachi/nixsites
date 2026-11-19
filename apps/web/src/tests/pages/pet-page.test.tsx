@@ -14,7 +14,10 @@ const petSettings = vi.hoisted((): { provider: PetProfile['provider']; enabled: 
   enabled: true,
 }));
 const mock = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn(), send: vi.fn(), hook: vi.fn() }));
-vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => mock }));
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({
+  useApiClient: () => mock,
+  useOptionalApiClient: () => null,
+}));
 vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: WORKSPACE }),
 }));

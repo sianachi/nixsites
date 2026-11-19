@@ -65,6 +65,7 @@ public sealed class BulkItemVisibilityPlanEvidenceTests : IAsyncLifetime
                 Text("title_pattern", "%visibility%"),
                 Text("query", "visibility"),
                 Integer("limit", 50),
+                new NpgsqlParameter("pet_sources_only", NpgsqlDbType.Boolean) { Value = false },
 
                 // No locks: the case this plan was recorded for, in which the lock probes fold
                 // away. The backlink and graph cases below carry a lock and run the probe.

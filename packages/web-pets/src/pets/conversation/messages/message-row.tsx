@@ -1,6 +1,6 @@
 import { Button, Icon, Text } from '@nix/ui';
 import { type PetConnection } from '@nix/api-client';
-import { FilePlus, Pencil, RefreshCw } from 'lucide-react';
+import { FilePlus, Paperclip, Pencil, RefreshCw } from 'lucide-react';
 import { memo, type ReactElement } from 'react';
 import { type ProgramPiece } from '../../../openui/fence';
 import { PetMessageText } from '../../pet-message-text';
@@ -14,6 +14,7 @@ function PetMessageRowView({
   onEdit,
   onRegenerate,
   onSave,
+  onAttachToJob,
   onAsk,
   applyWithoutAsking,
   earlierPieces,
@@ -31,6 +32,7 @@ function PetMessageRowView({
   readonly onEdit?: ((message: { readonly id: string; readonly text: string }) => void) | undefined;
   readonly onRegenerate?: (() => void) | undefined;
   readonly onSave?: ((text: string) => void) | undefined;
+  readonly onAttachToJob?: ((text: string) => void) | undefined;
   /** A generated-UI button's request to the pet, which goes to the composer rather than out. */
   readonly onAsk?: ((message: string) => void) | undefined;
   readonly applyWithoutAsking: boolean;
@@ -92,7 +94,7 @@ function PetMessageRowView({
           />
         ) : null}
       </div>
-      {onEdit || onSave || onRegenerate ? (
+      {onEdit || onSave || onRegenerate || onAttachToJob ? (
         <div className="flex items-center">
           {onSave ? (
             <IconAction
@@ -100,6 +102,15 @@ function PetMessageRowView({
               icon={FilePlus}
               onClick={() => {
                 onSave(message.text);
+              }}
+            />
+          ) : null}
+          {onAttachToJob ? (
+            <IconAction
+              label="Attach message to a job"
+              icon={Paperclip}
+              onClick={() => {
+                onAttachToJob(message.text);
               }}
             />
           ) : null}

@@ -1,4 +1,9 @@
-import { attachments as attachmentsApi, type ItemSettings } from '@nix/api-client';
+import {
+  attachments as attachmentsApi,
+  isNixApiError,
+  items,
+  type ItemSettings,
+} from '@nix/api-client';
 import { Button, Checkbox, Dialog, Field, Select, Text } from '@nix/ui';
 import { useState, type ReactNode } from 'react';
 
@@ -7,8 +12,9 @@ import { DOCUMENT_VIEW } from '@nix/web-collections/core/container-model';
 import type { ContainerData } from '@nix/web-collections/core/use-container';
 import type { ItemProperties } from '@nix/web-collections/properties/use-item-properties';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useOptionalWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 
-type SettingKey = keyof ItemSettings;
+type SettingKey = 'comments' | 'suggesting' | 'reviewStates' | 'fullWidth';
 
 interface Entry {
   readonly key: SettingKey;
@@ -55,9 +61,11 @@ export function ItemSettingsPane({
   readonly details: ItemProperties;
 }): ReactNode {
   const client = useApiClient();
+  const workspace = useOptionalWorkspace();
   const { item } = details;
   const [problem, setProblem] = useState<string | null>(null);
   const [confirmReviewOff, setConfirmReviewOff] = useState(false);
+  const [savingProtection, setSavingProtection] = useState(false);
 
   if (item === null) {
     return (
@@ -101,6 +109,21 @@ export function ItemSettingsPane({
     await apply({ [key]: next });
   }
 
+  async function setPetProtection(next: boolean): Promise<void> {
+    if (item === null || savingProtection) return;
+    setProblem(null);
+    setSavingProtection(true);
+    try {
+      await client.execute(items.setItemPetProtection(item.id, item.workspaceId, next));
+    } catch (error) {
+      setProblem(
+        isNixApiError(error) ? error.message : 'Could not save pet protection. Try again.',
+      );
+    } finally {
+      setSavingProtection(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {entries.map((entry) => (
@@ -117,6 +140,22 @@ export function ItemSettingsPane({
           </Text>
         </div>
       ))}
+
+      {workspace?.workspaceId === item.workspaceId && workspace.workspace.canRename ? (
+        <div className="flex flex-col gap-0.5">
+          <Checkbox
+            label="Withhold from pets"
+            checked={item.settings?.withholdFromPets ?? false}
+            disabled={savingProtection}
+            onChange={(event) => {
+              void setPetProtection(event.target.checked);
+            }}
+          />
+          <Text variant="note" tone="muted" className="ps-(--control-sm)">
+            Pets cannot use this item or its contents in a job or a handoff.
+          </Text>
+        </div>
+      ) : null}
 
       {views === null ? null : (
         <Field label="Default view" hint="What this item opens as for everyone in the workspace.">

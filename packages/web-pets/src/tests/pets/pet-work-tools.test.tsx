@@ -75,8 +75,8 @@ function show() {
     />,
   );
 }
-async function approveRequest() {
-  const button = screen.getByRole('button', { name: 'Approve request' });
+async function approveRequest(name = 'Create note') {
+  const button = screen.getByRole('button', { name });
   await waitFor(() => {
     expect(button).toBeEnabled();
   });
@@ -112,6 +112,11 @@ describe('companion work approvals', () => {
       })),
     };
     client.query.mockImplementation((endpoint: { operation: string; path: string }) => {
+      if (endpoint.operation === 'items.get')
+        return Promise.resolve({
+          id: '33333333-3333-4333-8333-333333333333',
+          workspaceId: '11111111-1111-4111-8111-111111111111',
+        });
       if (endpoint.operation !== 'templates.capture.preview')
         throw new Error(`Unexpected preview query: ${endpoint.operation}`);
       const excluded = endpoint.path.includes('excludeSampleDescendants=true');
@@ -151,7 +156,7 @@ describe('companion work approvals', () => {
     expect(await screen.findByText(/I will save “Applications” and 1 children/)).toBeVisible();
     expect(screen.getByText('2 items to copy, 1 template write')).toBeVisible();
     expect(screen.queryByText(/0 fields, 0 views/)).not.toBeInTheDocument();
-    await approveRequest();
+    await approveRequest('Save template');
     await waitFor(() => {
       expect(runWorkspaceToolSpy).toHaveBeenCalledOnce();
     });
@@ -168,7 +173,7 @@ describe('companion work approvals', () => {
     expect(client.execute).toHaveBeenCalledTimes(2);
     expect(client.execute.mock.calls[0]?.[0]).toMatchObject({ body: { operation: 'tool_claim' } });
     expect(client.execute.mock.calls[1]?.[0]).toMatchObject({ body: { operation: 'read' } });
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create note' })).not.toBeInTheDocument();
   });
 
   it.each(['claimed', 'completed', 'failed', 'interrupted'] as const)(
@@ -201,7 +206,7 @@ describe('companion work approvals', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(runWorkspaceToolSpy).not.toHaveBeenCalled();
       expect(requestOperations()).toEqual(['tool_claim', 'read']);
-      expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Create note' })).not.toBeInTheDocument();
     },
   );
 
@@ -304,7 +309,7 @@ describe('companion work approvals', () => {
           { wrapper: MemoryRouter },
         );
         if (operation === 'create_note') {
-          const approvals = screen.getAllByRole('button', { name: 'Approve request' });
+          const approvals = screen.getAllByRole('button', { name: 'Create note' });
           await waitFor(() => {
             expect(approvals.every((button) => !button.hasAttribute('disabled'))).toBe(true);
           });
@@ -460,18 +465,18 @@ describe('companion work approvals', () => {
         { wrapper: MemoryRouter },
       );
       if (asks) {
-        expect(await screen.findByRole('button', { name: 'Approve request' })).toBeVisible();
+        expect(await screen.findByRole('button', { name: 'Save memory' })).toBeVisible();
         expect(onResolve).not.toHaveBeenCalled();
       } else {
         await vi.waitFor(() => {
           expect(onResolve).toHaveBeenCalledWith(tool, true);
         });
-        expect(screen.queryByRole('button', { name: 'Approve request' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Save memory' })).toBeNull();
       }
     },
   );
 
-  it("moves focus to the row after a click on a read's Approve request", async () => {
+  it('moves focus to the row after choosing List items', async () => {
     const readRuntime = {
       ...runtime,
       tools: (runtime.tools ?? []).map((tool) => ({
@@ -491,7 +496,7 @@ describe('companion work approvals', () => {
       />,
       { wrapper: MemoryRouter },
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Approve request' }));
+    await userEvent.click(screen.getByRole('button', { name: 'List items' }));
     const status = await screen.findByText(/^Approval submitted/);
     expect(status.closest('[tabindex="-1"]')).toHaveFocus();
     localStorage.removeItem('nix.pet.readWithoutAsking');
@@ -598,7 +603,8 @@ describe('companion work approvals', () => {
     ] as const) {
       const buttons = within(group).getAllByRole('button');
       expect(buttons.map((button) => button.textContent)).toEqual([
-        'Approve request',
+        'Create note',
+        'Ask for changes',
         'Edit',
         'Decline request',
       ]);
@@ -635,7 +641,7 @@ describe('companion work approvals', () => {
   it('describes the planned action before the permission buttons', async () => {
     show();
     const description = await screen.findByText(/I will create a note named “Plan”/);
-    const approval = screen.getByRole('button', { name: 'Approve request' });
+    const approval = screen.getByRole('button', { name: 'Create note' });
     expect(
       description.compareDocumentPosition(approval) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -725,7 +731,7 @@ describe('companion work approvals', () => {
     // UX fix U16: the status word is no longer its own live region - the row beside it already
     // carries the announcement.
     expect(screen.getByText('Declined')).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create note' })).not.toBeInTheDocument();
   });
 
   it('does not ask again after a stale refresh or reopening an uncertain request', async () => {
@@ -735,7 +741,7 @@ describe('companion work approvals', () => {
     await screen.findByRole('alert');
     view.unmount();
     show();
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create note' })).not.toBeInTheDocument();
     expect(screen.getByText('Approval submitted. Waiting for confirmation.')).toBeVisible();
     expect(requestOperations()).toEqual(['tool_claim', 'read']);
   });
@@ -767,6 +773,65 @@ describe('companion work approvals', () => {
     });
     expect(changed).not.toHaveBeenCalled();
     unsubscribe();
+  });
+
+  it('sends revision feedback through the claim without executing the proposal', async () => {
+    const pending = { ...runtime, serverWrites: true };
+    client.execute.mockImplementation(
+      (endpoint: { body: { operation: string; requestId: string; toolResult?: string } }) => {
+        const { operation, requestId, toolResult } = endpoint.body;
+        return Promise.resolve({
+          ...pending,
+          tools: pending.tools?.map((tool) => ({
+            ...tool,
+            status: operation === 'tool_result' ? 'failed' : 'claimed',
+            claimId: requestId,
+            result: toolResult ?? '',
+          })),
+        });
+      },
+    );
+    function Session(): ReactElement {
+      const [snapshot, setSnapshot] = useState(pending);
+      return (
+        <PetWorkTools
+          client={client as unknown as NixClient}
+          runtime={snapshot}
+          workspaceId="11111111-1111-4111-8111-111111111111"
+          petId="22222222-2222-4222-8222-222222222222"
+          onChange={setSnapshot}
+        />
+      );
+    }
+    render(<Session />, { wrapper: MemoryRouter });
+    const preview = await screen.findByRole('heading', { name: /named “Plan”/ });
+    const group = within(screen.getByRole('group', { name: preview.textContent }));
+    await userEvent.click(group.getByRole('button', { name: 'Ask for changes' }));
+    const field = group.getByRole('textbox', { name: 'What should change?' });
+    expect(field).toHaveFocus();
+    expect(preview).toBeVisible();
+    expect(group.getByRole('button', { name: 'Send feedback' })).toBeDisabled();
+    await userEvent.click(group.getByRole('button', { name: 'Cancel' }));
+    expect(group.getByRole('button', { name: 'Ask for changes' })).toHaveFocus();
+    expect(client.execute).not.toHaveBeenCalled();
+
+    await userEvent.click(group.getByRole('button', { name: 'Ask for changes' }));
+    await userEvent.type(group.getByRole('textbox'), '  Use the title Release plan.  ');
+    await userEvent.click(group.getByRole('button', { name: 'Send feedback' }));
+
+    expect(await screen.findByText('Changes requested')).toBeVisible();
+    expect(requestOperations()).toEqual(['tool_claim', 'tool_result']);
+    expect(client.execute.mock.calls[0]?.[0]).toMatchObject({ body: { toolId: 'tool-1' } });
+    expect(client.execute.mock.calls[1]?.[0]).toMatchObject({
+      body: {
+        toolId: 'tool-1',
+        toolSuccess: false,
+        toolResult:
+          'The user declined this proposal. It was not applied. Offer a new proposal addressing their feedback.\n\nUse the title Release plan.',
+      },
+    });
+    expect(runWorkspaceToolSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Create note' })).not.toBeInTheDocument();
   });
 
   it('refuses a read whose target is outside this workspace when it runs automatically', async () => {
@@ -822,7 +887,7 @@ describe('companion work approvals', () => {
     await waitFor(() => {
       expect(client.execute).toHaveBeenCalledTimes(2);
     });
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Read item' })).not.toBeInTheDocument();
     expect(client.invalidate).not.toHaveBeenCalled();
     // The refusal itself must never carry the private fixture's content back to the pet.
     const toolResultCall = client.execute.mock.calls.find(
@@ -849,7 +914,7 @@ describe('companion work approvals', () => {
       },
     );
     show();
-    const approval = screen.getByRole('button', { name: 'Approve request' });
+    const approval = screen.getByRole('button', { name: 'Create note' });
     await waitFor(() => expect(approval).toBeEnabled());
     await userEvent.dblClick(approval);
     await waitFor(() => {
@@ -860,7 +925,7 @@ describe('companion work approvals', () => {
         ([endpoint]) => (endpoint as { operation: string }).operation === 'items.create',
       ),
     ).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create note' })).not.toBeInTheDocument();
     await waitFor(() => {
       expect(changed).toHaveBeenCalledExactlyOnceWith({
         workspaceId: '11111111-1111-4111-8111-111111111111',
@@ -950,7 +1015,7 @@ describe('companion work approvals', () => {
     // richer "Sent N problems back to {pet}" wording (`WriteReceiptRow` in work-tools/activity-rows.tsx)
     // needs that persisted `tool.result`, which the live app supplies through `setRuntime`.
     expect(await screen.findByText('Declined')).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create item' })).not.toBeInTheDocument();
   });
 
   it('passes the preview fingerprint to execution and refreshes touched containers once', async () => {
@@ -1008,7 +1073,7 @@ describe('companion work approvals', () => {
       />,
       { wrapper: MemoryRouter },
     );
-    await approveRequest();
+    await approveRequest('Create item');
     await waitFor(() => {
       expect(client.execute).toHaveBeenCalledTimes(2);
     });
@@ -1109,7 +1174,7 @@ describe('companion work approvals', () => {
       );
       expect(await screen.findByText('I will mark “Pay rent” done.')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Inspect target item' })).toBeInTheDocument();
-      await approveRequest();
+      await approveRequest('Update task');
       await waitFor(() => {
         expect(runWorkspaceToolSpy).toHaveBeenCalledOnce();
       });
@@ -1167,7 +1232,7 @@ describe('companion work approvals', () => {
         );
       });
       expect(runWorkspaceToolSpy).not.toHaveBeenCalled();
-      expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Update task' })).not.toBeInTheDocument();
     });
   });
 
@@ -1223,7 +1288,7 @@ describe('companion work approvals', () => {
       />,
       { wrapper: MemoryRouter },
     );
-    await approveRequest();
+    await approveRequest('Apply template');
     await waitFor(() => {
       expect(client.invalidate).toHaveBeenCalledWith(['templates']);
     });
@@ -1313,7 +1378,7 @@ describe('companion work approvals', () => {
         />
       </MemoryRouter>,
     );
-    const approveButton = await screen.findByRole('button', { name: 'Approve request' });
+    const approveButton = await screen.findByRole('button', { name: 'Build draft' });
     await waitFor(() => {
       expect(approveButton).toBeEnabled();
     });
@@ -1715,7 +1780,7 @@ describe('companion work approvals', () => {
       // Never something the owner was asked to decide.
       expect(onNeedsDecisionChange).toHaveBeenLastCalledWith([]);
       expect(await screen.findByText('Done without asking')).toBeVisible();
-      expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Create note' })).not.toBeInTheDocument();
       // Never a receipt that claims the owner approved it, at any point.
       expect(screen.queryByText(/Approval submitted/)).not.toBeInTheDocument();
       // What ran stays readable afterwards: the preview and the text it stored.
@@ -2013,7 +2078,7 @@ describe('companion work approvals', () => {
         />,
         { wrapper: MemoryRouter },
       );
-      expect(await screen.findByRole('button', { name: 'Approve request' })).toBeEnabled();
+      expect(await screen.findByRole('button', { name: 'Create item' })).toBeEnabled();
       await waitFor(() => {
         expect(onNeedsDecisionChange).toHaveBeenLastCalledWith(['tool-1']);
       });
@@ -2036,7 +2101,7 @@ describe('companion work approvals', () => {
       render(<Live initial={linkRuntime} onNeedsDecisionChange={onNeedsDecisionChange} />, {
         wrapper: MemoryRouter,
       });
-      expect(await screen.findByRole('button', { name: 'Approve request' })).toBeEnabled();
+      expect(await screen.findByRole('button', { name: 'Create note' })).toBeEnabled();
       await waitFor(() => {
         expect(onNeedsDecisionChange).toHaveBeenLastCalledWith(['tool-1']);
       });
@@ -2070,7 +2135,7 @@ describe('companion work approvals', () => {
       render(<Live initial={trashRuntime} onNeedsDecisionChange={onNeedsDecisionChange} />, {
         wrapper: MemoryRouter,
       });
-      expect(await screen.findByRole('button', { name: 'Approve request' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Move to trash' })).toBeInTheDocument();
       await waitFor(() => {
         expect(onNeedsDecisionChange).toHaveBeenLastCalledWith(['tool-1']);
       });
@@ -2253,7 +2318,7 @@ describe('companion work approvals', () => {
       expect(screen.queryByText(/Removes 1 block/)).not.toBeInTheDocument();
       // The comparison already carries the new text; it is not listed a second time.
       expect(screen.queryByRole('region', { name: /New section text/ })).not.toBeInTheDocument();
-      await approveRequest();
+      await approveRequest('Apply section edit');
       await waitFor(() => {
         expect(client.execute).toHaveBeenCalledTimes(2);
       });
@@ -2358,7 +2423,7 @@ describe('companion work approvals', () => {
       await waitFor(() => {
         expect(onNeedsDecisionChange).toHaveBeenLastCalledWith(['tool-1']);
       });
-      expect(screen.getByRole('button', { name: 'Approve request' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Apply passage edit' })).toBeEnabled();
       expect(runWorkspaceToolSpy).not.toHaveBeenCalled();
       expect(client.execute).not.toHaveBeenCalled();
     });
@@ -2428,7 +2493,7 @@ describe('companion work approvals', () => {
       await waitFor(() => {
         expect(onNeedsDecisionChange).toHaveBeenLastCalledWith(['tool-1']);
       });
-      expect(screen.getByRole('button', { name: 'Approve request' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Apply passage edit' })).toBeEnabled();
       expect(runWorkspaceToolSpy).not.toHaveBeenCalled();
       expect(client.execute).not.toHaveBeenCalled();
     });
@@ -2462,7 +2527,7 @@ describe('companion work approvals', () => {
       await waitFor(() => {
         expect(onNeedsDecisionChange).toHaveBeenLastCalledWith(['tool-1']);
       });
-      expect(screen.getByRole('button', { name: 'Approve request' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Apply passage edit' })).toBeEnabled();
       expect(runWorkspaceToolSpy).not.toHaveBeenCalled();
       expect(client.execute).not.toHaveBeenCalled();
     });
@@ -2481,7 +2546,7 @@ describe('companion work approvals', () => {
         touchedParents: [],
       });
       render(<LiveTools initial={sectionRuntime} />, { wrapper: MemoryRouter });
-      await approveRequest();
+      await approveRequest('Apply section edit');
       expect(await screen.findByText('Done')).toBeVisible();
       // The receipt names the edit, never the preview's "I will..." beside "Done".
       expect(screen.getByText('Edit to the section “Budget” in the linked note')).toBeVisible();
@@ -2530,7 +2595,7 @@ describe('companion work approvals', () => {
         ),
       );
       render(<LiveTools initial={passageRuntime} />, { wrapper: MemoryRouter });
-      await approveRequest();
+      await approveRequest('Apply passage edit');
       expect(await screen.findByText('Not run - nothing changed')).toBeVisible();
       expect(client.execute.mock.calls[1]?.[0]).toMatchObject({
         body: {
@@ -2628,7 +2693,7 @@ describe('companion work approvals', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Use these values' }));
       expect(await screen.findByText('This field is required')).toBeInTheDocument();
       expect(screen.queryByText(/You edited this request/)).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Approve request' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Create note' })).toBeDisabled();
     });
   });
 });

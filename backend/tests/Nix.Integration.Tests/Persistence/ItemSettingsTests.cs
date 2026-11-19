@@ -77,6 +77,78 @@ public sealed class ItemSettingsTests(NixPostgresFixture fixture) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task A_reviewed_item_row_revision_changes_when_the_item_settings_change()
+    {
+        var owner = M0SchemaSeed.Alpha.PrincipalId;
+        var item = await CreateNoteAsync(owner);
+        long? reviewed;
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(As(owner), Cancellation))
+        {
+            reviewed = await work.Resolve<IItemTree>().ReadPetRevisionAsync(Workspace, item.Id, pin: false, Cancellation);
+            Assert.NotNull(reviewed);
+        }
+
+        var edited = await SetAsync(Editor, item.Id, comments: true);
+        Assert.True(edited.IsSuccess);
+        Assert.Equal(item.Seq, edited.Value.Seq);
+
+        await using var execution = await fixture.Application.BeginUnitOfWorkAsync(As(owner), Cancellation);
+        var tree = execution.Resolve<IItemTree>();
+        var pinned = await tree.ReadPetRevisionAsync(Workspace, item.Id, pin: true, Cancellation);
+        Assert.NotNull(pinned);
+        Assert.NotEqual(reviewed, pinned);
+        Assert.Null(await tree.ReadPetRevisionAsync(WorkspaceId.From(M0SchemaSeed.Beta.WorkspaceId), item.Id, pin: true, Cancellation));
+    }
+
+    [Fact]
+    public async Task Marking_an_item_for_pet_protection_advances_its_revision_and_survives_ordinary_settings_edits()
+    {
+        var owner = M0SchemaSeed.Alpha.PrincipalId;
+        var item = await CreateNoteAsync(owner);
+        var child = (await SendAsync<CreateItem, Item>(owner, new CreateItem(Workspace, "note", "Child", item.Id, null))).Value;
+        Assert.True((await SetAsync(Editor, item.Id, fullWidth: true)).IsSuccess);
+        var otherWorkspace = WorkspaceId.From(M0SchemaSeed.Beta.WorkspaceId);
+
+        long? before;
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(As(owner), Cancellation))
+        {
+            var tree = work.Resolve<IItemTree>();
+            Assert.False(await tree.AnyItemsWithheldFromPetsAsync(Workspace, Cancellation));
+            before = await work.Resolve<INativeReplayStore>().LockItemRevisionAsync(Workspace, item.Id, Cancellation);
+            Assert.NotNull(before);
+            Assert.False(await tree.SetItemPetProtectionAsync(item.Id, otherWorkspace, true, Cancellation));
+            Assert.True(await tree.SetItemPetProtectionAsync(item.Id, Workspace, true, Cancellation));
+            await work.CommitAsync(Cancellation);
+        }
+
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(As(owner), Cancellation))
+        {
+            var tree = work.Resolve<IItemTree>();
+            Assert.True(await tree.AnyItemsWithheldFromPetsAsync(Workspace, Cancellation));
+            Assert.False(await tree.AnyItemsWithheldFromPetsAsync(otherWorkspace, Cancellation));
+            Assert.False(ItemSettings.Read((await tree.FindAsync(child.Id, Cancellation))!.Settings).WithholdFromPets);
+            var after = await work.Resolve<INativeReplayStore>().LockItemRevisionAsync(Workspace, item.Id, Cancellation);
+            Assert.Equal(before + 1, after);
+        }
+
+        var edited = await SetAsync(Editor, item.Id, comments: true);
+        Assert.Equal(new ItemSettings(Comments: true, FullWidth: true, WithholdFromPets: true), ItemSettings.Read(edited.Value.Settings));
+
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(As(owner), Cancellation))
+        {
+            var tree = work.Resolve<IItemTree>();
+            Assert.True(await tree.SetItemPetProtectionAsync(item.Id, Workspace, false, Cancellation));
+            await work.CommitAsync(Cancellation);
+        }
+
+        await using var read = await fixture.Application.BeginUnitOfWorkAsync(As(owner), Cancellation);
+        var cleared = await read.Resolve<IItemTree>().FindAsync(item.Id, Cancellation);
+        Assert.Equal(new ItemSettings(Comments: true, FullWidth: true), ItemSettings.Read(cleared!.Settings));
+        Assert.False(await read.Resolve<IItemTree>().AnyItemsWithheldFromPetsAsync(Workspace, Cancellation));
+        Assert.Equal(before + 3, await read.Resolve<INativeReplayStore>().LockItemRevisionAsync(Workspace, item.Id, Cancellation));
+    }
+
+    [Fact]
     public async Task Workspace_defaults_are_set_by_an_owner_only_and_apply_to_items_created_afterwards()
     {
         var existing = await CreateNoteAsync(M0SchemaSeed.Alpha.PrincipalId);

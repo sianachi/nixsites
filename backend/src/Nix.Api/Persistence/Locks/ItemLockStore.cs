@@ -1,5 +1,6 @@
 using Nix.Abstractions;
 using Nix.Domain.Items;
+using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
@@ -66,6 +67,13 @@ public sealed class ItemLockStore(
         await sql.ScalarOrDefaultAsync<bool>(
             ItemLockSql.AnyInSubtree,
             [TenantParameter(), ItemParameter(itemId)],
+            cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async ValueTask<bool> AnyInWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
+        await sql.ScalarOrDefaultAsync<bool>(
+            ItemLockSql.AnyInWorkspace,
+            [TenantParameter(), new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid) { Value = workspaceId.Value }],
             cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />

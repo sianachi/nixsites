@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
+using Nix.Domain.Items;
 using Nix.Domain.Notifications;
+using Nix.Domain.Tenancy;
 using Nix.Features.Notifications;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
@@ -172,6 +174,54 @@ public sealed class NotificationsPersistenceTests(NixPostgresFixture fixture) : 
             Assert.Equal(1, unread);
             Assert.True(revision > 0);
             await work.CommitAsync(Cancellation);
+        }
+    }
+
+    [Theory]
+    [InlineData(true, "question", "Pet has a question")]
+    [InlineData(false, "proposal", "Pet needs approval")]
+    public async Task A_pet_decision_creates_one_private_inbox_notice(
+        bool isQuestion, string kind, string title)
+    {
+        var context = TestTenants.AlphaContext;
+        var itemId = ItemId.From(M0SchemaSeed.Alpha.ItemId);
+        var workspaceId = WorkspaceId.From(TestTenants.AlphaWorkspace);
+        var target = new NotificationPetDecisionTarget(Guid.NewGuid(), Guid.NewGuid(), isQuestion);
+
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(context, Cancellation))
+        {
+            var writer = work.Resolve<INotificationWriter>();
+            var first = await writer.CreatePetDecisionAsync(context.PrincipalId, itemId, workspaceId, target, Cancellation);
+            var duplicate = await writer.CreatePetDecisionAsync(context.PrincipalId, itemId, workspaceId, target, Cancellation);
+            Assert.True(first.Created);
+            Assert.False(duplicate.Created);
+            Assert.Equal(first.Notification.Id, duplicate.Notification.Id);
+            await work.CommitAsync(Cancellation);
+        }
+
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(context, Cancellation))
+        {
+            var dispatcher = work.Resolve<NixDispatcher>();
+            var page = await dispatcher.QueryAsync<GetNotifications, NotificationsPageResponse>(new(null, false), Cancellation);
+            var notice = Assert.Single(page.Items);
+            Assert.Equal(1, page.Unread);
+            Assert.Equal(1, page.Revision);
+            Assert.Equal("system", notice.Kind);
+            Assert.Equal(title, notice.Title);
+            Assert.Equal("Open the pet dialog to continue.", notice.Body);
+            Assert.Equal(itemId.Value, notice.ItemId);
+            Assert.Equal(workspaceId.Value, notice.WorkspaceId);
+            Assert.Equal(new NotificationPetDecisionDto(target.RunId, target.DecisionId, kind), notice.PetDecision);
+            Assert.False(await work.Resolve<INotificationStore>().ClaimPushAsync(
+                context.TenantId, context.PrincipalId, notice.Id, Cancellation));
+        }
+
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(SecondAlphaContext, Cancellation))
+        {
+            var dispatcher = work.Resolve<NixDispatcher>();
+            var page = await dispatcher.QueryAsync<GetNotifications, NotificationsPageResponse>(new(null, false), Cancellation);
+            Assert.Empty(page.Items);
+            Assert.Equal(0, page.Unread);
         }
     }
 

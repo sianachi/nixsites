@@ -54,6 +54,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="../../../packages/api-client/src/pet-capabilities.json" LogicalName="Nix.PetCapabilities.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <!-- Security floor for a transitive dependency; see Directory.Packages.props. -->

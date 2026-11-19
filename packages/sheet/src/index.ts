@@ -49,6 +49,15 @@ export {
 } from './refs.js';
 export { checkSheetDocument, checkSheetSnapshot, sheetSnapshot } from './validate.js';
 export {
+  MAX_SHEET_EDITS,
+  SheetEditError,
+  applySheetEdit,
+  invertSheetEdit,
+  previewSheetEdit,
+  type SheetEditChange,
+  type SheetEditPlan,
+} from './pet-edit.js';
+export {
   type CellValue,
   SHEET_ERROR_CODES,
   SHEET_ERROR_HELP,

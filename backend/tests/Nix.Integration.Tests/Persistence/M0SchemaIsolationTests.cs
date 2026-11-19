@@ -23,9 +23,9 @@ namespace Nix.Integration.Tests.Persistence;
 /// </para>
 /// <para>
 /// The theories run over <see cref="NixTables.TenantScoped"/> rather than over a list written
-/// here. A separate test exhaustively classifies every database table as tenant-scoped or
-/// capability-only, and the capability class proves forced RLS and no ambient access. Together they
-/// mean a new table cannot be added without a checked security boundary - a list
+/// here. A separate test exhaustively classifies every database table. Parent-scoped tables prove
+/// isolation through their protected parents, and capability-only tables prove no ambient access.
+/// Together they mean a new table cannot be added without a checked security boundary - a list
 /// maintained by hand next to the tables it describes would drift silently, which is the failure
 /// this pair exists to prevent.
 /// </para>
@@ -44,6 +44,21 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
         {
             var tables = new TheoryData<string>();
             foreach (var table in NixTables.TenantScoped)
+            {
+                tables.Add(table);
+            }
+
+            return tables;
+        }
+    }
+
+    /// <summary>Every table with a runtime isolation policy, for privilege assertions.</summary>
+    public static TheoryData<string> PolicyScopedTables
+    {
+        get
+        {
+            var tables = new TheoryData<string>();
+            foreach (var table in NixTables.TenantScoped.Concat(NixTables.ParentScoped))
             {
                 tables.Add(table);
             }
@@ -143,23 +158,23 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
 
     [Theory]
     [MemberData(nameof(TenantScopedTables))]
-    public async Task Each_tenant_scoped_table_carries_a_policy_with_both_using_and_with_check(string table)
+    public async Task Each_tenant_scoped_table_carries_a_policy_with_effective_read_and_write_checks(string table)
     {
-        // Read from the catalogue rather than from the migration that was supposed to have
-        // written it. USING alone would hide the other tenant's rows on read while still
-        // permitting an insert that plants a row under their id.
+        // PostgreSQL inherits USING as WITH CHECK only for ALL and UPDATE policies.
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
         {
             var policies = await RawSql.TextListAsync(
                 connection,
                 $"""
-                SELECT coalesce(qual, '(none)') || ' | ' || coalesce(with_check, '(none)')
+                SELECT cmd || ' | ' || coalesce(qual, '(none)') || ' | '
+                    || coalesce(with_check, CASE WHEN cmd IN ('ALL', 'UPDATE') THEN qual END, '(none)')
                 FROM pg_policies
                 WHERE schemaname = 'public' AND tablename = '{table}'
                 """);
 
             var policy = Assert.Single(policies);
+            Assert.StartsWith("ALL | ", policy, StringComparison.Ordinal);
             Assert.DoesNotContain("(none)", policy, StringComparison.Ordinal);
 
             // Both halves must consult the session setting; a policy that hard-coded a tenant or
@@ -189,7 +204,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
                 """);
 
             Assert.Empty(NixTables.TenantScoped.Intersect(NixTables.CapabilityOnly, StringComparer.Ordinal));
-            var classified = NixTables.TenantScoped.Concat(NixTables.CapabilityOnly).ToArray();
+            var classified = NixTables.TenantScoped.Concat(NixTables.ParentScoped).Concat(NixTables.CapabilityOnly).ToArray();
             Assert.Equal(classified.Length, classified.Distinct(StringComparer.Ordinal).Count());
             Assert.Equal(classified.Order(StringComparer.Ordinal), actual);
         }
@@ -316,7 +331,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
     }
 
     [Theory]
-    [MemberData(nameof(TenantScopedTables))]
+    [MemberData(nameof(PolicyScopedTables))]
     public async Task Each_table_grants_the_runtime_role_exactly_the_privileges_the_matrix_allows(string table)
     {
         // Asserted against the declared matrix rather than against "whatever full DML looks like",
@@ -348,7 +363,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
     {
         // The theory above indexes into the matrix, so a table missing from it would throw rather
         // than fail readably. This says which one.
-        var classified = NixTables.TenantScoped.Concat(NixTables.CapabilityOnly).Order(StringComparer.Ordinal);
+        var classified = NixTables.TenantScoped.Concat(NixTables.ParentScoped).Concat(NixTables.CapabilityOnly).Order(StringComparer.Ordinal);
         Assert.Equal(classified, NixTables.ExpectedApplicationPrivileges.Keys.Order(StringComparer.Ordinal));
     }
 

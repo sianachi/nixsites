@@ -14,4 +14,5 @@ docker build --target collab -f "$context/deploy/docker/node.Dockerfile" -t "loc
 docker build --target web -f "$context/deploy/docker/web.Dockerfile" -t "localhost/nix/web:$sha" "$context"
 docker build --target release-tools -f "$context/deploy/docker/release-tools.Dockerfile" -t "localhost/nix/release-tools:$sha" "$context"
 docker build --target sites -f "$context/deploy/docker/sites.Dockerfile" -t "localhost/nix/sites:$sha" "$context"
+docker build --target browser -f "$context/deploy/docker/browser.Dockerfile" -t "localhost/nix/browser:$sha" "$context"
 printf 'Built Compose release %s. Set NIX_IMAGE_TAG and NIX_WEB_IMAGE_TAG to this SHA.\n' "$sha"

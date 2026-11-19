@@ -2,6 +2,12 @@ import { isRecord } from '../shared/util.ts';
 
 export const PROVIDER_ERROR_HEADER = 'X-Nix-Provider-Error';
 
+export class ProviderThreadUnavailableError extends Error {
+  constructor() {
+    super("that conversation's thread is no longer available; start a new one");
+  }
+}
+
 export class ProviderFailure extends Error {
   readonly provider: string;
   readonly status: number;

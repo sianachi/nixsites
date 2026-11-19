@@ -7,7 +7,6 @@ import {
   LayoutTemplate,
   Lock,
   LockOpen,
-  MessageCircle,
   Network,
   PanelRightClose,
   Save,
@@ -32,7 +31,6 @@ export interface ItemActionArgs {
   readonly workspace: ReturnType<typeof useOptionalWorkspace>;
   readonly visibility: ReturnType<typeof useHiddenItems>;
   readonly navigate: NavigateFunction;
-  readonly openChat: () => void;
   readonly onNavigateAway: (() => void) | undefined;
   readonly onClose: (() => void) | undefined;
   readonly sitesEnabled: boolean;
@@ -55,7 +53,6 @@ export function itemActionEntries({
   workspace,
   visibility,
   navigate,
-  openChat,
   onNavigateAway,
   onClose,
   sitesEnabled,
@@ -71,12 +68,6 @@ export function itemActionEntries({
   return [
     ...(workspace && lock.open
       ? [
-          {
-            key: 'note-chat',
-            label: 'Chat about this note',
-            icon: MessageCircle,
-            onSelect: openChat,
-          },
           {
             key: 'focus-graph',
             label: 'Focus in graph',

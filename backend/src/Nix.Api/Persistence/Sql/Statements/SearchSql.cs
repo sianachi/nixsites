@@ -44,6 +44,12 @@ namespace Nix.Persistence.Sql.Statements;
 /// </remarks>
 public static class SearchSql
 {
+    // An explicit malformed setting withholds the item, matching ItemSettings.Read.
+    private const string PetSourceVisible = """
+        (jsonb_typeof(item.settings) = 'object' AND item.settings ? 'withholdFromPets'
+            AND (item.settings -> 'withholdFromPets') IS DISTINCT FROM 'false'::jsonb) IS NOT TRUE
+        """;
+
     /// <summary>
     /// Items whose title or document text matches, most relevant first.
     /// </summary>
@@ -179,6 +185,16 @@ public static class SearchSql
          AND item.id = ranked.item_id
          AND item.template_id IS NULL
          AND item.lifecycle_state = 'active'
+         AND (NOT @pet_sources_only OR (
+             {{PetSourceVisible}}
+             AND (cardinality(@lock_ids) = 0 OR NOT EXISTS (
+                 SELECT 1
+                 FROM item_closure AS lock_edge
+                 WHERE lock_edge.tenant_id = @tenant_id
+                   AND lock_edge.descendant_id = item.id
+                   AND lock_edge.ancestor_id = ANY(@lock_ids)
+             ))
+         ))
          AND NOT EXISTS (
              SELECT 1
              FROM item_closure AS visibility_edge
@@ -220,7 +236,7 @@ public static class SearchSql
     /// index; add HNSW once a workspace holds more than about 100,000 chunks.
     /// </para>
     /// </remarks>
-    public const string Passages = """
+    public const string Passages = $$"""
         WITH visible AS MATERIALIZED (
             SELECT item.id AS item_id,
                    item.properties ->> 'title' AS title
@@ -237,6 +253,7 @@ public static class SearchSql
                    ))
               AND item.lifecycle_state = 'active'
               AND item.template_id IS NULL
+              AND (NOT @pet_sources_only OR {{PetSourceVisible}})
               AND EXISTS (
                   SELECT 1 FROM item_chunk AS has_chunk
                   WHERE has_chunk.tenant_id = @tenant_id AND has_chunk.item_id = item.id

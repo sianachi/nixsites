@@ -12,6 +12,7 @@ import { Link } from 'react-router';
 import { PetBodyEditPreview } from '../pet-body-edit-preview';
 import { PetStructurePreview } from '../pet-structure-preview';
 import { ApprovalActions, ApprovalFrame, touchLink } from './approval-frame';
+import { approvalLabels } from './approval-labels';
 import { ApprovalSummary } from './approval-summary';
 import { EditRequest, isEditable } from './edit-request';
 import { prepareWrite, type PreparedPreview } from './prepare-write';
@@ -144,6 +145,7 @@ export function ApprovalCard({
       actions={(headingId) => (
         <ApprovalActions
           headingId={headingId}
+          approveLabel={approvalLabels[args.operation]}
           approveDisabled={!clean || editing}
           editLabel={edited === null ? 'Edit' : 'Edit again'}
           onApprove={() => {

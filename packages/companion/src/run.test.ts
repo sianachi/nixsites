@@ -24,11 +24,13 @@ function setup() {
   const fake = createFakePorts();
   fake.query.mockImplementation((endpoint: { operation: string }) =>
     Promise.resolve(
-      endpoint.operation === 'schema.get'
-        ? { properties: [], declared: [], inherit: true }
-        : endpoint.operation === 'views.getConfigurations' || endpoint.operation === 'views.get'
-          ? { views: [], unrenderable: [], default: 'document', hideDocument: false }
-          : { id: itemId, workspaceId: workspace, parentId: null, title: 'Plan', type: 'note' },
+      endpoint.operation === 'items.getWorkspacePetProtection'
+        ? { hasProtectedItems: false }
+        : endpoint.operation === 'schema.get'
+          ? { properties: [], declared: [], inherit: true }
+          : endpoint.operation === 'views.getConfigurations' || endpoint.operation === 'views.get'
+            ? { views: [], unrenderable: [], default: 'document', hideDocument: false }
+            : { id: itemId, workspaceId: workspace, parentId: null, title: 'Plan', type: 'note' },
     ),
   );
   fake.execute.mockResolvedValue({ id: itemId, title: 'Plan' });
@@ -136,6 +138,32 @@ describe('workspace-scoped companion tools', () => {
     await expect(
       runWorkspaceTool(ports, workspace, input('read_note', { itemId }), signal),
     ).rejects.toThrow(WorkspaceToolRefusal);
+  });
+  it('refuses withheld notes before opening their bodies', async () => {
+    const { ports, query, bodies, signal } = setup();
+    query.mockResolvedValue({
+      id: itemId,
+      workspaceId: workspace,
+      title: 'Withheld',
+      type: 'note',
+      settings: { withholdFromPets: true },
+    });
+    await expect(
+      runWorkspaceTool(ports, workspace, input('read_note', { itemId }), signal),
+    ).rejects.toThrow('unavailable to pets');
+    expect(bodies.read).not.toHaveBeenCalled();
+  });
+  it('discards a note body marked as withheld during the read', async () => {
+    const { ports, query, bodies, signal } = setup();
+    const item = { id: itemId, workspaceId: workspace, type: 'note' };
+    query.mockResolvedValue(item);
+    bodies.read.mockImplementation(() => {
+      query.mockResolvedValue({ ...item, settings: { withholdFromPets: true } });
+      return Promise.resolve({ markdown: 'Sensitive body' });
+    });
+    await expect(
+      runWorkspaceTool(ports, workspace, input('read_note', { itemId }), signal),
+    ).rejects.toThrow('unavailable to pets');
   });
   it('bounds list results and tells the model when they are incomplete', async () => {
     const { ports, paginate, signal } = setup();
@@ -255,20 +283,29 @@ describe('workspace-scoped companion tools', () => {
   );
   it('filters search results before sending data to the model', async () => {
     const { ports, query, signal } = setup();
+    const withheldId = '44444444-4444-4444-8444-444444444444';
     const passage = { itemId, title: 'Trip', heading: 'Plan', ord: 0, text: 'Holiday in May.' };
-    query.mockImplementation((endpoint: { path: string; query?: Record<string, unknown> }) =>
-      Promise.resolve(
-        endpoint.path === '/api/v1/search/passages'
-          ? { passages: endpoint.query?.workspaceId === workspace ? [passage] : [] }
-          : {
-              results: [
-                { id: 'allowed', workspaceId: workspace },
-                { id: 'private', workspaceId: 'other' },
-              ],
-              truncated: true,
-            },
-      ),
-    );
+    const withheld = { ...passage, itemId: withheldId, text: 'Sensitive passage' };
+    query.mockImplementation((endpoint: { operation: string; path: string }) => {
+      if (endpoint.operation === 'items.get') {
+        const id = endpoint.path.split('/').at(-1);
+        return Promise.resolve({
+          id,
+          workspaceId: workspace,
+          settings: { withholdFromPets: id === withheldId },
+        });
+      }
+      if (endpoint.path === '/api/v1/search/passages')
+        return Promise.resolve({ passages: [passage, withheld] });
+      return Promise.resolve({
+        results: [
+          { id: itemId, workspaceId: workspace, title: 'Trip' },
+          { id: withheldId, workspaceId: workspace, title: 'Sensitive title' },
+          { id: 'private', workspaceId: 'other' },
+        ],
+        truncated: true,
+      });
+    });
     const outcome = await runWorkspaceTool(
       ports,
       workspace,
@@ -276,7 +313,12 @@ describe('workspace-scoped companion tools', () => {
       signal,
     );
     expect(outcome.text).not.toContain('private');
-    expect(JSON.parse(outcome.text)).toMatchObject({ truncated: true, passages: [passage] });
+    expect(outcome.text).not.toContain('Sensitive');
+    expect(JSON.parse(outcome.text)).toMatchObject({
+      results: [{ id: itemId, title: 'Trip' }],
+      truncated: true,
+      passages: [passage],
+    });
   });
   describe('remember', () => {
     const settings = (extra: Record<string, unknown> = {}) => ({
@@ -358,7 +400,10 @@ describe('workspace-scoped companion tools', () => {
         action('KeepItem', { path: { itemId } }),
         signal,
       );
-      expect(query).toHaveBeenCalledOnce();
+      expect(query).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: 'items.get' }),
+        expect.anything(),
+      );
       expect(execute.mock.calls[0]?.[0]).toMatchObject({
         method: 'PUT',
         path: `/api/v1/items/${itemId}/bookmark`,
@@ -435,6 +480,35 @@ describe('workspace-scoped companion tools', () => {
       expect(outcome.lockedContent).toBe(true);
     });
 
+    it('does not dispatch raw actions when the workspace might contain withheld items', async () => {
+      const { ports, query, execute, signal } = setup();
+      query.mockResolvedValue({ hasProtectedItems: true });
+      await expect(
+        runWorkspaceTool(
+          ports,
+          workspace,
+          action('RunWorkspaceQuery', { path: { workspaceId: workspace }, body: {} }),
+          signal,
+        ),
+      ).rejects.toThrow('excludes withheld items');
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it('discards a raw response if an item becomes withheld during the action', async () => {
+      const { ports, query, execute, signal } = setup();
+      query.mockResolvedValueOnce({ hasProtectedItems: false }).mockResolvedValueOnce({
+        hasProtectedItems: true,
+      });
+      execute.mockResolvedValue({ results: [{ title: 'Sensitive' }] });
+      const outcome = await runWorkspaceTool(
+        ports,
+        workspace,
+        action('RunWorkspaceQuery', { path: { workspaceId: workspace }, body: {} }),
+        signal,
+      );
+      expect(outcome.text).toBe('{"completed":true}');
+    });
+
     describe('the workspace switches for agents', () => {
       const versionId = '44444444-4444-4444-8444-444444444444';
       const gated = {
@@ -454,7 +528,15 @@ describe('workspace-scoped companion tools', () => {
           Promise.resolve(
             endpoint.operation === 'workspaces.get'
               ? { id: workspace, ...flags }
-              : { id: itemId, workspaceId: workspace, parentId: null, title: 'Plan', type: 'note' },
+              : endpoint.operation === 'items.getWorkspacePetProtection'
+                ? { hasProtectedItems: false }
+                : {
+                    id: itemId,
+                    workspaceId: workspace,
+                    parentId: null,
+                    title: 'Plan',
+                    type: 'note',
+                  },
           ),
         );
         fake.execute.mockResolvedValue({ ok: true });
@@ -507,7 +589,7 @@ describe('workspace-scoped companion tools', () => {
 
     it('treats a read through an action as locked content', async () => {
       const { ports, query, signal } = setup();
-      query.mockResolvedValue({ id: itemId, workspaceId: workspace, parentId: null });
+      query.mockResolvedValue({ hasProtectedItems: false });
       const outcome = await runWorkspaceTool(
         ports,
         workspace,
@@ -583,6 +665,8 @@ describe('workspace-scoped companion tools', () => {
     async (fence) => {
       const { ports, query, execute, signal } = setup();
       query.mockImplementation((endpoint: { operation: string; path?: string }) => {
+        if (endpoint.operation === 'items.get')
+          return Promise.resolve({ id: itemId, workspaceId: workspace });
         if (endpoint.operation !== 'templates.capture.preview')
           throw new Error(`unexpected query ${endpoint.operation}`);
         const excluded = endpoint.path?.includes('excludeSampleDescendants=true');
@@ -1749,31 +1833,41 @@ describe('reading values, the calendar, and completing tasks', () => {
     endValue: null,
     ...overrides,
   });
+  const calendarQuery =
+    (response: ReturnType<typeof calendarResponse>, locked = false) =>
+    (endpoint: { operation: string; path: string }) => {
+      if (endpoint.operation === 'items.get')
+        return Promise.resolve({ id: endpoint.path.split('/').at(-1), workspaceId: workspace });
+      if (endpoint.operation === 'locks.get') return Promise.resolve({ locked });
+      return Promise.resolve(response);
+    };
 
   it('reads the workspace calendar for a bounded window as trimmed rows', async () => {
     const { ports, query, signal } = setup();
-    query.mockResolvedValue(
-      calendarResponse(
-        [
-          entry({}),
-          entry({ value: '2026-09-26', generated: true, completed: false }),
-          entry({
-            value: '2026-09-27T09:00:00+01:00[Europe/London]',
-            endValue: '2026-09-27T10:00:00+01:00[Europe/London]',
-            kind: 'timestamp',
-          }),
-        ],
-        {
-          unplaceable: [
-            {
-              containerId,
-              containerTitle: 'Tasks',
-              reason: 'no_date_property',
-              itemId: null,
-              itemTitle: null,
-            },
+    query.mockImplementation(
+      calendarQuery(
+        calendarResponse(
+          [
+            entry({}),
+            entry({ value: '2026-09-26', generated: true, completed: false }),
+            entry({
+              value: '2026-09-27T09:00:00+01:00[Europe/London]',
+              endValue: '2026-09-27T10:00:00+01:00[Europe/London]',
+              kind: 'timestamp',
+            }),
           ],
-        },
+          {
+            unplaceable: [
+              {
+                containerId,
+                containerTitle: 'Tasks',
+                reason: 'no_date_property',
+                itemId: null,
+                itemTitle: null,
+              },
+            ],
+          },
+        ),
       ),
     );
     const outcome = await runWorkspaceTool(
@@ -1814,7 +1908,9 @@ describe('reading values, the calendar, and completing tasks', () => {
 
   it('caps calendar rows and says the window holds more', async () => {
     const { ports, query, signal } = setup();
-    query.mockResolvedValue(calendarResponse(Array.from({ length: 150 }, () => entry({}))));
+    query.mockImplementation(
+      calendarQuery(calendarResponse(Array.from({ length: 150 }, () => entry({})))),
+    );
     const outcome = await runWorkspaceTool(
       ports,
       workspace,
@@ -2188,18 +2284,7 @@ describe('reading values, the calendar, and completing tasks', () => {
 
   it('checks the containers a calendar read returned rows from', async () => {
     const { ports, query, signal } = setup();
-    query.mockImplementation((endpoint: { operation: string }) =>
-      Promise.resolve(
-        endpoint.operation === 'locks.get'
-          ? {
-              locked: true,
-              unlockedUntil: '2026-09-25T10:00:00+00:00',
-              lockItemId: containerId,
-              selfLocked: true,
-            }
-          : calendarResponse([entry({})]),
-      ),
-    );
+    query.mockImplementation(calendarQuery(calendarResponse([entry({})]), true));
     const outcome = await runWorkspaceTool(
       ports,
       workspace,

@@ -1,10 +1,14 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Nix.Authentication;
 using Nix.Messaging;
 using Nix.Persistence;
 using Nix.Persistence.ObjectStorage;
+using Nix.Workers;
 
 namespace Nix.Tests.Composition;
 
@@ -74,8 +78,15 @@ public sealed class CompositionRootTests
     public void Every_registered_handler_resolves_from_a_scope()
     {
         var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+        using var serverServices = new ServiceCollection().AddOptions().BuildServiceProvider();
+        using var server = new TestServer(serverServices);
         services.AddNixPersistence(RuntimeConnectionString);
-        services.AddNixObjectStorage(new ConfigurationBuilder().Build());
+        services.AddNixObjectStorage(configuration);
+        services.AddNixWorkers(configuration);
+        services.AddRouting();
+        services.AddSingleton<IServer>(server);
+        services.AddSingleton<SelfIssuedTokenService>();
 
         var handlerServiceTypes = services
             .Select(descriptor => descriptor.ServiceType)

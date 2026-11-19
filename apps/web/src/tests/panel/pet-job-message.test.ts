@@ -1,0 +1,67 @@
+import { expect, it } from 'vitest';
+import { isPetJobMessage } from '../../panel/pet-job-message';
+
+it.each([
+  'Draw an editable flowchart with Start, Review, and Done, connected by arrows.',
+  '  Could you draw a flowchart?  ',
+  'Can you draw me a flowchart?',
+  'Can you please build a checklist for onboarding?',
+  'Please, draw a flowchart.',
+  'I’d like you to draft a project note.',
+  "I'd like you to draft a response to the review.",
+  'I need you to create a sheet for the estimates.',
+  'I need a flowchart that shows the release process.',
+  'I need a random class diagram on the canvas',
+  'I would like an editable diagram of the review process.',
+  'look up Linear issue ENG-12',
+  'Could you look up ENG-12?',
+  'Using the connected Linear catalog, find the scoped linear.read_issue action and request approval to read only issue NIX-37. Report its title and status only.',
+  'Create a weekly tracker.',
+  'Update the task title to Estimate reviewed.',
+  'Set the formula in B2 to =SUM(A2:A5).',
+  'Browse the website https://forms.example/test using the connected site session. Report only the page title and main heading. Do not submit the form.',
+  'Could you browse https://forms.example/test?',
+  'Read the page at https://forms.example/test.',
+  'Would you organize these tasks by status?',
+  'Please organize the tasks by due date.',
+])('routes a direct work request to a job: %s', (message) => {
+  expect(isPetJobMessage(message)).toBe(true);
+});
+
+it.each([
+  '',
+  'Hello there!',
+  'Thanks, that looks great.',
+  'How do I draw a flowchart?',
+  'How do I draw a class diagram on the canvas?',
+  'Could you explain how to draw a flowchart?',
+  'Tell me how to update this task.',
+  'Using a simple example, explain how to create a flowchart.',
+  'Using the Linear catalog, what actions are available?',
+  'Using the Linear catalog, could you find issues?',
+  `Using ${'x'.repeat(161)}, find issue NIX-37.`,
+  'Can you draw?',
+  'Can you draw flowcharts?',
+  'Can you draw flowcharts in Nix?',
+  'Can you browse websites?',
+  'Can you read?',
+  'Read this sentence aloud.',
+  'Read this sentence about https://forms.example/test.',
+  'Can you set formulas in Sheets?',
+  'How do I set the formula in B2?',
+  'If we did create a board, how would it work?',
+  'Should I create a new note?',
+  'Don’t update the task yet.',
+  'Please do not draw a chart.',
+  'Could you not draw a chart yet?',
+  'Create is disabled in that menu.',
+  'Look up how to use this view.',
+  'I need a flowchart tutorial.',
+  '"Draw a flowchart."',
+  '“Draw a flowchart.”',
+  '> Draw a flowchart.',
+  '`Draw a flowchart.`',
+  'Summarize this page',
+])('leaves a conversational or ambiguous message in chat: %s', (message) => {
+  expect(isPetJobMessage(message)).toBe(false);
+});

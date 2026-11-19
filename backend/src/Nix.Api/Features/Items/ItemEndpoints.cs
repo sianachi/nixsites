@@ -209,6 +209,24 @@ internal static class ItemEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
 
+        items.MapPut("/{itemId:guid}/pet-protection", ItemPetProtectionEndpoints.Set)
+            .WithName("SetItemPetProtection")
+            .WithSummary("Control whether pets can use an item")
+            .WithDescription("A workspace owner may withhold this item from pets in a signed-in browser session.")
+            .Produces<ItemResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
+
+        endpoints.MapGet("/api/v1/workspaces/{workspaceId:guid}/pet-protection", ItemPetProtectionEndpoints.ReadWorkspace)
+            .WithTags("Items")
+            .WithName("GetWorkspacePetProtection")
+            .WithSummary("Check whether a workspace contains any items withheld from pets")
+            .WithDescription("Available only in the workspace owner's browser or its signed pet turn. Returns a boolean without item details.")
+            .Produces<WorkspacePetProtectionResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         items.MapPost("/{itemId:guid}/restore", RestoreItemEndpoint.Handle)
             .WithName("RestoreItem")
             .WithSummary("Restore a soft-deleted item")

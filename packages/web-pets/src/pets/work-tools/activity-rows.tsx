@@ -2,18 +2,24 @@ import type { PetToolCall } from '@nix/api-client';
 import type { WorkspaceToolArgs } from '@nix/companion/tool-args';
 import type { StructureFingerprint } from '@nix/companion';
 import type { Problem } from '@nix/structure-spec';
-import { Button, Icon, Text, cn, focusRing, inkWashStates } from '@nix/ui';
+import { Icon, Text, cn, focusRing, inkWashStates } from '@nix/ui';
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useRef, type ReactElement, type RefObject } from 'react';
+import { useEffect, useId, useRef, type ReactElement, type RefObject } from 'react';
+import { ApprovalActions } from '../approval/approval-frame';
+import { approvalLabels } from '../approval/approval-labels';
 import type { EditedRequest } from '../approval/edit-request';
 import {
   APPLYING_WITHOUT_ASKING,
+  CHANGES_REQUESTED,
   DECLINED_BY_USER,
   DECLINED_FOR_PROBLEMS_PREFIX,
   DONE_WITHOUT_ASKING,
   NOT_RUN,
+  REQUESTING_CHANGES,
+  REVISION_FEEDBACK_PREFIX,
   buildOutcome,
   ranWithoutAsking,
+  revisionFeedback,
 } from './receipts';
 import { describeReadSentence, readStatusText } from './read-sentence';
 import { ForgetMemory } from './forget-memory';
@@ -34,6 +40,7 @@ export type Resolver = (
  * outcomes rather than a stack of forms. */
 function ActivityRow({
   sentence,
+  sentenceId,
   status,
   details,
   detailsLabel = 'Result details',
@@ -44,6 +51,7 @@ function ActivityRow({
   rowRef,
 }: {
   readonly sentence: string;
+  readonly sentenceId?: string;
   readonly status: string;
   readonly details: string | undefined;
   readonly detailsLabel?: string;
@@ -64,7 +72,9 @@ function ActivityRow({
   }, []);
   const line = (
     <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-2">
-      <Text variant="bodySmall">{sentence}</Text>
+      <Text variant="bodySmall" {...(sentenceId === undefined ? {} : { id: sentenceId })}>
+        {sentence}
+      </Text>
       {/* UX fix U16: this word already sits beside its own sentence, which the row re-renders
        * whenever it changes - a second live-region announcement here was redundant noise. */}
       <Text variant="note" tone="muted">
@@ -117,8 +127,7 @@ function ActivityRow({
   );
 }
 
-/** A read, running or done. Never a card: there is nothing here for the
- * owner to approve, only whether it ran. */
+/** A read awaiting a decision, running, or settled. */
 export function ReadActivityRow({
   tool,
   args,
@@ -157,41 +166,40 @@ export function ReadActivityRow({
   }, [autoRun, tool, submitted, busy, onResolve]);
 
   const row = useRef<HTMLDivElement | null>(null);
+  const sentenceId = useId();
   // The buttons leave with the decision, so focus moves to the row as they are clicked.
-  const decide = (approved: boolean) => {
+  const decide = (approved: boolean, feedback?: string) => {
     row.current?.focus();
-    void onResolve(tool, approved);
+    void onResolve(tool, approved, undefined, feedback);
   };
   const needsClick = !autoRun && tool.status === 'pending' && !submitted;
+  const feedback = tool.status === 'failed' ? revisionFeedback(tool.result) : undefined;
   return (
     <ActivityRow
       sentence={describeReadSentence(tool, args, autoRun)}
+      sentenceId={sentenceId}
       status={readStatusText(tool, autoRun, submitted)}
-      details={tool.result || undefined}
+      details={(feedback ?? tool.result) || undefined}
+      detailsLabel={feedback === undefined ? 'Result details' : 'Feedback'}
       anchor={anchor && needsClick}
       rowRef={row}
       actions={
         needsClick ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="primary"
-              disabled={busy}
-              onClick={() => {
-                decide(true);
-              }}
-            >
-              Approve request
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={busy}
-              onClick={() => {
-                decide(false);
-              }}
-            >
-              Decline request
-            </Button>
-          </div>
+          <ApprovalActions
+            headingId={sentenceId}
+            approveLabel={approvalLabels[args.operation]}
+            approveDisabled={false}
+            busy={busy}
+            onApprove={() => {
+              decide(true);
+            }}
+            onDecline={() => {
+              decide(false);
+            }}
+            onRequestChanges={(feedback) => {
+              decide(false, REVISION_FEEDBACK_PREFIX + feedback);
+            }}
+          />
         ) : args.operation === 'remember' && tool.status === 'completed' ? (
           <ForgetMemory result={tool.result} />
         ) : undefined
@@ -220,12 +228,14 @@ function writeStatusText(
     case 'pending':
       return submitted ?? 'Waiting for your approval';
     case 'claimed':
+      if (submitted === REQUESTING_CHANGES || submitted === CHANGES_REQUESTED) return submitted;
       return withoutAsking ? APPLYING_WITHOUT_ASKING : 'Applying…';
     case 'completed':
       if (withoutAsking) return submitted ?? DONE_WITHOUT_ASKING;
       return incompleteBuild ? 'Incomplete' : 'Done';
     case 'failed':
       if (tool.result === DECLINED_BY_USER) return 'Declined';
+      if (revisionFeedback(tool.result) !== undefined) return CHANGES_REQUESTED;
       if (submitted === NOT_RUN) return NOT_RUN;
       return withoutAsking
         ? "Didn't finish (ran without asking) - check your workspace before retrying"
@@ -265,6 +275,7 @@ export function WriteReceiptRow({
   readonly cleanup: ReactElement | null | undefined;
 }): ReactElement {
   const declinedForProblems = tool.result.startsWith(DECLINED_FOR_PROBLEMS_PREFIX);
+  const feedback = tool.status === 'failed' ? revisionFeedback(tool.result) : undefined;
   return (
     <ActivityRow
       sentence={headline}
@@ -281,7 +292,7 @@ export function WriteReceiptRow({
           ? problems.map((problem) => problem.message).join('\n')
           : submitted === NOT_RUN
             ? ownerReason
-            : tool.result || undefined
+            : (feedback ?? tool.result) || undefined
       }
       detailsLabel={
         declinedForProblems
@@ -290,7 +301,9 @@ export function WriteReceiptRow({
             ? 'Why it did not run'
             : applied
               ? 'What was applied'
-              : 'Result details'
+              : feedback === undefined
+                ? 'Result details'
+                : 'Feedback'
       }
       detailsExtra={applied}
       focusOnMount={focusOnMount}

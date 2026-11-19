@@ -15,6 +15,7 @@ using Nix.Features.Calendar;
 using Nix.Features.Canvas;
 using Nix.Features.Charts;
 using Nix.Features.Comments;
+using Nix.Features.Connections;
 using Nix.Features.Conversations;
 using Nix.Features.CurrentUser;
 using Nix.Features.DocumentImports;
@@ -25,10 +26,13 @@ using Nix.Features.Habits;
 using Nix.Features.Health;
 using Nix.Features.Internal;
 using Nix.Features.Items;
+using Nix.Features.Linear;
 using Nix.Features.Locks;
 using Nix.Features.Notifications;
 using Nix.Features.Operations;
 using Nix.Features.Pets;
+using Nix.Features.PetPeers;
+using Nix.Features.PetRuns;
 using Nix.Features.Properties;
 using Nix.Features.PublicLinks;
 using Nix.Features.PublicLinks.Notes;
@@ -86,6 +90,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Add(SearchJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(CanvasJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(PetJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(PetRunJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(PetPeerJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(PetBrowserJson.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(LinearJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(ConnectorJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(ConversationJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(NotificationsJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(AutomationJsonContext.Default);
@@ -314,6 +323,21 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
             }));
 
+    // The hosted MCP service forwards every pet call, including each idle runner poll.
+    options.AddPolicy<string>(PetPeerEndpoints.RateLimitPolicy, httpContext =>
+    {
+        var credentials = httpContext.RequestServices.GetRequiredService<PetPeerCredential>();
+        var ticket = PetPeerEndpoints.ReadTicket(httpContext, credentials);
+        return RateLimitPartition.GetFixedWindowLimiter(
+            ticket is null ? $"invalid:{ClientKey.For(httpContext)}" : ticket.PeerId.ToString("D"),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = ticket is null ? tokenExchangesPerMinute : 160,
+                Window = writesWindow,
+                QueueLimit = 0,
+            });
+    });
+
     // Interactive sign-in: a person starts and finishes a login a few times at most. Per address,
     // across /auth/login and /auth/callback; configurable for sites where many people share one.
     options.AddPolicy<IPAddress>(BrowserAuthEndpoints.LoginPolicy, httpContext =>
@@ -498,10 +522,11 @@ if (persistenceConfigured)
     });
     builder.Services.AddScoped<BrowserAuthCoordinator>();
     builder.Services.AddScoped<CliLoginCoordinator>();
+    builder.Services.AddScoped<LinearBrowserAccess>();
+    builder.Services.AddPetPeers();
     builder.Services.AddScoped<NativeHandoffCoordinator>();
     builder.Services.AddSingleton<Nix.Features.OAuth.OAuthClients>();
     builder.Services.AddScoped<Nix.Features.OAuth.OAuthConsentGuard>();
-    Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<Nix.Abstractions.IIsolatedUnitOfWork, Nix.Persistence.IsolatedUnitOfWork>(builder.Services);
     Nix.Features.LocalAuth.LocalAuthServiceCollectionExtensions.AddLocalAuth(builder.Services);
 }
 
@@ -619,6 +644,7 @@ if (persistenceConfigured)
 {
     app.MapBrowserAuthEndpoints();
     app.MapCliLoginEndpoints();
+    app.MapLinearOAuthCallback();
     Nix.Features.LocalAuth.LocalAuthEndpoints.MapLocalAuthEndpoints(app);
     Nix.Features.LocalAuth.LocalPasskeyEndpoints.MapLocalPasskeySignInEndpoints(app);
     Nix.Features.LocalAuth.LocalTotpEndpoints.MapLocalTotpSignInEndpoints(app);
@@ -711,6 +737,11 @@ app.MapInternalEndpoints();
 app.MapSearchEndpoints();
 app.MapCanvasEndpoints();
 app.MapPetEndpoints();
+app.MapPetRunEndpoints();
+app.MapPetPeers();
+app.MapLinearEndpoints();
+app.MapPetConnections();
+app.MapPetBrowserConnections();
 app.MapConversationEndpoints();
 app.MapNotificationEndpoints();
 app.MapAutomationEndpoints();

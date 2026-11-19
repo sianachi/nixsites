@@ -371,12 +371,16 @@ public sealed class NixTokenValidator
                 out var petRequestId,
                 out var petMode))
             {
-                return new ValidatedPetTurnToken(tenantId, principalId, petRequestId, petMode);
+                var binding = result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetActionBindingClaim)?.Value;
+                return binding is null || PetActionRequestBinding.IsDigest(binding)
+                    ? new ValidatedPetTurnToken(tenantId, principalId, petRequestId, petMode, binding)
+                    : null;
             }
 
             // A pet claim that does not read cleanly (unknown mode, mixed with another kind) is refused whole.
             if (result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetTurnClaim) is not null
-                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetModeClaim) is not null)
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetModeClaim) is not null
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetActionBindingClaim) is not null)
             {
                 return null;
             }
@@ -607,7 +611,8 @@ public sealed record ValidatedPetTurnToken(
     TenantId TenantId,
     PrincipalId PrincipalId,
     Guid RequestId,
-    PetTurnMode Mode)
+    PetTurnMode Mode,
+    string? ActionBinding = null)
     : ValidatedToken(TenantId)
 {
     /// <summary>Gets a value indicating whether the token reaches write routes.</summary>

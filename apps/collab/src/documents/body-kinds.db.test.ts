@@ -1,5 +1,6 @@
 import type { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import * as Y from 'yjs';
 
 import { DB_TESTS_ENABLED, TENANTS, clearContent, seedTenants } from '../db/testing.ts';
 import {
@@ -70,6 +71,70 @@ describe.runIf(DB_TESTS_ENABLED)('a canvas body through the live server', () => 
         partner.doc.getMap('elements').has('rect-1') && drawer.doc.getMap('elements').has('rect-2'),
       'both scenes to converge',
     );
+  });
+
+  it('applies one prepared Canvas edit and returns its receipt only to the original actor', async () => {
+    const harness = track(await startLiveServer(TENANTS.alpha));
+    const author = 'as-canvas-author';
+    const urlFor = (server: LiveHarness) =>
+      `${server.url.replace('ws://', 'http://')}/documents/${TENANTS.alpha.itemId}/updates`;
+    const prepared = await fetch(urlFor(harness), {
+      headers: { authorization: `Bearer ${author}` },
+    });
+    expect(prepared.status).toBe(200);
+    const { docId, headSeq } = (await prepared.json()) as { docId: string; headSeq: string };
+
+    const proposal = (id: string) => {
+      const doc = new Y.Doc();
+      try {
+        placeElement(doc, id);
+        return {
+          expectedDocId: docId,
+          expectedHeadSeq: headSeq,
+          clientId: id,
+          update: Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64'),
+        };
+      } finally {
+        doc.destroy();
+      }
+    };
+
+    const submit = (server: LiveHarness, payload: ReturnType<typeof proposal>, token = author) =>
+      fetch(urlFor(server), {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+    // Both proposals target the same reviewed revision. One can become a scene update.
+    const proposals = [proposal('first-approval'), proposal('second-approval')] as const;
+    const attempts = await Promise.all(proposals.map((payload) => submit(harness, payload)));
+    const winner = attempts[0]?.status === 202 ? 0 : 1;
+    const loser = winner === 0 ? 1 : 0;
+    expect(attempts[winner]?.status).toBe(202);
+    expect(await attempts[winner]?.json()).toEqual({ docId, seq: '1', snapshotWritten: true });
+    expect(attempts[loser]?.status).toBe(409);
+    expect(await attempts[loser]?.json()).toMatchObject({ code: 'revision_changed' });
+
+    const next = await submit(harness, {
+      ...proposal('independent-edit'),
+      expectedHeadSeq: '1',
+    });
+    expect(next.status).toBe(202);
+    await harness.close();
+    const restarted = track(await startLiveServer(TENANTS.alpha));
+    const replayed = await submit(restarted, proposals[winner]);
+    expect(replayed.status).toBe(202);
+    expect(await replayed.json()).toEqual({ docId, seq: '1', snapshotWritten: true });
+
+    const otherActor = await submit(restarted, proposals[winner], 'as-second-canvas-author');
+    const differentUpdate = await submit(restarted, {
+      ...proposals[winner],
+      update: proposals[loser].update,
+    });
+    expect(otherActor.status).toBe(409);
+    expect(differentUpdate.status).toBe(409);
+    expect(await countUpdates(verifyPool, TENANTS.alpha)).toBe(2);
   });
 
   it('tells the client which body kind it opened', async () => {

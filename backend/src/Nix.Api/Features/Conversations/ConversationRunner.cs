@@ -1,4 +1,5 @@
 using Nix.Abstractions;
+using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Features.Pets;
 using Nix.Messaging;
@@ -44,6 +45,11 @@ public sealed class ConversationRunner(IIsolatedUnitOfWork units, IHostApplicati
                     {
                         return new IsolatedOutcome<bool>(false, false);
                     }
+                    if (ItemSettings.Read(found.Value.Settings).WithholdFromPets)
+                    {
+                        await service.UpdateTurn(id, request.RequestId, "interrupted", "", "This conversation is withheld from pets.", token).ConfigureAwait(false);
+                        return new IsolatedOutcome<bool>(false, true);
+                    }
 
                     var config = ConversationService.Configuration(found.Value)!;
                     if (config.Turn is not { Status: "running" } active || active.RequestId != request.RequestId)
@@ -68,7 +74,7 @@ public sealed class ConversationRunner(IIsolatedUnitOfWork units, IHostApplicati
                         string? cursor = null;
                         do
                         {
-                            var page = await service.Messages(id, cursor, 100, token).ConfigureAwait(false);
+                            var page = await service.Messages(id, cursor, 100, forModel: true, token).ConfigureAwait(false);
                             if (page.IsFailure)
                             {
                                 return new IsolatedOutcome<bool>(false, false);

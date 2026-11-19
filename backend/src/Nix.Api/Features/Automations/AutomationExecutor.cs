@@ -11,6 +11,7 @@ using Nix.Domain.Notifications;
 using Nix.Domain.Primitives;
 using Nix.Domain.Scheduling;
 using Nix.Features.Items;
+using Nix.Features.PetRuns;
 using Nix.Features.Properties;
 using Nix.Messaging;
 
@@ -238,6 +239,10 @@ public sealed class AutomationExecutor(
                 NotifyAction notify => new AutomationPreviewAction(index, notify.TypeText, context.Item?.Id.Value, null,
                     RenderTitle(notify.Title, context, AutomationActionJson.MaximumNotifyTitle),
                     AutomationTitleTemplate.Render(notify.Body, context.LocalDate, context.ItemTitle, AutomationActionJson.MaximumNotifyBody)),
+                StartPetRunAction pet => new AutomationPreviewAction(index, pet.TypeText, context.Rule.ScopeItemId?.Value, null,
+                    context.Rule.Name, pet.Brief),
+                PollPetMailboxAction mailbox => new AutomationPreviewAction(index, mailbox.TypeText,
+                    context.Rule.ScopeItemId?.Value, null, $"{mailbox.Provider} {mailbox.ResourceId}", mailbox.Brief),
                 _ => new AutomationPreviewAction(index, context.Actions[index].TypeText, null, null, null, null),
             });
         }
@@ -286,6 +291,11 @@ public sealed class AutomationExecutor(
         var trigger = AutomationTriggerJson.ReadStored(rule.Trigger);
         var conditions = AutomationConditionJson.ReadAll(JsonNode.Parse(rule.Conditions)).Value;
         var actions = AutomationActionJson.ReadStored(rule.Actions);
+
+        if (actions.Any(action => action is StartPetRunAction or PollPetMailboxAction) && execution.Origin != AutomationOrigin.Schedule)
+        {
+            return Evaluation.Skip(rule, null, "schedule_only");
+        }
 
         // 2. The owner is still active and may still read the workspace. Either failing counts
         // toward auto-disable: a departed owner's rule must stop, not skip forever.
@@ -456,6 +466,8 @@ public sealed class AutomationExecutor(
                 SetPropertyAction set => await SetPropertyAsync(context, set, cancellationToken).ConfigureAwait(false),
                 CreateItemAction create => await CreateItemAsync(context, create, cancellationToken).ConfigureAwait(false),
                 NotifyAction notify => await NotifyAsync(context, notify, runId, index, cancellationToken).ConfigureAwait(false),
+                StartPetRunAction => await StartPetAsync(context.Rule, cancellationToken).ConfigureAwait(false),
+                PollPetMailboxAction => await PollPetMailboxAsync(context.Rule, runId, cancellationToken).ConfigureAwait(false),
                 _ => ActionStep.Failed("action.unavailable"),
             };
             if (step.FailureCode is { } code)
@@ -467,6 +479,20 @@ public sealed class AutomationExecutor(
         }
 
         return new ActionsResult(changed, null);
+    }
+
+    private async Task<ActionStep> StartPetAsync(AutomationRule rule, CancellationToken cancellationToken)
+    {
+        var result = await dispatcher.SendAsync<StartPetRoutine, PetRunResponse>(
+            new StartPetRoutine(new PetRoutineBinding(rule.Id, rule.Revision)), cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess ? ActionStep.Done : ActionStep.Failed(result.Error.Code);
+    }
+
+    private async Task<ActionStep> PollPetMailboxAsync(AutomationRule rule, Guid runId, CancellationToken cancellationToken)
+    {
+        var result = await dispatcher.SendAsync<PollPetMailbox, bool>(
+            new PollPetMailbox(new PetRoutineBinding(rule.Id, rule.Revision), runId), cancellationToken).ConfigureAwait(false);
+        return result.Match(queued => queued ? ActionStep.Done : ActionStep.Unchanged, error => ActionStep.Failed(error.Code));
     }
 
     private async Task<ActionStep> SetPropertyAsync(ExecutionContext context, SetPropertyAction set, CancellationToken cancellationToken)

@@ -1,6 +1,11 @@
 import type { PetToolCall } from '@nix/api-client';
 import type { WorkspaceToolArgs } from '@nix/companion/tool-args';
-import { DECLINED_BY_USER } from './receipts';
+import {
+  CHANGES_REQUESTED,
+  DECLINED_BY_USER,
+  REQUESTING_CHANGES,
+  revisionFeedback,
+} from './receipts';
 
 /** The base (infinitive), progressive and past forms of one read's sentence
  * (UX fix U3): "Search for "x"?" while pending, "Searching for "x"" while running, "Searched for
@@ -118,6 +123,7 @@ export function describeReadSentence(
   }
   if (tool.status === 'claimed') return phrase.progressive;
   if (tool.status === 'completed') return phrase.past;
+  if (tool.status === 'failed' && revisionFeedback(tool.result) !== undefined) return phrase.base;
   if (tool.status === 'failed' && tool.result === DECLINED_BY_USER)
     return `Didn't ${lowerFirst(phrase.base)}`;
   return `Couldn't ${lowerFirst(phrase.base)}`;
@@ -136,8 +142,14 @@ export function readStatusText(
     if (submitted) return submitted;
     return 'Waiting for your approval';
   }
-  if (tool.status === 'claimed') return 'Running…';
+  if (tool.status === 'claimed')
+    return submitted === REQUESTING_CHANGES || submitted === CHANGES_REQUESTED
+      ? submitted
+      : 'Running…';
   if (tool.status === 'completed') return 'Done';
-  if (tool.status === 'failed') return tool.result === DECLINED_BY_USER ? 'Declined' : 'Failed';
+  if (tool.status === 'failed') {
+    if (revisionFeedback(tool.result) !== undefined) return CHANGES_REQUESTED;
+    return tool.result === DECLINED_BY_USER ? 'Declined' : 'Failed';
+  }
   return 'Stopped';
 }

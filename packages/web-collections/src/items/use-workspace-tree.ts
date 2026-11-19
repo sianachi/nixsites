@@ -131,6 +131,8 @@ export interface WorkspaceTree {
   readonly breadcrumbs: (itemId: string) => readonly TreeItem[];
 
   readonly find: (itemId: string) => TreeItem | null;
+  /** Updates one already loaded row from an authorized item read. */
+  readonly updateLoadedItem?: (item: Item) => void;
   readonly setDefaultViewKind: (itemId: string, kind: string | null) => void;
 
   /**
@@ -265,6 +267,15 @@ export function useWorkspaceTree(): WorkspaceTree {
   }, []);
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const updateLoadedItem = useCallback(
+    (payload: Item): void => {
+      if (payload.workspaceId !== workspaceId) return;
+      const refreshed = toItem(payload);
+      setItems((current) => current.map((item) => (item.id === refreshed.id ? refreshed : item)));
+    },
+    [workspaceId],
+  );
 
   const fetchChildren = useCallback(
     async (parentId: string | null, signal: AbortSignal): Promise<readonly TreeItem[]> => {
@@ -1037,6 +1048,7 @@ export function useWorkspaceTree(): WorkspaceTree {
     breadcrumbs,
     reveal,
     find: (itemId) => byId.get(itemId) ?? null,
+    updateLoadedItem,
     setDefaultViewKind,
     isCreating,
     isSaving,

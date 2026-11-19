@@ -105,6 +105,9 @@ public sealed class SelfIssuedTokenService : IDisposable
     /// <summary>The claim carrying what a pet token may do: <c>read</c>, <c>write</c> or <c>admin</c>.</summary>
     public const string PetModeClaim = "nix_pet_mode";
 
+    /// <summary>The exact request binding carried by a durable pet action credential.</summary>
+    internal const string PetActionBindingClaim = "nix_pet_action_binding";
+
     private const int DefaultLifetimeMinutes = 10;
 
     /// <summary>
@@ -339,7 +342,22 @@ public sealed class SelfIssuedTokenService : IDisposable
     /// Mints the token the companion service runs one pet turn's tools with. It is bound to the
     /// person, not a workspace; <c>PetTurnPolicy</c> bounds what it reaches.
     /// </summary>
-    public string MintPetTurn(PrincipalId principalId, TenantId tenantId, Guid requestId, PetTurnMode mode)
+    public string MintPetTurn(PrincipalId principalId, TenantId tenantId, Guid requestId, PetTurnMode mode) =>
+        MintPetCredential(principalId, tenantId, requestId, mode, actionBinding: null);
+
+    /// <summary>Mints a short-lived credential usable only for the explicitly bound request.</summary>
+    public string MintPetAction(PrincipalId principalId, TenantId tenantId, Guid actionId, PetTurnMode mode, string binding)
+    {
+        ArgumentNullException.ThrowIfNull(binding);
+        if (!PetActionRequestBinding.IsDigest(binding))
+        {
+            throw new ArgumentException("The pet action binding is invalid.", nameof(binding));
+        }
+
+        return MintPetCredential(principalId, tenantId, actionId, mode, binding);
+    }
+
+    private string MintPetCredential(PrincipalId principalId, TenantId tenantId, Guid requestId, PetTurnMode mode, string? actionBinding)
     {
         if (principalId.Value == Guid.Empty || requestId == Guid.Empty || !Enum.IsDefined(mode))
         {
@@ -350,19 +368,24 @@ public sealed class SelfIssuedTokenService : IDisposable
             throw new InvalidOperationException("Cannot mint a pet turn token while Core signing is unconfigured.");
         }
         var now = Clock.GetUtcNow();
+        var claims = new List<Claim>
+        {
+            new("sub", principalId.Value.ToString("D", CultureInfo.InvariantCulture)),
+            new(TenantClaim, tenantId.Value.ToString("D", CultureInfo.InvariantCulture)),
+            new(PetTurnClaim, requestId.ToString("D", CultureInfo.InvariantCulture)),
+            new(PetModeClaim, mode switch { PetTurnMode.Read => "read", PetTurnMode.Write => "write", _ => "admin" }),
+            new("jti", Guid.CreateVersion7().ToString("D", CultureInfo.InvariantCulture)),
+        };
+        if (actionBinding is not null)
+        {
+            claims.Add(new Claim(PetActionBindingClaim, actionBinding));
+        }
         var token = new JwtSecurityToken(
             issuer: Issuer,
             audience: Audience,
-            claims:
-            [
-                new Claim("sub", principalId.Value.ToString("D", CultureInfo.InvariantCulture)),
-                new Claim(TenantClaim, tenantId.Value.ToString("D", CultureInfo.InvariantCulture)),
-                new Claim(PetTurnClaim, requestId.ToString("D", CultureInfo.InvariantCulture)),
-                new Claim(PetModeClaim, mode switch { PetTurnMode.Read => "read", PetTurnMode.Write => "write", _ => "admin" }),
-                new Claim("jti", Guid.CreateVersion7().ToString("D", CultureInfo.InvariantCulture)),
-            ],
+            claims: claims,
             notBefore: now.UtcDateTime,
-            expires: (now + (mode == PetTurnMode.Read ? PetTurnReadLifetime : PetTurnWriteLifetime)).UtcDateTime,
+            expires: (now + (mode == PetTurnMode.Read && actionBinding is null ? PetTurnReadLifetime : PetTurnWriteLifetime)).UtcDateTime,
             signingCredentials: new SigningCredentials(_securityKey, SecurityAlgorithms.EcdsaSha256));
         return _handler.WriteToken(token);
     }

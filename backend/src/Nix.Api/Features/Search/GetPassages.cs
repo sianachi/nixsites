@@ -25,7 +25,8 @@ public sealed record GetPassages(ItemId RootId, string Query, int Limit) : IQuer
 public sealed class GetPassagesHandler(
     IItemSearch search,
     IItemTree tree,
-    IPermissionResolver permissions)
+    IPermissionResolver permissions,
+    AccessTokenSessionContext access)
     : IQueryHandler<GetPassages, Result<IReadOnlyList<NotePassage>>>
 {
     /// <summary>The most passages one request may return.</summary>
@@ -52,7 +53,7 @@ public sealed class GetPassagesHandler(
 
         var notFound = SearchErrors.NotFound($"No item {query.RootId} is visible.");
         var root = await tree.FindAsync(query.RootId, cancellationToken).ConfigureAwait(false);
-        if (root is null)
+        if (root is null || access.IsPetTurn && ItemSettings.Read(root.Settings).WithholdFromPets)
         {
             return Result.Failure<IReadOnlyList<NotePassage>>(notFound);
         }
@@ -66,7 +67,7 @@ public sealed class GetPassagesHandler(
         try
         {
             return Result.Success(await search
-                .FindPassagesAsync(query.RootId, text, workspaces, Math.Clamp(query.Limit, 1, MaximumLimit), cancellationToken)
+                .FindPassagesAsync(query.RootId, text, workspaces, Math.Clamp(query.Limit, 1, MaximumLimit), access.IsPetTurn, cancellationToken)
                 .ConfigureAwait(false));
         }
         catch (ItemQueryFailedException)
@@ -90,7 +91,7 @@ public sealed record SearchPassages(WorkspaceId? WorkspaceId, string Query, int 
 /// A workspace the caller cannot read gives no passages rather than an error, like the item
 /// search, so the answer never tells an outsider whether the workspace exists.
 /// </remarks>
-public sealed class SearchPassagesHandler(IItemSearch search, IPermissionResolver permissions)
+public sealed class SearchPassagesHandler(IItemSearch search, IPermissionResolver permissions, AccessTokenSessionContext access)
     : IQueryHandler<SearchPassages, Result<IReadOnlyList<NotePassage>>>
 {
     /// <inheritdoc />
@@ -115,7 +116,7 @@ public sealed class SearchPassagesHandler(IItemSearch search, IPermissionResolve
         try
         {
             return Result.Success(await search
-                .FindPassagesAsync(null, text, workspaces, Math.Clamp(query.Limit, 1, GetPassagesHandler.MaximumLimit), cancellationToken)
+                .FindPassagesAsync(null, text, workspaces, Math.Clamp(query.Limit, 1, GetPassagesHandler.MaximumLimit), access.IsPetTurn, cancellationToken)
                 .ConfigureAwait(false));
         }
         catch (ItemQueryFailedException)

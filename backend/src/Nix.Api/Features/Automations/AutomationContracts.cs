@@ -15,7 +15,10 @@ namespace Nix.Features.Automations;
 /// <c>{"value": ...}</c>).
 /// </param>
 /// <param name="Conditions">Up to five <c>{key, op, value?}</c> checks on the triggering item.</param>
-/// <param name="Actions">One to five of <c>set_property</c>, <c>create_item</c> and <c>notify</c>.</param>
+/// <param name="Actions">
+/// One to five of <c>set_property</c>, <c>create_item</c> and <c>notify</c>. Pet routines use a
+/// sole <c>start_pet_run</c> or <c>poll_pet_mailbox</c> action on a schedule with an exact task scope.
+/// </param>
 public sealed record AutomationRuleInput(
     string Name,
     bool Enabled,
@@ -77,13 +80,19 @@ public sealed record AutomationTestResponse(bool WouldRun, string? Reason, IRead
 public sealed record ListAutomations(WorkspaceId WorkspaceId) : ICommand<AutomationListResponse>;
 
 /// <summary>Creates a rule owned by the caller.</summary>
-public sealed record CreateAutomation(WorkspaceId WorkspaceId, AutomationRuleInput Rule) : ICommand<AutomationRuleResponse>;
+public sealed record CreateAutomation(WorkspaceId WorkspaceId, AutomationRuleInput Rule) : ICommand<AutomationRuleResponse>
+{
+    internal bool VerifiedBrowserOwner { get; init; }
+}
 
 /// <summary>Reads one of the caller's rules.</summary>
 public sealed record GetAutomation(Guid RuleId) : ICommand<AutomationRuleResponse>;
 
 /// <summary>Replaces one of the caller's rules at a revision.</summary>
-public sealed record UpdateAutomation(Guid RuleId, long ExpectedRevision, AutomationRuleInput Rule) : ICommand<AutomationRuleResponse>;
+public sealed record UpdateAutomation(Guid RuleId, long ExpectedRevision, AutomationRuleInput Rule) : ICommand<AutomationRuleResponse>
+{
+    internal bool VerifiedBrowserOwner { get; init; }
+}
 
 /// <summary>Deletes one of the caller's rules and cancels its pending triggers.</summary>
 public sealed record DeleteAutomation(Guid RuleId) : ICommand<bool>;

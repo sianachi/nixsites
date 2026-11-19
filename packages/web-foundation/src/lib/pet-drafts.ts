@@ -1,15 +1,9 @@
 import { useSyncExternalStore } from 'react';
 
-// The unsent message, per workspace and pet. Module-level so it survives the conversation
-// moving between the floating panel and the page (each mounts its own `Conversation`). In memory
-// only, on purpose: it is an unfinished message rather than a document, so it is never written to
-// storage and a reload dropping it is the intended end of its life.
+// Unsent messages survive reopening their workspace or item conversation.
+// Drafts live in memory and are cleared on reload or sign-out.
 const drafts = new Map<string, string>();
 const listeners = new Set<() => void>();
-
-function draftKey(workspaceId: string, petId: string): string {
-  return `${workspaceId}:${petId}`;
-}
 
 function subscribe(onChange: () => void): () => void {
   listeners.add(onChange);
@@ -31,8 +25,8 @@ export function usePetDraft(
   workspaceId: string,
   petId: string,
   rootItemId?: string,
-): readonly [string, (next: string) => void] {
-  const key = `${draftKey(workspaceId, petId)}${rootItemId ? `:note:${rootItemId}` : ''}`;
+): readonly [string, (next: string | ((current: string) => string)) => void] {
+  const key = `${workspaceId}:${petId}${rootItemId ? `:${rootItemId}` : ''}`;
   const draft = useSyncExternalStore(
     subscribe,
     () => drafts.get(key) ?? '',
@@ -41,7 +35,7 @@ export function usePetDraft(
   return [
     draft,
     (next) => {
-      writeDraft(key, next);
+      writeDraft(key, typeof next === 'function' ? next(drafts.get(key) ?? '') : next);
     },
   ];
 }

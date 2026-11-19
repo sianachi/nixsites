@@ -104,6 +104,8 @@ export interface CommandEndpoint<TResult> {
   readonly schema: z.ZodType<TResult>;
   /** Cache key prefixes marked stale once the command succeeds. */
   readonly invalidates: readonly CacheKey[];
+  /** Budget for a bounded command that waits on external work. */
+  readonly timeoutMs?: number | undefined;
 }
 
 export interface CommandSpec<TResult> {
@@ -115,6 +117,7 @@ export interface CommandSpec<TResult> {
   readonly body?: unknown;
   readonly headers?: Readonly<Record<string, string>> | undefined;
   readonly invalidates?: readonly CacheKey[] | undefined;
+  readonly timeoutMs?: number | undefined;
 }
 
 export function defineCommand<TResult>(spec: CommandSpec<TResult>): CommandEndpoint<TResult> {
@@ -128,6 +131,7 @@ export function defineCommand<TResult>(spec: CommandSpec<TResult>): CommandEndpo
     headers: spec.headers,
     schema: spec.schema,
     invalidates: spec.invalidates ?? [],
+    ...(spec.timeoutMs === undefined ? {} : { timeoutMs: spec.timeoutMs }),
   };
 }
 

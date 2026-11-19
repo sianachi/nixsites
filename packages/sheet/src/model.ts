@@ -58,7 +58,7 @@ export interface SheetMeta {
   readonly colWidths: Readonly<Record<string, number>>;
 }
 
-const DEFAULT_SHEET_META: SheetMeta = { rows: 100, cols: 26, colWidths: {} };
+export const DEFAULT_SHEET_META: SheetMeta = { rows: 100, cols: 26, colWidths: {} };
 
 export function sheetCellsMap(doc: Y.Doc): Y.Map<unknown> {
   return doc.getMap(SHEET_CELLS_KEY);

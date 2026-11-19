@@ -13,13 +13,14 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { BookmarkButton } from '../../bookmarks/bookmark-button';
 import { DailyNoteBar } from '../../daily-notes/daily-note-bar';
 import { parseDailyNoteDate } from '../../daily-notes/daily-note';
 import { NoteEditor } from '@nix/web-editor/editor/note-editor';
+import { readComments } from '@nix/web-editor/editor/comment-anchors';
 import { useHiddenItems } from '@nix/web-collections/items/use-hidden-items';
 import { paneClip, paneScroller } from '@nix/web-foundation/layout/regions';
 import { useBackDismiss } from '@nix/web-foundation/layout/use-back-dismiss';
@@ -61,6 +62,7 @@ import { bodyNoun, clockTime } from './lock-copy';
 import { useItemViewActions } from './use-item-view-actions';
 import { ItemViewSuggestions } from './item-view-suggestions';
 import { NoteChatDrawer } from '../pet-page';
+import { dismissPetJobRoute, readPetJobRoute } from './pet-job-routing';
 
 const addableViews = STRUCTURED_RECIPES.filter(
   (recipe, index, all) =>
@@ -198,6 +200,7 @@ export function OpenItem({
   const overlayDetails = compactDetails || onClose !== undefined || onNavigateAway !== undefined;
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelPane, setPanelPane] = useState<Pane>('details');
+  const [commentThreadId, setCommentThreadId] = useState<string | null>(null);
 
   // The dialog is mounted only while it is open, so an export that was never started costs nothing
   // and a closed one keeps no half-chosen format from last time.
@@ -206,10 +209,14 @@ export function OpenItem({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [noteChatOpen, setNoteChatOpen] = useState(false);
+  const paneIndex = usePaneIndex();
+  const [search, setSearch] = useSearchParams();
+  const petJob =
+    paneIndex === 0 && onNavigateAway === undefined ? readPetJobRoute(search, itemId) : null;
   const closeNoteChat = (): void => {
     setNoteChatOpen(false);
+    if (petJob !== null) setSearch(dismissPetJobRoute, { replace: true });
   };
-  useBackDismiss(narrow && noteChatOpen, closeNoteChat);
   const [leadingHeading, setLeadingHeading] = useState<string | null>(null);
   const { getAccessToken } = useAuth();
 
@@ -218,6 +225,8 @@ export function OpenItem({
   // ancestor's. This is what lets the page say so, and close both when the unlock runs out, instead
   // of drawing an editor that cannot connect or a view over nothing.
   const lock = useItemLock(itemId);
+  const petDialogOpen = lock.open && (noteChatOpen || petJob !== null);
+  useBackDismiss(narrow && noteChatOpen && petJob === null, closeNoteChat);
   useForgetLockedBody(itemId, lock);
   const lockNoun = bodyNoun(bodyKind);
   const lockButtonRef = useRef<HTMLButtonElement>(null);
@@ -254,7 +263,6 @@ export function OpenItem({
     lock.lockItemId !== null && lock.lockItemId !== itemId
       ? (tree.find(lock.lockItemId)?.title ?? '')
       : null;
-  const paneIndex = usePaneIndex();
 
   const togglePanel = useCallback((): void => {
     setHistoryOpen(false);
@@ -291,6 +299,7 @@ export function OpenItem({
   }, [itemId, openSitePane]);
   function openCommentsPane(): void {
     setHistoryOpen(false);
+    setCommentThreadId(null);
     setPanelPane('comments');
     setPanelOpen(!panelOpen || panelPane !== 'comments');
   }
@@ -366,8 +375,25 @@ export function OpenItem({
     narrow && !viewsHostControls && lock.open && showingDocument && editorKind;
   const sectionRowShown = narrow && !viewsHostControls && !noteDocked && !editorHostsControls;
 
+  const askPet =
+    lock.open && workspace !== null && !zen ? (
+      <Button
+        variant="ghost"
+        className="shrink-0"
+        aria-haspopup="dialog"
+        aria-expanded={petDialogOpen}
+        onClick={() => {
+          setNoteChatOpen(true);
+        }}
+      >
+        <Icon icon={MessageCircle} size="sm" />
+        Ask pet
+      </Button>
+    ) : null;
+
   const mobileItemControls = (
     <>
+      {askPet}
       <Button
         variant="ghost"
         aria-label="Item details"
@@ -396,9 +422,6 @@ export function OpenItem({
     workspace,
     visibility,
     navigate,
-    openChat: () => {
-      setNoteChatOpen(true);
-    },
     onNavigateAway,
     onClose,
     sitesEnabled,
@@ -435,16 +458,10 @@ export function OpenItem({
     icon: MessageSquare,
     onSelect: openCommentsPane,
   };
-  const headerChat =
-    onNavigateAway === undefined
-      ? actionEntries.find((entry) => entry.key === 'note-chat')
-      : undefined;
   const contextItems: MenuEntry[] = [
     ...(onNavigateAway === undefined ? [] : [bookmarkEntry]),
     ...(onNavigateAway !== undefined && canOpenComments ? [commentEntry] : []),
-    ...actionEntries.filter(
-      (entry) => entry !== headerChat && !DIALOG_ACTIONS.has(entry.key ?? ''),
-    ),
+    ...actionEntries.filter((entry) => !DIALOG_ACTIONS.has(entry.key ?? '')),
   ];
   const menuItems: MenuEntry[] = [
     ...contextItems,
@@ -464,18 +481,7 @@ export function OpenItem({
   ];
   const desktopControls = (
     <div className="flex shrink-0 items-center gap-1">
-      {headerChat && (
-        <Button
-          variant="icon"
-          aria-label={headerChat.label}
-          title={headerChat.label}
-          aria-haspopup="dialog"
-          aria-expanded={noteChatOpen}
-          onClick={headerChat.onSelect}
-        >
-          <Icon icon={MessageCircle} size="sm" />
-        </Button>
-      )}
+      {askPet}
       <Button
         variant="icon"
         aria-label="Item settings"
@@ -783,7 +789,11 @@ export function OpenItem({
             panelOpen={panelOpen && (panelPane !== 'comments' || lock.open)}
             overlayDetails={overlayDetails}
             panelPane={panelPane}
-            onPanelPaneChange={setPanelPane}
+            focusThreadId={commentThreadId}
+            onPanelPaneChange={(pane) => {
+              setCommentThreadId(null);
+              setPanelPane(pane);
+            }}
             onTogglePanel={togglePanel}
             historyOpen={historyOpen && lock.open}
             onCloseHistory={() => {
@@ -805,11 +815,27 @@ export function OpenItem({
         lock={lock}
         getAccessToken={getAccessToken}
       />
-      {noteChatOpen && lock.open && workspace !== null ? (
+      {petDialogOpen && workspace !== null ? (
         <NoteChatDrawer
           workspaceId={workspace.workspaceId}
           rootItemId={itemId}
+          itemNoun={lockNoun}
+          activeRunId={petJob?.runId}
+          activeDecisionId={petJob?.decisionId}
           onClose={closeNoteChat}
+          onItemRefresh={tree.updateLoadedItem}
+          onViewComment={
+            commentsOn && bodyKind === 'note'
+              ? (threadId) => {
+                  closeNoteChat();
+                  readComments(itemId).refresh();
+                  setHistoryOpen(false);
+                  setPanelPane('comments');
+                  setCommentThreadId(threadId);
+                  setPanelOpen(true);
+                }
+              : undefined
+          }
         />
       ) : null}
     </>

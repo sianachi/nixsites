@@ -11,7 +11,7 @@ export interface StubItem {
   readonly properties: Readonly<Record<string, unknown>>;
   /** The item's optional features; absent means a server from before them, so everything off. */
   readonly settings?: Readonly<
-    Record<'comments' | 'suggesting' | 'reviewStates' | 'fullWidth', boolean>
+    Record<'comments' | 'suggesting' | 'reviewStates' | 'fullWidth' | 'withholdFromPets', boolean>
   >;
   readonly createdAt: string;
   readonly updatedAt: string;

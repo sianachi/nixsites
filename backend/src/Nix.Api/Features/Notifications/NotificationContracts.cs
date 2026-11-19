@@ -4,7 +4,11 @@ namespace Nix.Features.Notifications;
 
 /// <summary>One inbox entry, as the client sees it.</summary>
 public sealed record NotificationDto(Guid Id, string Kind, string Title, string Body,
-    Guid? ItemId, Guid? WorkspaceId, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt);
+    Guid? ItemId, Guid? WorkspaceId, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt,
+    NotificationPetDecisionDto? PetDecision = null);
+
+/// <summary>An exact question or proposal in the item pet dialog.</summary>
+public sealed record NotificationPetDecisionDto(Guid RunId, Guid DecisionId, string Kind);
 
 /// <summary>One slice of the caller's inbox.</summary>
 public sealed record NotificationsPageResponse(IReadOnlyList<NotificationDto> Items, string? NextCursor, int Unread, long Revision);

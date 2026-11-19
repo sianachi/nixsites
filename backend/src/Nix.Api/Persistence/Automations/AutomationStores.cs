@@ -38,6 +38,15 @@ public sealed class AutomationRuleStore(NixDbContext database) : IAutomationRule
             .AsNoTracking()
             .SingleOrDefaultAsync(rule => rule.Id == ruleId, cancellationToken);
 
+    public async Task<AutomationRule?> GetForUpdateAsync(Guid ruleId, CancellationToken cancellationToken)
+    {
+        var rows = await database.Set<AutomationRule>()
+            .FromSqlInterpolated($"SELECT * FROM automation_rule WHERE id = {ruleId} FOR NO KEY UPDATE")
+            .AsNoTracking()
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return rows.SingleOrDefault();
+    }
+
     public async Task LockOwnerQuotaAsync(TenantId tenantId, PrincipalId ownerId, WorkspaceId workspaceId, CancellationToken cancellationToken)
     {
         // Transaction-scoped: held until the creating transaction commits or rolls back, so a

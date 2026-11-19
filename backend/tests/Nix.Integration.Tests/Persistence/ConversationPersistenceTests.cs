@@ -2,6 +2,7 @@ using System.Text.Json;
 using Nix.Abstractions;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
+using Nix.Domain.Tenancy;
 using Nix.Features.Conversations;
 using Nix.Features.Items;
 using Nix.Features.Locks;
@@ -324,6 +325,96 @@ public sealed class ConversationPersistenceTests(NixPostgresFixture fixture) : I
     }
 
     [Fact]
+    public async Task Workspace_and_subtree_passages_keep_public_matches_and_exclude_protected_notes()
+    {
+        var id = await Create();
+        var workspace = WorkspaceId.From(TestTenants.AlphaWorkspace);
+        ItemId root;
+        ItemId visible;
+        ItemId withheld;
+        ItemId locked;
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
+        {
+            var dispatcher = work.Resolve<NixDispatcher>();
+            async Task<ItemId> CreateItemAsync(string type, string title, ItemId? parent)
+            {
+                var item = await dispatcher.SendAsync<CreateItem, Item>(new(workspace, type, title, parent, null), Cancellation);
+                Assert.True(item.IsSuccess, item.IsFailure ? item.Error.Message : null);
+                return item.Value.Id;
+            }
+
+            root = await CreateItemAsync("folder", "Passage fixture", null);
+            visible = await CreateItemAsync("note", "Open note", root);
+            withheld = await CreateItemAsync("note", "Marked note", root);
+            locked = await CreateItemAsync("note", "Locked note", root);
+            Assert.True(await work.Resolve<IItemTree>().SetItemPetProtectionAsync(withheld, workspace, true, Cancellation));
+            Assert.True((await dispatcher.SendAsync<LockItem, bool>(new(locked, "a-test-password", null), Cancellation)).IsSuccess);
+            await work.CommitAsync(Cancellation);
+        }
+
+        const string openText = "The orchard opens on Saturday.";
+        const string withheldText = "Orchard orchard orchard orchard. Marked synthetic passage.";
+        const string lockedText = "Orchard orchard orchard orchard. Locked synthetic passage.";
+        await using (var connection = await fixture.OpenMigratorConnectionAsync())
+        {
+            await RawSql.ExecuteAsync(connection, null, $"""
+                INSERT INTO item_chunk (tenant_id, item_id, ord, seq, heading, body, content_hash, body_vector)
+                VALUES ('{TestTenants.Alpha:D}', '{visible.Value:D}', 0, 1, '', '{openText}', 'open', to_tsvector('english', '{openText}')),
+                       ('{TestTenants.Alpha:D}', '{locked.Value:D}', 0, 1, '', '{lockedText}', 'locked', to_tsvector('english', '{lockedText}'));
+
+                INSERT INTO item_chunk (tenant_id, item_id, ord, seq, heading, body, content_hash, body_vector)
+                SELECT '{TestTenants.Alpha:D}', '{withheld.Value:D}', ord, 1, '', '{withheldText}', 'marked', to_tsvector('english', '{withheldText}')
+                FROM generate_series(0, 8) AS ord;
+                """);
+        }
+
+        await using var active = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var ordinary = await active.Resolve<IItemSearch>().FindPassagesAsync(root, "orchard", [workspace], 20, petSourcesOnly: false, Cancellation);
+        Assert.Contains(ordinary, passage => passage.ItemId == visible && passage.Text == openText);
+        Assert.Contains(ordinary, passage => passage.ItemId == withheld && passage.Text == withheldText);
+        Assert.DoesNotContain(ordinary, passage => passage.ItemId == locked);
+        var requestId = Guid.NewGuid();
+        var begun = await active.Resolve<ConversationService>().Begin(id, new(requestId, "Search orchard notes"), Cancellation);
+        Assert.True(begun.IsSuccess);
+
+        foreach (var operation in new[] { "search", "search_note" })
+        {
+            var arguments = new Dictionary<string, JsonElement>
+            {
+                ["operation"] = JsonSerializer.SerializeToElement(operation),
+                ["workspaceId"] = JsonSerializer.SerializeToElement(workspace.Value),
+                ["itemId"] = JsonSerializer.SerializeToElement(root.Value),
+                ["query"] = JsonSerializer.SerializeToElement("orchard"),
+            };
+            var result = await ConversationTools.Execute(id, new(TestTenants.Alpha, TestTenants.AlphaPrincipal, requestId, arguments),
+                active.Resolve<IServiceProvider>(), Cancellation);
+            Assert.True(result.Success, result.Result);
+            Assert.DoesNotContain(withheldText, result.Result, StringComparison.Ordinal);
+            Assert.DoesNotContain(lockedText, result.Result, StringComparison.Ordinal);
+            using var body = JsonDocument.Parse(result.Result);
+            var passage = Assert.Single(body.RootElement.GetProperty("passages").EnumerateArray());
+            Assert.Equal(visible.Value, passage.GetProperty("itemId").GetGuid());
+            Assert.Equal(openText, passage.GetProperty("text").GetString());
+        }
+
+        await using var host = SiteHttpHost.Create(fixture);
+        var pet = host.PetTurnToken(TestTenants.AlphaContext);
+        foreach (var route in new[]
+        {
+            $"/api/v1/search/passages?q=orchard&workspaceId={workspace.Value:D}",
+            $"/api/v1/items/{root.Value:D}/passages?q=orchard",
+        })
+        {
+            using var response = await host.SendAsync(HttpMethod.Get, route, pet);
+            response.EnsureSuccessStatusCode();
+            using var body = await SiteHttpHost.JsonAsync(response);
+            var passage = Assert.Single(body.RootElement.GetProperty("passages").EnumerateArray());
+            Assert.Equal(visible.Value, passage.GetProperty("itemId").GetGuid());
+            Assert.Equal(openText, passage.GetProperty("text").GetString());
+        }
+    }
+
+    [Fact]
     public async Task Trash_and_restore_before_lease_expiry_interrupts_the_turn_and_keeps_the_transcript()
     {
         var id = await Create();
@@ -360,6 +451,25 @@ public sealed class ConversationPersistenceTests(NixPostgresFixture fixture) : I
         Assert.True(locked.IsSuccess);
         var after = await service.Messages(id, null, 50, Cancellation);
         Assert.Empty(after.Value.Items);
+    }
+
+    [Fact]
+    public async Task Marked_messages_remain_in_the_human_transcript_and_are_omitted_from_model_history()
+    {
+        var id = await Create([new("user", "Selected private context"), new("assistant", "Public response")]);
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var service = work.Resolve<ConversationService>();
+        var tree = work.Resolve<IItemTree>();
+        var before = await service.Messages(id, null, 50, Cancellation);
+        var marked = new ItemId(before.Value.Items[0].Id);
+        Assert.True(await tree.SetItemPetProtectionAsync(marked, new(TestTenants.AlphaWorkspace), true, Cancellation));
+
+        var history = await service.Messages(id, null, 50, forModel: true, Cancellation);
+        Assert.Equal("Public response", Assert.Single(history.Value.Items).Text);
+        var displayed = await service.Messages(id, null, 50, Cancellation);
+        Assert.Collection(displayed.Value.Items,
+            message => Assert.Equal("Selected private context", message.Text),
+            message => Assert.Equal("Public response", message.Text));
     }
 
     [Fact]

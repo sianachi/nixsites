@@ -1,12 +1,13 @@
 import { memoryModeOf } from '../../memory-mode';
 import { type PetConnection, type PetProfile, type PetSettings } from '@nix/api-client';
 import { Button, Text } from '@nix/ui';
-import { useLayoutEffect, useMemo, useRef, type ReactElement } from 'react';
+import { Fragment, useLayoutEffect, useMemo, useRef, type ReactElement } from 'react';
 import { type NixClient } from '@nix/api-client';
 import { type ProgramPiece } from '../../../openui/fence';
 import { PetAvatar } from '../../pet-avatar';
 import { PetChatViewport } from '../../pet-chat-viewport';
 import { PetWorkTools } from '../../work-tools/pet-work-tools';
+import { type ConversationJobEntry } from '../conversation-jobs';
 import { PetEmptyState } from './empty-state';
 import { PetMessageEditor } from './message-editor';
 import { PetMessageRow } from './message-row';
@@ -41,6 +42,8 @@ export function MessageList({
   resendTurn,
   retryLastTurn,
   onSaveInsight,
+  jobEntries,
+  onAttachToJob,
 }: {
   readonly client: NixClient;
   readonly workspaceId: string;
@@ -69,12 +72,14 @@ export function MessageList({
   readonly resendTurn: (text: string, replaceFromMessageId: string) => unknown;
   readonly retryLastTurn: () => void;
   readonly onSaveInsight: (text: string) => void;
+  readonly jobEntries?: readonly ConversationJobEntry[] | undefined;
+  readonly onAttachToJob?: ((text: string) => void) | undefined;
 }): ReactElement {
   // The watch hands over a new runtime up to four times a second. Rows are memoised, so the
   // callbacks they receive must keep one identity; they read the latest props through a ref.
-  const latestProps = useRef({ onAsk, retryLastTurn, onSaveInsight, setEditing });
+  const latestProps = useRef({ onAsk, retryLastTurn, onSaveInsight, setEditing, onAttachToJob });
   useLayoutEffect(() => {
-    latestProps.current = { onAsk, retryLastTurn, onSaveInsight, setEditing };
+    latestProps.current = { onAsk, retryLastTurn, onSaveInsight, setEditing, onAttachToJob };
   });
   const stable = useMemo(
     () => ({
@@ -90,9 +95,41 @@ export function MessageList({
       onEdit: (message: { readonly id: string; readonly text: string }) => {
         latestProps.current.setEditing({ id: message.id, text: message.text });
       },
+      onAttach: (text: string) => {
+        latestProps.current.onAttachToJob?.(text);
+      },
     }),
     [],
   );
+  const entriesByMessage = new Map<string, ConversationJobEntry[]>();
+  const messageIds = new Set(messages.map((message) => message.id));
+  const detachedEntries: ConversationJobEntry[] = [];
+  for (const entry of jobEntries ?? []) {
+    const anchor = entry.afterMessageId;
+    if (anchor === undefined || !messageIds.has(anchor)) {
+      detachedEntries.push(entry);
+      continue;
+    }
+    const anchored = entriesByMessage.get(anchor) ?? [];
+    anchored.push(entry);
+    entriesByMessage.set(anchor, anchored);
+  }
+
+  const newestJob = jobEntries?.at(-1);
+  const latestJobId =
+    !running && !busy && newestJob?.afterMessageId === messages.at(-1)?.id
+      ? newestJob?.id
+      : undefined;
+  const renderEntry = (entry: ConversationJobEntry) => (
+    <div
+      key={entry.id}
+      data-pet-latest-message={entry.id === latestJobId ? '' : undefined}
+      className="min-w-0"
+    >
+      {entry.content}
+    </div>
+  );
+
   const tools = (
     <PetWorkTools
       client={client}
@@ -111,16 +148,18 @@ export function MessageList({
   return (
     <PetChatViewport
       quiet
-      latestKey={`${messages.at(-1)?.id ?? ''}:${runtime.tools?.at(-1)?.id ?? ''}:${running ? 'thinking' : 'idle'}:${approvalPending ? 'approval' : ''}`}
+      latestKey={`${messages.at(-1)?.id ?? ''}:${runtime.tools?.at(-1)?.id ?? ''}:${running ? 'thinking' : 'idle'}:${approvalPending ? 'approval' : ''}:${jobEntries?.at(-1)?.id ?? ''}`}
     >
       {messages.length === 0 ? (
         <>
-          <PetEmptyState
-            pet={pet}
-            workspaceAccess={workspaceAccess}
-            suggestions={suggestions}
-            onPick={onPick}
-          />
+          {detachedEntries.length === 0 ? (
+            <PetEmptyState
+              pet={pet}
+              workspaceAccess={workspaceAccess}
+              suggestions={suggestions}
+              onPick={onPick}
+            />
+          ) : null}
           {tools}
         </>
       ) : (
@@ -138,47 +177,61 @@ export function MessageList({
             const edit = editing?.id === message.id ? editing : null;
             const quiet = !idle || edit !== null;
             return (
-              <PetMessageRow
-                key={message.id}
-                message={message}
-                petName={pet.name}
-                workspaceId={workspaceId}
-                // While a card waits it is the scroll anchor; your own message still wins (it is yours).
-                latest={
-                  index === messages.length - 1 && (!approvalPending || message.role === 'user')
-                }
-                onAsk={stable.onAsk}
-                applyWithoutAsking={applyWithoutAsking}
-                earlierPieces={piecesBefore[index]}
-                followsLockedRead={runtime.lockedRead}
-                noteScope={noteScope}
-                editor={
-                  edit ? (
-                    <PetMessageEditor
-                      text={edit.text}
-                      enterToSend={enterToSend}
-                      busy={running || busy}
-                      onChange={(text) => {
-                        setEditing({ id: message.id, text });
-                      }}
-                      onSend={() => {
-                        setEditing(null);
-                        void resendTurn(edit.text, message.id);
-                      }}
-                      onCancel={() => {
-                        setEditing(null);
-                      }}
-                    />
-                  ) : undefined
-                }
-                onEdit={!quiet && index === lastUserIndex ? stable.onEdit : undefined}
-                onRegenerate={!quiet && index === lastReplyIndex ? stable.onRegenerate : undefined}
-                onSave={
-                  !quiet && message.role === 'assistant' && !message.id.includes(':draft:')
-                    ? stable.onSave
-                    : undefined
-                }
-              />
+              <Fragment key={message.id}>
+                <PetMessageRow
+                  message={message}
+                  petName={pet.name}
+                  workspaceId={workspaceId}
+                  // While a card waits it is the scroll anchor; your own message still wins (it is yours).
+                  latest={
+                    latestJobId === undefined &&
+                    index === messages.length - 1 &&
+                    (!approvalPending || message.role === 'user')
+                  }
+                  onAsk={stable.onAsk}
+                  applyWithoutAsking={applyWithoutAsking}
+                  earlierPieces={piecesBefore[index]}
+                  followsLockedRead={runtime.lockedRead}
+                  noteScope={noteScope}
+                  editor={
+                    edit ? (
+                      <PetMessageEditor
+                        text={edit.text}
+                        enterToSend={enterToSend}
+                        busy={running || busy}
+                        onChange={(text) => {
+                          setEditing({ id: message.id, text });
+                        }}
+                        onSend={() => {
+                          setEditing(null);
+                          void resendTurn(edit.text, message.id);
+                        }}
+                        onCancel={() => {
+                          setEditing(null);
+                        }}
+                      />
+                    ) : undefined
+                  }
+                  onEdit={!quiet && index === lastUserIndex ? stable.onEdit : undefined}
+                  onRegenerate={
+                    !quiet && index === lastReplyIndex ? stable.onRegenerate : undefined
+                  }
+                  onAttachToJob={
+                    !quiet &&
+                    !runtime.lockedRead &&
+                    !message.id.includes(':draft:') &&
+                    onAttachToJob
+                      ? stable.onAttach
+                      : undefined
+                  }
+                  onSave={
+                    !quiet && message.role === 'assistant' && !message.id.includes(':draft:')
+                      ? stable.onSave
+                      : undefined
+                  }
+                />
+                {entriesByMessage.get(message.id)?.map(renderEntry)}
+              </Fragment>
             );
           };
           return (
@@ -190,6 +243,7 @@ export function MessageList({
           );
         })()
       )}
+      {detachedEntries.map(renderEntry)}
       {runtime.state === 'error' ? (
         // At the turn that failed, after the last row, where the reply would have been.
         <div className="flex items-center justify-between gap-2">

@@ -122,6 +122,11 @@ internal sealed class SiteHttpHost : IAsyncDisposable
             .MintBrowserSession(who.PrincipalId, who.TenantId, sessionId);
     }
 
+    /// <summary>Mints the bounded bearer a pet uses for a read-only turn.</summary>
+    public string PetTurnToken(NixSessionContext who) =>
+        _factory.Services.GetRequiredService<SelfIssuedTokenService>()
+            .MintPetTurn(who.PrincipalId, who.TenantId, Guid.NewGuid(), PetTurnMode.Read);
+
     /// <summary>Sends a public API request with a bearer.</summary>
     public async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, string bearer, object? body = null)
     {

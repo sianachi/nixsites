@@ -7,6 +7,29 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Send a work request in the pet conversation to start a job. Enabled workspaces can start with
+  the current item and review or revise proposals in the conversation. Nix inbox notices link
+  to pending decisions and keep job details inside the dialog. Jobs resume after a restart.
+- Review a pet's fitted Canvas draft in the canvas area. Apply native shapes, strokes, groups,
+  attached arrows, and linked Nix cards, or ask for changes. Undo preserves separate edits.
+- Set up scoped pet connections to supported mail, drive, messaging, calendar, issue, and code
+  services. Review outbound changes in the pet dialog. Register an MCP tool or a peer with its own
+  grant.
+- Browse public websites or use a saved session for an exact site. Review the destination and
+  fields before a pet submits a supported form. Open the reviewed page from the pet dialog when a
+  form needs you to finish it yourself.
+- Withhold an item from pet access in its protection settings. A pet run checks the setting
+  before sending selected sources to the model or handing them to another agent.
+- Schedule a named pet routine from the pet dialog. Its owner can allow one exact, reversible task
+  rename to apply automatically. Other proposed changes still ask for review.
+- Watch a connected Gmail label or Outlook folder from the pet dialog. New messages queue one pet
+  job each, and message reads and replies still ask for review in that conversation.
+- Assign a Linear lookup from the task's pet dialog. After you approve the lookup, the pet posts its
+  suggested next step as a task comment.
+- Connect Linear read-only in workspace settings. Claude and Codex can request an issue lookup from
+  a Nix task, and the connection owner can approve or decline it in the task's pet dialog.
+- Link an issue from an authorized Linear team to a Nix task, refresh its status, and copy the
+  reviewed value into the task. Nix flags independent status edits and preserves conflicting values.
 - OAuth sign-in for remote MCP: hosted clients such as ChatGPT and claude.ai connect through discovery, dynamic
   client registration and an authorization-code flow with PKCE; the token they receive is an ordinary personal
   access token that expires after 90 days.
@@ -82,6 +105,39 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Collaboration restarts refuse reconnects during document draining and give active HTTP requests
+  up to the existing 60-second shutdown grace period before closing unfinished connections.
+- Failed pet jobs show Core’s safe failure reason for planning, preparing a draft, or applying a
+  change, alongside the existing retry action.
+- A pet job asks for source consent when it needs unshared note text. It can append text you
+  supply without sending the existing note text to the model.
+- Pet chat explains how enabled jobs handle browsing and reviewed workspace changes from a
+  message in the item dialog.
+- Closed, idle pet dialogs release their live connection. When too many conversations are open,
+  the pet asks you to close another conversation.
+- Saved Canvas drawings fit the initial viewport while preserving zoom and movement after you
+  start using the editor.
+- Read-only Linear issue approvals show the requested issue and authorized destination with a
+  clear Look up issue action.
+- Pet web research distinguishes a page's title from the text visible on the page.
+
+- Pet job search shows only sources that are available to the pet. When a source becomes
+  unavailable after selection, the dialog explains the refusal and lets you choose again.
+
+- A pet job pauses when a note has Comments turned off. Enable Comments in the note's settings,
+  then reply to continue the job with its earlier edits still recorded.
+- Pet jobs follow your draft revisions through later steps, including after the revised edit is applied.
+- Pet chat can send again after a worker restart leaves its provider thread unavailable. Your
+  visible messages stay in the conversation.
+- Pet chat answers general questions without probing the open item and checks the item type
+  before reading its contents. A failed read appears in tool activity.
+- Pet drawing previews keep their labels readable in dark mode and leave space around wide
+  diagrams.
+- Pet sheet reviews show the exact before and after values or formulas. Note reviews show the
+  text to add and link to the target note.
+- Direct requests to browse a website or set a value start a pet job. Website approvals show
+  the destination and whether the visit uses a connected session.
+
 - The phone and desktop apps no longer delete a workspace's offline copy, queued edits included,
   when a proxy or bot check in front of the server answers a sync request with 403 or 404. Only a
   refusal from Nix itself removes the copy.
@@ -110,6 +166,12 @@ follows semantic versioning (`0.x` pre-1.0).
 - The Android app is excluded from device backup and transfer, which carried its signed-in session.
 - In Settings > Access tokens the Rotate and Revoke buttons no longer run into each other when a
   token has a long name. They read Rotate and Revoke; the token's name stays in the row.
+
+### Security
+
+- Pet search keeps excerpts from marked or locked notes out of workspace and folder results.
+- Pet job briefs and observations are screened for recognizable credentials before they reach
+  the planning model.
 
 ## 0.7.0 - 2026-11-14
 

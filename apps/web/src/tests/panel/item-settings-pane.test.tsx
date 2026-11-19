@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { item, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
+import { item, STUB_WORKSPACE_ID, stubCoreApi } from '@nix/web-foundation/testing/api-stub';
 import { json } from '@nix/web-foundation/testing/json-response';
 import { requestUrl } from '@nix/web-foundation/testing/request-url';
 import { renderAt, signedIn } from '@nix/web-editor/testing/render-with-router';
@@ -37,7 +37,10 @@ function stubSettings(options: { readonly link?: boolean } = {}): Call[] {
       const method = (
         init?.method ?? (input instanceof Request ? input.method : 'GET')
       ).toUpperCase();
-      const id = /\/api\/v1\/items\/([0-9a-f-]{36})(\/settings|\/public-link)?$/.exec(url.pathname);
+      const id =
+        /\/api\/v1\/items\/([0-9a-f-]{36})(\/settings|\/public-link|\/pet-protection)?$/.exec(
+          url.pathname,
+        );
       if (id === null || (id[2] === undefined && method !== 'GET')) return inner(input, init);
       const [, itemId = '', tail] = id;
       const stored = settings.get(itemId);
@@ -58,7 +61,7 @@ function stubSettings(options: { readonly link?: boolean } = {}): Call[] {
               404,
             );
       }
-      if (tail === '/settings') {
+      if (tail === '/settings' || tail === '/pet-protection') {
         const body: unknown =
           typeof init?.body === 'string'
             ? JSON.parse(init.body)
@@ -78,14 +81,34 @@ function stubSettings(options: { readonly link?: boolean } = {}): Call[] {
 }
 
 async function openSettings(itemId: string) {
-  renderAt(<App />, `/?item=${itemId}`);
-  await userEvent.click(await screen.findByRole('button', { name: 'Item settings' }));
+  renderAt(<App />, `/w/${STUB_WORKSPACE_ID}?item=${itemId}`);
+  await userEvent.click(
+    await screen.findByRole('button', { name: 'Item settings' }, { timeout: 5_000 }),
+  );
   const panel = within(await screen.findByRole('complementary', { name: 'Item settings' }));
   await userEvent.click(panel.getByRole('button', { name: 'Settings' }));
   return panel;
 }
 
 describe('the item settings pane', () => {
+  it('lets the workspace owner withhold an item through the dedicated browser control', async () => {
+    stubCoreApi({ items: [item({ id: NOTE, title: 'Personal notes' })] });
+    const calls = stubSettings();
+    const panel = await openSettings(NOTE);
+    const control = await panel.findByRole('checkbox', { name: 'Withhold from pets' });
+    await userEvent.click(control);
+    await waitFor(() => {
+      expect(control).toBeChecked();
+    });
+    expect(calls).toEqual([
+      {
+        method: 'PUT',
+        path: `/api/v1/items/${NOTE}/pet-protection`,
+        body: { withholdFromPets: true },
+      },
+    ]);
+  });
+
   it('lists the note switches off, with no Comments pane until comments are on', async () => {
     stubCoreApi({ items: [item({ id: NOTE, title: 'Plan' })] });
     const calls = stubSettings();

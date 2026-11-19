@@ -18,6 +18,13 @@ public static class PetTurnPolicy
         (Rule(@"^/api/v1/me/pets(/|$)"), true),
         (Rule(@"^/api/v1/me/push-subscriptions(/|$)"), true),
         (Rule(@"^/api/v1/me/calendar/connections(/|$)"), true),
+        (Rule(@"^/api/v1/workspaces/[^/]+/linear(/|$)"), false),
+        (Rule(@"^/api/v1/workspaces/[^/]+/pet-connections(/|$)"), true),
+        (Rule(@"^/api/v1/items/[^/]+/linear-requests/[^/]+/decision$"), true),
+        (Rule(@"^/api/v1/items/[^/]+/linear-requests/hand-to-pet$"), true),
+        (Rule(@"^/api/v1/items/[^/]+/linear-link(/|$)"), true),
+        (Rule(@"^/api/v1/(items|workspaces)/[^/]+/pet-runs(/|$)"), true),
+        (Rule(@"^/api/v1/items/[^/]+/pet-peers(/|$)"), true),
         (Rule(@"^/api/v1/me/(preferences|ui-settings|workspace-arrangement)(/|$)"), false),
         (Rule(@"^/api/v1/conversations/[^/]+/(turns|configure|sources|cancel)$"), false),
         (Rule(@"^/api/v1/workspaces/[^/]+/conversations(/|$)"), false),
@@ -30,7 +37,7 @@ public static class PetTurnPolicy
         (Rule(@"^/api/v1/workspaces/[^/]+/agent-policy$"), true),
         (Rule(@"^/api/v1/workspaces/[^/]+/(password|unlock|join)(/|$)"), true),
         // An item lock password is typed by a person too; a leaked write token must not lock owners out.
-        (Rule(@"^/api/v1/items/[^/]+/(lock|unlock|protection)(/|$)"), true),
+        (Rule(@"^/api/v1/items/[^/]+/(lock|unlock|protection|pet-protection)(/|$)"), true),
     ];
 
     /// <summary>Whether the executor's human-only list covers this request.</summary>

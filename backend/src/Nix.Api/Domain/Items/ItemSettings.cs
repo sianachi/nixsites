@@ -9,15 +9,18 @@ namespace Nix.Domain.Items;
 /// <param name="Suggesting">Whether the item's editor offers suggesting (track changes).</param>
 /// <param name="ReviewStates">Whether a file's versions carry Draft, In review and Approved states.</param>
 /// <param name="FullWidth">Whether a note's body uses the full width of its pane.</param>
+/// <param name="WithholdFromPets">Whether this item is excluded from pet work and model inputs.</param>
 /// <remarks>
-/// Stored as one JSON object on the item (and, as defaults for new items, on the workspace). A
-/// missing or malformed value reads as everything off, so a bad row never blocks an item read.
+/// The item stores these settings together as JSON. The workspace stores defaults for the editor
+/// switches. A missing value reads as off. A malformed pet protection flag withholds the item.
 /// </remarks>
-public sealed record ItemSettings(bool Comments = false, bool Suggesting = false, bool ReviewStates = false, bool FullWidth = false)
+public sealed record ItemSettings(
+    bool Comments = false, bool Suggesting = false, bool ReviewStates = false, bool FullWidth = false,
+    bool WithholdFromPets = false)
 {
     /// <summary>Reads the stored JSON, tolerating null and anything unexpected.</summary>
     /// <param name="json">The stored object, or null.</param>
-    /// <returns>The settings; every switch off for a missing or unreadable value.</returns>
+    /// <returns>The settings, including protection when a stored pet protection flag is malformed.</returns>
     public static ItemSettings Read(string? json)
     {
         JsonObject? node = null;
@@ -29,7 +32,10 @@ public sealed record ItemSettings(bool Comments = false, bool Suggesting = false
         {
         }
 
-        return new ItemSettings(Flag(node, "comments"), Flag(node, "suggesting"), Flag(node, "reviewStates"), Flag(node, "fullWidth"));
+        return new ItemSettings(
+            Flag(node, "comments"), Flag(node, "suggesting"), Flag(node, "reviewStates"), Flag(node, "fullWidth"),
+            node?.ContainsKey("withholdFromPets") == true
+                && (node["withholdFromPets"] is not JsonValue value || !value.TryGetValue<bool>(out var mark) || mark));
     }
 
     /// <summary>The JSON to merge over the stored object: only the switches named, so two edits do not overwrite each other.</summary>

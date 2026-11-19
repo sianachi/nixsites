@@ -111,6 +111,7 @@ public sealed class TemplateBoundarySecurityIntegrationTests : IAsyncLifetime
                 "vaultcanary",
                 [Workspace],
                 limit: 100,
+                petSourcesOnly: false,
                 Cancellation);
             Assert.DoesNotContain(search, item => hidden.Contains(item.Id));
 

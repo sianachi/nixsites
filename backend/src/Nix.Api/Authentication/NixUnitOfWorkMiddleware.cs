@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Nix.Abstractions;
 using Nix.Abstractions.Workers;
 using Nix.Domain.Identity;
+using Nix.Domain.Items;
 using Nix.Domain.Provisioning;
 using Nix.Errors;
 using Nix.Features.Identity;
@@ -184,7 +185,10 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
             return;
         }
 
-        if (validated is ValidatedPetTurnToken petTurn && !PetTurnPolicy.Allows(context.Request, petTurn))
+        if (validated is ValidatedPetTurnToken petTurn
+            && (!PetTurnPolicy.Allows(context.Request, petTurn)
+                || (petTurn.ActionBinding is { } binding
+                    && !await PetActionRequestBinding.MatchesAsync(context.Request, binding, context.RequestAborted).ConfigureAwait(false))))
         {
             await WriteProblemAsync(
                 context,
@@ -343,7 +347,7 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
         // No credentialContext grant is set for this kind, so locked bodies stay closed to it.
         if (validated is ValidatedPetTurnToken petCeiling)
         {
-            scopeContext.SetTokenCeiling(mayWrite: petCeiling.MayWrite, mayAdminister: petCeiling.MayAdminister);
+            scopeContext.SetPetTurn(mayWrite: petCeiling.MayWrite, mayAdminister: petCeiling.MayAdminister);
         }
 
         var scopedPrincipalId = principal?.Id
@@ -373,9 +377,11 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
         var captureSnapshot = context.Request.Path.Value is { } requestPath
             && (requestPath.Contains("/templates/capture-preview/", StringComparison.OrdinalIgnoreCase)
                 || requestPath.Equals("/internal/templates/captures/begin", StringComparison.OrdinalIgnoreCase));
+        var boundPetEdit = validated is ValidatedPetTurnToken { ActionBinding: not null }
+            && context.Request.Headers.ContainsKey(PetActionRequestBinding.RevisionsHeader);
         var transaction = await dbContext.Database
             .BeginTransactionAsync(
-                captureSnapshot ? IsolationLevel.RepeatableRead : IsolationLevel.ReadCommitted,
+                captureSnapshot || boundPetEdit ? IsolationLevel.RepeatableRead : IsolationLevel.ReadCommitted,
                 context.RequestAborted)
             .ConfigureAwait(false);
 
@@ -484,6 +490,37 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
                     "Worker delegation is outside its export root",
                     "This worker execution token cannot read metadata outside its signed export boundary.")
                     .ConfigureAwait(false);
+                return;
+            }
+
+            if (boundPetEdit
+                && !await PetActionRequestBinding.RevisionsMatchAsync(context, context.RequestAborted).ConfigureAwait(false))
+            {
+                await transaction.RollbackAsync(context.RequestAborted).ConfigureAwait(false);
+                await WriteProblemAsync(
+                    context,
+                    StatusCodes.Status409Conflict,
+                    "pet_runs.stale_review",
+                    "Pet action has changed",
+                    "An affected item changed or became locked. Review a new preview.").ConfigureAwait(false);
+                return;
+            }
+
+            if (validated is ValidatedPetTurnToken
+                && context.Request.Path.StartsWithSegments("/api/v1/items", StringComparison.OrdinalIgnoreCase)
+                && context.Request.RouteValues.TryGetValue("itemId", out var rawPetTarget)
+                && Guid.TryParse(rawPetTarget?.ToString(), out var petTarget)
+                && await context.RequestServices.GetRequiredService<IItemTree>()
+                    .FindStoredAsync(ItemId.From(petTarget), context.RequestAborted).ConfigureAwait(false) is { } target
+                && ItemSettings.Read(target.Settings).WithholdFromPets)
+            {
+                await transaction.RollbackAsync(context.RequestAborted).ConfigureAwait(false);
+                await WriteProblemAsync(
+                    context,
+                    StatusCodes.Status404NotFound,
+                    "items.not_found",
+                    "Item not found",
+                    "No such item is visible.").ConfigureAwait(false);
                 return;
             }
 

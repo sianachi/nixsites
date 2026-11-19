@@ -38,6 +38,7 @@ public interface IItemSearch
     /// <param name="query">What the person typed. Never a pattern; never SQL.</param>
     /// <param name="readableWorkspaces">Where the caller is allowed to look.</param>
     /// <param name="limit">The most results to return.</param>
+    /// <param name="petSourcesOnly">Whether to omit pet-withheld items and items at or under any lock.</param>
     /// <param name="cancellationToken">Cancels the search.</param>
     /// <returns>The matches, ordered with title matches first.</returns>
     /// <remarks>
@@ -50,6 +51,7 @@ public interface IItemSearch
         string query,
         IReadOnlyList<WorkspaceId> readableWorkspaces,
         int limit,
+        bool petSourcesOnly,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -114,6 +116,7 @@ public interface IItemSearch
     /// <param name="query">What to find, in the person's or the pet's words.</param>
     /// <param name="readableWorkspaces">Where the caller is allowed to look.</param>
     /// <param name="limit">The most passages to return.</param>
+    /// <param name="petSourcesOnly">Exclude notes withheld from pets before ranking.</param>
     /// <param name="cancellationToken">Cancels the search.</param>
     /// <returns>The passages, most relevant first.</returns>
     /// <remarks>
@@ -127,6 +130,7 @@ public interface IItemSearch
         string query,
         IReadOnlyList<WorkspaceId> readableWorkspaces,
         int limit,
+        bool petSourcesOnly,
         CancellationToken cancellationToken);
 }
 

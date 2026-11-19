@@ -191,6 +191,19 @@ public interface IItemTree
     public ValueTask SetSettingsAsync(ItemId id, string patch, CancellationToken cancellationToken) =>
         ValueTask.FromException(new NotSupportedException("This item tree does not implement item settings."));
 
+    /// <summary>Changes pet protection for a single visible item in the workspace that authorized it.</summary>
+    public ValueTask<bool> SetItemPetProtectionAsync(
+        ItemId id, WorkspaceId workspaceId, bool withholdFromPets, CancellationToken cancellationToken) =>
+        ValueTask.FromException<bool>(new NotSupportedException("This item tree does not implement pet protection."));
+
+    /// <summary>Whether a workspace holds any items protected from pets.</summary>
+    public ValueTask<bool> AnyItemsWithheldFromPetsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(true);
+
+    /// <summary>Reads the current Postgres item row revision and optionally pins the row until the unit of work ends.</summary>
+    public ValueTask<long?> ReadPetRevisionAsync(WorkspaceId workspaceId, ItemId id, bool pin, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<long?>(null);
+
     /// <summary>The item settings new items in a workspace start with, as stored JSON, or null for all off.</summary>
     /// <param name="workspaceId">The workspace.</param>
     /// <param name="cancellationToken">Cancels the read.</param>

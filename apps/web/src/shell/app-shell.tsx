@@ -15,7 +15,7 @@ import { ItemDialogProvider } from '../items/item-dialog-provider';
 import { MobileNavigation } from './mobile-navigation';
 import { petAttentionText } from '@nix/web-pets/pets/pet-attention';
 import { usePetNavEntry } from '@nix/web-pets/pets/use-pet-nav-entry';
-import { PetCompanion } from '@nix/web-pets/pets/pet-companion';
+import { PetJobCompanion } from '../pages/pet-page';
 import { PwaControls } from '@nix/web-platform/pwa/pwa-controls';
 import { useRememberLocation } from '@nix/web-platform/pwa/use-remember-location';
 import { focusRing, useUndo } from '@nix/ui';
@@ -77,6 +77,7 @@ import { useZenLayoutPreview } from './zen-layout-preview';
 import { StatusBar } from './status-bar';
 import { useStatusBarPreference } from '@nix/web-foundation/lib/status-bar-preference';
 import { NotificationInboxPanel } from './notifications/notification-inbox-panel';
+import { petDecisionNotificationHref } from './notifications/pet-decision-notification-href';
 import { useNotificationsInbox } from './notifications/use-notifications-inbox';
 import { ShellSidebar } from './shell-sidebar';
 import { ShellToasts, useShellToasts } from './shell-toasts';
@@ -166,7 +167,8 @@ export function AppShell({
   const { selectedId } = useSelectedItem();
   // Homebase lists what was opened last. Recorded once the tree knows the item, so a chat tab or a
   // link to something unreadable is never listed, and a rename is picked up.
-  const selectedTitle = selectedId === null ? undefined : tree.find(selectedId)?.title;
+  const selectedItem = selectedId === null ? undefined : tree.find(selectedId);
+  const selectedTitle = selectedItem?.title;
   useEffect(() => {
     if (selectedId !== null && selectedTitle !== undefined)
       recordRecentItem(workspaceId, selectedId, selectedTitle);
@@ -356,37 +358,40 @@ export function AppShell({
     [pushToast],
   );
 
-  // A notification that arrives while the app is open and focused surfaces immediately as a
-  // shell toast, with an Open action to the item it names - the inbox panel itself only needs to
-  // be opened when the person goes looking, not for every arrival while they are already here.
+  // A notification that arrives while the app is open surfaces as a toast with its destination.
   useEffect(
     () =>
       notificationsInbox.onArrived((arrived) => {
         for (const notification of arrived) {
           const itemId = notification.itemId;
-          shellToasts.push({
-            key: `notification-${notification.id}`,
-            message: notification.title,
-            autoFocus: false,
-            persistent: true,
-            ...(itemId === null
-              ? {}
-              : {
-                  action: {
+          const decisionHref = petDecisionNotificationHref(notification);
+          const action =
+            decisionHref !== null
+              ? {
+                  label: 'Review',
+                  onAction: () => {
+                    if (notification.readAt === null) notificationsInbox.markRead(notification.id);
+                    void navigate(decisionHref);
+                  },
+                }
+              : itemId !== null
+                ? {
                     label: 'Open',
                     onAction: () => {
                       openPreview(itemId);
                     },
-                  },
-                }),
+                  }
+                : undefined;
+          pushToast({
+            key: `notification-${notification.id}`,
+            message: notification.title,
+            autoFocus: false,
+            persistent: true,
+            ...(action === undefined ? {} : { action }),
           });
         }
       }),
-    // shellToasts.push is stable across renders (see use-shell-toasts's own state setter), and
-    // openPreview is a useCallback from useOpenItem - only the inbox's own subscription needs to
-    // move when the client that backs it changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `push` and `openPreview` are stable; only the inbox subscription moves.
-    [notificationsInbox],
+    [navigate, notificationsInbox, openPreview, pushToast],
   );
 
   // A screen that got torn down mid-import - a session expiring underneath it, chief among the
@@ -1034,7 +1039,8 @@ export function AppShell({
         ) : null}
       </div>
 
-      <PetCompanion
+      <PetJobCompanion
+        targetItem={selectedItem ?? undefined}
         dock={
           layout === 'desktop'
             ? undefined
@@ -1278,6 +1284,9 @@ export function AppShell({
         }}
         inbox={notificationsInbox}
         onOpenItem={openPreview}
+        onOpenPetDecision={(href) => {
+          void navigate(href);
+        }}
         onOpenWorkspace={(id) => {
           // An invitation that arrived after sign-in is not in the loaded list yet.
           reloadWorkspaces();

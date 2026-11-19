@@ -19,3 +19,18 @@ it('shares the draft across surfaces, isolates workspace and pet, and clears it 
   expect(a.result.current[0]).toBe('');
   expect(b.result.current[0]).toBe('');
 });
+
+it('keeps text typed while a submitted message is being accepted', () => {
+  const first = renderHook(() => usePetDraft('workspace', 'pet'));
+  const second = renderHook(() => usePetDraft('workspace', 'pet'));
+  act(() => {
+    first.result.current[1]('Draw a flowchart');
+  });
+
+  const [submitted, originalSetter] = first.result.current;
+  act(() => {
+    second.result.current[1]('What else can you draw?');
+    originalSetter((current) => (current === submitted ? '' : current));
+  });
+  expect(first.result.current[0]).toBe('What else can you draw?');
+});

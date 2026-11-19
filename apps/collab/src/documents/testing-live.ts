@@ -41,17 +41,18 @@ export function authorizerFor(tenant: TestTenant): Authorizer {
         tenantId: tenant.tenantId,
         workspaceId: tenant.workspaceId,
         principalId:
-          token === 'as-second-principal' || token === 'solo-second'
+          token === 'as-second-principal' ||
+          token === 'as-second-canvas-author' ||
+          token === 'solo-second'
             ? SECOND_PRINCIPAL
             : tenant.principalId,
         canWrite: token !== 'as-reader',
         collaborative: !token.startsWith('solo-'),
-        bodyKind:
-          token === 'as-canvas-author'
-            ? 'canvas'
-            : token === 'as-sheet-author'
-              ? 'spreadsheet'
-              : 'note',
+        bodyKind: token.endsWith('canvas-author')
+          ? 'canvas'
+          : token === 'as-sheet-author'
+            ? 'spreadsheet'
+            : 'note',
       }),
   };
 }

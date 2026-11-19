@@ -14,13 +14,17 @@ import {
 } from '../schemas/index.js';
 
 /** Full-text search across the items the caller can see. */
-export const searchItems = (query: string, limit?: number): QueryEndpoint<SearchResults> =>
+export const searchItems = (
+  query: string,
+  limit?: number,
+  petWorkspaceId?: string,
+): QueryEndpoint<SearchResults> =>
   defineQuery<SearchResults>({
     operation: 'search.run',
     retain: false,
     path: '/api/v1/search',
     schema: searchResultsSchema,
-    query: { q: query, limit },
+    query: { q: query, limit, petWorkspaceId },
     // Search reflects the last flushed index snapshot, so it is not a cache identity worth reusing;
     // every call re-runs.
     cacheKey: undefined,

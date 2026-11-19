@@ -36,8 +36,8 @@ public interface INotificationStore
 
     /// <summary>
     /// Records that this notification's push is being handed to a worker. Returns
-    /// <see langword="false"/> when it already was: the second worker must send nothing, so a
-    /// job re-run after a crash can never push the same notification twice.
+    /// <see langword="false"/> for a missing or in-app-only notice, or when already handed out:
+    /// a job re-run after a crash can never push the same notification twice.
     /// </summary>
     public Task<bool> ClaimPushAsync(TenantId tenantId, PrincipalId principalId, Guid notificationId, CancellationToken cancellationToken);
 }
@@ -46,7 +46,7 @@ public interface INotificationStore
 /// <param name="Notification">The stored notification.</param>
 /// <param name="Created">
 /// <see langword="true"/> when this call inserted it; <see langword="false"/> when the dedupe key
-/// already existed. Only a created notification should be pushed.
+/// already existed. Only a newly created, push-eligible notification should be pushed.
 /// </param>
 public sealed record NotificationWriteResult(Notification Notification, bool Created);
 
@@ -74,5 +74,16 @@ public interface INotificationWriter
         ItemId? itemId,
         WorkspaceId? workspaceId,
         string dedupeKey,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Creates an in-app notice for a pet decision, once per recipient and decision. The caller
+    /// must be scoped to the recipient and use the same transaction as the waiting checkpoint.
+    /// </summary>
+    public Task<NotificationWriteResult> CreatePetDecisionAsync(
+        PrincipalId principal,
+        ItemId itemId,
+        WorkspaceId workspaceId,
+        NotificationPetDecisionTarget target,
         CancellationToken cancellationToken);
 }

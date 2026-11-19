@@ -952,13 +952,20 @@ describe('usePetRuntime errorKind and retryWatch', () => {
   });
 });
 
-function sseResponse(records: readonly [string, unknown][], hold = false): Response {
+function sseResponse(
+  records: readonly [string, unknown][],
+  hold = false,
+  onCancel?: () => void,
+): Response {
   const encoder = new TextEncoder();
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
       for (const [event, data] of records)
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       if (!hold) controller.close();
+    },
+    cancel() {
+      onCancel?.();
     },
   });
   return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
@@ -1004,6 +1011,82 @@ describe('usePetRuntime stream', () => {
     act(async () => {
       await vi.advanceTimersByTimeAsync(ms);
     });
+
+  it('releases an initially closed idle stream and opens one stream when the panel opens', async () => {
+    const cancel = vi.fn();
+    client.stream.mockImplementation(() =>
+      Promise.resolve(sseResponse([['snapshot', connection({ revision: 1 })]], true, cancel)),
+    );
+    const { rerender } = renderHook(
+      ({ open }: { open: boolean }) => usePetRuntime(WORKSPACE_ID, PET_ID, open),
+      { initialProps: { open: false } },
+    );
+    await settle(3000);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(client.stream).toHaveBeenCalledTimes(1);
+
+    rerender({ open: true });
+    await settle(3000);
+    expect(client.stream).toHaveBeenCalledTimes(2);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases a closed panel stream when its thinking snapshot becomes idle', async () => {
+    const cancel = vi.fn();
+    const encoder = new TextEncoder();
+    let finish: (() => void) | undefined;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(`event: snapshot\ndata: ${JSON.stringify(draft(1, 'Working'))}\n\n`),
+        );
+        finish = () => {
+          controller.enqueue(
+            encoder.encode(
+              `event: snapshot\ndata: ${JSON.stringify(connection({ revision: 2 }))}\n\n`,
+            ),
+          );
+        };
+      },
+      cancel,
+    });
+    client.stream.mockResolvedValue(
+      new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }),
+    );
+    renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, false));
+    await settle();
+    expect(cancel).not.toHaveBeenCalled();
+
+    act(() => finish?.());
+    await settle(3000);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(client.stream).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    {
+      code: 'pets.too_many_watches',
+      message:
+        'Too many pet conversations are open. Close another Nix tab or chat pane, then retry.',
+    },
+    {
+      code: 'pets.provider_rate_limited',
+      message: 'Conversation could not be loaded. Check your connection and try again.',
+    },
+  ])('explains a rejected stream using the Core code $code', async ({ code, message }) => {
+    client.stream.mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ code }), {
+          status: 429,
+          headers: { 'Content-Type': 'application/problem+json' },
+        }),
+      ),
+    );
+    const { result } = renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+    await settle(1100);
+    expect(result.current.errorKind).toBe('load');
+    expect(result.current.error).toBe(message);
+  });
 
   it('renders the snapshot, grows the draft by deltas and updates a tool card', async () => {
     client.stream.mockResolvedValueOnce(

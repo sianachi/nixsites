@@ -311,6 +311,42 @@ public sealed partial class ItemTree(
             """, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async ValueTask<bool> SetItemPetProtectionAsync(
+        ItemId id, WorkspaceId workspaceId, bool withholdFromPets, CancellationToken cancellationToken) =>
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE item
+            SET settings = (CASE WHEN jsonb_typeof(settings) = 'object' THEN settings ELSE jsonb_build_object() END)
+                || jsonb_build_object('withholdFromPets', {withholdFromPets})
+            WHERE id = {id.Value} AND tenant_id = {Tenant.Value} AND workspace_id = {workspaceId.Value}
+            """, cancellationToken).ConfigureAwait(false) == 1;
+
+    /// <inheritdoc />
+    public async ValueTask<bool> AnyItemsWithheldFromPetsAsync(
+        WorkspaceId workspaceId, CancellationToken cancellationToken) =>
+        await _dbContext.Database.SqlQuery<bool>($"""
+            SELECT EXISTS (
+                SELECT 1 FROM item
+                WHERE tenant_id = {Tenant.Value} AND workspace_id = {workspaceId.Value}
+                    AND jsonb_typeof(settings) = 'object' AND settings ? 'withholdFromPets'
+                    AND (settings -> 'withholdFromPets') IS DISTINCT FROM 'false'::jsonb
+            ) AS "Value"
+            """).SingleAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async ValueTask<long?> ReadPetRevisionAsync(
+        WorkspaceId workspaceId, ItemId id, bool pin, CancellationToken cancellationToken) =>
+        await (pin
+            ? _dbContext.Database.SqlQuery<long?>($"""
+                SELECT xmin::text::bigint AS "Value" FROM item
+                WHERE tenant_id = {Tenant.Value} AND workspace_id = {workspaceId.Value} AND id = {id.Value}
+                FOR NO KEY UPDATE
+                """)
+            : _dbContext.Database.SqlQuery<long?>($"""
+                SELECT xmin::text::bigint AS "Value" FROM item
+                WHERE tenant_id = {Tenant.Value} AND workspace_id = {workspaceId.Value} AND id = {id.Value}
+                """)).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
     private readonly Dictionary<WorkspaceId, string?> _itemDefaults = [];
 
     /// <inheritdoc />

@@ -18,6 +18,14 @@
       "types": "./dist/auto-apply.d.ts",
       "default": "./dist/auto-apply.js"
     },
+    "./canvas-plan": {
+      "types": "./dist/canvas-plan.d.ts",
+      "default": "./dist/canvas-plan.js"
+    },
+    "./guarded-body": {
+      "types": "./dist/guarded-body.d.ts",
+      "default": "./dist/guarded-body.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",

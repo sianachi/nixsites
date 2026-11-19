@@ -296,6 +296,61 @@ internal static class M0SchemaSeed
                     (tenant_id, principal_id, provider, protected_key, key_hint, saved_at)
                 VALUES ({Literal(rows.TenantId)}, {Literal(rows.PrincipalId)}, 'anthropic',
                     decode('0102', 'hex'), 'seed', now());
+
+                INSERT INTO linear_connection (id, tenant_id, workspace_id, owner_id, protected_oauth_state)
+                VALUES ({Literal(rows.AclEntryId)}, {Literal(rows.TenantId)}, {Literal(rows.WorkspaceId)},
+                    {Literal(rows.PrincipalId)}, 'protected seed');
+
+                INSERT INTO linear_task_request
+                    (id, tenant_id, workspace_id, item_id, connection_id, connection_revision,
+                     requester_id, issue_id, status, created_at, expires_at)
+                VALUES ({Literal(rows.ItemId)}, {Literal(rows.TenantId)}, {Literal(rows.WorkspaceId)},
+                    {Literal(rows.ItemId)}, {Literal(rows.AclEntryId)}, 1, {Literal(rows.PrincipalId)},
+                    'SEED-1', 'pending', now(), now() + interval '15 minutes');
+
+                INSERT INTO pet_connector_grant
+                    (id, tenant_id, workspace_id, owner_id, revision, provider, resource_kind, resource_id, protected_tokens)
+                VALUES ({Literal(rows.ItemId)}, {Literal(rows.TenantId)}, {Literal(rows.WorkspaceId)},
+                    {Literal(rows.PrincipalId)}, {Literal(rows.AclEntryId)}, 'slack', 'channel', 'CSEED1', 'protected seed');
+
+                INSERT INTO pet_connector_grant
+                    (id, tenant_id, workspace_id, owner_id, revision, provider, resource_kind, resource_id, actions, protected_tokens)
+                VALUES ({Literal(rows.AclEntryId)}, {Literal(rows.TenantId)}, {Literal(rows.WorkspaceId)},
+                    {Literal(rows.PrincipalId)}, {Literal(rows.ItemId)}, 'linear', 'team', {Literal(rows.WorkspaceId)}::text,
+                    ARRAY['linear.read_issue'], 'protected seed');
+
+                INSERT INTO pet_mailbox_cursor
+                    (rule_id, connection_id, connection_revision, cursor, baselined)
+                VALUES ({Literal(rows.GroupId)}, {Literal(rows.AclEntryId)}, {Literal(rows.ItemId)}, 'seed cursor', true);
+
+                INSERT INTO pet_mailbox_seen
+                    (rule_id, connection_id, connection_revision, message_hash)
+                VALUES ({Literal(rows.GroupId)}, {Literal(rows.AclEntryId)}, {Literal(rows.ItemId)}, decode(repeat('a', 64), 'hex'));
+
+                INSERT INTO linear_item_link (
+                    tenant_id, workspace_id, item_id, owner_id, connection_id, connection_revision, revision,
+                    issue_id, identifier, url, status_id, status, remote_updated_at, checked_at, baseline_status_id)
+                VALUES ({Literal(rows.TenantId)}, {Literal(rows.WorkspaceId)}, {Literal(rows.ItemId)},
+                    {Literal(rows.PrincipalId)}, {Literal(rows.AclEntryId)}, {Literal(rows.ItemId)}, {Literal(rows.ItemId)},
+                    {Literal(rows.ItemId)}, 'SEED-1', 'https://linear.app/seed/issue/SEED-1',
+                    {Literal(rows.ItemId)}, 'Open', now(), now(), {Literal(rows.ItemId)});
+
+                INSERT INTO pet_run
+                    (id, tenant_id, workspace_id, item_id, actor_id, brief, source_item_ids, workspace_scope,
+                     abilities, status, revision, state, created_at, updated_at)
+                VALUES ({Literal(rows.ItemId)}, {Literal(rows.TenantId)}, {Literal(rows.WorkspaceId)},
+                    {Literal(rows.ItemId)}, {Literal(rows.PrincipalId)}, 'A waiting pet run', ARRAY[]::uuid[], FALSE,
+                    ARRAY[]::text[], 'waiting_for_input', 2, jsonb_build_object(), now(), now());
+
+                INSERT INTO pet_peer (id, tenant_id, owner_id, workspace_id, item_id, pet_id, name, kind, expires_at)
+                VALUES ({Literal(rows.AclEntryId)}, {Literal(rows.TenantId)}, {Literal(rows.PrincipalId)},
+                    {Literal(rows.WorkspaceId)}, {Literal(rows.ItemId)}, {Literal(rows.ItemId)}, 'Seed peer', 'client',
+                    now() + interval '1 day');
+
+                INSERT INTO pet_peer_work (id, peer_id, tenant_id, workspace_id, owner_id, run_id,
+                    direction, status, brief, created_at)
+                VALUES ({Literal(rows.ItemId)}, {Literal(rows.AclEntryId)}, {Literal(rows.TenantId)}, {Literal(rows.WorkspaceId)},
+                    {Literal(rows.PrincipalId)}, {Literal(rows.ItemId)}, 'inbound', 'submitted', 'Seed brief', now());
                 """);
         }
     }

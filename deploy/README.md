@@ -127,8 +127,8 @@ there is no central Grafana/Loki/Alloy stack or replacement alert backend in thi
 ## Build and release
 
 Release images are built by CI, not on the host. On every push to `main` (and on manual
-dispatch) the CI images workflow (`.github/workflows/ci-images.yml`) publishes six images:
-`api`, `migrator`, `collab`, `worker`, `web` and `release-tools`, for linux/amd64 and linux/arm64,
+dispatch) the CI images workflow (`.github/workflows/ci-images.yml`) publishes seven images:
+`api`, `migrator`, `collab`, `sites`, `web`, `browser` and `release-tools`, for linux/amd64 and linux/arm64,
 to `ghcr.io/sianachi/nix/<image>:<full commit SHA>`. Speech variants are no longer built.
 Every `main` SHA ends up with every image, but not every image is rebuilt: a `plan` job diffs
 the push range against each image's source paths and retags the previous SHA's manifest for
@@ -236,6 +236,24 @@ request without a bearer is refused before any tool server is built. To enable, 
 claude.ai connectors need OAuth discovery, which this endpoint does not offer yet; Claude Code,
 Cursor and Claude Desktop (through `mcp-remote`) send the header. People make and revoke MCP
 tokens under Settings > MCP; the stdio server (`nixctl mcp`) keeps working without the profile.
+
+### Pet jobs pilot
+
+Set `NIX_PET_RUNS_ENABLED=true` and `NIX_PET_RUNS_PILOT_WORKSPACE` to the selected workspace ID
+after completing the pilot checks. Add `pet-browser` to `COMPOSE_PROFILES` on Compose and point
+`NIX_PET_BROWSER_URL` at `http://nix-pet-browser:8313`. Use a dedicated shared secret for Core and
+the browser worker. On Kubernetes, install `nix-pet-browser` with key `secret` before enabling the
+pilot. Keep the browser worker on its private network with the configured object storage origin.
+
+Chromium runs as an unprivileged user with its sandbox enabled. Install a compatible seccomp
+profile that permits Chromium's user namespaces. Set `NIX_PET_BROWSER_SECCOMP_PROFILE` to the
+profile's absolute host path on Compose. On Kubernetes, install it as `nix/pet-browser.json`
+under the kubelet seccomp root on the nodes where the worker can run. The worker's `/readyz` only
+passes after a sandboxed browser starts. [Playwright sandbox setup](https://playwright.dev/docs/docker#crawling-and-scraping)
+
+On a confirmed disclosure, set `NIX_PET_RUNS_ENABLED=false`, keep the pilot workspace ID configured,
+and roll out the config to Core. This pauses durable jobs and legacy Linear pet assignments in the
+pilot. Revoke affected connections and peer grants from workspace and task settings.
 
 ### Off-host backups
 

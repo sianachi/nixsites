@@ -226,6 +226,14 @@ describe('mirror fetch router', () => {
     expect(found.results.map((hit) => hit.id)).toEqual([ROOT]);
   });
 
+  it('requires Core to search for pet sources', async () => {
+    const { get, inner } = setup({ bootOffline: true });
+    const response = await get(`/api/v1/search?q=10&petWorkspaceId=${WS}`);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ code: 'offline.unavailable' });
+    expect(inner).not.toHaveBeenCalled();
+  });
+
   it('answers a file download with a capability for a blob of the stored bytes', async () => {
     const { get } = setup({ bootOffline: true });
     const capability = (await (await get(`/api/v1/items/${FILE}/file/download`)).json()) as {

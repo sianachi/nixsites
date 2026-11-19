@@ -17,6 +17,8 @@ import { BacklinksPane } from '../links/backlinks-panel';
 import { useItemComments } from '@nix/web-editor/editor/comment-anchors';
 import { CommentsPane } from './comments-pane';
 import { ItemSettingsPane } from './item-settings-pane';
+import { LinearLinkSection } from './linear-link-section';
+import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { OutlinePane } from './outline-pane';
 import { PropertyPanel } from '@nix/web-collections/properties/property-panel';
 import { useCanPublishSites } from '@nix/web-settings/settings/publishing/publishing-preference';
@@ -71,6 +73,7 @@ export interface ItemPanelProps {
   /** The pane to show, when the caller steers it (the Site menu entry does). */
   readonly pane?: Pane;
   readonly onPaneChange?: (pane: Pane) => void;
+  readonly focusThreadId?: string | null;
 
   /** Phone right drawer: the pane switcher is an icon pill at the bottom, and there is no close row. */
   readonly drawer?: boolean;
@@ -93,6 +96,7 @@ export function ItemPanel({
   onClose,
   pane: steeredPane,
   onPaneChange,
+  focusThreadId,
   drawer = false,
 }: ItemPanelProps): ReactNode {
   const sitesEnabled = useCanPublishSites();
@@ -110,7 +114,9 @@ export function ItemPanel({
     (requestedPane === 'comments' && !commentsAvailable)
       ? 'details'
       : requestedPane;
-  const setPane = onPaneChange ?? setOwnPane;
+  function setPane(next: Pane): void {
+    (onPaneChange ?? setOwnPane)(next);
+  }
   const options = PANES.filter(
     (option) =>
       (sitesEnabled || option.value !== 'site') &&
@@ -156,7 +162,7 @@ export function ItemPanel({
           )
         ) : pane === 'comments' ? (
           details.item === null ? null : (
-            <CommentsPane itemId={details.item.id} />
+            <CommentsPane itemId={details.item.id} focusThreadId={focusThreadId ?? null} />
           )
         ) : pane === 'settings' ? (
           <ItemSettingsPane container={container} details={details} />
@@ -216,6 +222,7 @@ function DetailsPane({
   readonly container: ContainerData;
   readonly details: ItemPanelProps['details'];
 }): ReactNode {
+  const client = useOptionalApiClient();
   const properties = container.schema?.properties ?? [];
 
   if (details.error !== null) {
@@ -244,23 +251,25 @@ function DetailsPane({
       </Text>
     );
   }
-
-  if (!details.loading && properties.length === 0) {
-    return (
-      <Text variant="note" tone="muted">
-        No details yet. Add fields to describe the items inside this one.
-      </Text>
-    );
-  }
+  const { item } = details;
 
   return (
-    <PropertyPanel
-      key={details.item.id}
-      compact
-      item={details.item}
-      properties={properties}
-      loading={details.loading}
-      onChange={details.write}
-    />
+    <>
+      {!details.loading && properties.length === 0 ? (
+        <Text variant="note" tone="muted">
+          No fields yet. Add fields to describe the items inside this one.
+        </Text>
+      ) : (
+        <PropertyPanel
+          key={item.id}
+          compact
+          item={item}
+          properties={properties}
+          loading={details.loading}
+          onChange={details.write}
+        />
+      )}
+      {client ? <LinearLinkSection key={item.id} itemId={item.id} client={client} /> : null}
+    </>
   );
 }

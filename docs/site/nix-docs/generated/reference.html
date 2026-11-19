@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#localsecurity">LocalSecurity</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#oauth">OAuth</a><a href="#operations">Operations</a><a href="#people">People</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#linear">Linear</a><a href="#localsecurity">LocalSecurity</a><a href="#me">Me</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#oauth">OAuth</a><a href="#operations">Operations</a><a href="#people">People</a><a href="#pet-connections">Pet Connections</a><a href="#pet-peers">Pet peers</a><a href="#pet-runs">Pet Runs</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -1215,6 +1215,18 @@
 
 <p>Responses: <code>200</code>, <code>404</code>, <code>422</code>.</p>
 </article>
+<article id="setitempetprotection" data-search="put /api/v1/items/{itemid}/pet-protection setitempetprotection control whether pets can use an item a workspace owner may withhold this item from pets in a signed-in browser session. items">
+<h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/pet-protection</code></h3>
+<p>Control whether pets can use an item</p>
+<p class="id">Operation id: <code>SetItemPetProtection</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+<p>A workspace owner may withhold this item from pets in a signed-in browser session.</p>
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>SetItemPetProtectionRequest</code>.</p>
+<p>Responses: <code>200</code>, <code>400</code>, <code>403</code>, <code>404</code>.</p>
+</article>
 <article id="setitemprotection" data-search="put /api/v1/items/{itemid}/protection setitemprotection protect an item from deletion or from new children sets whether the item can be deleted and whether it accepts new children. a field left null is unchanged. fails with 'items.protection_managed' (409) when the deletion protection belongs to a system feature, such as a linked calendar. items">
 <h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/protection</code></h3>
 <p>Protect an item from deletion or from new children</p>
@@ -1298,6 +1310,174 @@
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>cursor</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
+</article>
+<article id="getworkspacepetprotection" data-search="get /api/v1/workspaces/{workspaceid}/pet-protection getworkspacepetprotection check whether a workspace contains any items withheld from pets available only in the workspace owner's browser or its signed pet turn. returns a boolean without item details. items">
+<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/pet-protection</code></h3>
+<p>Check whether a workspace contains any items withheld from pets</p>
+<p class="id">Operation id: <code>GetWorkspacePetProtection</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+<p>Available only in the workspace owner's browser or its signed pet turn. Returns a boolean without item details.</p>
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>, <code>404</code>.</p>
+</article></section>
+<section id="linear"><h2>Linear</h2><article id="getlinearlink" data-search="get /api/v1/items/{itemid}/linear-link getlinearlink read an owner's linked linear issue and observed status.  linear">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/linear-link</code></h3>
+<p>Read an owner's linked Linear issue and observed status.</p>
+<p class="id">Operation id: <code>GetLinearLink</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="linklinearissue" data-search="put /api/v1/items/{itemid}/linear-link linklinearissue link one exact issue from an authorized linear team.  linear">
+<h3><span class="verb">PUT</span> <code>/api/v1/items/{itemId}/linear-link</code></h3>
+<p>Link one exact issue from an authorized Linear team.</p>
+<p class="id">Operation id: <code>LinkLinearIssue</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>LinkLinearIssueRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="unlinklinearissue" data-search="delete /api/v1/items/{itemid}/linear-link unlinklinearissue remove the exact linked issue without changing linear.  linear">
+<h3><span class="verb">DELETE</span> <code>/api/v1/items/{itemId}/linear-link</code></h3>
+<p>Remove the exact linked issue without changing Linear.</p>
+<p class="id">Operation id: <code>UnlinkLinearIssue</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>revision</code> in query (required, string (uuid))</li></ul>
+
+<p>Responses: <code>204</code>.</p>
+</article>
+<article id="copylinkedlinearstatus" data-search="post /api/v1/items/{itemid}/linear-link/copy-status copylinkedlinearstatus copy an observed linear status into the selected nix task.  linear">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/linear-link/copy-status</code></h3>
+<p>Copy an observed Linear status into the selected Nix task.</p>
+<p class="id">Operation id: <code>CopyLinkedLinearStatus</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>CopyLinearStatusRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="refreshlinearlink" data-search="post /api/v1/items/{itemid}/linear-link/refresh refreshlinearlink refresh the linked issue status in nix without changing linear.  linear">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/linear-link/refresh</code></h3>
+<p>Refresh the linked issue status in Nix without changing Linear.</p>
+<p class="id">Operation id: <code>RefreshLinearLink</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="listlinearrequests" data-search="get /api/v1/items/{itemid}/linear-requests listlinearrequests list visible linear issue requests for a nix task.  linear">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/linear-requests</code></h3>
+<p>List visible Linear issue requests for a Nix task.</p>
+<p class="id">Operation id: <code>ListLinearRequests</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="requestlinearissue" data-search="post /api/v1/items/{itemid}/linear-requests requestlinearissue queue a one-issue lookup for approval on a nix task.  linear">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/linear-requests</code></h3>
+<p>Queue a one-issue lookup for approval on a Nix task.</p>
+<p class="id">Operation id: <code>RequestLinearIssue</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>RequestLinearIssueRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="handtopet" data-search="post /api/v1/items/{itemid}/linear-requests/hand-to-pet handtopet hand a pet a single linear issue lookup for approval on the task.  linear">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/linear-requests/hand-to-pet</code></h3>
+<p>Hand a pet a single Linear issue lookup for approval on the task.</p>
+<p class="id">Operation id: <code>HandToPet</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>HandToPetRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="getlinearissuerequest" data-search="get /api/v1/items/{itemid}/linear-requests/{requestid} getlinearissuerequest read the status of a linear issue request on a nix task.  linear">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/linear-requests/{requestId}</code></h3>
+<p>Read the status of a Linear issue request on a Nix task.</p>
+<p class="id">Operation id: <code>GetLinearIssueRequest</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>requestId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="decidelinearissuerequest" data-search="post /api/v1/items/{itemid}/linear-requests/{requestid}/decision decidelinearissuerequest approve or decline a single pending linear issue lookup in the browser.  linear">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/linear-requests/{requestId}/decision</code></h3>
+<p>Approve or decline a single pending Linear issue lookup in the browser.</p>
+<p class="id">Operation id: <code>DecideLinearIssueRequest</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>requestId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>DecideLinearIssueRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="getlinearconnection" data-search="get /api/v1/workspaces/{workspaceid}/linear getlinearconnection read the linear connection status for this workspace.  linear">
+<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/linear</code></h3>
+<p>Read the Linear connection status for this workspace.</p>
+<p class="id">Operation id: <code>GetLinearConnection</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="disconnectlinearconnection" data-search="delete /api/v1/workspaces/{workspaceid}/linear disconnectlinearconnection remove this workspace's linear connection.  linear">
+<h3><span class="verb">DELETE</span> <code>/api/v1/workspaces/{workspaceId}/linear</code></h3>
+<p>Remove this workspace's Linear connection.</p>
+<p class="id">Operation id: <code>DisconnectLinearConnection</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>204</code>.</p>
+</article>
+<article id="authorizelinearconnection" data-search="post /api/v1/workspaces/{workspaceid}/linear/authorize authorizelinearconnection start a browser oauth connection to read-only linear.  linear">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/linear/authorize</code></h3>
+<p>Start a browser OAuth connection to read-only Linear.</p>
+<p class="id">Operation id: <code>AuthorizeLinearConnection</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
 </article></section>
 <section id="localsecurity"><h2>LocalSecurity</h2><article id="getlocalsecurity" data-search="get /api/v1/me/security getlocalsecurity the caller's own sign-in methods  localsecurity">
 <h3><span class="verb">GET</span> <code>/api/v1/me/security</code></h3>
@@ -1693,6 +1873,258 @@
 
 <ul><li><code>id</code> in path (required, string (uuid))</li></ul>
 <p>Request body: <code>one of several shapes</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article></section>
+<section id="pet-connections"><h2>Pet Connections</h2><article id="listpetconnections" data-search="get /api/v1/workspaces/{workspaceid}/pet-connections listpetconnections list the owner’s scoped pet connections and provider actions.  pet connections">
+<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/pet-connections</code></h3>
+<p>List the owner’s scoped pet connections and provider actions.</p>
+<p class="id">Operation id: <code>ListPetConnections</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="authorizepetconnection" data-search="post /api/v1/workspaces/{workspaceid}/pet-connections/authorize authorizepetconnection begin browser consent for a scoped pet connection.  pet connections">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/pet-connections/authorize</code></h3>
+<p>Begin browser consent for a scoped pet connection.</p>
+<p class="id">Operation id: <code>AuthorizePetConnection</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>AuthorizePetConnectionRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="savepetbrowsersite" data-search="post /api/v1/workspaces/{workspaceid}/pet-connections/browser-site savepetbrowsersite connect a site-scoped browser session  pet connections">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/pet-connections/browser-site</code></h3>
+<p>Connect a site-scoped browser session</p>
+<p class="id">Operation id: <code>SavePetBrowserSite</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>SavePetBrowserSiteRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="registerpetmcpconnection" data-search="post /api/v1/workspaces/{workspaceid}/pet-connections/register-mcp registerpetmcpconnection register one exact remote mcp tool against its input schema.  pet connections">
+<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/pet-connections/register-mcp</code></h3>
+<p>Register one exact remote MCP tool against its input schema.</p>
+<p class="id">Operation id: <code>RegisterPetMcpConnection</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>RegisterPetMcpConnectionRequest</code>.</p>
+<p>Responses: <code>204</code>.</p>
+</article>
+<article id="disconnectpetconnection" data-search="delete /api/v1/workspaces/{workspaceid}/pet-connections/{connectionid} disconnectpetconnection revoke a pet connection in nix.  pet connections">
+<h3><span class="verb">DELETE</span> <code>/api/v1/workspaces/{workspaceId}/pet-connections/{connectionId}</code></h3>
+<p>Revoke a pet connection in Nix.</p>
+<p class="id">Operation id: <code>DisconnectPetConnection</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>connectionId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>204</code>.</p>
+</article></section>
+<section id="pet-peers"><h2>Pet peers</h2><article id="listpetpeers" data-search="get /api/v1/items/{itemid}/pet-peers listpetpeers   pet peers">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/pet-peers</code></h3>
+<p></p>
+<p class="id">Operation id: <code>ListPetPeers</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="registerpetpeer" data-search="post /api/v1/items/{itemid}/pet-peers registerpetpeer   pet peers">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-peers</code></h3>
+<p></p>
+<p class="id">Operation id: <code>RegisterPetPeer</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>RegisterPetPeerRequest</code>.</p>
+<p>Responses: <code>201</code>.</p>
+</article>
+<article id="listpetpeerwork" data-search="get /api/v1/items/{itemid}/pet-peers/work listpetpeerwork   pet peers">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/pet-peers/work</code></h3>
+<p></p>
+<p class="id">Operation id: <code>ListPetPeerWork</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="revokepetpeer" data-search="delete /api/v1/items/{itemid}/pet-peers/{peerid} revokepetpeer   pet peers">
+<h3><span class="verb">DELETE</span> <code>/api/v1/items/{itemId}/pet-peers/{peerId}</code></h3>
+<p></p>
+<p class="id">Operation id: <code>RevokePetPeer</code></p>
+<p><strong>Can.</strong> Delete or revoke what the summary names.</p>
+<p><strong>Cannot.</strong> Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>peerId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>204</code>.</p>
+</article></section>
+<section id="pet-runs"><h2>Pet Runs</h2><article id="listitempetruns" data-search="get /api/v1/items/{itemid}/pet-runs listitempetruns list the caller's pet jobs on the task.  pet runs">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/pet-runs</code></h3>
+<p>List the caller's pet jobs on the task.</p>
+<p class="id">Operation id: <code>ListItemPetRuns</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="createpetrun" data-search="post /api/v1/items/{itemid}/pet-runs createpetrun queue a task-scoped pet job.  pet runs">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-runs</code></h3>
+<p>Queue a task-scoped pet job.</p>
+<p class="id">Operation id: <code>CreatePetRun</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>StartPetRunRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="getpetrun" data-search="get /api/v1/items/{itemid}/pet-runs/{runid} getpetrun read an owned pet job and its action receipts.  pet runs">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}</code></h3>
+<p>Read an owned pet job and its action receipts.</p>
+<p class="id">Operation id: <code>GetPetRun</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="answerpetrun" data-search="post /api/v1/items/{itemid}/pet-runs/{runid}/answer answerpetrun answer the pet's pending question.  pet runs">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}/answer</code></h3>
+<p>Answer the pet's pending question.</p>
+<p class="id">Operation id: <code>AnswerPetRun</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>AnswerPetRunRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="cancelpetrun" data-search="post /api/v1/items/{itemid}/pet-runs/{runid}/cancel cancelpetrun cancel an owned pet job.  pet runs">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}/cancel</code></h3>
+<p>Cancel an owned pet job.</p>
+<p class="id">Operation id: <code>CancelPetRun</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="decidepetrunproposal" data-search="post /api/v1/items/{itemid}/pet-runs/{runid}/proposals/{proposalid}/decision decidepetrunproposal approve or decline the exact pending proposal in an active browser.  pet runs">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/decision</code></h3>
+<p>Approve or decline the exact pending proposal in an active browser.</p>
+<p class="id">Operation id: <code>DecidePetRunProposal</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li><li><code>proposalId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>DecidePetProposalRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="revisepetrunproposal" data-search="post /api/v1/items/{itemid}/pet-runs/{runid}/proposals/{proposalid}/revise revisepetrunproposal supersede the current proposal and prepare a fresh draft in the same job.  pet runs">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/revise</code></h3>
+<p>Supersede the current proposal and prepare a fresh draft in the same job.</p>
+<p class="id">Operation id: <code>RevisePetRunProposal</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li><li><code>proposalId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>RevisePetRunProposalRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="retrypetrun" data-search="post /api/v1/items/{itemid}/pet-runs/{runid}/retry retrypetrun retry a failed pet job with a known outcome.  pet runs">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}/retry</code></h3>
+<p>Retry a failed pet job with a known outcome.</p>
+<p class="id">Operation id: <code>RetryPetRun</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="decidepetrunscope" data-search="post /api/v1/items/{itemid}/pet-runs/{runid}/scope decidepetrunscope decide the exact pending request for a read-only source or one ability.  pet runs">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}/scope</code></h3>
+<p>Decide the exact pending request for a read-only source or one ability.</p>
+<p class="id">Operation id: <code>DecidePetRunScope</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li></ul>
+<p>Request body: <code>DecidePetRunScopeRequest</code>.</p>
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="undopetrunstep" data-search="post /api/v1/items/{itemid}/pet-runs/{runid}/steps/{stepid}/undo undopetrunstep queue the supported undo of an applied step.  pet runs">
+<h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}/steps/{stepId}/undo</code></h3>
+<p>Queue the supported undo of an applied step.</p>
+<p class="id">Operation id: <code>UndoPetRunStep</code></p>
+<p><strong>Can.</strong> Write what the summary names.</p>
+<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li><li><code>stepId</code> in path (required, string (uuid))</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="watchpetrun" data-search="get /api/v1/items/{itemid}/pet-runs/{runid}/watch watchpetrun read the current pet job checkpoint for polling.  pet runs">
+<h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/pet-runs/{runId}/watch</code></h3>
+<p>Read the current pet job checkpoint for polling.</p>
+<p class="id">Operation id: <code>WatchPetRun</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>itemId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li><li><code>after</code> in query (optional, integer | string)</li></ul>
+
+<p>Responses: <code>200</code>.</p>
+</article>
+<article id="listworkspacepetruns" data-search="get /api/v1/workspaces/{workspaceid}/pet-runs listworkspacepetruns list the caller's pet jobs in a workspace.  pet runs">
+<h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/pet-runs</code></h3>
+<p>List the caller's pet jobs in a workspace.</p>
+<p class="id">Operation id: <code>ListWorkspacePetRuns</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
+
+<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
+
 <p>Responses: <code>200</code>.</p>
 </article></section>
 <section id="pets"><h2>Pets</h2><article id="getpetconnection" data-search="get /api/v1/me/pets/connection getpetconnection   pets">
@@ -2151,15 +2583,15 @@
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
-<article id="searchitems" data-search="get /api/v1/search searchitems find items by title or document text returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. the search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. an item in a workspace the caller cannot reach is omitted entirely rather than redacted. a blank query returns no results rather than every item. search">
+<article id="searchitems" data-search="get /api/v1/search searchitems find items by title or document text returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. the search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. an item in a workspace the caller cannot reach is omitted entirely rather than redacted. a blank query returns no results rather than every item. 'petworkspaceid' limits the search to items available to pet work in one workspace. search">
 <h3><span class="verb">GET</span> <code>/api/v1/search</code></h3>
 <p>Find items by title or document text</p>
 <p class="id">Operation id: <code>SearchItems</code></p>
 <p><strong>Can.</strong> Read the resource named in the summary.</p>
 <p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
 <p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
-<p>Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. The search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. An item in a workspace the caller cannot reach is omitted entirely rather than redacted. A blank query returns no results rather than every item.</p>
-<ul><li><code>q</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li></ul>
+<p>Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. The search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. An item in a workspace the caller cannot reach is omitted entirely rather than redacted. A blank query returns no results rather than every item. 'petWorkspaceId' limits the search to items available to pet work in one workspace.</p>
+<ul><li><code>q</code> in query (optional, string)</li><li><code>limit</code> in query (optional, integer | string)</li><li><code>petWorkspaceId</code> in query (optional, string (uuid))</li></ul>
 
 <p>Responses: <code>200</code>.</p>
 </article>

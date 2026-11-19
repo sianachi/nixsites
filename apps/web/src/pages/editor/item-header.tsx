@@ -40,6 +40,8 @@ export function ItemHeader({
   // state and not reset is the classic mirrored-prop bug: navigating from one note to another would
   // leave the previous note's name in the field, and the next blur would save it onto the new one.
   const [draft, setDraft] = useState(title);
+  const [serverTitle, setServerTitle] = useState(title);
+  const [editingTitle, setEditingTitle] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const cancelled = useRef(false);
   const [needsTitle, setNeedsTitle] = useState(false);
@@ -47,6 +49,11 @@ export function ItemHeader({
   const renameButton = useRef<HTMLButtonElement>(null);
   const undo = useUndo();
   const flash = useFlash(title);
+
+  if (serverTitle !== title) {
+    setServerTitle(title);
+    if (!editingTitle || draft === serverTitle) setDraft(title);
+  }
 
   function commitTitle(): void {
     if (cancelled.current) {
@@ -155,6 +162,9 @@ export function ItemHeader({
                 value={draft}
                 placeholder="Untitled"
                 title="Rename"
+                onFocus={() => {
+                  setEditingTitle(true);
+                }}
                 onChange={(event) => {
                   setDraft(event.target.value);
                   setNeedsTitle(false);
@@ -175,6 +185,7 @@ export function ItemHeader({
                 // per character would be a request per character.
                 onBlur={() => {
                   commitTitle();
+                  setEditingTitle(false);
                   setRenaming(false);
                 }}
                 // No `outline-none` beside the ring. In Tailwind v4 that utility sets `--tw-outline-style:

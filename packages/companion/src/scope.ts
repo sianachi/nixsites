@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { items, structure, type Item } from '@nix/api-client';
 import type { CompanionPorts } from './ports.js';
-import { checkItem } from './guards.js';
+import { isPetItemWithheld, itemInWorkspace, requirePetItem } from './guards.js';
 import { listedItems } from './read/list-items.js';
 import { READ_ONLY_OPERATIONS, WorkspaceToolRefusal, type WorkspaceToolArgs } from './tool-args.js';
 
@@ -47,17 +47,32 @@ export async function checkNoteScopedItem(
   signal: AbortSignal,
   scope: NoteToolScope,
 ): Promise<Item> {
-  const item = await checkItem(ports, workspaceId, itemId, signal);
+  const item = await scopedItemInWorkspace(ports, workspaceId, itemId, signal, scope);
+  requirePetItem(item);
+  return item;
+}
+
+async function scopedItemInWorkspace(
+  ports: CompanionPorts,
+  workspaceId: string,
+  itemId: string,
+  signal: AbortSignal,
+  scope: NoteToolScope,
+): Promise<Item> {
+  const item = await itemInWorkspace(ports, workspaceId, itemId, signal);
   if (item.id !== itemId)
     throw new WorkspaceToolRefusal('The item identity could not be confirmed. No action was run.');
   let current = item;
   const visited = new Set<string>();
   for (let depth = 0; depth < MAX_ANCESTORS; depth += 1) {
-    if (current.id === scope.rootItemId) return item;
+    if (current.id === scope.rootItemId) {
+      requirePetItem(current);
+      return item;
+    }
     if (!current.parentId || visited.has(current.id)) break;
     visited.add(current.id);
     const parentId = current.parentId;
-    current = await checkItem(ports, workspaceId, parentId, signal);
+    current = await itemInWorkspace(ports, workspaceId, parentId, signal);
     if (current.id !== parentId)
       throw new WorkspaceToolRefusal(
         'The item ancestry could not be confirmed. No action was run.',
@@ -113,18 +128,20 @@ export async function listNoteScopedItems(
   const requestOptions = { signal, forceRefresh: true };
   const children: Item[] = [];
   let truncated = false;
+  let scanned = 0;
   for await (const listed of ports.core.paginate(
     items.listItems(workspaceId, { parentId, pageSize: MAX_RESULTS }),
     requestOptions,
   )) {
-    if (children.length >= MAX_RESULTS) {
+    if (++scanned > MAX_RESULTS) {
       truncated = true;
       break;
     }
-    const child = await checkNoteScopedItem(ports, workspaceId, listed.id, signal, scope);
+    const child = await scopedItemInWorkspace(ports, workspaceId, listed.id, signal, scope);
     if (child.parentId !== parentId)
       throw new WorkspaceToolRefusal('The note tree changed while listing it. Try again.');
-    children.push(child);
+    if (!isPetItemWithheld(child)) children.push(child);
+    else truncated = true;
   }
   const fields = (await ports.core.query(structure.effectiveSchema(parentId), requestOptions))
     .properties;
@@ -156,6 +173,7 @@ export async function searchNoteScopedItems(
   const results: NoteTitleSearch['results'] = [];
   const contentSources: string[] = [];
   const add = (item: Item) => {
+    if (isPetItemWithheld(item)) return;
     contentSources.push(item.id);
     // shortcut: only titles are searched, include bodies when Core offers a subtree search.
     if (!item.title.toLowerCase().includes(term.toLowerCase())) return;
@@ -195,7 +213,7 @@ export async function searchNoteScopedItems(
   for (let index = 0; index < pending.length && !truncated; index += 1) {
     const parentId = pending[index];
     if (parentId === undefined) break;
-    await checkNoteScopedItem(ports, workspaceId, parentId, signal, scope);
+    await scopedItemInWorkspace(ports, workspaceId, parentId, signal, scope);
     for await (const listed of ports.core.paginate(
       items.listItems(workspaceId, { parentId, pageSize: MAX_RESULTS }),
       { signal, forceRefresh: true },
@@ -206,7 +224,7 @@ export async function searchNoteScopedItems(
       }
       if (visited.has(listed.id))
         throw new WorkspaceToolRefusal('The note tree could not be confirmed. Try again.');
-      const child = await checkNoteScopedItem(ports, workspaceId, listed.id, signal, scope);
+      const child = await scopedItemInWorkspace(ports, workspaceId, listed.id, signal, scope);
       if (child.parentId !== parentId)
         throw new WorkspaceToolRefusal('The note tree changed while searching it. Try again.');
       visited.add(child.id);

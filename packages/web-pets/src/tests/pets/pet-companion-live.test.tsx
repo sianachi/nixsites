@@ -112,13 +112,13 @@ describe('companion live wiring', () => {
       'First reply',
       'Second request',
       'Looking into it.',
-      'Approve request',
+      'Create note',
     ].map((fragment) => text.indexOf(fragment));
     expect(order.every((index) => index >= 0)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
 
     // The earlier, finished turn shows no approval controls of its own.
-    expect(screen.getByRole('button', { name: 'Approve request' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Create note' })).toBeVisible();
   });
 
   it('shows a still-streaming draft with a caret, "Writing" status, and no thinking dots, excluded from the live region', async () => {

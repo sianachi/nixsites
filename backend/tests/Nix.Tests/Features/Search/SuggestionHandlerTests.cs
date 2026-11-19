@@ -348,6 +348,7 @@ public sealed class SuggestionHandlerTests
             string query,
             IReadOnlyList<WorkspaceId> readableWorkspaces,
             int limit,
+            bool petSourcesOnly,
             CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Mentions must not run a text search.");
 
@@ -362,6 +363,7 @@ public sealed class SuggestionHandlerTests
             string query,
             IReadOnlyList<WorkspaceId> readableWorkspaces,
             int limit,
+            bool petSourcesOnly,
             CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Mentions must not search passages.");
 

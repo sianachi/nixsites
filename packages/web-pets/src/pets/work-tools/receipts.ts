@@ -1,5 +1,9 @@
 import type { PetToolCall } from '@nix/api-client';
-import type { WorkspaceToolArgs } from '@nix/companion/tool-args';
+import {
+  READ_ONLY_OPERATIONS,
+  workspaceToolSchema,
+  type WorkspaceToolArgs,
+} from '@nix/companion/tool-args';
 
 export type BuildLedger = readonly { nodeId: string; itemId?: string; status?: string }[];
 
@@ -10,6 +14,16 @@ export interface BuildOutcome {
 }
 
 export const DECLINED_BY_USER = 'Declined by the user. Do not retry this change unless asked.';
+export const CHANGES_REQUESTED = 'Changes requested';
+export const REQUESTING_CHANGES = 'Sending feedback…';
+export const REVISION_FEEDBACK_PREFIX =
+  'The user declined this proposal. It was not applied. Offer a new proposal addressing their feedback.\n\n';
+
+export function revisionFeedback(result: string): string | undefined {
+  return result.startsWith(REVISION_FEEDBACK_PREFIX)
+    ? result.slice(REVISION_FEEDBACK_PREFIX.length)
+    : undefined;
+}
 /** The receipt of an approved write that was refused before it changed anything, with the
  * owner's reason kept beside it (`ownerReasons`) rather than the model's. */
 export const NOT_RUN = 'Not run - nothing changed';
@@ -78,9 +92,21 @@ export function toolOutcomeSentence(tool: PetToolCall | undefined): string {
     const done = build.ledger.filter((entry) => entry.status === 'done').length;
     return `Stopped after ${String(done)} of ${String(build.ledger.length)}. The draft is incomplete.`;
   }
-  return tool.status === 'failed' && tool.result !== DECLINED_BY_USER && tool.result !== NOT_RUN
-    ? "Didn't finish. Check your workspace before retrying."
-    : '';
+  if (
+    tool.status !== 'failed' ||
+    tool.result === DECLINED_BY_USER ||
+    tool.result === NOT_RUN ||
+    revisionFeedback(tool.result) !== undefined
+  )
+    return '';
+
+  const warning = "Didn't finish. Check your workspace before retrying.";
+  try {
+    const args = workspaceToolSchema.safeParse(JSON.parse(tool.arguments));
+    return args.success && READ_ONLY_OPERATIONS.has(args.data.operation) ? '' : warning;
+  } catch {
+    return warning;
+  }
 }
 
 /** A request's headline said what the pet would do ("I will create a note ... with the content

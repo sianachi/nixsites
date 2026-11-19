@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Net.ServerSentEvents;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -166,6 +167,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         var instructions = string.Empty;
         var title = string.Empty;
         var sharedItems = new List<PetWorkerItem>();
+        IReadOnlyList<PetWorkspaceMapEntry>? workspaceMap = null;
         PetProfile? pet = null;
         if (request.Operation is "status" or "connect" or "disconnect" or "models")
         {
@@ -198,14 +200,15 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             if (request.RootItemId is { } rootItemId)
             {
                 var root = await dispatcher.QueryAsync<GetItem, Result<Item>>(new(new ItemId(rootItemId)), cancellationToken).ConfigureAwait(false);
-                if (root.IsFailure || root.Value.WorkspaceId.Value != request.WorkspaceId)
+                if (root.IsFailure || root.Value.WorkspaceId.Value != request.WorkspaceId
+                    || ItemSettings.Read(root.Value.Settings).WithholdFromPets)
                 {
                     return Result.Failure<PetConnectionResponse>(new("pets.not_found", "The conversation item is unavailable."));
                 }
 
                 var rootLock = await dispatcher.QueryAsync<GetItemLock, Result<ItemLockState>>(
                     new(new ItemId(rootItemId)), cancellationToken).ConfigureAwait(false);
-                if (rootLock.IsFailure || rootLock.Value is { Locked: true, UnlockedUntil: null })
+                if (rootLock.IsFailure || rootLock.Value.Locked)
                 {
                     return Result.Failure<PetConnectionResponse>(new("pets.not_found", "The conversation item is unavailable."));
                 }
@@ -236,13 +239,14 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             foreach (var sharedId in sharedIds)
             {
                 var item = await dispatcher.QueryAsync<GetItem, Result<Item>>(new(new ItemId(sharedId)), cancellationToken).ConfigureAwait(false);
-                if (item.IsFailure || item.Value.WorkspaceId.Value != request.WorkspaceId)
+                if (item.IsFailure || item.Value.WorkspaceId.Value != request.WorkspaceId
+                    || ItemSettings.Read(item.Value.Settings).WithholdFromPets)
                 {
                     return Result.Failure<PetConnectionResponse>(new("pets.not_found", "The shared item is unavailable."));
                 }
 
                 var itemLock = await dispatcher.QueryAsync<GetItemLock, Result<ItemLockState>>(new(new ItemId(sharedId)), cancellationToken).ConfigureAwait(false);
-                if (itemLock.IsFailure || itemLock.Value is { Locked: true, UnlockedUntil: null })
+                if (itemLock.IsFailure || itemLock.Value.Locked)
                 {
                     return Result.Failure<PetConnectionResponse>(new("pets.not_found", "The shared item is unavailable."));
                 }
@@ -257,6 +261,32 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             else if (request.SharedText.Length > 0)
             {
                 return Result.Failure<PetConnectionResponse>(new("pets.invalid_request", "Select the item whose text you want to share."));
+            }
+
+            if (request.RootItemId is null && request.WorkspaceMap is { Count: > 0 } map)
+            {
+                var visible = new List<PetWorkspaceMapEntry>(map.Count);
+                foreach (var entry in map)
+                {
+                    var id = ItemId.From(entry.Id);
+                    var item = await dispatcher.QueryAsync<GetItem, Result<Item>>(new(id), cancellationToken).ConfigureAwait(false);
+                    if (item.IsFailure || item.Value.WorkspaceId.Value != request.WorkspaceId
+                        || ItemSettings.Read(item.Value.Settings).WithholdFromPets)
+                    {
+                        continue;
+                    }
+
+                    var itemLock = await dispatcher.QueryAsync<GetItemLock, Result<ItemLockState>>(new(id), cancellationToken).ConfigureAwait(false);
+                    if (itemLock.IsSuccess && !itemLock.Value.Locked)
+                    {
+                        visible.Add(entry with
+                        {
+                            Title = ClipTitle(ItemProperties.ReadTitle(item.Value.Properties)),
+                            Type = item.Value.Type,
+                        });
+                    }
+                }
+                workspaceMap = visible;
             }
         }
 
@@ -308,7 +338,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             request.WorkspaceId?.ToString() ?? "", request.PetId?.ToString() ?? "", request.Operation,
             request.RequestId?.ToString() ?? "", request.Text, instructions, sharedItems.Count > 0 ? sharedItems[0].Id : request.ItemId?.ToString() ?? "", title, request.SharedText,
             request.Model, request.WorkspaceAccess, request.ToolId, request.ToolResult, request.ToolSuccess, request.HistoryId?.ToString() ?? "",
-            request.Mode, after, request.Today, request.TimeZone, request.RootItemId is null ? request.WorkspaceMap : null, request.ToolLockedContent,
+            request.Mode, after, request.Today, request.TimeZone, workspaceMap, request.ToolLockedContent,
             request.RootItemId?.ToString(), request.ReadOnly, sharedItems.Count > 0 ? sharedItems : null,
             request.ReplaceFromMessageId?.ToString(), provider == PetProviders.ChatGpt ? null : provider, apiKey, conversationItemId?.ToString(),
             sourceWorkspaceIds?.Select(id => id.ToString()).ToArray(), earlierMessages,
@@ -522,23 +552,40 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
     /// </remarks>
     internal async Task<Result<HttpResponseMessage>> OpenInlineAsync(PetInlineRequest request, PetProfile pet, CancellationToken cancellationToken)
     {
+        var prepared = await PrepareToolFreeTurnAsync(request, pet, "inline", cancellationToken).ConfigureAwait(false);
+        return prepared.IsFailure
+            ? Result.Failure<HttpResponseMessage>(prepared.Error)
+            : await OpenToolFreeTurnAsync(prepared.Value, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<Result<PetInlineWorkerRequest>> PrepareToolFreeTurnAsync(PetInlineRequest request, PetProfile pet,
+        string operation, CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(pet);
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");
         var resolved = await ProviderFor(pet, context, cancellationToken).ConfigureAwait(false);
         if (resolved.IsFailure)
         {
-            return Result.Failure<HttpResponseMessage>(resolved.Error);
+            return Result.Failure<PetInlineWorkerRequest>(resolved.Error);
         }
 
         var (provider, apiKey) = resolved.Value;
+        return Result.Success(new PetInlineWorkerRequest(context.TenantId.Value.ToString(), context.PrincipalId.Value.ToString(),
+            request.WorkspaceId.ToString(), pet.Id.ToString(), operation, request.RequestId.ToString(), request.Instruction ?? "",
+            request.Selection ?? "", request.Context ?? "", request.Kind, request.Kind == "translate" ? request.Language ?? "" : "",
+            request.Model ?? "", provider == PetProviders.ChatGpt ? null : provider, apiKey));
+    }
+
+    private async Task<Result<HttpResponseMessage>> OpenToolFreeTurnAsync(PetInlineWorkerRequest request, CancellationToken cancellationToken)
+    {
         var address = configuration["Nix:Pets:WorkerUrl"];
         var secret = configuration["Nix:InternalSecret"];
         if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(secret)
             || !Uri.TryCreate(address, UriKind.Absolute, out var origin) || origin.Scheme is not ("http" or "https")
             || origin.UserInfo.Length != 0 || origin.Query.Length != 0 || origin.Fragment.Length != 0 || origin.AbsolutePath != "/")
         {
-            ApiLog.PetWorkerFailed(_log, "inline", "the worker URL or internal secret is not configured", "pets.unavailable");
+            ApiLog.PetWorkerFailed(_log, request.Operation, "the worker URL or internal secret is not configured", "pets.unavailable");
             return Result.Failure<HttpResponseMessage>(new("pets.unavailable", "The companion is not available on this server."));
         }
 
@@ -547,10 +594,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         try
         {
             outgoing.Headers.Add("X-Nix-Internal-Secret", secret);
-            outgoing.Content = JsonContent.Create(new PetInlineWorkerRequest(context.TenantId.Value.ToString(), context.PrincipalId.Value.ToString(),
-                request.WorkspaceId.ToString(), pet.Id.ToString(), "inline", request.RequestId.ToString(), request.Instruction ?? "",
-                request.Selection ?? "", request.Context ?? "", request.Kind, request.Kind == "translate" ? request.Language ?? "" : "",
-                request.Model ?? "", provider == PetProviders.ChatGpt ? null : provider, apiKey), PetJsonContext.Default.PetInlineWorkerRequest);
+            outgoing.Content = JsonContent.Create(request, PetJsonContext.Default.PetInlineWorkerRequest);
             response = await http.SendAsync(outgoing, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.OK
                 && string.Equals(response.Content.Headers.ContentType?.MediaType, "text/event-stream", StringComparison.OrdinalIgnoreCase))
@@ -560,24 +604,72 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
                 return Result.Success(opened);
             }
 
-            var failure = ProviderFailure(response, provider) ?? (response.StatusCode switch
+            var failure = ProviderFailure(response, request.Provider ?? PetProviders.ChatGpt) ?? (response.StatusCode switch
             {
                 HttpStatusCode.UnprocessableEntity => new NixError("pets.invalid_request", "The companion refused this request. Check the text and try again."),
                 HttpStatusCode.TooManyRequests => new NixError("pets.inline_busy", "Too many writing requests are open. Wait for one to finish."),
                 _ => new NixError("pets.unavailable", "The companion could not complete this request. Retry or check the selected provider in Settings > Pets."),
             });
-            ApiLog.PetWorkerFailed(_log, "inline", $"worker returned HTTP {(int)response.StatusCode} {response.Content.Headers.ContentType?.MediaType}", failure.Code);
+            ApiLog.PetWorkerFailed(_log, request.Operation, $"worker returned HTTP {(int)response.StatusCode} {response.Content.Headers.ContentType?.MediaType}", failure.Code);
             return Result.Failure<HttpResponseMessage>(failure);
         }
         catch (HttpRequestException exception)
         {
-            ApiLog.PetWorkerFailed(_log, "inline", exception.GetType().Name, "pets.unavailable");
+            ApiLog.PetWorkerFailed(_log, request.Operation, exception.GetType().Name, "pets.unavailable");
             return Result.Failure<HttpResponseMessage>(new("pets.unavailable", "The companion is unreachable. Check the existing worker and try again."));
         }
         finally
         {
             response?.Dispose();
         }
+    }
+
+    internal async Task<string?> ChooseTaskNextStepAsync(PetInlineRequest request, PetProfile pet, CancellationToken token)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(TimeSpan.FromSeconds(45));
+        try
+        {
+            var opened = await OpenInlineAsync(request, pet, deadline.Token).ConfigureAwait(false);
+            if (opened.IsFailure)
+            {
+                return null;
+            }
+
+            using var response = opened.Value;
+            var body = await response.Content.ReadAsStreamAsync(deadline.Token).ConfigureAwait(false);
+            var bounded = new CappedStream(body, 8 * 1024);
+            await using var boundedLease = bounded.ConfigureAwait(false);
+            await foreach (var entry in SseParser.Create(bounded).EnumerateAsync(deadline.Token).ConfigureAwait(false))
+            {
+                if (entry.EventType == "error")
+                {
+                    return null;
+                }
+
+                if (entry.EventType == "done")
+                {
+                    using var json = JsonDocument.Parse(entry.Data);
+                    return json.RootElement.ValueKind == JsonValueKind.Object
+                        && json.RootElement.TryGetProperty("text", out var text) && text.ValueKind == JsonValueKind.String
+                        ? text.GetString()?.Trim() switch
+                        {
+                            "check_acceptance_criteria" => "Check the task acceptance criteria.",
+                            "ask_for_update" => "Ask the issue owner for an update.",
+                            "review_completed_work" => "Review the completed work against the task requirements.",
+                            _ => null,
+                        }
+                        : null;
+                }
+            }
+        }
+        catch (Exception error) when (error is HttpRequestException or IOException or JsonException or StreamCapExceededException
+            || error is OperationCanceledException && !token.IsCancellationRequested)
+        {
+            return null;
+        }
+
+        return null;
     }
 
     private const int MaxResponseBytes = 4 * 1024 * 1024;

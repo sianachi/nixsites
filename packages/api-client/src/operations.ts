@@ -43,6 +43,13 @@ export const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   [/^\/api\/v1\/me\/pets(\/|$)/, 'any'],
   [/^\/api\/v1\/me\/push-subscriptions(\/|$)/, 'any'],
   [/^\/api\/v1\/me\/calendar\/connections(\/|$)/, 'any'],
+  [/^\/api\/v1\/workspaces\/[^/]+\/linear(\/|$)/, 'write'],
+  [/^\/api\/v1\/workspaces\/[^/]+\/pet-connections(\/|$)/, 'any'],
+  [/^\/api\/v1\/items\/[^/]+\/linear-requests\/[^/]+\/decision$/, 'any'],
+  [/^\/api\/v1\/items\/[^/]+\/linear-requests\/hand-to-pet$/, 'any'],
+  [/^\/api\/v1\/items\/[^/]+\/linear-link(\/|$)/, 'any'],
+  [/^\/api\/v1\/(items|workspaces)\/[^/]+\/pet-runs(\/|$)/, 'any'],
+  [/^\/api\/v1\/items\/[^/]+\/pet-peers(\/|$)/, 'any'],
   [/^\/api\/v1\/me\/(preferences|ui-settings|workspace-arrangement)(\/|$)/, 'write'],
   [/^\/api\/v1\/conversations\/[^/]+\/(turns|configure|sources|cancel)$/, 'write'],
   [/^\/api\/v1\/workspaces\/[^/]+\/conversations(\/|$)/, 'write'],
@@ -58,7 +65,7 @@ export const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   // it and joining by it are never run by an assistant, which must not be handed the password.
   [/^\/api\/v1\/workspaces\/[^/]+\/(password|unlock|join)(\/|$)/, 'any'],
   // Item lock passwords and protections are set by a person, for the same reason.
-  [/^\/api\/v1\/items\/[^/]+\/(lock|unlock|protection)(\/|$)/, 'any'],
+  [/^\/api\/v1\/items\/[^/]+\/(lock|unlock|protection|pet-protection)(\/|$)/, 'any'],
 ];
 
 export function isHumanOnlyOperation(entry: OperationEntry): boolean {

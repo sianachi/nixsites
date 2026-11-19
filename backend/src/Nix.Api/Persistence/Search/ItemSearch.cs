@@ -50,6 +50,7 @@ public sealed class ItemSearch(
         string query,
         IReadOnlyList<WorkspaceId> readableWorkspaces,
         int limit,
+        bool petSourcesOnly,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -72,6 +73,7 @@ public sealed class ItemSearch(
                 new NpgsqlParameter("title_pattern", NpgsqlDbType.Text) { Value = ContainsPattern(query) },
                 new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = query },
                 new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
+                new NpgsqlParameter("pet_sources_only", NpgsqlDbType.Boolean) { Value = petSourcesOnly },
                 await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
                 await ClosedLocksAsync(cancellationToken).ConfigureAwait(false),
             ],
@@ -113,6 +115,7 @@ public sealed class ItemSearch(
         string query,
         IReadOnlyList<WorkspaceId> readableWorkspaces,
         int limit,
+        bool petSourcesOnly,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -143,6 +146,7 @@ public sealed class ItemSearch(
                         Value = vector is null ? DBNull.Value : LocalEmbedder.ToLiteral(vector),
                     },
                     new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
+                    new NpgsqlParameter("pet_sources_only", NpgsqlDbType.Boolean) { Value = petSourcesOnly },
                     locks,
                 ],
                 cancellationToken);

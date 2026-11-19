@@ -28,6 +28,49 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspaceId}/pet-protection": {
+      "get": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Check whether a workspace contains any items withheld from pets",
+        "description": "Available only in the workspace owner's browser or its signed pet turn. Returns a boolean without item details.",
+        "operationId": "GetWorkspacePetProtection",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacePetProtectionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -285,6 +328,80 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-runs": {
+      "get": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "List the caller's pet jobs in a workspace.",
+        "operationId": "ListWorkspacePetRuns",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-connections/browser-site": {
+      "post": {
+        "tags": [
+          "Pet Connections"
+        ],
+        "summary": "Connect a site-scoped browser session",
+        "operationId": "SavePetBrowserSite",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePetBrowserSiteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorConnection"
                 }
               }
             }
@@ -3440,6 +3557,79 @@
         }
       }
     },
+    "/api/v1/items/{itemId}/pet-protection": {
+      "put": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Control whether pets can use an item",
+        "description": "A workspace owner may withhold this item from pets in a signed-in browser session.",
+        "operationId": "SetItemPetProtection",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetItemPetProtectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/items/{itemId}/restore": {
       "post": {
         "tags": [
@@ -6345,7 +6535,7 @@
           "Search"
         ],
         "summary": "Find items by title or document text",
-        "description": "Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. The search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. An item in a workspace the caller cannot reach is omitted entirely rather than redacted. A blank query returns no results rather than every item.",
+        "description": "Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. The search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. An item in a workspace the caller cannot reach is omitted entirely rather than redacted. A blank query returns no results rather than every item. 'petWorkspaceId' limits the search to items available to pet work in one workspace.",
         "operationId": "SearchItems",
         "parameters": [
           {
@@ -6366,6 +6556,14 @@
               ],
               "format": "int32",
               "default": 20
+            }
+          },
+          {
+            "name": "petWorkspaceId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -7390,6 +7588,1291 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs": {
+      "get": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "List the caller's pet jobs on the task.",
+        "operationId": "ListItemPetRuns",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Queue a task-scoped pet job.",
+        "operationId": "CreatePetRun",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPetRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}": {
+      "get": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Read an owned pet job and its action receipts.",
+        "operationId": "GetPetRun",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}/watch": {
+      "get": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Read the current pet job checkpoint for polling.",
+        "operationId": "WatchPetRun",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}/answer": {
+      "post": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Answer the pet's pending question.",
+        "operationId": "AnswerPetRun",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerPetRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/decision": {
+      "post": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Approve or decline the exact pending proposal in an active browser.",
+        "operationId": "DecidePetRunProposal",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "proposalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecidePetProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}/scope": {
+      "post": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Decide the exact pending request for a read-only source or one ability.",
+        "operationId": "DecidePetRunScope",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecidePetRunScopeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/revise": {
+      "post": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Supersede the current proposal and prepare a fresh draft in the same job.",
+        "operationId": "RevisePetRunProposal",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "proposalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisePetRunProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}/cancel": {
+      "post": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Cancel an owned pet job.",
+        "operationId": "CancelPetRun",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}/retry": {
+      "post": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Retry a failed pet job with a known outcome.",
+        "operationId": "RetryPetRun",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-runs/{runId}/steps/{stepId}/undo": {
+      "post": {
+        "tags": [
+          "Pet Runs"
+        ],
+        "summary": "Queue the supported undo of an applied step.",
+        "operationId": "UndoPetRunStep",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "stepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-peers": {
+      "get": {
+        "tags": [
+          "Pet peers"
+        ],
+        "operationId": "ListPetPeers",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPeersResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pet peers"
+        ],
+        "operationId": "RegisterPetPeer",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPetPeerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredPetPeer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-peers/work": {
+      "get": {
+        "tags": [
+          "Pet peers"
+        ],
+        "operationId": "ListPetPeerWork",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPeerWorkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-peers/{peerId}": {
+      "delete": {
+        "tags": [
+          "Pet peers"
+        ],
+        "operationId": "RevokePetPeer",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "peerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/linear": {
+      "get": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Read the Linear connection status for this workspace.",
+        "operationId": "GetLinearConnection",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearConnectionResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Remove this workspace's Linear connection.",
+        "operationId": "DisconnectLinearConnection",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/linear/authorize": {
+      "post": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Start a browser OAuth connection to read-only Linear.",
+        "operationId": "AuthorizeLinearConnection",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AuthorizeLinearConnectionRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearAuthorizationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/linear-requests": {
+      "get": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "List visible Linear issue requests for a Nix task.",
+        "operationId": "ListLinearRequests",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearRequestsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Queue a one-issue lookup for approval on a Nix task.",
+        "operationId": "RequestLinearIssue",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestLinearIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearRequestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/linear-requests/{requestId}": {
+      "get": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Read the status of a Linear issue request on a Nix task.",
+        "operationId": "GetLinearIssueRequest",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearRequestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/linear-requests/hand-to-pet": {
+      "post": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Hand a pet a single Linear issue lookup for approval on the task.",
+        "operationId": "HandToPet",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandToPetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearRequestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/linear-requests/{requestId}/decision": {
+      "post": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Approve or decline a single pending Linear issue lookup in the browser.",
+        "operationId": "DecideLinearIssueRequest",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideLinearIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearRequestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/linear-link": {
+      "get": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Read an owner's linked Linear issue and observed status.",
+        "operationId": "GetLinearLink",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearLinkResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Link one exact issue from an authorized Linear team.",
+        "operationId": "LinkLinearIssue",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkLinearIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearLinkResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Remove the exact linked issue without changing Linear.",
+        "operationId": "UnlinkLinearIssue",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/linear-link/refresh": {
+      "post": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Refresh the linked issue status in Nix without changing Linear.",
+        "operationId": "RefreshLinearLink",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearLinkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/linear-link/copy-status": {
+      "post": {
+        "tags": [
+          "Linear"
+        ],
+        "summary": "Copy an observed Linear status into the selected Nix task.",
+        "operationId": "CopyLinkedLinearStatus",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyLinearStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinearLinkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-connections": {
+      "get": {
+        "tags": [
+          "Pet Connections"
+        ],
+        "summary": "List the owner’s scoped pet connections and provider actions.",
+        "operationId": "ListPetConnections",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-connections/authorize": {
+      "post": {
+        "tags": [
+          "Pet Connections"
+        ],
+        "summary": "Begin browser consent for a scoped pet connection.",
+        "operationId": "AuthorizePetConnection",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizePetConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizePetConnectionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-connections/{connectionId}": {
+      "delete": {
+        "tags": [
+          "Pet Connections"
+        ],
+        "summary": "Revoke a pet connection in Nix.",
+        "operationId": "DisconnectPetConnection",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-connections/register-mcp": {
+      "post": {
+        "tags": [
+          "Pet Connections"
+        ],
+        "summary": "Register one exact remote MCP tool against its input schema.",
+        "operationId": "RegisterPetMcpConnection",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPetMcpConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
           }
         }
       }
@@ -14002,6 +15485,25 @@
           }
         }
       },
+      "AnswerPetRunRequest": {
+        "required": [
+          "questionId",
+          "answer"
+        ],
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "AppendViewSetupRequest": {
         "required": [
           "properties",
@@ -14111,6 +15613,71 @@
         }
       },
       "AuthorizeCalendarResponse": {
+        "required": [
+          "authorizationUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "authorizationUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthorizeLinearConnectionRequest": {
+        "required": [
+          "returnTo"
+        ],
+        "type": "object",
+        "properties": {
+          "returnTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AuthorizePetConnectionRequest": {
+        "required": [
+          "provider",
+          "resourceKind",
+          "resourceId",
+          "actions",
+          "returnTo"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "resourceKind": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "returnTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "calendarLinkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "AuthorizePetConnectionResponse": {
         "required": [
           "authorizationUrl"
         ],
@@ -14918,6 +16485,25 @@
             "format": "int64"
           },
           "idempotencyKey": {
+            "type": "string"
+          }
+        }
+      },
+      "BrowserSiteCookie": {
+        "required": [
+          "name",
+          "value",
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "path": {
             "type": "string"
           }
         }
@@ -15886,6 +17472,141 @@
           }
         }
       },
+      "ConnectorActionDefinition": {
+        "required": [
+          "id",
+          "provider",
+          "resourceKind",
+          "kind",
+          "description",
+          "schema",
+          "schemaHash",
+          "configured"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "resourceKind": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "schemaHash": {
+            "type": "string"
+          },
+          "configured": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ConnectorCalendarLink": {
+        "required": [
+          "linkId",
+          "provider",
+          "resourceId",
+          "name",
+          "writable"
+        ],
+        "type": "object",
+        "properties": {
+          "linkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "writable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ConnectorConnection": {
+        "required": [
+          "id",
+          "provider",
+          "resourceKind",
+          "resourceId",
+          "actions",
+          "revision"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "resourceKind": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "revision": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ConnectorList": {
+        "required": [
+          "enabled",
+          "connections",
+          "actions",
+          "calendars"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "connections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorConnection"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorActionDefinition"
+            }
+          },
+          "calendars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorCalendarLink"
+            }
+          }
+        }
+      },
       "ContainerViewsResponse": {
         "required": [
           "views",
@@ -16124,6 +17845,25 @@
           "text": {
             "type": "string",
             "default": ""
+          }
+        }
+      },
+      "CopyLinearStatusRequest": {
+        "required": [
+          "revision",
+          "localStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "localStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -16751,6 +18491,51 @@
           },
           "showOnCalendar": {
             "type": "boolean"
+          }
+        }
+      },
+      "DecideLinearIssueRequest": {
+        "required": [
+          "approve"
+        ],
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DecidePetProposalRequest": {
+        "required": [
+          "approve"
+        ],
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DecidePetRunScopeRequest": {
+        "required": [
+          "questionId",
+          "approve"
+        ],
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approve": {
+            "type": "boolean"
+          },
+          "sourceItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -18318,6 +20103,22 @@
           }
         }
       },
+      "HandToPetRequest": {
+        "required": [
+          "petId",
+          "issueId"
+        ],
+        "type": "object",
+        "properties": {
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issueId": {
+            "type": "string"
+          }
+        }
+      },
       "HealthCheckResponse": {
         "required": [
           "name",
@@ -18817,6 +20618,10 @@
           "fullWidth": {
             "type": "boolean",
             "default": false
+          },
+          "withholdFromPets": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -18907,6 +20712,259 @@
           "keptAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "LinearAuthorizationResponse": {
+        "required": [
+          "authorizationUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "authorizationUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "LinearConnectionResponse": {
+        "required": [
+          "connected"
+        ],
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LinearIssueResponse": {
+        "required": [
+          "id",
+          "title",
+          "status",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "LinearLinkConnection": {
+        "required": [
+          "id",
+          "teamId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teamId": {
+            "type": "string"
+          }
+        }
+      },
+      "LinearLinkedIssue": {
+        "required": [
+          "revision",
+          "connected",
+          "identifier",
+          "url",
+          "remoteStatus",
+          "checkedAt",
+          "localStatus",
+          "change",
+          "canCopyStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "identifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "remoteStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "checkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "localStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "canCopyStatus": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LinearLinkResponse": {
+        "required": [
+          "link",
+          "connections"
+        ],
+        "type": "object",
+        "properties": {
+          "link": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LinearLinkedIssue"
+              }
+            ]
+          },
+          "connections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinearLinkConnection"
+            }
+          }
+        }
+      },
+      "LinearRequestResponse": {
+        "required": [
+          "id",
+          "itemId",
+          "issueId",
+          "status",
+          "requestedBy",
+          "createdAt",
+          "expiresAt",
+          "canDecide",
+          "result",
+          "petId",
+          "commentId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issueId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "requestedBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "canDecide": {
+            "type": "boolean"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LinearIssueResponse"
+              }
+            ]
+          },
+          "petId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "commentId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "LinearRequestsResponse": {
+        "required": [
+          "requests",
+          "canHandToPet"
+        ],
+        "type": "object",
+        "properties": {
+          "requests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinearRequestResponse"
+            }
+          },
+          "canHandToPet": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LinkLinearIssueRequest": {
+        "required": [
+          "connectionId",
+          "issue"
+        ],
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issue": {
+            "type": "string"
           }
         }
       },
@@ -19506,6 +21564,37 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "petDecision": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NotificationPetDecisionDto"
+              }
+            ]
+          }
+        }
+      },
+      "NotificationPetDecisionDto": {
+        "required": [
+          "runId",
+          "decisionId",
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
           }
         }
       },
@@ -20076,6 +22165,124 @@
           }
         }
       },
+      "PetPeerRegistration": {
+        "required": [
+          "id",
+          "petId",
+          "workspaceId",
+          "itemId",
+          "name",
+          "kind",
+          "expiresAt",
+          "revokedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PetPeersResponse": {
+        "required": [
+          "peers"
+        ],
+        "type": "object",
+        "properties": {
+          "peers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetPeerRegistration"
+            }
+          }
+        }
+      },
+      "PetPeerWorkResponse": {
+        "required": [
+          "work"
+        ],
+        "type": "object",
+        "properties": {
+          "work": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetPeerWorkView"
+            }
+          }
+        }
+      },
+      "PetPeerWorkView": {
+        "required": [
+          "id",
+          "peerId",
+          "runId",
+          "direction",
+          "status",
+          "result",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "peerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "result": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "PetProfile": {
         "required": [
           "id",
@@ -20138,6 +22345,284 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PetProviderKeyResponse"
+            }
+          }
+        }
+      },
+      "PetRunAbility": {
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "PetRunFailure": {
+        "required": [
+          "stage",
+          "code",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "PetRunProposal": {
+        "required": [
+          "id",
+          "capability",
+          "description",
+          "preview",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capability": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "status": {
+            "type": "string"
+          },
+          "decisionAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "receipt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "undoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "automatic": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "PetRunQuestion": {
+        "required": [
+          "id",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "scope": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ability": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PetRunResponse": {
+        "required": [
+          "id",
+          "itemId",
+          "workspaceId",
+          "brief",
+          "sourceItemIds",
+          "workspaceScope",
+          "abilities",
+          "status",
+          "revision",
+          "question",
+          "proposals",
+          "results",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brief": {
+            "type": "string"
+          },
+          "sourceItemIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "workspaceScope": {
+            "type": "boolean"
+          },
+          "abilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "question": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetRunQuestion"
+              }
+            ]
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetRunProposal"
+            }
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetRunResult"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "includeTargetText": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "afterMessageId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failure": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetRunFailure"
+              }
+            ]
+          }
+        }
+      },
+      "PetRunResult": {
+        "required": [
+          "id",
+          "text",
+          "reversible"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "reversible": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PetRunsResponse": {
+        "required": [
+          "enabled",
+          "abilities",
+          "runs"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "abilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetRunAbility"
+            }
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetRunResponse"
             }
           }
         }
@@ -21458,6 +23943,74 @@
           }
         }
       },
+      "RegisteredPetPeer": {
+        "required": [
+          "peer",
+          "endpoint",
+          "credential"
+        ],
+        "type": "object",
+        "properties": {
+          "peer": {
+            "$ref": "#/components/schemas/PetPeerRegistration"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "credential": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterPetMcpConnectionRequest": {
+        "required": [
+          "url",
+          "tool",
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterPetPeerRequest": {
+        "required": [
+          "name",
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 30
+          }
+        }
+      },
       "RejectSiteApprovalRequest": {
         "required": [
           "note"
@@ -21595,6 +24148,17 @@
           }
         }
       },
+      "RequestLinearIssueRequest": {
+        "required": [
+          "issueId"
+        ],
+        "type": "object",
+        "properties": {
+          "issueId": {
+            "type": "string"
+          }
+        }
+      },
       "RequestSiteApprovalRequest": {
         "required": [
           "acknowledgeDisclosure"
@@ -21613,6 +24177,17 @@
         "type": "object",
         "properties": {
           "currentPassword": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RevisePetRunProposalRequest": {
+        "type": "object",
+        "properties": {
+          "feedback": {
             "type": [
               "null",
               "string"
@@ -21707,6 +24282,34 @@
             "format": "int32"
           },
           "showOnCalendar": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SavePetBrowserSiteRequest": {
+        "required": [
+          "origin",
+          "cookies",
+          "allowSubmissions"
+        ],
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cookies": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/BrowserSiteCookie"
+            }
+          },
+          "allowSubmissions": {
             "type": "boolean"
           }
         }
@@ -22008,6 +24611,20 @@
             "type": [
               "null",
               "string"
+            ]
+          }
+        }
+      },
+      "SetItemPetProtectionRequest": {
+        "required": [
+          "withholdFromPets"
+        ],
+        "type": "object",
+        "properties": {
+          "withholdFromPets": {
+            "type": [
+              "null",
+              "boolean"
             ]
           }
         }
@@ -22911,6 +25528,55 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "StartPetRunRequest": {
+        "required": [
+          "brief"
+        ],
+        "type": "object",
+        "properties": {
+          "brief": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sourceItemIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "workspaceScope": {
+            "type": "boolean",
+            "default": false
+          },
+          "abilities": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "includeTargetText": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "afterMessageId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -25807,6 +28473,17 @@
           }
         }
       },
+      "WorkspacePetProtectionResponse": {
+        "required": [
+          "hasProtectedItems"
+        ],
+        "type": "object",
+        "properties": {
+          "hasProtectedItems": {
+            "type": "boolean"
+          }
+        }
+      },
       "WorkspacePrincipalResponse": {
         "required": [
           "principalId",
@@ -26258,6 +28935,9 @@
       "name": "Health"
     },
     {
+      "name": "Items"
+    },
+    {
       "name": "Me"
     },
     {
@@ -26268,6 +28948,12 @@
     },
     {
       "name": "Canvas"
+    },
+    {
+      "name": "Pet Runs"
+    },
+    {
+      "name": "Pet Connections"
     },
     {
       "name": "Conversations"
@@ -26297,9 +28983,6 @@
       "name": "Attachments"
     },
     {
-      "name": "Items"
-    },
-    {
       "name": "Imports"
     },
     {
@@ -26325,6 +29008,12 @@
     },
     {
       "name": "Pets"
+    },
+    {
+      "name": "Pet peers"
+    },
+    {
+      "name": "Linear"
     },
     {
       "name": "Notifications"

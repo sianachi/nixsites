@@ -1,4 +1,5 @@
 import { items, workspaces } from '@nix/api-client';
+import { requirePetItem } from './guards.js';
 import type { CompanionPorts } from './ports.js';
 import { WorkspaceToolRefusal, type WorkspaceToolArgs } from './tool-args.js';
 
@@ -41,6 +42,7 @@ export async function crossWorkspaceMove(
     throw new WorkspaceToolRefusal(
       'The parent is not in the destination workspace. No action was run.',
     );
+  if (parent !== undefined) requirePetItem(parent);
   const source = await ports.core.query(workspaces.workspaceById(workspaceId), options);
   return {
     workspaceId: wanted,

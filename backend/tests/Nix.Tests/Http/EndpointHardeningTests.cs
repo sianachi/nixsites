@@ -152,6 +152,7 @@ public sealed class EndpointHardeningTests(ContractHostFactory factory)
     {
         "/public/v1/forms/{token}" => RateLimitRefusal.PublicFormsPolicyName,
         "/public/v1/auth/token" or "/api/v1/oauth/token" => RateLimitRefusal.TokenExchangePolicyName,
+        "/public/v1/pet-mcp/{petId:guid}/dispatch" => "pet-peer",
 
         // Every route that checks an item-lock password carries the tighter lock policy instead.
         // Relocking shares the unlock path but checks nothing, so it keeps the writes policy.

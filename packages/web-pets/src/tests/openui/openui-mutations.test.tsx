@@ -90,7 +90,7 @@ describe('component writes', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Do it' }));
     expect(await screen.findByText('I will mark Pay rent done')).toBeInTheDocument();
     expect(run).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Approve request' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Update task' }));
     expect(await screen.findByText('Done!')).toBeInTheDocument();
     // The card is gone, so focus lands on the block rather than dropping to the page.
     expect(document.querySelector('[data-openui-block]')).toHaveFocus();
@@ -109,7 +109,7 @@ describe('component writes', () => {
     });
     expect(options).toEqual({ fence: 'fence-1' });
     expect(afterWrite).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Update task' })).not.toBeInTheDocument();
   });
 
   it('run nothing when declined, and the component sees the error', async () => {
@@ -133,7 +133,7 @@ describe('component writes', () => {
   it('always wait for operations the switch never covers', async () => {
     block(finishTask('trash_item', `itemId: "${task}"`), true);
     fireEvent.click(await screen.findByRole('button', { name: 'Do it' }));
-    expect(await screen.findByRole('button', { name: 'Approve request' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Move to trash' })).toBeEnabled();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(run).not.toHaveBeenCalled();
   });
@@ -170,7 +170,7 @@ said = Text(finish.status == "success" ? "Done!" : "Waiting", "body")`,
     block(finishTask('complete_task', 'completed: true'));
     fireEvent.click(await screen.findByRole('button', { name: 'Do it' }));
     expect(await screen.findByText('Not done')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Update task' })).not.toBeInTheDocument();
     expect(prepareWrite).not.toHaveBeenCalled();
   });
 
@@ -186,7 +186,7 @@ said = Text(finish.status == "error" ? "Not done" : spam.status == "x" ? "" : "W
       );
       fireEvent.click(await screen.findByRole('button', { name: 'Do it' }));
       expect(await screen.findByText('Not done')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Update task' })).not.toBeInTheDocument();
       expect(prepareWrite).not.toHaveBeenCalled();
       expect(run).not.toHaveBeenCalled();
     });
@@ -199,10 +199,10 @@ a = Button("First", @Run(one))
 b = Button("Second", @Run(two))
 said = Text(two.status == "error" ? "Second refused" : "", "body")`);
       fireEvent.click(await screen.findByRole('button', { name: 'First' }));
-      expect(await screen.findByRole('button', { name: 'Approve request' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Update task' })).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Second' }));
       expect(await screen.findByText('Second refused')).toBeInTheDocument();
-      expect(screen.getAllByRole('button', { name: 'Approve request' })).toHaveLength(1);
+      expect(screen.getAllByRole('button', { name: 'Update task' })).toHaveLength(1);
     });
 
     it('hold writes after the conversation read locked content (H1)', async () => {
@@ -227,7 +227,7 @@ said = Text(two.status == "error" ? "Second refused" : "", "body")`);
 
       block(finishTask(), false, { noteScope: { rootItemId: task, readOnly: false } });
       fireEvent.click(await screen.findByRole('button', { name: 'Do it' }));
-      fireEvent.click(await screen.findByRole('button', { name: 'Approve request' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Update task' }));
       expect(await screen.findByText('Done!')).toBeInTheDocument();
       expect(prepareWrite.mock.calls[0]?.[4]).toEqual({ rootItemId: task, readOnly: false });
       expect(run.mock.calls[0]?.[4]).toEqual({
@@ -239,7 +239,7 @@ said = Text(two.status == "error" ? "Second refused" : "", "body")`);
     it('never approve a card that was already waiting when the switch went on (L1)', async () => {
       const view = block(finishTask());
       fireEvent.click(await screen.findByRole('button', { name: 'Do it' }));
-      expect(await screen.findByRole('button', { name: 'Approve request' })).toBeEnabled();
+      expect(await screen.findByRole('button', { name: 'Update task' })).toBeEnabled();
       view.setApply(true);
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(run).not.toHaveBeenCalled();

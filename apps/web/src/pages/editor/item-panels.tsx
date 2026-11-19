@@ -19,6 +19,7 @@ interface ItemPanelsProps {
   readonly panelOpen: boolean;
   readonly overlayDetails: boolean;
   readonly panelPane: Pane;
+  readonly focusThreadId: string | null;
   readonly onPanelPaneChange: (pane: Pane) => void;
   readonly onTogglePanel: () => void;
   readonly historyOpen: boolean;
@@ -35,6 +36,7 @@ export function ItemPanels({
   panelOpen,
   overlayDetails,
   panelPane,
+  focusThreadId,
   onPanelPaneChange: setPanelPane,
   onTogglePanel: togglePanel,
   historyOpen,
@@ -54,6 +56,7 @@ export function ItemPanels({
       onClose={togglePanel}
       drawer={phone}
       pane={panelPane}
+      focusThreadId={focusThreadId}
       onPaneChange={setPanelPane}
     />
   ) : null;

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "resolveJsonModule": true,
     // The published surface targets the browser: AbortController, AbortSignal
     // and console come from the DOM lib, not from Node types, so nothing
     // Node-shaped leaks into the emitted declarations.

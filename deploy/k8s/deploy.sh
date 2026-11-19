@@ -119,6 +119,21 @@ case "${NIX_MCP_ENABLED:-true}" in
   false) export MCP_PUBLIC_URL="" ;;
   *) echo "NIX_MCP_ENABLED must be true or false" >&2; exit 1 ;;
 esac
+export NIX_PET_RUNS_ENABLED="${NIX_PET_RUNS_ENABLED:-false}"
+export NIX_PET_RUNS_PILOT_WORKSPACE="${NIX_PET_RUNS_PILOT_WORKSPACE:-}"
+if [ -n "$NIX_PET_RUNS_PILOT_WORKSPACE" ] && \
+    ! [[ "$NIX_PET_RUNS_PILOT_WORKSPACE" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]]; then
+  echo "NIX_PET_RUNS_PILOT_WORKSPACE must be a workspace UUID" >&2
+  exit 1
+fi
+case "$NIX_PET_RUNS_ENABLED" in
+  true)
+    : "${NIX_PET_RUNS_PILOT_WORKSPACE:?set NIX_PET_RUNS_PILOT_WORKSPACE when enabling pet jobs}"
+    kubectl -n nix get secret nix-pet-browser >/dev/null
+    ;;
+  false) ;;
+  *) echo "NIX_PET_RUNS_ENABLED must be true or false" >&2; exit 1 ;;
+esac
 NIX_BOOTSTRAP_IDENTITY="${NIX_BOOTSTRAP_IDENTITY:-false}"
 case "$NIX_BOOTSTRAP_IDENTITY" in
   true)
@@ -171,7 +186,7 @@ export NIX_RELEASE_VERSION
 SITES_FOREIGN_LABEL_SUFFIX="${SITES_FOREIGN_LABEL_SUFFIX--home}"
 export REGISTRY TAG OIDC_ISSUER OIDC_CLIENT_ID DOMAIN SITES_REQUIRE_OPERATOR_APPROVAL SITES_FOREIGN_LABEL_SUFFIX BACKUP_OFFSITE PUBLIC_LINKS_ENABLED
 
-render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${PUBLIC_LINKS_ENABLED} ${BACKUP_OFFSITE} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_CREDENTIAL_SECRET} ${TEMPLATE_BOOT_CREDENTIAL_KEY} ${TEMPLATE_BOOT_SERVICE_KEY_FILE} ${TEMPLATE_BOOT_ACCESS_TOKEN_FILE} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION} ${AUTH_MODE} ${AUTH_PASSKEY_RP_ID} ${IMPORT_RP_ID} ${ZITADEL_IMPORT_ARGS} ${COLLAB_OIDC_ISSUERS} ${COLLAB_OIDC_AUDIENCE}' < "$1"; }
+render() { envsubst '${REGISTRY} ${TAG} ${OIDC_ISSUER} ${OIDC_CLIENT_ID} ${DOMAIN} ${SITES_FOREIGN_LABEL_SUFFIX} ${POD_CIDR} ${SITES_REQUIRE_OPERATOR_APPROVAL} ${PUBLIC_LINKS_ENABLED} ${BACKUP_OFFSITE} ${OBJECT_STORE_SECRET_VERSION} ${SITES_SECRET_VERSION} ${TEMPLATE_BOOT_WORKSPACE_ID} ${TEMPLATE_BOOT_OIDC_AUDIENCE} ${TEMPLATE_BOOT_OIDC_SCOPE} ${TEMPLATE_BOOT_PVC} ${TEMPLATE_BOOT_CREDENTIAL_SECRET} ${TEMPLATE_BOOT_CREDENTIAL_KEY} ${TEMPLATE_BOOT_SERVICE_KEY_FILE} ${TEMPLATE_BOOT_ACCESS_TOKEN_FILE} ${INGRESS_CLASS} ${INGRESS_MIDDLEWARES} ${STORAGE_CLASS} ${STORAGE_CLASS_RETAIN} ${INGRESS_SSL_REDIRECT} ${PUBLIC_ORIGIN} ${MCP_PUBLIC_URL} ${TLS_HOSTS} ${CLIENT_IP_HEADER} ${NIX_WEB_LANDING} ${NIX_WEB_DEMO} ${NIX_RELEASE_VERSION} ${AUTH_MODE} ${AUTH_PASSKEY_RP_ID} ${IMPORT_RP_ID} ${ZITADEL_IMPORT_ARGS} ${COLLAB_OIDC_ISSUERS} ${COLLAB_OIDC_AUDIENCE} ${NIX_PET_RUNS_ENABLED} ${NIX_PET_RUNS_PILOT_WORKSPACE}' < "$1"; }
 
 # The old bundled Zitadel is not managed here. Leaving it running beside a deploy that does not use it
 # would keep the old sign-in reachable, so migrate first (a dry run only reads and is allowed).
@@ -356,6 +371,10 @@ kubectl -n nix create configmap nix-caddy --from-file=Caddyfile=deploy/k8s/Caddy
 
 echo "== Workloads =="
 render deploy/k8s/api.yaml | kubectl apply -f -
+if [ "$NIX_PET_RUNS_ENABLED" = true ]; then
+  render deploy/k8s/pet-browser.yaml | kubectl apply -f -
+  kubectl -n nix rollout status deployment/nix-pet-browser --timeout=180s
+fi
 render deploy/k8s/node.yaml | kubectl apply -f -
 render deploy/k8s/web.yaml | kubectl apply -f -
 render deploy/k8s/sites.yaml | kubectl apply -f -

@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import { useSessionStore } from '@nix/web-foundation/lib/session-store';
-import type { TemplateInitialization } from '@nix/api-client';
+import type { NotificationDto, TemplateInitialization } from '@nix/api-client';
 import { item, STUB_WORKSPACE_ID } from './resources/items';
 import type { StubItem } from './resources/items';
 import { requestUrl } from '../request-url';
@@ -470,16 +470,7 @@ export const STUB_DEFAULT_PREFERENCES: StubPreferences = {
 };
 
 /** As `GET /api/v1/me/notifications` reports one row. */
-export interface StubNotification {
-  readonly id: string;
-  readonly kind: 'reminder' | 'automation' | 'calendar' | 'system';
-  readonly title: string;
-  readonly body: string;
-  readonly itemId: string | null;
-  readonly workspaceId: string | null;
-  readonly createdAt: string;
-  readonly readAt: string | null;
-}
+export type StubNotification = NotificationDto;
 
 /** As `POST /api/v1/me/push-subscriptions` reports a registered device. */
 export interface StubPushSubscription {

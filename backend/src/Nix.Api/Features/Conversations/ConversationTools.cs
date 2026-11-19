@@ -36,7 +36,7 @@ public static class ConversationTools
         ArgumentNullException.ThrowIfNull(services);
         var service = services.GetRequiredService<ConversationService>();
         var found = await service.Find(conversationId, true, token).ConfigureAwait(false);
-        if (found.IsFailure)
+        if (found.IsFailure || ItemSettings.Read(found.Value.Settings).WithholdFromPets)
         {
             return new(false, "The conversation is unavailable.");
         }
@@ -64,8 +64,14 @@ public static class ConversationTools
         var workspace = await services.GetRequiredService<NixDispatcher>().QueryAsync<GetWorkspace, WorkspaceSnapshot?>(new(new WorkspaceId(workspaceId)), token).ConfigureAwait(false);
         var operation = Arg("operation");
         var tree = services.GetRequiredService<IItemTree>();
-        async Task<bool> Unlocked(Item row)
+        var search = services.GetRequiredService<IItemSearch>();
+        WorkspaceId[] source = [new(workspaceId)];
+        async Task<bool> AvailableToPet(Item row)
         {
+            if (ItemSettings.Read(row.Settings).WithholdFromPets)
+            {
+                return false;
+            }
             var state = await services.GetRequiredService<NixDispatcher>().QueryAsync<GetItemLock, Result<ItemLockState>>(new(row.Id), token).ConfigureAwait(false);
             return state.IsSuccess && !state.Value.Locked;
         }
@@ -82,6 +88,40 @@ public static class ConversationTools
             ["schema"] = JsonNode.Parse(row.Schema ?? "{}"),
             ["views"] = JsonNode.Parse(row.Views ?? "{}")
         };
+        async Task<JsonArray> PassagesForPet(ItemId? root, string query)
+        {
+            var passages = await search.FindPassagesAsync(root, query, source, 8, petSourcesOnly: true, token).ConfigureAwait(false);
+            var rows = new JsonArray();
+            var availability = new Dictionary<ItemId, bool>();
+            foreach (var passage in passages)
+            {
+                if (!availability.TryGetValue(passage.ItemId, out var available))
+                {
+                    var row = await tree.FindAsync(passage.ItemId, token).ConfigureAwait(false);
+                    available = row is not null && row.WorkspaceId.Value == workspaceId
+                        && await AvailableToPet(row).ConfigureAwait(false);
+                    availability.Add(passage.ItemId, available);
+                }
+                if (!available)
+                {
+                    continue;
+                }
+
+                var projection = new JsonObject
+                {
+                    ["itemId"] = passage.ItemId.Value,
+                    ["title"] = passage.Title,
+                    ["heading"] = passage.Heading,
+                    ["text"] = passage.Text,
+                };
+                if (root is not null)
+                {
+                    projection["ord"] = passage.Ord;
+                }
+                rows.Add(projection);
+            }
+            return rows;
+        }
         if (operation == "search")
         {
             var query = Arg("query");
@@ -90,12 +130,12 @@ public static class ConversationTools
                 return new(false, "Search needs 3 to 1000 characters.");
             }
 
-            var hits = await services.GetRequiredService<IItemSearch>().FindAsync(query, [new WorkspaceId(workspaceId)], 30, token).ConfigureAwait(false);
+            var hits = await search.FindAsync(query, source, 30, petSourcesOnly: true, token).ConfigureAwait(false);
             var rows = new JsonArray();
             foreach (var hit in hits)
             {
                 var row = await tree.FindAsync(hit.Id, token).ConfigureAwait(false);
-                if (row is not null && await Unlocked(row).ConfigureAwait(false))
+                if (row is not null && await AvailableToPet(row).ConfigureAwait(false))
                 {
                     rows.Add(Envelope(row));
                 }
@@ -104,16 +144,7 @@ public static class ConversationTools
             var passages = new JsonArray();
             try
             {
-                foreach (var passage in await services.GetRequiredService<IItemSearch>().FindPassagesAsync(null, query, [new WorkspaceId(workspaceId)], 8, token).ConfigureAwait(false))
-                {
-                    passages.Add(new JsonObject
-                    {
-                        ["itemId"] = passage.ItemId.Value,
-                        ["title"] = passage.Title,
-                        ["heading"] = passage.Heading,
-                        ["text"] = passage.Text,
-                    });
-                }
+                passages = await PassagesForPet(null, query).ConfigureAwait(false);
             }
             catch (ItemQueryFailedException)
             {
@@ -134,7 +165,7 @@ public static class ConversationTools
             if (parent is { } parentKey)
             {
                 item = await tree.FindAsync(parentKey, token).ConfigureAwait(false);
-                if (item is null || item.WorkspaceId.Value != workspaceId || !await Unlocked(item).ConfigureAwait(false))
+                if (item is null || item.WorkspaceId.Value != workspaceId || !await AvailableToPet(item).ConfigureAwait(false))
                 {
                     return new(false, "The parent is unavailable.");
                 }
@@ -143,7 +174,7 @@ public static class ConversationTools
             var visible = new JsonArray();
             foreach (var row in rows.Take(30))
             {
-                if (await Unlocked(row).ConfigureAwait(false))
+                if (await AvailableToPet(row).ConfigureAwait(false))
                 {
                     visible.Add(Envelope(row));
                 }
@@ -155,7 +186,8 @@ public static class ConversationTools
                 ["partial"] = rows.Count > 30 || visible.Count != Math.Min(rows.Count, 30)
             }.ToJsonString());
         }
-        if (item is null || item.WorkspaceId.Value != workspaceId)
+        if (item is null || item.WorkspaceId.Value != workspaceId
+            || ItemSettings.Read(item.Settings).WithholdFromPets)
         {
             return new(false, "The item is unavailable.");
         }
@@ -211,26 +243,14 @@ public static class ConversationTools
                 return new(false, "Search needs 1 to 1000 characters.");
             }
 
-            IReadOnlyList<NotePassage> passages;
+            JsonArray rows;
             try
             {
-                passages = await services.GetRequiredService<IItemSearch>().FindPassagesAsync(item.Id, query, [new WorkspaceId(workspaceId)], 8, token).ConfigureAwait(false);
+                rows = await PassagesForPet(item.Id, query).ConfigureAwait(false);
             }
             catch (ItemQueryFailedException)
             {
                 return new(false, "The search took too long. Search a smaller note or folder.");
-            }
-            var rows = new JsonArray();
-            foreach (var passage in passages)
-            {
-                rows.Add(new JsonObject
-                {
-                    ["itemId"] = passage.ItemId.Value,
-                    ["title"] = passage.Title,
-                    ["heading"] = passage.Heading,
-                    ["ord"] = passage.Ord,
-                    ["text"] = passage.Text
-                });
             }
             return new(true, new JsonObject { ["id"] = item.Id.Value, ["title"] = ItemProperties.ReadTitle(item.Properties), ["passages"] = rows }.ToJsonString());
         }

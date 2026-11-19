@@ -21,6 +21,7 @@ function item(n: number, hasChildren: boolean, parentId: string | null = null) {
     title: `Item ${String(n)}`,
     type: 'note',
     hasChildren,
+    settings: { withholdFromPets: false },
   };
 }
 
@@ -62,6 +63,16 @@ describe('ownerTurnContext', () => {
 });
 
 describe('buildWorkspaceMap', () => {
+  it('omits withheld items from the turn workspace map', async () => {
+    const withheld = { withholdFromPets: true };
+    const { client } = fakeClient({
+      '': [item(1, true), { ...item(2, true), settings: withheld }],
+      [id(1)]: [item(3, true, id(1)), { ...item(4, true, id(1)), settings: withheld }],
+    });
+    const map = await buildWorkspaceMap(client, WORKSPACE_ID, new AbortController().signal);
+    expect(map?.map((entry) => entry.id)).toEqual([id(1), id(3)]);
+  });
+
   it('lists every root and the containers one level down, with cached view kinds only', async () => {
     const { client } = fakeClient(
       {

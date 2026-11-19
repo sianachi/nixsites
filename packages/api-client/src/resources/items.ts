@@ -284,6 +284,32 @@ export const setItemSettings = (
     invalidates: [itemKey(itemId), workspaceTreeKey(workspaceId)],
   });
 
+/** Changes whether pets may use this item. Only a workspace owner in the browser may call it. */
+export const setItemPetProtection = (
+  itemId: string,
+  workspaceId: string,
+  withholdFromPets: boolean,
+): CommandEndpoint<Item> =>
+  defineCommand<Item>({
+    operation: 'items.setPetProtection',
+    method: 'PUT',
+    path: `/api/v1/items/${itemId}/pet-protection`,
+    schema: itemSchema,
+    body: { withholdFromPets },
+    invalidates: [itemKey(itemId), workspaceTreeKey(workspaceId)],
+  });
+
+/** Returns the current aggregate mark for an owner without exposing any item details. */
+export const getWorkspacePetProtection = (
+  workspaceId: string,
+): QueryEndpoint<{ hasProtectedItems: boolean }> =>
+  defineQuery({
+    operation: 'items.getWorkspacePetProtection',
+    path: `/api/v1/workspaces/${workspaceId}/pet-protection`,
+    schema: z.object({ hasProtectedItems: z.boolean() }),
+    retain: false,
+  });
+
 /** Soft-deletes an item. The subtree stays intact and restoring is the same flag flipped back. */
 export const deleteItem = (workspaceId: string, itemId: string): CommandEndpoint<undefined> =>
   defineCommand<undefined>({

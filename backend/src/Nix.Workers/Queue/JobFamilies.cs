@@ -10,9 +10,11 @@ public static class JobFamilies
     public const string Calendar = "calendar";
     public const string Export = "export";
     public const string Import = "import";
+    public const string Pet = "pet";
+    public const string PetAdvance = "pet.advance";
 
     /// <summary>Every family in the order the hosts start.</summary>
-    public static IReadOnlyList<string> All { get; } = [Notify, Calendar, Export, Import];
+    public static IReadOnlyList<string> All { get; } = [Notify, Calendar, Export, Import, Pet];
 
     /// <summary>The job kinds a family's host leases, exact matches for <c>nix_lease_worker_jobs</c>.</summary>
     public static IReadOnlyList<string> KindsOf(string family) => family switch
@@ -20,6 +22,7 @@ public static class JobFamilies
         Notify => ["notify.push"],
         Calendar => ["calendar.sync"],
         Export => ["export.nix", "export.markdown", "export.docx", "export.pdf"],
+        Pet => [PetAdvance],
         Import =>
         [
             "import.preview.nix", "import.preview.markdown", "import.preview.txt", "import.preview.docx", "import.preview.pdf",

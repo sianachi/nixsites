@@ -4,6 +4,7 @@ import { createInMemoryTokenStore } from './auth.js';
 import { createNixClient, type NixClient } from './client.js';
 import { defineBinaryQuery, defineCommand, definePagedQuery, defineQuery } from './endpoints.js';
 import { NixErrorCode, NixErrorKind } from './errors.js';
+import * as linear from './resources/linear.js';
 import { itemSchema, noContentSchema, type Item } from './schemas/index.js';
 import { captureFailure } from './testing/failure.js';
 import { TEST_BASE_URL, server, testUrl } from './testing/server.js';
@@ -57,6 +58,32 @@ beforeEach(() => {
 });
 
 describe('reading a resource', () => {
+  it('preserves the same-origin browser session on Linear requests', async () => {
+    const credentials: RequestCredentials[] = [];
+    const fetchImpl: typeof fetch = (input, init) => {
+      credentials.push(new Request(input, init).credentials);
+      return Promise.resolve(
+        Response.json({
+          requests: [],
+          authorizationUrl: 'https://linear.app/oauth/authorize',
+        }),
+      );
+    };
+    const browser = createNixClient({
+      baseUrl: TEST_BASE_URL,
+      tokens: createInMemoryTokenStore({
+        initialAccessToken: 'token',
+        refresh: () => Promise.resolve(null),
+      }),
+      fetch: fetchImpl,
+    });
+
+    await browser.query(linear.listRequests(ITEM_ID));
+    await browser.execute(linear.authorize(WORKSPACE_ID));
+
+    expect(credentials).toEqual(['same-origin', 'same-origin']);
+  });
+
   it('carries the endpoint long-poll budget through authentication and parsing', async () => {
     const pollingClient = createNixClient({
       baseUrl: TEST_BASE_URL,
@@ -329,6 +356,40 @@ describe('downloading a binary resource', () => {
 });
 
 describe('commands', () => {
+  it('keeps waiting for a pet comment beyond the normal command budget', async () => {
+    const requestId = '33333333-3333-4333-8333-333333333333';
+    const approvingClient = createNixClient({
+      baseUrl: TEST_BASE_URL,
+      timeoutMs: 20,
+      tokens: createInMemoryTokenStore({
+        initialAccessToken: 'token',
+        refresh: () => Promise.resolve(null),
+      }),
+    });
+    server.use(
+      http.post(
+        testUrl(`/api/v1/items/${ITEM_ID}/linear-requests/${requestId}/decision`),
+        async () => {
+          await delay(40);
+          return HttpResponse.json({
+            id: requestId,
+            itemId: ITEM_ID,
+            issueId: 'SANI-170',
+            status: 'succeeded',
+            requestedBy: 'Owl',
+            createdAt: '2026-11-17T12:00:00Z',
+            expiresAt: '2026-11-17T12:15:00Z',
+            canDecide: false,
+            commentId: WORKSPACE_ID,
+          });
+        },
+      ),
+    );
+
+    const receipt = await approvingClient.execute(linear.decide(ITEM_ID, requestId, true));
+    expect(receipt.commentId).toBe(WORKSPACE_ID);
+  });
+
   it('forwards endpoint headers without losing JSON serialization or authentication', async () => {
     server.use(
       http.post(testUrl('/templates/import'), async ({ request }) => {

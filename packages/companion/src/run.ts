@@ -16,13 +16,27 @@ import {
   saveSpecSchema,
 } from '@nix/structure-spec';
 import type { CompanionPorts } from './ports.js';
-import { confineActionRun, findActions, parseActionRun, runAction } from './action.js';
+import {
+  confineActionRun,
+  findActions,
+  hasWorkspaceResult,
+  parseActionRun,
+  runAction,
+} from './action.js';
 import { crossWorkspaceMove } from './move.js';
 import { applyTemplate } from './templates/apply.js';
 import { listTemplates } from './templates/list.js';
 import { readTemplate } from './templates/read.js';
 import { bodyEditOf, loadPreviewContext } from './context.js';
-import { checkItem, hasProseBody, type StructureFingerprint } from './guards.js';
+import {
+  canReadOpaqueWorkspaceData,
+  checkItem,
+  hasProseBody,
+  isPetItemWithheld,
+  petSourceIds,
+  requirePetItem,
+  type StructureFingerprint,
+} from './guards.js';
 import { readStructure } from './structure/read-structure.js';
 import { readView } from './structure/read-view.js';
 import { boundedStructureRead } from './structure/read-output.js';
@@ -380,6 +394,7 @@ export async function runWorkspaceTool(
       for await (const item of client.paginate(items.listTrash(workspaceId, 50), requestOptions)) {
         if (++checked > 500) break;
         if (item.id === args.itemId && item.workspaceId === workspaceId) {
+          requirePetItem(item);
           found = true;
           break;
         }
@@ -406,15 +421,17 @@ export async function runWorkspaceTool(
       }
       const children = [];
       let truncated = false;
+      let scanned = 0;
       for await (const item of client.paginate(
         items.listItems(workspaceId, { parentId: args.parentId || undefined, pageSize: 50 }),
         requestOptions,
       )) {
-        if (children.length >= 50) {
+        if (++scanned > 50) {
           truncated = true;
           break;
         }
-        children.push(item);
+        if (!isPetItemWithheld(item)) children.push(item);
+        else truncated = true;
       }
       // Values are keyed by the container's effective schema; the workspace root has none, so
       // its rows carry identity only.
@@ -435,7 +452,15 @@ export async function runWorkspaceTool(
     case 'run_action': {
       const run = parseActionRun(args.query, args.specJson, workspaceId);
       await confineActionRun(client, run, workspaceId, check, signal);
-      result = await runAction(client, run, signal);
+      if (!(await canReadOpaqueWorkspaceData(ports, workspaceId, signal)))
+        throw new WorkspaceToolRefusal(
+          'Nix could not verify that this action excludes withheld items. Use a specific item tool instead.',
+        );
+      const response = await runAction(client, run, signal);
+      result =
+        hasWorkspaceResult(run) && (await canReadOpaqueWorkspaceData(ports, workspaceId, signal))
+          ? response
+          : { completed: true };
       // An action cannot say which items its answer came from (POST queries and previews return
       // content too), so every run counts as a locked read and later writes are held.
       actionRead = true;
@@ -500,12 +525,24 @@ export async function runWorkspaceTool(
             return { passages: [] };
           }),
       ]);
-      const hits = found.results.filter((item) => item.workspaceId === workspaceId);
+      const workspaceHits = found.results.filter((item) => item.workspaceId === workspaceId);
+      const visible = await petSourceIds(
+        ports,
+        workspaceId,
+        [...workspaceHits.map((hit) => hit.id), ...passages.passages.map((part) => part.itemId)],
+        signal,
+      );
+      const hits = workspaceHits.filter((hit) => visible.has(hit.id));
+      const excerpts = passages.passages.filter((part) => visible.has(part.itemId));
       contentSources = [
         ...hits.map((hit) => hit.parentId),
-        ...passages.passages.map((passage) => passage.itemId),
+        ...excerpts.map((passage) => passage.itemId),
       ];
-      result = { results: hits, truncated: found.truncated, passages: passages.passages };
+      result = {
+        results: hits,
+        truncated: found.truncated || hits.length < workspaceHits.length,
+        passages: excerpts,
+      };
       break;
     }
     case 'create_note': {
@@ -626,8 +663,15 @@ export async function runWorkspaceTool(
             search.notePassages(item.id, args.query, 8),
             requestOptions,
           );
-          result = { id: item.id, title: item.title, passages: found.passages };
-          contentSources = [item.id, ...found.passages.map((passage) => passage.itemId)];
+          const visible = await petSourceIds(
+            ports,
+            workspaceId,
+            found.passages.map((part) => part.itemId),
+            signal,
+          );
+          const passages = found.passages.filter((part) => visible.has(part.itemId));
+          result = { id: item.id, title: item.title, passages };
+          contentSources = [item.id, ...passages.map((passage) => passage.itemId)];
           break;
         }
         case 'read_note':
@@ -638,6 +682,7 @@ export async function runWorkspaceTool(
                 'Files cannot be read here. Ask the owner to open it.',
               );
             const { image: picture, ...read } = await ports.files.read(item.id, signal);
+            await check(item.id);
             result = { id: item.id, title: item.title, type: item.type, ...read };
             image = picture;
             contentSources = [item.id];
@@ -649,7 +694,10 @@ export async function runWorkspaceTool(
             args.operation === 'read_note'
               ? await bodies.read(item.id, signal)
               : await bodies.append(item.id, args.markdown, signal);
-          if (args.operation === 'read_note') contentSources = [item.id];
+          if (args.operation === 'read_note') {
+            await check(item.id);
+            contentSources = [item.id];
+          }
           break;
         case 'replace_section':
         case 'replace_passage': {
@@ -670,8 +718,10 @@ export async function runWorkspaceTool(
           } catch (reason) {
             // A refusal can quote the note (the headings it has, how often a passage appears);
             // a successful edit returns counts only, so only a refusal needs the lock check.
-            if (reason instanceof WorkspaceToolRefusal)
+            if (reason instanceof WorkspaceToolRefusal) {
+              await check(item.id);
               reason.lockedContent = await anyUnderLock(ports, [item.id], signal);
+            }
             throw reason;
           }
           break;

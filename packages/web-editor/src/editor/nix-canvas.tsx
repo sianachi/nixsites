@@ -74,6 +74,9 @@ export interface NixCanvasProps {
   readonly onOpenItem?: ((itemId: string) => void) | undefined;
   readonly awareness?: Awareness | undefined;
   readonly readOnly?: boolean | undefined;
+  readonly fitToElementIds?: readonly string[] | undefined;
+  readonly initialFitElementIds?: readonly string[] | undefined;
+  readonly onReady?: ((ready: boolean) => void) | undefined;
   /** Template drafts do not yet have a durable parent to own uploaded file items. */
   readonly allowFileUploads?: boolean | undefined;
 }
@@ -109,6 +112,9 @@ export function NixCanvas({
   onOpenItem,
   awareness,
   readOnly = false,
+  fitToElementIds,
+  initialFitElementIds,
+  onReady,
   allowFileUploads = true,
 }: NixCanvasProps): ReactNode {
   const client = useApiClient();
@@ -133,6 +139,7 @@ export function NixCanvas({
   const [importing, setImporting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement>(null);
+  const initialViewportSettled = useRef(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
   const lastPublishedFingerprintRef = useRef('');
@@ -215,8 +222,37 @@ export function NixCanvas({
     elements: preparedElements,
     files: initialFiles,
     libraryItems: EMPTY_LIBRARY,
-    scrollToContent: preparedElements.length > 0,
+    scrollToContent: preparedElements.length > 0 && fitToElementIds === undefined,
   }));
+
+  useEffect(() => {
+    const root = canvasRootRef.current;
+    if (api === null || fitToElementIds === undefined || root === null) return;
+    const ids = new Set(fitToElementIds);
+    const affected = preparedElements.filter(
+      (element) => !element.isDeleted && ids.has(element.id),
+    );
+    const scene =
+      affected.length > 0 ? affected : preparedElements.filter((element) => !element.isDeleted);
+    let frame = 0;
+    function fit() {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (scene.length > 0) {
+          api?.scrollToContent(scene, { fitToContent: true, viewportZoomFactor: 0.9 });
+        }
+        onReady?.(true);
+      });
+    }
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
+    observer?.observe(root);
+    fit();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      onReady?.(false);
+    };
+  }, [api, fitToElementIds, onReady, preparedElements]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -278,6 +314,55 @@ export function NixCanvas({
       onChangeRef.current(durableWinners);
     }
   }, [api, preparedElements]);
+
+  useEffect(() => {
+    const root = canvasRootRef.current;
+    const canvas = api;
+    if (
+      canvas === null ||
+      root === null ||
+      initialFitElementIds === undefined ||
+      initialViewportSettled.current
+    )
+      return;
+    if (initialFitElementIds.length === 0) {
+      initialViewportSettled.current = true;
+      return;
+    }
+    const ids = new Set(initialFitElementIds);
+    let frame = 0;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (initialViewportSettled.current) {
+          observer?.disconnect();
+          return;
+        }
+        const view = canvas.getAppState();
+        if (view.isLoading || view.width <= 0 || view.height <= 0) return;
+        initialViewportSettled.current = true;
+        observer?.disconnect();
+        if (view.userToFollow != null) return;
+        const initialElements = canvas
+          .getSceneElementsIncludingDeleted()
+          .filter((element) => !element.isDeleted && ids.has(element.id));
+        if (initialElements.length > 0) {
+          canvas.scrollToContent(initialElements, {
+            fitToContent: true,
+            viewportZoomFactor: 0.9,
+            maxZoom: view.zoom.value,
+          });
+        }
+      });
+    };
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
+    observer?.observe(root);
+    fit();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [api, initialFitElementIds]);
 
   // Old URL-backed images are supported only as a recovery path. Their address lives in legacy
   // customData; it is never copied into a newly authored scene record.
@@ -943,12 +1028,19 @@ export function NixCanvas({
     setItemDialogOpen(true);
   }
 
+  function keepCurrentViewport(): void {
+    initialViewportSettled.current = true;
+  }
+
   return (
     <div
       ref={canvasRootRef}
       className="@container/canvas relative h-full min-h-0 min-w-0 w-full overflow-hidden bg-background @max-5xl/canvas:[&_.App-menu\_top]:grid-cols-[auto_minmax(0,1fr)]! @max-5xl/canvas:[&_.App-menu\_top]:gap-x-4! @max-5xl/canvas:[&_.App-menu\_top]:gap-y-8! @max-5xl/canvas:[&_.App-menu\_top>.layer-ui\_\_wrapper\_\_top-right]:col-span-2! [&_.App-top-bar>section]:w-full! [&_.App-top-bar>section>.Stack]:w-full! [&_.App-top-bar_.App-toolbar-container]:relative! [&_.App-top-bar_.App-toolbar-container]:w-full! [&_.App-top-bar_.App-toolbar-container]:grid-cols-1! [&_.App-top-bar_.App-toolbar-container]:grid-flow-row! [&_.App-toolbar--mobile]:w-full! [&_.App-toolbar--mobile]:max-w-full! [&_.App-toolbar--mobile>.Stack]:grid-flow-row! [&_.App-toolbar--mobile>.Stack]:grid-cols-[repeat(auto-fit,minmax(var(--control-lg),1fr))]! [&_.App-toolbar--mobile_.ToolIcon]:min-h-(--control-lg)! [&_.App-toolbar--mobile_.ToolIcon]:min-w-(--control-lg)! [&_.mobile-misc-tools-container]:top-full! [&_.mobile-misc-tools-container]:mt-2! [&_.welcome-screen-center]:flex!"
       role="region"
       aria-label="Canvas workspace"
+      onPointerDownCapture={keepCurrentViewport}
+      onWheelCapture={keepCurrentViewport}
+      onKeyDownCapture={keepCurrentViewport}
       onDragOverCapture={(event: ReactDragEvent<HTMLDivElement>) => {
         if (!event.dataTransfer.types.includes('Files')) return;
         event.preventDefault();
@@ -1067,6 +1159,7 @@ export function NixCanvas({
               ...localCanvasAwareness(awareness),
               selectedElementIds: appState.selectedElementIds,
             });
+            if (readOnly) return;
 
             let localElements = nextElements;
             const pendingRemote = pendingRemoteElementsRef.current;
@@ -1170,7 +1263,7 @@ export function NixCanvas({
             });
           }}
           onLibraryChange={(nextItems) => {
-            library.save(nextItems);
+            if (!readOnly) library.save(nextItems);
           }}
           onLinkOpen={(element, event) => {
             const itemId = nixItemIdFromElement(element) ?? itemIdFromNixLink(element.link);

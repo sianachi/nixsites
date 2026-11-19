@@ -5,6 +5,11 @@ namespace Nix.Features.Automations;
 /// <summary>The refusals the automation endpoints give, with their stable codes.</summary>
 public static class AutomationErrors
 {
+    internal const string PetRoutineOwnerRequiredCode = "automation.pet_routine_owner_required";
+
+    internal static NixError PetRoutineOwnerRequired { get; } = new(
+        PetRoutineOwnerRequiredCode, "Open Nix in your signed-in browser to save this pet routine.");
+
     /// <summary>The rule document was malformed; the message lists every violation.</summary>
     public const string InvalidCode = "automation.invalid";
 

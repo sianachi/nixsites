@@ -38,11 +38,14 @@ internal sealed class NixPersistenceHost : IAsyncDisposable
     /// </summary>
     /// <param name="connectionString">A connection string for the runtime role.</param>
     /// <param name="testInterceptor">An optional observer appended by an integration test.</param>
+    /// <param name="configuration">The host configuration when the suite needs one.</param>
+    /// <param name="configureServices">Optional fixture adapters for dependencies outside Core.</param>
     /// <returns>The host.</returns>
     public static NixPersistenceHost Create(
         string connectionString,
         IInterceptor? testInterceptor = null,
-        IConfiguration? configuration = null)
+        IConfiguration? configuration = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         var services = new ServiceCollection();
 
@@ -70,6 +73,7 @@ internal sealed class NixPersistenceHost : IAsyncDisposable
                 (_, builder) => builder.AddInterceptors(testInterceptor));
         }
 
+        configureServices?.Invoke(services);
         return new NixPersistenceHost(services.BuildServiceProvider(validateScopes: true), clock);
     }
 

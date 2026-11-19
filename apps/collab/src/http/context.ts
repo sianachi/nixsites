@@ -118,6 +118,7 @@ export async function establish(
   request: FastifyRequest,
   reply: FastifyReply,
   deps: ServerDependencies,
+  fresh = false,
 ): Promise<RequestContext | null> {
   const token = requestToken(request, reply);
   if (token === null) {
@@ -132,7 +133,7 @@ export async function establish(
     return null;
   }
 
-  const result = await deps.sessions.authenticate(token, itemId);
+  const result = await deps.sessions.authenticate(token, itemId, fresh);
   if (!result.ok) {
     if (result.reason === 'unauthenticated') {
       problem(reply, 401, 'unauthenticated', 'The token could not be validated.');

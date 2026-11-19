@@ -100,7 +100,13 @@ it('opens a board note on Comments inside the item dialog and can switch to Docu
     parentId: board.id,
     properties: { stage: 'Doing' },
     // A note's Comments tab needs comments switched on.
-    settings: { comments: true, suggesting: false, reviewStates: false, fullWidth: false },
+    settings: {
+      comments: true,
+      suggesting: false,
+      reviewStates: false,
+      fullWidth: false,
+      withholdFromPets: false,
+    },
   });
   const stage = {
     key: 'stage',

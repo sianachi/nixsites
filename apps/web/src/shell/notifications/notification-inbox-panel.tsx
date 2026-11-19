@@ -3,6 +3,7 @@ import { Button, Dialog, Text } from '@nix/ui';
 import type { ReactElement } from 'react';
 
 import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
+import { petDecisionNotificationHref } from './pet-decision-notification-href';
 import type { NotificationsInboxState } from './use-notifications-inbox';
 
 export interface NotificationInboxPanelProps {
@@ -11,6 +12,7 @@ export interface NotificationInboxPanelProps {
   readonly inbox: NotificationsInboxState;
   /** Opens the item a notification points at, in the caller's own way of opening one. */
   readonly onOpenItem: (itemId: string) => void;
+  readonly onOpenPetDecision?: (href: string) => void;
   /** Opens a workspace; an invitation's workspace shows only its Accept and Decline. */
   readonly onOpenWorkspace?: (workspaceId: string) => void;
 }
@@ -24,17 +26,17 @@ export function NotificationInboxPanel({
   onClose,
   inbox,
   onOpenItem,
+  onOpenPetDecision,
   onOpenWorkspace,
 }: NotificationInboxPanelProps): ReactElement {
-  // `title` and `body` below are untrusted plain text - a reminder source or an automation's
-  // `notify` action can put anything in them - and are rendered as JSX text content only, never
-  // through `dangerouslySetInnerHTML` or a Markdown renderer. Likewise, opening a notification
-  // never parses a destination out of that text: it navigates only through `notification.itemId`
-  // (a UUID Core issued), the same contract `notification.data.url`'s same-origin check in
-  // `public/service-worker.js` enforces for a push notification's own click.
+  // Core's typed identifiers supply destinations. Untrusted titles and bodies are plain text.
   function openNotification(notification: NotificationDto): void {
     if (notification.readAt === null) inbox.markRead(notification.id);
-    if (notification.itemId !== null) {
+    const decisionHref = petDecisionNotificationHref(notification);
+    if (decisionHref !== null && onOpenPetDecision !== undefined) {
+      onClose();
+      onOpenPetDecision(decisionHref);
+    } else if (notification.itemId !== null) {
       onOpenItem(notification.itemId);
       onClose();
     } else if (

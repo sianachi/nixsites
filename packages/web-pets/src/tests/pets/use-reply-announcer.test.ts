@@ -87,6 +87,20 @@ describe('useReplyAnnouncer', () => {
     expect(toolOutcomeSentence(tool('failed'))).toContain("Didn't finish");
     expect(toolOutcomeSentence(tool('completed', 'created'))).toBe('');
     expect(toolOutcomeSentence(tool('failed', DECLINED_BY_USER))).toBe('');
+    expect(
+      toolOutcomeSentence({
+        ...tool('failed', 'The item has no readable note body.'),
+        arguments: JSON.stringify({
+          operation: 'read_note',
+          itemId: 'a1000000-0000-4000-8000-000000000001',
+          parentId: '',
+          title: '',
+          markdown: '',
+          query: '',
+          propertiesJson: '',
+        }),
+      }),
+    ).toBe('');
   });
 
   it('speaks an outcome once, through the same region', () => {

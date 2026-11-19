@@ -13,7 +13,7 @@ import {
 } from '@nix/api-client';
 import { isComputedType, SORTED_VIEW_KINDS } from '@nix/structure-spec';
 import { z } from 'zod';
-import { checkItem } from '../guards.js';
+import { canReadOpaqueWorkspaceData, checkItem, petSourceIds } from '../guards.js';
 import type { CompanionPorts } from '../ports.js';
 import { WorkspaceToolRefusal } from '../tool-args.js';
 import { describeView, type ReadStructureView } from './read-structure.js';
@@ -51,6 +51,25 @@ export interface ReadViewResult {
   aggregates?: WorkspaceAggregate[];
   chart?: ItemChart;
   chartSampleTruncated?: boolean;
+}
+
+async function visibleRows<Row extends QueryResultRow>(
+  ports: CompanionPorts,
+  workspaceId: string,
+  rows: readonly Row[],
+  signal: AbortSignal,
+): Promise<Row[]> {
+  const allowed = await petSourceIds(
+    ports,
+    workspaceId,
+    rows.flatMap(({ id, containerId }) => [id, containerId]),
+    signal,
+  );
+  return rows.flatMap((row) => {
+    if (!allowed.has(row.id)) return [];
+    if (row.containerId === null || allowed.has(row.containerId)) return [row];
+    return [{ ...row, containerId: null, containerTitle: null }];
+  });
 }
 
 /** Reads saved configuration before its data. All row selection and folds run in Core, so a
@@ -123,6 +142,12 @@ export async function readView(
       options,
     );
     const scopedRows = result.results.filter((row) => row.workspaceId === workspaceId);
+    const visible = await visibleRows(
+      ports,
+      workspaceId,
+      scopedRows.slice(0, request.pageSize),
+      signal,
+    );
     base.limits.push(
       'Core saved queries have no cursor or exact total count; this is a sample of their bounded result.',
     );
@@ -133,15 +158,22 @@ export async function readView(
       ...base,
       source: 'saved_query',
       appliedViewRules: true,
-      results: scopedRows.slice(0, request.pageSize),
-      returned: Math.min(scopedRows.length, request.pageSize),
-      totalCount: null,
-      truncated: result.truncated || scopedRows.length > request.pageSize,
+      results: visible,
+      returned: visible.length,
+      truncated: result.truncated || scopedRows.length > visible.length,
       hasUnboundedProvenance: result.truncated || scopedRows.length > request.pageSize,
     };
   }
   if (view.kind === 'chart') {
+    const showWithholdingMessage = () =>
+      new WorkspaceToolRefusal(
+        'Nix could not verify that this chart excludes withheld items. Read individual items instead.',
+      );
+    if (!(await canReadOpaqueWorkspaceData(ports, workspaceId, signal)))
+      throw showWithholdingMessage();
     const chart = await ports.core.query(itemChart.itemChart(itemId, view.id), options);
+    if (!(await canReadOpaqueWorkspaceData(ports, workspaceId, signal)))
+      throw showWithholdingMessage();
     const sampleTruncated =
       chart.buckets.length > request.pageSize ||
       chart.series.length > MAX_CHART_SERIES ||
@@ -210,18 +242,24 @@ export async function readView(
     ...(sort === undefined || computed.has(sort.property) ? {} : { sort }),
     limit: request.pageSize,
   };
+  const summariesPermitted = await canReadOpaqueWorkspaceData(ports, workspaceId, signal);
   const [result, count] = await Promise.all([
     ports.core.execute(workspaceQuery.runWorkspaceQuery(workspaceId, queryMatch), { signal }),
-    ports.core.execute(
-      workspaceQuery.aggregateWorkspaceQuery(workspaceId, {
-        ...match,
-        aggregate: { function: 'count' },
-      }),
-      { signal },
-    ),
+    summariesPermitted
+      ? ports.core.execute(
+          workspaceQuery.aggregateWorkspaceQuery(workspaceId, {
+            ...match,
+            aggregate: { function: 'count' },
+          }),
+          { signal },
+        )
+      : null,
   ]);
   const aggregates: WorkspaceAggregate[] = [];
-  for (const aggregate of (appliesSavedRules ? view.aggregates : []).slice(0, MAX_AGGREGATES)) {
+  for (const aggregate of (appliesSavedRules && summariesPermitted ? view.aggregates : []).slice(
+    0,
+    MAX_AGGREGATES,
+  )) {
     const fold = aggregate.function;
     if (!['count', 'sum', 'avg', 'min', 'max'].includes(fold) || computed.has(aggregate.property)) {
       base.limits.push(
@@ -268,16 +306,23 @@ export async function readView(
     base.limits.push(
       'This renderer does not apply saved filters or sorting. The read ignores those settings and samples direct children in Core default query order; its count describes children, not the specialized display.',
     );
+  const sample = result.results.slice(0, request.pageSize);
+  const visible = await visibleRows(ports, workspaceId, sample, signal);
+  const summariesAllowed =
+    summariesPermitted && (await canReadOpaqueWorkspaceData(ports, workspaceId, signal));
+  if (!summariesAllowed)
+    base.limits.push(
+      'Counts, groups and summaries are unavailable because their contributing items could not be verified.',
+    );
   return {
     ...base,
     source: 'workspace_query',
     appliedViewRules: appliesSavedRules,
-    results: result.results.slice(0, request.pageSize),
-    returned: Math.min(result.results.length, request.pageSize),
-    totalCount: count.count,
-    truncated: result.truncated || result.results.length > request.pageSize,
-    groups: result.groups.slice(0, request.pageSize),
-    aggregates,
+    results: summariesAllowed ? visible : visible.map((row) => ({ ...row, group: null })),
+    returned: visible.length,
+    totalCount: summariesAllowed ? (count?.count ?? null) : null,
+    truncated: result.truncated || result.results.length > visible.length,
+    ...(summariesAllowed ? { groups: result.groups.slice(0, request.pageSize), aggregates } : {}),
     hasUnboundedProvenance: true,
   };
 }

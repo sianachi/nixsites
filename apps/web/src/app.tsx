@@ -13,6 +13,7 @@ import { CalendarPage } from './pages/calendar-page';
 import { EditorPage } from './pages/editor-page';
 import { GraphPage } from './pages/graph-page';
 import { PetPage } from './pages/pet-page';
+import { PetActivityPage } from './pages/pet-activity-page';
 import { OAuthAuthorizePage } from './pages/oauth-authorize-page';
 import { NotFoundPage } from './pages/not-found-page';
 import { PublicFormPage } from './pages/public-form-page';
@@ -183,6 +184,7 @@ export function AppRoutes(): ReactElement {
                 <Route path="daily/:date" element={<DailyNotePage />} />
                 <Route path="graph" element={<GraphPage />} />
                 <Route path="pet" element={<PetPage />} />
+                <Route path="pet/activity" element={<PetActivityPage />} />
                 <Route path="bookmarks" element={<BookmarksPage />} />
                 <Route path="trash" element={<TrashPage />} />
                 <Route path="attachments" element={<AttachmentsPage />} />

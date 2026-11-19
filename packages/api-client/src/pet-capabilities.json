@@ -1,0 +1,1807 @@
+{
+  "AcceptWorkspaceInvitation": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/invitations/{invitationId}/accept"
+  },
+  "AddComment": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/comments",
+    "executor": "nix.action"
+  },
+  "AddItemReference": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/references",
+    "executor": "nix.action"
+  },
+  "AddPerson": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/tenant/people"
+  },
+  "AddPushSubscription": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/push-subscriptions"
+  },
+  "AddSiteHostname": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/sites/{siteId}/hostnames"
+  },
+  "AggregateWorkspaceQuery": {
+    "mode": "read",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/query/aggregate"
+  },
+  "AnswerPetRun": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}/answer"
+  },
+  "AppendItemBody": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/body",
+    "executor": "nix.action"
+  },
+  "AppendViewSetup": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/view-setups"
+  },
+  "ApproveSitePublish": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/sites/{siteId}/approval/approve"
+  },
+  "ArchiveWorkspace": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/archive"
+  },
+  "AuthorizeCalendarConnection": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/calendar/connections/{provider}/authorize"
+  },
+  "AuthorizeDocumentImportPreview": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/imports/{importId}/preview"
+  },
+  "AuthorizeExportDownload": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/exports/{exportId}/download"
+  },
+  "AuthorizeFileDownload": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/file/download"
+  },
+  "AuthorizeFileThumbnail": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/file/thumbnail"
+  },
+  "AuthorizeLinearConnection": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/linear/authorize"
+  },
+  "AuthorizePetConnection": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-connections/authorize"
+  },
+  "BatchRecords": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/records/batch"
+  },
+  "BeginDocumentImport": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/imports"
+  },
+  "BeginExport": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/exports"
+  },
+  "BeginFileUpload": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/files/uploads"
+  },
+  "BeginTemplateImport": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/template-imports"
+  },
+  "CancelConversation": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/conversations/{itemId}/cancel"
+  },
+  "CancelDocumentImport": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/imports/{importId}"
+  },
+  "CancelExport": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/exports/{exportId}/cancel"
+  },
+  "CancelFileUpload": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/files/uploads/{uploadId}"
+  },
+  "CancelOperation": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/operations/{operationId}/cancel"
+  },
+  "CancelPetRun": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}/cancel"
+  },
+  "CancelTemplateImport": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/template-imports/{importId}"
+  },
+  "canvas.arrow": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "canvas.delete": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.duplicate": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.edit": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "canvas.freehand": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "canvas.group": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "canvas.image": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.layer": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.layout": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "canvas.library": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.linked-card": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "canvas.paste": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.read": {
+    "mode": "read",
+    "editor": "canvas",
+    "executor": "canvas.read"
+  },
+  "canvas.redo": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.resize": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.rotate": {
+    "mode": "review",
+    "editor": "canvas"
+  },
+  "canvas.shape": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "canvas.text": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "canvas.undo": {
+    "mode": "review",
+    "editor": "canvas",
+    "executor": "canvas.edit"
+  },
+  "ChangeConversationSources": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/conversations/{itemId}/sources"
+  },
+  "ChangeWorkspaceMemberRole": {
+    "mode": "human",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspaceId}/members/{principalId}"
+  },
+  "CommitDocumentImport": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/imports/{importId}/commit"
+  },
+  "CommitTemplateImport": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/template-imports/{importId}/commit"
+  },
+  "CompleteFileUpload": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/files/uploads/{uploadId}/complete"
+  },
+  "CompleteRecurrenceOccurrence": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/recurrence/completions"
+  },
+  "ConfigureConversation": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/conversations/{itemId}/configure"
+  },
+  "ConfirmLocalTotp": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/security/totp/confirm"
+  },
+  "CopyLinkedLinearStatus": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/linear-link/copy-status"
+  },
+  "CreateAccessToken": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/tokens"
+  },
+  "CreateAutomation": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/automations"
+  },
+  "CreateCalendarLink": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/me/calendar/links"
+  },
+  "CreateConversation": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/conversations"
+  },
+  "CreateItem": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/items",
+    "executor": "nix.action"
+  },
+  "CreatePetRun": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-runs"
+  },
+  "CreatePublicLink": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/public-link"
+  },
+  "CreateSite": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/sites"
+  },
+  "CreateStructuredItem": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/structured-items"
+  },
+  "CreateWorkspace": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/workspaces"
+  },
+  "CreateWorkspaceInvitation": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/invitations"
+  },
+  "DecideLinearIssueRequest": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/linear-requests/{requestId}/decision"
+  },
+  "DecideOAuthConsent": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/oauth/consent"
+  },
+  "DecidePetRunProposal": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/decision"
+  },
+  "DecidePetRunScope": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}/scope"
+  },
+  "DeclineWorkspaceInvitation": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/invitations/{invitationId}/decline"
+  },
+  "DeleteAutomation": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/automations/{ruleId}"
+  },
+  "DeleteCalendarConnection": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/me/calendar/connections/{connectionId}"
+  },
+  "DeleteCalendarLink": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/me/calendar/links/{linkId}"
+  },
+  "DeleteComment": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/comments/{commentId}"
+  },
+  "DeleteHabitCheckIn": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/habit/check-ins/{occurredOn}"
+  },
+  "DeleteItem": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}"
+  },
+  "DeleteSite": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/sites/{siteId}"
+  },
+  "DeleteTemplate": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/templates/{templateId}"
+  },
+  "DisablePerson": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/tenant/people/{id}/disable"
+  },
+  "DisconnectLinearConnection": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/linear"
+  },
+  "DisconnectPetConnection": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-connections/{connectionId}"
+  },
+  "EditComment": {
+    "mode": "review",
+    "method": "PATCH",
+    "path": "/api/v1/items/{itemId}/comments/{commentId}"
+  },
+  "EnablePerson": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/tenant/people/{id}/enable"
+  },
+  "EnrolLocalTotp": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/security/totp"
+  },
+  "FindMentions": {
+    "mode": "read",
+    "method": "POST",
+    "path": "/api/v1/search/mentions"
+  },
+  "FinishAddLocalPasskey": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/security/passkeys/verify"
+  },
+  "GetAutomation": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/automations/{ruleId}"
+  },
+  "GetBacklinks": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/backlinks"
+  },
+  "GetBookmarks": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/me/bookmarks"
+  },
+  "GetCanvasLibrary": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/me/canvas-library"
+  },
+  "GetContainerViews": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/views"
+  },
+  "GetConversation": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/conversations/{itemId}"
+  },
+  "GetConversationMessages": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/conversations/{itemId}/messages"
+  },
+  "GetCurrentPrincipal": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/me"
+  },
+  "GetDailyNoteSettings": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/daily-notes/settings"
+  },
+  "GetDocumentImport": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/imports/{importId}"
+  },
+  "GetEffectiveSchema": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/schema"
+  },
+  "GetExport": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/exports/{exportId}"
+  },
+  "GetFile": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/file"
+  },
+  "GetFileUpload": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/files/uploads/{uploadId}"
+  },
+  "GetHabitTracker": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/habit"
+  },
+  "GetHealthCheck": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/health/checks/{name}"
+  },
+  "GetItem": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}"
+  },
+  "GetItemBody": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/body"
+  },
+  "GetItemLock": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/lock"
+  },
+  "GetItemSite": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/site"
+  },
+  "GetLinearConnection": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/linear"
+  },
+  "GetLinearIssueRequest": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/linear-requests/{requestId}"
+  },
+  "GetLinearLink": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/linear-link"
+  },
+  "GetLocalSecurity": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/security"
+  },
+  "GetOperation": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/operations/{operationId}"
+  },
+  "GetPassages": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/passages"
+  },
+  "GetPetConnection": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/pets/connection"
+  },
+  "GetPetRun": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}"
+  },
+  "GetPetSettings": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/pets/settings"
+  },
+  "GetPreferences": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/me/preferences"
+  },
+  "GetPublicFormStatus": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/views/{viewId}/public-link"
+  },
+  "GetPublicLink": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/public-link"
+  },
+  "GetPushPublicKey": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/me/push/public-key"
+  },
+  "GetRelatedItems": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/related"
+  },
+  "GetServiceStatus": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/health/status"
+  },
+  "GetSite": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/sites/{siteId}"
+  },
+  "GetSiteBuild": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/sites/{siteId}/builds/{buildId}"
+  },
+  "GetSystemVersions": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/system/versions"
+  },
+  "GetTemplate": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/templates/{templateId}"
+  },
+  "GetTemplateImport": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/template-imports/{importId}"
+  },
+  "GetTemplateItem": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/templates/{templateId}/items/{sourceId}"
+  },
+  "GetTenantSettings": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/tenant/settings"
+  },
+  "GetUiSettings": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/me/ui-settings"
+  },
+  "GetWorkspace": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}"
+  },
+  "GetWorkspaceArrangement": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/me/workspace-arrangement"
+  },
+  "GetWorkspaceCalendar": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/calendar"
+  },
+  "GetWorkspaceGraph": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/graph"
+  },
+  "GetWorkspaceItemDefaults": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/item-defaults"
+  },
+  "GetWorkspacePetProtection": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-protection"
+  },
+  "GetWorkspaceSyncChanges": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/sync/changes"
+  },
+  "GetWorkspaceSyncSnapshot": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/sync/snapshot"
+  },
+  "GrantSiteOperator": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/sites/operators/{principalId}"
+  },
+  "GrantTenantAdmin": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/tenant/admins/{principalId}"
+  },
+  "HandToPet": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/linear-requests/hand-to-pet"
+  },
+  "ImportConversation": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/conversations/import"
+  },
+  "IssuePersonResetLink": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/tenant/people/{id}/reset-link"
+  },
+  "JoinWorkspace": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/join"
+  },
+  "KeepItem": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/bookmark"
+  },
+  "LeaveWorkspace": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/leave"
+  },
+  "LinkLinearIssue": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/linear-link"
+  },
+  "ListAccessTokens": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/tokens"
+  },
+  "ListAttachments": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/attachments"
+  },
+  "ListAutomationRuns": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/automations/{ruleId}/runs"
+  },
+  "ListAutomations": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/automations"
+  },
+  "ListBackupRuns": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/admin/backups"
+  },
+  "ListCalendarConnections": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/calendar/connections"
+  },
+  "ListCalendarLinkLog": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/me/calendar/links/{linkId}/log"
+  },
+  "ListCalendarLinks": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/me/calendar/links"
+  },
+  "ListComments": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/comments"
+  },
+  "ListExportFormats": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/exports/formats"
+  },
+  "ListExternalCalendars": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/calendar/connections/{connectionId}/calendars"
+  },
+  "ListItemMoveWorkspaces": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/move-workspaces"
+  },
+  "ListItemPetRuns": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/pet-runs"
+  },
+  "ListItemReferences": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/references"
+  },
+  "ListItems": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/items"
+  },
+  "ListLinearRequests": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/linear-requests"
+  },
+  "ListNotifications": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/me/notifications"
+  },
+  "ListPeople": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/tenant/people"
+  },
+  "ListPetConnections": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-connections"
+  },
+  "ListPetPeers": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/pet-peers"
+  },
+  "ListPetPeerWork": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/pet-peers/work"
+  },
+  "ListPetProviderKeys": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/pets/providers"
+  },
+  "ListReferencedBy": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/referenced-by"
+  },
+  "ListSiteApprovals": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/sites/approvals"
+  },
+  "ListSiteBuilds": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/sites/{siteId}/builds"
+  },
+  "ListSiteOperators": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/sites/operators"
+  },
+  "ListSitePages": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/sites/{siteId}/pages"
+  },
+  "ListTemplates": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/templates"
+  },
+  "ListTenantRoles": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/tenant/roles"
+  },
+  "ListTrash": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/items/trash"
+  },
+  "ListWorkspaceAssignablePrincipals": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/principals"
+  },
+  "ListWorkspaceCalendarLinks": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/calendar-links"
+  },
+  "ListWorkspaceInvitations": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/invitations"
+  },
+  "ListWorkspaceInvitees": {
+    "mode": "review",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/invitees"
+  },
+  "ListWorkspaceMembers": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/members"
+  },
+  "ListWorkspacePetRuns": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-runs"
+  },
+  "ListWorkspaces": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces"
+  },
+  "ListWorkspaceSites": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/sites"
+  },
+  "LookupItemsByProperty": {
+    "mode": "read",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/lookup"
+  },
+  "MarkAllNotificationsRead": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/me/notifications/read-all"
+  },
+  "MarkNotificationRead": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/me/notifications/{notificationId}/read"
+  },
+  "MoveItem": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/move"
+  },
+  "note.accept-all-suggestions": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.accept-suggestion": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.addColumn": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.addColumnToRow": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.addRow": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.align-center": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.align-justify": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.align-left": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.align-right": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.append": {
+    "mode": "review",
+    "editor": "note",
+    "executor": "AppendItemBody"
+  },
+  "note.blockquote": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.bold": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.bulletList": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.code": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.codeBlock": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.columnNarrower": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.columnWider": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.comment-anchor": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.deleteColumn": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.deleteRow": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.deleteTable": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.heading-1": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.heading-2": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.heading-3": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.highlight": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.horizontalRule": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.image": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.insert-item": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.italic": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.lineBreak": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.link": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.moveBlockDown": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.moveBlockUp": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.orderedList": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.page-break": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.paragraph": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.read": {
+    "mode": "read",
+    "editor": "note",
+    "executor": "GetItemBody"
+  },
+  "note.redo": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.reject-all-suggestions": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.reject-suggestion": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.removeColumnFromRow": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.replace": {
+    "mode": "review",
+    "editor": "note",
+    "executor": "ReplaceItemBody"
+  },
+  "note.resetColumnWidth": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.stanza": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.strike": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.suggest": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.table": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.taskList": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.underline": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "note.undo": {
+    "mode": "review",
+    "editor": "note"
+  },
+  "OpenDailyNote": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/workspaces/{workspaceId}/daily-notes/{date}"
+  },
+  "PatchUiSettings": {
+    "mode": "human",
+    "method": "PATCH",
+    "path": "/api/v1/me/ui-settings"
+  },
+  "PetInlineWrite": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/pets/inline"
+  },
+  "PetNoteRuntime": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/pets/runtime/note"
+  },
+  "PetRuntime": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/pets/runtime"
+  },
+  "PreflightTemplateApplication": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/templates/{templateId}/preflight"
+  },
+  "PreviewDocumentImport": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/imports/{importId}/preview"
+  },
+  "PreviewOAuthConsent": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/oauth/consent/preview"
+  },
+  "PreviewTemplateCapture": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/templates/capture-preview/{sourceItemId}"
+  },
+  "PreviewTemplateImport": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/template-imports/{importId}/preview"
+  },
+  "PublishPublicForm": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/views/{viewId}/public-link"
+  },
+  "PublishSite": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/sites/{siteId}/publish"
+  },
+  "PurgeItem": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/purge"
+  },
+  "PurgeWorkspace": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}"
+  },
+  "ReconcileWorkspaceSync": {
+    "mode": "internal",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/sync/reconcile"
+  },
+  "RecoverWorkspace": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/recover"
+  },
+  "RefreshLinearLink": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/linear-link/refresh"
+  },
+  "RegisterPetMcpConnection": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-connections/register-mcp"
+  },
+  "RegisterPetPeer": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-peers"
+  },
+  "RejectSitePublish": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/sites/{siteId}/approval/reject"
+  },
+  "ReleaseItem": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/bookmark"
+  },
+  "RelockItem": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/unlock"
+  },
+  "RelockWorkspace": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/unlock"
+  },
+  "RemoveItemLock": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/lock/remove"
+  },
+  "RemoveItemReference": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/references/{referenceId}"
+  },
+  "RemoveLocalPasskey": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/me/security/passkeys/{id}"
+  },
+  "RemoveLocalPassword": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/me/security/password"
+  },
+  "RemoveLocalTotp": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/me/security/totp"
+  },
+  "RemovePetProviderKey": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/me/pets/providers/{provider}/key"
+  },
+  "RemovePushSubscription": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/me/push-subscriptions"
+  },
+  "RemoveSiteHostname": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/sites/{siteId}/hostnames/{hostname}"
+  },
+  "RemoveWorkspaceMember": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/members/{principalId}"
+  },
+  "RemoveWorkspacePassword": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/password/remove"
+  },
+  "RenameLocalPasskey": {
+    "mode": "human",
+    "method": "PATCH",
+    "path": "/api/v1/me/security/passkeys/{id}"
+  },
+  "RenameWorkspace": {
+    "mode": "review",
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspaceId}"
+  },
+  "ReplaceItemBody": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/body",
+    "executor": "nix.action"
+  },
+  "ReplaceViewSetup": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/view-setups/{viewId}"
+  },
+  "ReplayNativeOperation": {
+    "mode": "internal",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/sync/replay"
+  },
+  "ReplyComment": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/comments/{threadId}/replies"
+  },
+  "RequestLinearIssue": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/linear-requests"
+  },
+  "RequestSiteApproval": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/sites/{siteId}/approval"
+  },
+  "ResolveReferences": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/search/references"
+  },
+  "RestoreItem": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/restore"
+  },
+  "RestoreWorkspace": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/restore"
+  },
+  "RetryPetRun": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}/retry"
+  },
+  "RevisePetRunProposal": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/revise"
+  },
+  "RevokeAccessToken": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/me/tokens/{tokenId}"
+  },
+  "RevokePetPeer": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/pet-peers/{peerId}"
+  },
+  "RevokePublicForm": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/views/{viewId}/public-link"
+  },
+  "RevokePublicLink": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/public-link"
+  },
+  "RevokeSiteOperator": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/sites/operators/{principalId}"
+  },
+  "RevokeTenantAdmin": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/tenant/admins/{principalId}"
+  },
+  "RevokeWorkspaceInvitation": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/invitations/{invitationId}"
+  },
+  "RollbackSite": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/sites/{siteId}/rollback"
+  },
+  "RotateAccessToken": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/tokens/{tokenId}/rotate"
+  },
+  "RunAutomation": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/automations/{ruleId}/run"
+  },
+  "RunItemChart": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/chart"
+  },
+  "RunItemQuery": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/query"
+  },
+  "RunWorkspaceQuery": {
+    "mode": "read",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/query"
+  },
+  "SaveCanvasLibrary": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/me/canvas-library"
+  },
+  "SaveDailyNoteSettings": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/workspaces/{workspaceId}/daily-notes/settings"
+  },
+  "SavePetBrowserSite": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-connections/browser-site"
+  },
+  "SavePetProviderKey": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/me/pets/providers/{provider}/key"
+  },
+  "SavePetSettings": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/me/pets/settings"
+  },
+  "SavePreferences": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/me/preferences"
+  },
+  "SaveWorkspaceArrangement": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/me/workspace-arrangement"
+  },
+  "SearchItems": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/search"
+  },
+  "SearchPassages": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/search/passages"
+  },
+  "SendConversation": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/conversations/{itemId}/turns"
+  },
+  "SetCommentAnchor": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/comments/{threadId}/anchor"
+  },
+  "SetCommentResolved": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/comments/{threadId}/resolved"
+  },
+  "SetContainerViews": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/views",
+    "executor": "nix.action"
+  },
+  "SetFileVersionState": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/file/versions/{versionId}/state"
+  },
+  "SetHabitCheckIn": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/habit/check-ins/{occurredOn}"
+  },
+  "SetHabitSettings": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/habit"
+  },
+  "SetHabitStatus": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/habit/status"
+  },
+  "SetItemLock": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/lock"
+  },
+  "SetItemPetProtection": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/pet-protection"
+  },
+  "SetItemProperties": {
+    "mode": "review",
+    "method": "PATCH",
+    "path": "/api/v1/items/{itemId}/properties",
+    "executor": "nix.action"
+  },
+  "SetItemProtection": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/protection"
+  },
+  "SetItemRecurrence": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/recurrence",
+    "executor": "nix.action"
+  },
+  "SetItemSchema": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/schema"
+  },
+  "SetItemSettings": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/items/{itemId}/settings",
+    "executor": "nix.action"
+  },
+  "SetLocalPassword": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/security/password"
+  },
+  "SetSiteHostnames": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/sites/{siteId}/hostnames"
+  },
+  "SetSitePagePath": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/sites/{siteId}/pages/{itemId}/path"
+  },
+  "SetWorkspaceAgentPolicy": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/workspaces/{workspaceId}/agent-policy"
+  },
+  "SetWorkspaceItemDefaults": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/workspaces/{workspaceId}/item-defaults"
+  },
+  "SetWorkspacePassword": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/workspaces/{workspaceId}/password"
+  },
+  "SetWorkspaceSharing": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/workspaces/{workspaceId}/sharing"
+  },
+  "sheet.cell": {
+    "mode": "review",
+    "editor": "sheet",
+    "executor": "sheet.edit"
+  },
+  "sheet.clear": {
+    "mode": "review",
+    "editor": "sheet",
+    "executor": "sheet.edit"
+  },
+  "sheet.edit": {
+    "mode": "review",
+    "editor": "sheet",
+    "executor": "sheet.edit"
+  },
+  "sheet.expand": {
+    "mode": "review",
+    "editor": "sheet",
+    "executor": "sheet.edit"
+  },
+  "sheet.fill": {
+    "mode": "review",
+    "editor": "sheet"
+  },
+  "sheet.formula": {
+    "mode": "review",
+    "editor": "sheet",
+    "executor": "sheet.edit"
+  },
+  "sheet.paste": {
+    "mode": "review",
+    "editor": "sheet"
+  },
+  "sheet.read": {
+    "mode": "read",
+    "editor": "sheet"
+  },
+  "sheet.redo": {
+    "mode": "review",
+    "editor": "sheet"
+  },
+  "sheet.reset-column-width": {
+    "mode": "review",
+    "editor": "sheet",
+    "executor": "sheet.edit"
+  },
+  "sheet.resize-column": {
+    "mode": "review",
+    "editor": "sheet",
+    "executor": "sheet.edit"
+  },
+  "sheet.undo": {
+    "mode": "review",
+    "editor": "sheet",
+    "executor": "sheet.edit"
+  },
+  "SignOutEverywhere": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/security/sign-out-everywhere"
+  },
+  "StartAddLocalPasskey": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/security/passkeys/options"
+  },
+  "StreamPetNoteRuntime": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/pets/runtime/note/stream"
+  },
+  "StreamPetRuntime": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/me/pets/runtime/stream"
+  },
+  "SyncCalendarLink": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/me/calendar/links/{linkId}/sync"
+  },
+  "TestAutomation": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/automations/{ruleId}/test"
+  },
+  "UndoPetRunStep": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}/steps/{stepId}/undo"
+  },
+  "UnlinkLinearIssue": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/items/{itemId}/linear-link"
+  },
+  "UnlinkWorkspaceCalendar": {
+    "mode": "review",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/calendar-links/{containerItemId}"
+  },
+  "UnlockItem": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/unlock"
+  },
+  "UnlockWorkspace": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/unlock"
+  },
+  "UnpublishSite": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/sites/{siteId}/unpublish"
+  },
+  "UpdateAutomation": {
+    "mode": "review",
+    "method": "PUT",
+    "path": "/api/v1/automations/{ruleId}"
+  },
+  "UpdateCalendarLink": {
+    "mode": "review",
+    "method": "PATCH",
+    "path": "/api/v1/me/calendar/links/{linkId}"
+  },
+  "UpdateItem": {
+    "mode": "routine",
+    "method": "PATCH",
+    "path": "/api/v1/items/{itemId}",
+    "executor": "nix.action"
+  },
+  "UpdateSite": {
+    "mode": "review",
+    "method": "PATCH",
+    "path": "/api/v1/sites/{siteId}"
+  },
+  "UpdateSiteHostname": {
+    "mode": "review",
+    "method": "PATCH",
+    "path": "/api/v1/sites/{siteId}/hostnames/{hostname}"
+  },
+  "UpdateTenantSettings": {
+    "mode": "human",
+    "method": "PUT",
+    "path": "/api/v1/tenant/settings"
+  },
+  "UpsertRecord": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/items/{parentId}/records/upsert"
+  },
+  "VerifySiteHostname": {
+    "mode": "review",
+    "method": "POST",
+    "path": "/api/v1/sites/{siteId}/hostnames/{hostname}/verify"
+  },
+  "WatchComments": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/comments/watch"
+  },
+  "WatchConversation": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/conversations/{itemId}/watch"
+  },
+  "WatchNotifications": {
+    "mode": "internal",
+    "method": "GET",
+    "path": "/api/v1/me/notifications/watch"
+  },
+  "WatchPetNoteRuntime": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/pets/runtime/note/watch"
+  },
+  "WatchPetRun": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/pet-runs/{runId}/watch"
+  },
+  "WatchPetRuntime": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/pets/runtime/watch"
+  }
+}

@@ -74,7 +74,7 @@ async function firstPage(
       maxPages: 1,
     },
   ))
-    children.push(item);
+    if (!item.settings.withholdFromPets) children.push(item);
   return children;
 }
 

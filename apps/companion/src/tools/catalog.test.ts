@@ -55,6 +55,34 @@ describe('instructions', () => {
     expect(text).toContain(`Nix capabilities: ${chatCatalog()}`);
   });
 
+  it('keeps general questions out of workspace reads and respects item types', () => {
+    const text = instructions();
+    expect(text).toContain('Answer general questions directly without workspace tools.');
+    expect(text).toContain('Use nix_read_item if the item type is unknown.');
+    expect(text).toContain(
+      'Use nix_read_note for notes, artifacts and supported files, never for canvases or sheets.',
+    );
+    const scope = noteScopeRules(request({ rootItemId: 'x', readOnly: true }));
+    expect(scope).toContain('Workspace tools in this conversation are limited to rootItemId');
+    expect(scope).toContain('use the tool that supports its item type');
+  });
+
+  it('explains enabled pet jobs while preserving direct chat scope and approvals', () => {
+    const text = instructions();
+    expect(text).toContain('When pet jobs are enabled in the workspace');
+    expect(text).toContain("sending an action request in an item's pet dialog");
+    expect(text).toContain('A job uses its selected sources and enabled abilities.');
+    expect(text).toContain('Each approval covers the reviewed effect.');
+    expect(text).toContain(
+      'The direct chat restrictions in these instructions apply to chat tool calls.',
+    );
+    expect(text).toContain('A capability question requests an explanation.');
+    expect(text).toContain('Never access host files, shell, network, browser or host tools.');
+    expect(noteScopeRules(request({ rootItemId: 'x', readOnly: true }))).toContain(
+      'readOnly is on: answer and retrieve only. Do not propose or call a mutation.',
+    );
+  });
+
   it('add the note and saved-conversation scopes only when they apply', () => {
     expect(noteScopeRules(request())).toBe('');
     expect(noteScopeRules(request({ rootItemId: 'x', readOnly: true }))).toContain(

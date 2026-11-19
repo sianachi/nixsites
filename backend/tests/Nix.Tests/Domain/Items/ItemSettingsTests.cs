@@ -21,6 +21,15 @@ public sealed class ItemSettingsTests
         Assert.Equal(new ItemSettings(Comments: true, ReviewStates: true), settings);
     }
 
+    [Theory]
+    [InlineData("{\"comments\":true}", false)]
+    [InlineData("{\"withholdFromPets\":false}", false)]
+    [InlineData("{\"withholdFromPets\":true}", true)]
+    [InlineData("{\"withholdFromPets\":null}", true)]
+    [InlineData("{\"withholdFromPets\":\"false\"}", true)]
+    public void Pet_protection_requires_an_explicit_false_when_the_key_exists(string stored, bool withheld) =>
+        Assert.Equal(withheld, ItemSettings.Read(stored).WithholdFromPets);
+
     [Fact]
     public void A_patch_holds_only_the_switches_named()
     {

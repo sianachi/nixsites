@@ -6,6 +6,7 @@ packages:
   - apps/sites
   - apps/companion
   - apps/node-host
+  - apps/browser-worker
   - apps/mobile
   - apps/desktop
 

@@ -25,11 +25,18 @@ const view = {
   aggregates: [{ property: 'hours', function: 'sum' }],
 };
 
-function setup(overrides: Record<string, unknown> = {}) {
+function setup(overrides: Record<string, unknown> = {}, hasProtectedItems = false) {
   const fake = createFakePorts();
-  fake.query.mockImplementation((endpoint: { operation: string }) => {
+  fake.query.mockImplementation((endpoint: { operation: string; path?: string }) => {
     if (endpoint.operation === 'items.get')
-      return Promise.resolve({ id: itemId, workspaceId, title: 'Tasks', type: 'note' });
+      return Promise.resolve({
+        id: endpoint.path?.split('/').at(-1),
+        workspaceId,
+        title: 'Tasks',
+        type: 'note',
+      });
+    if (endpoint.operation === 'items.getWorkspacePetProtection')
+      return Promise.resolve({ hasProtectedItems });
     if (endpoint.operation === 'views.getConfigurations')
       return Promise.resolve({
         views: [{ ...view, ...overrides }],
@@ -115,6 +122,22 @@ function setup(overrides: Record<string, unknown> = {}) {
 }
 
 describe('pet view result evidence', () => {
+  it('returns verified rows and withholds unverified group labels and aggregate counts', async () => {
+    const fake = setup({}, true);
+    const result = await readView(
+      fake.ports,
+      workspaceId,
+      itemId,
+      '{"viewId":"work"}',
+      fake.signal,
+    );
+    expect(result.results).toEqual([{ ...row, group: null }]);
+    expect(result.totalCount).toBeNull();
+    expect(result.groups).toBeUndefined();
+    expect(result.aggregates).toBeUndefined();
+    expect(fake.execute).toHaveBeenCalledOnce();
+  });
+
   it('asks Core to filter direct children before spending the sample limit and preserves exact count/skipped values', async () => {
     const fake = setup();
     const result = await readView(

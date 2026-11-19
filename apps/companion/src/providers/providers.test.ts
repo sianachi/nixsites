@@ -491,6 +491,44 @@ describe('Anthropic', () => {
     expect(last.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user']);
   });
 
+  it('keeps visible messages and starts a fresh provider thread after an unsaved turn fails', async () => {
+    let posts = 0;
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url.startsWith('/v1/models'))
+          return jsonResponse(res, 200, { data: [{ id: 'claude-x' }] });
+        if (++posts === 1)
+          return jsonResponse(res, 503, {
+            error: { type: 'overloaded_error', message: 'Temporary fixture failure' },
+          });
+        sse(res, anthropicTurn('Recovered answer'));
+      }),
+    );
+    const first = keyAccount('anthropic', server);
+    await first.send({ text: 'Question before restart' });
+    await eventually(() => first.account.snapshot(key).state === 'error');
+    expect(readdirSync(join(first.home, 'threads'))).toEqual([]);
+    first.transport.close();
+
+    const restarted = keyAccount('anthropic', server, first.home);
+    restarted.account.load(key);
+    await restarted.send({ requestId: IDS.other, text: 'Continue after restart' });
+    await eventually(() => restarted.account.snapshot(key).state === 'success');
+
+    expect(restarted.account.snapshot(key).messages.map((message) => message.text)).toEqual([
+      'Question before restart',
+      'Continue after restart',
+      'Recovered answer',
+    ]);
+    const requests = server.seen.filter((seen) => seen.method === 'POST');
+    expect(requests).toHaveLength(2);
+    expect(JSON.parse(requests[1]?.body ?? '{}')).toMatchObject({
+      model: 'claude-x',
+      messages: [{ role: 'user' }],
+    });
+    expect(requests[1]?.body).not.toContain('Question before restart');
+  });
+
   it('never saves an ephemeral thread and discards it on unsubscribe', async () => {
     const server = await track(
       startServer((_seen, res) => {

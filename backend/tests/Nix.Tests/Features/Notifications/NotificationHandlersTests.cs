@@ -78,7 +78,7 @@ public sealed class NotificationHandlersTests
         return (session, new MemoryNotificationStore(session));
     }
 
-    private sealed class MemoryNotificationStore(INixSessionContextAccessor session) : INotificationStore, INotificationWriter
+    private sealed class MemoryNotificationStore(INixSessionContextAccessor session) : INotificationStore
     {
         private readonly List<Notification> _rows = [];
         private long _nextSeq = 1;

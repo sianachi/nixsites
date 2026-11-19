@@ -88,7 +88,10 @@ public sealed class WatchNotificationsHandler(INotificationStore store, INixSess
 internal static class NotificationsMapping
 {
     internal static NotificationsPageResponse ToResponse(NotificationPage page) => new(
-        [.. page.Items.Select(row => new NotificationDto(row.Id, NotificationKindStorage.ToText(row.Kind), row.Title, row.Body,
-            row.ItemId?.Value, row.WorkspaceId?.Value, row.CreatedAt, row.ReadAt))],
+        [.. page.Items.Select(row => new NotificationDto(row.Id, NotificationKindStorage.ToText(row.Kind),
+            row.Title, row.Body, row.ItemId?.Value, row.WorkspaceId?.Value, row.CreatedAt, row.ReadAt,
+            row.ItemId is not null && row.WorkspaceId is not null && row.PetDecision is { } target
+                ? new(target.RunId, target.DecisionId, target.IsQuestion ? "question" : "proposal")
+                : null))],
         page.NextCursor, page.Unread, page.Revision);
 }

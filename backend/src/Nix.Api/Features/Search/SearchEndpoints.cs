@@ -72,7 +72,8 @@ internal static class SearchEndpoints
                 + "read and nothing else - the filter is a predicate inside the query, so the "
                 + "limit is never spent on rows that would then be discarded. An item in a "
                 + "workspace the caller cannot reach is omitted entirely rather than redacted. A "
-                + "blank query returns no results rather than every item.")
+                + "blank query returns no results rather than every item. 'petWorkspaceId' "
+                + "limits the search to items available to pet work in one workspace.")
             .Produces<SearchResponse>(StatusCodes.Status200OK);
 
         search.MapGet("/passages", SearchPassagesEndpoint.Handle)

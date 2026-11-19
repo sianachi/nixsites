@@ -10,6 +10,19 @@ node --check deploy/compose/smoke.mjs
 bash deploy/compose/release.test.sh
 # Validate real Compose interpolation, without printing credentials.
 docker compose --env-file deploy/compose.prod.env.example -f deploy/compose.prod.yml --profile maintenance config --format json > "$fixture/compose.json"
+docker compose --env-file deploy/compose.prod.env.example -f deploy/compose.prod.yml --profile pet-browser config --format json > "$fixture/compose-pet-browser.json"
+python3 - "$fixture/compose.json" "$fixture/compose-pet-browser.json" <<'PY'
+import json,sys
+basic=json.load(open(sys.argv[1]))['services']
+assert 'nix-pet-browser' not in basic
+assert basic['nix-api']['environment']['Nix__PetRuns__Enabled'] == 'false'
+pilot=json.load(open(sys.argv[2])); browser=pilot['services']['nix-pet-browser']
+assert browser['read_only'] and not browser.get('ports')
+assert set(browser['networks']) == {'pet-browser-control', 'pet-browser-egress'}
+assert pilot['networks']['pet-browser-control']['internal']
+assert '/readyz' in browser['healthcheck']['test'][-1]
+assert any(option.startswith('seccomp') for option in browser['security_opt'])
+PY
 # The opt-in identity bootstrap reads its values from the env file (placeholders only).
 { cat deploy/compose.prod.env.example; printf '%s\n' 'NIX_BOOTSTRAP_TENANT_NAME=Example Tenant' NIX_BOOTSTRAP_OIDC_PROJECT_ID=project-id; } > "$fixture/bootstrap.env"
 docker compose --env-file "$fixture/bootstrap.env" -f deploy/compose.prod.yml --profile maintenance --profile bootstrap config --format json > "$fixture/compose-bootstrap.json"
@@ -202,7 +215,9 @@ elif 'config' in args and '--format' in args:
  c['services']['nix-api']['environment']['Nix__Sites__Domain']=os.environ.get('SITES_DOMAIN','')
  print(json.dumps(c))
 elif args[-2:]==['config','--services']:
- print('nix-api\nnix-sites-serve' if os.environ.get('SITES_PROFILE') else 'nix-mcp\nnix-api' if os.environ.get('MCP_PROFILE') else 'nix-api')
+ print('nix-api')
+ for flag, service in [('SITES_PROFILE', 'nix-sites-serve'), ('MCP_PROFILE', 'nix-mcp'), ('BROWSER_PROFILE', 'nix-pet-browser')]:
+  if os.environ.get(flag): print(service)
 elif 'config' in args and '--images' in args:
  print('localhost/nix/api:test\nghcr.io/sianachi/nix/collab:test')
 elif 'run' in args and args[-1]=='nix-migrate' and os.environ.get('FAIL_MIGRATION'):
@@ -261,7 +276,7 @@ assert not any(' stop ' in call and 'nix-indexer' in call for call in calls)
 assert not any(' up ' in call and 'nix-opensearch' in call for call in calls)
 assert all(':/config/nixctl/config.json:ro' in calls[i] for i in smokes)
 # Sites are not enabled in the example env, so the rollout leaves them alone.
-assert not any(s in call.split() for call in calls for s in ('nix-sites-serve', 'nix-mcp'))
+assert not any(s in call.split() for call in calls for s in ('nix-sites-serve', 'nix-mcp', 'nix-pet-browser'))
 PYCODE
 # Enabled by profile or by domain, sites are pre-pulled, stopped with the writers and rolled with --wait.
 for enable in SITES_PROFILE=1 SITES_DOMAIN=sites.example.test; do
@@ -278,18 +293,21 @@ for service in ['nix-sites-serve']:
 assert '--wait' in roll.split()
 PYCODE
 done
-# With the mcp profile on, nix-mcp is pulled, stopped and rolled with the release, sites still left alone.
+# Profile services are pulled, stopped, and rolled with the same release.
+for profile in MCP_PROFILE BROWSER_PROFILE; do
+ case "$profile" in MCP_PROFILE) service=nix-mcp ;; BROWSER_PROFILE) service=nix-pet-browser ;; esac
 : > "$DOCKER_TEST_LOG"
-MCP_PROFILE=1 PATH="$fixture/nodeless:$PATH" bash deploy/compose/deploy.sh > "$fixture/deploy-mcp"
-python3 - "$DOCKER_TEST_LOG" <<'PYCODE'
+env "$profile=1" PATH="$fixture/nodeless:$PATH" bash deploy/compose/deploy.sh > "$fixture/deploy-$profile"
+python3 - "$DOCKER_TEST_LOG" "$service" <<'PYCODE'
 import sys
 calls=open(sys.argv[1]).read().splitlines()
 pull=next(s for s in calls if '--images' in s)
 stop=next(s for s in calls if ' stop nix-web ' in s)
 roll=next(s for s in calls if ' up ' in s and s.endswith(' nix-web cloudflared'))
-assert all('nix-mcp' in s.split() for s in (pull, stop, roll))
+assert all(sys.argv[2] in s.split() for s in (pull, stop, roll))
 assert not any('nix-sites-serve' in call.split() for call in calls)
 PYCODE
+done
 # The drift preview must run before the first `up` can recreate a service.
 python3 - "$DOCKER_TEST_LOG" <<'PYCODE'
 import sys

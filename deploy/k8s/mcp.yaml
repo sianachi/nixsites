@@ -71,6 +71,10 @@ spec:
     - host: "${DOMAIN}"
       http:
         paths:
+          - path: /mcp/pets
+            pathType: Prefix
+            backend:
+              service: { name: nix-mcp, port: { number: 8500 } }
           - path: /mcp
             pathType: Exact
             backend:

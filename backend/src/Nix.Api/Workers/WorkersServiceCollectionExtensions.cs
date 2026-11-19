@@ -35,6 +35,7 @@ public static class WorkersServiceCollectionExtensions
             TimeSpan.FromSeconds(provider.GetRequiredService<IOptions<WorkerOptions>>().Value.RequestTimeoutSeconds)));
 
         services.AddSingleton<IWorkerJobHandler, NotifyPushHandler>();
+        services.AddSingleton<IWorkerJobHandler>(provider => new PetRunAdvanceHandler(provider.GetRequiredService<IServiceScopeFactory>()));
 
         // Calendar providers: the same origin-locked, redirect-refusing client shape the Go worker had.
         services.AddHttpClient(CalendarProviderHttpClientName, static client => client.Timeout = Timeout.InfiniteTimeSpan)

@@ -193,6 +193,16 @@ public static class ItemLockSql
           AND edge.descendant_id = ANY(@item_ids)
         """;
 
+    internal const string AnyInWorkspace = """
+        SELECT EXISTS (
+            SELECT 1 FROM workspace_lock WHERE tenant_id = @tenant_id AND workspace_id = @workspace_id
+        ) OR EXISTS (
+            SELECT 1 FROM item_lock
+            JOIN item ON item.tenant_id = item_lock.tenant_id AND item.id = item_lock.item_id
+            WHERE item_lock.tenant_id = @tenant_id AND item.workspace_id = @workspace_id
+        )
+        """;
+
     /// <summary>
     /// The locks this credential has not opened, as one array: the <c>@closed_lock_ids</c> that
     /// <see cref="ContainerIsOpen"/> and <see cref="ItemIsNotUnderClosedLock"/> bind.

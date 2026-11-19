@@ -26,6 +26,9 @@ public enum NotificationKind
     Comment,
 }
 
+/// <summary>The exact question or proposal a pet is waiting on.</summary>
+public sealed record NotificationPetDecisionTarget(Guid RunId, Guid DecisionId, bool IsQuestion);
+
 /// <summary>One entry in a principal's inbox. Never shared with anyone else, even in the same workspace.</summary>
 public sealed class Notification
 {
@@ -52,6 +55,18 @@ public sealed class Notification
 
     /// <summary>Gets the workspace this notification is about, or <see langword="null"/> when it is not about one.</summary>
     public WorkspaceId? WorkspaceId { get; init; }
+
+    internal Guid? PetRunId { get; init; }
+
+    internal Guid? PetDecisionId { get; init; }
+
+    internal bool? PetDecisionIsQuestion { get; init; }
+
+    /// <summary>Gets the typed pet decision link for an in-app notice.</summary>
+    public NotificationPetDecisionTarget? PetDecision =>
+        PetRunId is { } runId && PetDecisionId is { } decisionId && PetDecisionIsQuestion is { } isQuestion
+            ? new(runId, decisionId, isQuestion)
+            : null;
 
     /// <summary>Gets when this notification was created. Also the newest-first ordering key.</summary>
     public required DateTimeOffset CreatedAt { get; init; }

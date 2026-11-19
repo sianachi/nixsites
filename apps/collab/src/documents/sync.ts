@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 
-import type { ContentDocRow } from '../db/documents.ts';
+import { lockDocByItem } from '../db/documents.ts';
 import { lockedAmong } from '../db/locks.ts';
 import type { ScopedQuery } from '../db/tenant-scope.ts';
 import { strategyFor } from './body-kinds.ts';
@@ -90,14 +90,7 @@ export async function syncDocument(
   }
 
   // Hold the body replacement fence through validation, append and delta reconstruction.
-  const { rows } = await sql.query<ContentDocRow>(
-    `SELECT doc_id, item_id, workspace_id, schema_version, head_seq
-       FROM content_doc
-      WHERE tenant_id = $1 AND item_id = $2
-      FOR UPDATE`,
-    [tenantId, document.itemId],
-  );
-  let doc = rows[0];
+  let doc = await lockDocByItem(sql, tenantId, document.itemId);
   if (doc?.workspace_id !== input.workspaceId) {
     throw new DocumentSyncRefusal({ itemId: document.itemId, status: 'forbidden' });
   }
