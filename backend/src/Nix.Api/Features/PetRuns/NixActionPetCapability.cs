@@ -48,11 +48,11 @@ internal sealed class NixActionPetCapability(
         + "GetItemBody returns note body text. If the target note text is not shared and you need it, ask to share that current note as a source.";
     public JsonElement? InputSchema => Schema;
 
-    private static readonly JsonElement Schema = JsonDocument.Parse("""
+    private static readonly JsonElement Schema = JsonElement.Parse("""
         {"type":"object","required":["operationId"],"additionalProperties":false,"properties":{
           "operationId":{"type":"string"},"path":{"type":"object"},"query":{"type":"object"},"body":{"type":"object"}
         }}
-        """).RootElement.Clone();
+        """);
 
     private static readonly HashSet<string> ItemParameters = new(StringComparer.OrdinalIgnoreCase)
     {
