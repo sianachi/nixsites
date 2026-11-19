@@ -270,7 +270,7 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
     }
 
     [Fact]
-    public async Task Closed_root_and_ancestor_locks_withhold_note_conversations_and_history_but_open_credentials_can_read()
+    public async Task Root_and_ancestor_locks_withhold_note_conversations_and_history_even_for_open_credentials()
     {
         await SaveInitialAsync();
         var locker = Guid.NewGuid();
@@ -303,22 +303,24 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
                 var settings = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
                 foreach (var scopedRoot in new[] { root, child })
                 {
-                    if (credential != locker)
+                    var state = await dispatcher.QueryAsync<GetItemLock, Result<ItemLockState>>(
+                        new(ItemId.From(scopedRoot)), Cancellation);
+                    Assert.True(state.IsSuccess);
+                    Assert.True(state.Value.Locked);
+                    Assert.Equal(ItemId.From(root), state.Value.LockItemId);
+                    if (credential == locker)
                     {
-                        await AssertScopedOperationsRefusedAsync(gateway, settings.Settings.ActivePetId!.Value, scopedRoot);
-                        Assert.Equal(0, handler.Calls);
+                        Assert.True(state.Value.UnlockedUntil > DateTimeOffset.UtcNow);
                     }
                     else
                     {
-                        var read = await gateway.ExecuteAsync(new("read", TestTenants.AlphaWorkspace,
-                            settings.Settings.ActivePetId, RootItemId: scopedRoot), Cancellation);
-                        Assert.True(read.IsSuccess);
-                        var watch = await gateway.ExecuteWatchAsync(TestTenants.AlphaWorkspace,
-                            settings.Settings.ActivePetId!.Value, "chat", 0, Cancellation, scopedRoot);
-                        Assert.True(watch.IsSuccess);
+                        Assert.Null(state.Value.UnlockedUntil);
                     }
+                    Assert.Equal(credential == locker,
+                        await work.Resolve<IItemLocks>().MayReadBodyAsync(ItemId.From(scopedRoot), Cancellation));
+                    await AssertScopedOperationsRefusedAsync(gateway, settings.Settings.ActivePetId!.Value, scopedRoot);
+                    Assert.Equal(0, handler.Calls);
                 }
-                Assert.Equal(credential == locker ? 4 : 0, handler.Calls);
             }
         }
     }
