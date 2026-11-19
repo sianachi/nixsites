@@ -504,11 +504,19 @@ public sealed class PetRunStoreTests(NixPostgresFixture fixture) : IAsyncLifetim
             SawAppendExample |= input.RootElement.GetProperty("sharedText").GetString()!.Contains("Append preserves existing note blocks", StringComparison.Ordinal);
             if (Interlocked.Increment(ref _turns) == 1 && readFirst)
             {
-                return PlanningResult(JsonSerializer.Serialize(new { kind = "action", capability = "nix.action",
-                    arguments = new { operationId = "GetItemBody", path = new { itemId = noteId } } }));
+                return PlanningResult(JsonSerializer.Serialize(new
+                {
+                    kind = "action",
+                    capability = "nix.action",
+                    arguments = new { operationId = "GetItemBody", path = new { itemId = noteId } },
+                }));
             }
-            return PlanningResult(JsonSerializer.Serialize(new { kind = "action", capability = "nix.action",
-                arguments = new { operationId = "AppendItemBody", path = new { itemId = noteId }, body = new { markdown = Addition } } }));
+            return PlanningResult(JsonSerializer.Serialize(new
+            {
+                kind = "action",
+                capability = "nix.action",
+                arguments = new { operationId = "AppendItemBody", path = new { itemId = noteId }, body = new { markdown = Addition } },
+            }));
         }
     }
 
@@ -532,8 +540,14 @@ public sealed class PetRunStoreTests(NixPostgresFixture fixture) : IAsyncLifetim
             }
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new { markdown = ExistingText, schemaVersion = 1, empty = false, losses = Array.Empty<object>(),
-                    revision = new { documentId = _document, headSeq = "0" } }),
+                Content = JsonContent.Create(new
+                {
+                    markdown = ExistingText,
+                    schemaVersion = 1,
+                    empty = false,
+                    losses = Array.Empty<object>(),
+                    revision = new { documentId = _document, headSeq = "0" },
+                }),
             });
         }
     }

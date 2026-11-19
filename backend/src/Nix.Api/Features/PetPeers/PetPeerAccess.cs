@@ -4,8 +4,8 @@ using Nix.Abstractions.PetPeers;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
 using Nix.Domain.Tenancy;
-using Nix.Features.Pets;
 using Nix.Features.PetRuns;
+using Nix.Features.Pets;
 using Nix.Messaging;
 
 namespace Nix.Features.PetPeers;
