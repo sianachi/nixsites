@@ -269,7 +269,9 @@ describe('the file item viewer', () => {
       expect(screen.queryByText('diagram.png')).not.toBeInTheDocument();
       expect(screen.queryByText('1'.repeat(64))).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument();
-      expect(revokeObjectURL).toHaveBeenCalledWith('blob:nix-preview');
+      await waitFor(() => {
+        expect(revokeObjectURL).toHaveBeenCalledWith('blob:nix-preview');
+      });
     },
   );
 
