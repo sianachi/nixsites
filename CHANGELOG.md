@@ -110,6 +110,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- The one-line install works again when the latest release is older than the installer on `main`:
+  it stopped at "set NIX_OIDC_ISSUER" on a new machine. A release is now installed by the copy of
+  the installer that shipped in it.
+
 - Collaboration restarts refuse reconnects during document draining and give active HTTP requests
   up to the existing 60-second shutdown grace period before closing unfinished connections.
 - Failed pet jobs show Core’s safe failure reason for planning, preparing a draft, or applying a

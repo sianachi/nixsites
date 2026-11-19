@@ -374,5 +374,17 @@ grep -Fq 'handle /mcp {' deploy/Caddyfile.prod
 grep -Fq 'reverse_proxy {$NIX_MCP_UPSTREAM}' deploy/Caddyfile.prod
 grep -Fq '@oauth_discovery path /.well-known/oauth-protected-resource* /.well-known/oauth-authorization-server' deploy/Caddyfile.prod
 
+# A downloaded release is installed by its own copy of the installer, with the resolved version.
+docker_mem 2147483648
+rm -rf "$state"
+mkdir -p "$state/src/v9.9.9/deploy"
+: > "$state/src/v9.9.9/deploy/compose.prod.yml"
+printf '%s\n' 'echo "release installer: $* delegated=$NIX_INSTALL_DELEGATED"' > "$state/src/v9.9.9/deploy/install.sh"
+: > "$called"
+run "$bin:/usr/bin:/bin" --dir "$state" --version v9.9.9 https://nix.example.org
+assert_ok
+assert_has "release installer: --dir $state --version v9.9.9 https://nix.example.org --version v9.9.9 delegated=1"
+[ ! -s "$called" ]
+
 
 echo 'install checks passed.'

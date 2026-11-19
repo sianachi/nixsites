@@ -26,6 +26,8 @@
 #
 # Re-running upgrades: state is kept, migrations run, services restart on the new images.
 #   --version <tag|sha>      release to install (default: the latest GitHub release)
+#                            the release's own copy of this script does the install, so what it
+#                            needs and prints is that release's, not necessarily what is written here
 #   --dir <path>             state directory (default ~/nix)
 #   --kubernetes             target the current kubectl context instead of Docker
 #   --ingress-class <name>   kubernetes: IngressClass (default: the first one)
@@ -101,6 +103,7 @@ require_tools() {
   fi
 }
 
+args=("$@")
 while [ $# -gt 0 ]; do
   case "$1" in
     --version) version=${2:?}; shift 2 ;;
@@ -163,6 +166,11 @@ else
     mkdir -p "$dir/src/$version"
     mv "$tmp"/*/deploy "$src"
     rm -rf "$tmp"
+  fi
+  # A release is installed by the installer that shipped in it. Its Compose files and the env file
+  # written below change together, and this copy (fetched from main) can be newer than the release.
+  if [ -z "${NIX_INSTALL_DELEGATED:-}" ] && [ -f "$src/install.sh" ]; then
+    NIX_INSTALL_DELEGATED=1 exec bash "$src/install.sh" ${args[@]+"${args[@]}"} --version "$version" </dev/null
   fi
 fi
 

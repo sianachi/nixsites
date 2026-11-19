@@ -40,6 +40,16 @@ Open <http://nix.localhost> in Chrome or Firefox, go to the setup page the scrip
 the setup code. Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost` to
 `/etc/hosts` first. A public hostname, Kubernetes and backups are in [Run it for real](#run-it-for-real).
 
+The line installs the latest release, with the copy of the installer that shipped in that release.
+Releases up to 0.7.0 bundle Zitadel for sign-in: they print an administrator password where this
+page says setup code, want about 8 GB of memory, and a public install also needs `auth.<host>`.
+To install what this page describes before it is released, pass a commit of `main`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh \
+  | bash -s -- --version "$(git ls-remote https://github.com/sianachi/nixsites main | cut -f1)"
+```
+
 Demo recording:
 
 https://github.com/user-attachments/assets/45a8a3df-a709-4c86-b762-895fcc0fffa5
@@ -168,7 +178,7 @@ pnpm install --frozen-lockfile
 pnpm dev                           # infrastructure, database, identity, then every service
 ```
 
-Open <http://localhost:5173> and sign in as `dev@nix.localhost` with `NixDev-Password1!`.
+Open <http://localhost:5173> and sign in as `dev@nix.localhost` with `nix-dev-password`.
 These are local development credentials only.
 
 `pnpm dev` is safe to re-run. Use `bash scripts/dev.sh --help` to start only some services, or
