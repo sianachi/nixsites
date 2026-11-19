@@ -387,6 +387,7 @@ export function PetRunCard({
             },
           }}
           onDismiss={dismissCanvasNotice}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- This disables Toast's mount focus.
           autoFocus={false}
         />
       )}
