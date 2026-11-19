@@ -22368,6 +22368,25 @@
           }
         }
       },
+      "PetRunFailure": {
+        "required": [
+          "stage",
+          "code",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
       "PetRunProposal": {
         "required": [
           "id",
@@ -22549,6 +22568,16 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "failure": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetRunFailure"
+              }
             ]
           }
         }

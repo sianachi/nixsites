@@ -348,9 +348,12 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `pet_runs.invalid_rename`
 - `pet_runs.not_reversible`
 - `pet_runs.outcome_uncertain`
+- `pet_runs.outcome_unknown`
 - `pet_runs.plan_unavailable`
+- `pet_runs.preview_unavailable`
 - `pet_runs.routine_unavailable`
 - `pet_runs.stale_review`
+- `pet_runs.target_text_required`
 - `pets.invalid_key`
 - `pets.invalid_settings`
 - `pets.settings_conflict`
