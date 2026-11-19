@@ -150,7 +150,7 @@ describe('the guided creation studio', () => {
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Delivery board');
     });
-    expect(screen.getByRole('heading', { name: /delivery board/i })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: /delivery board/i })).toBeVisible();
   });
 
   it('preserves every field of an existing companion and uses edit-specific save copy', async () => {
