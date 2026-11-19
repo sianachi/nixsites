@@ -281,7 +281,8 @@ internal static class PetInlineEndpoint
 
         // (c) The caller can read the item, and it is in the workspace they named.
         var item = await dispatcher.QueryAsync<GetItem, Result<Item>>(new(new ItemId(request.ItemId)), aborted).ConfigureAwait(false);
-        if (item.IsFailure || item.Value.WorkspaceId.Value != request.WorkspaceId)
+        if (item.IsFailure || item.Value.WorkspaceId.Value != request.WorkspaceId
+            || ItemSettings.Read(item.Value.Settings).WithholdFromPets)
         {
             return Refuse(context, StatusCodes.Status404NotFound, "pets.not_found", "Item not found", "The item is unavailable.");
         }

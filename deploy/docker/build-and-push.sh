@@ -40,6 +40,9 @@ docker buildx build --platform "$PLATFORM" --target web \
 docker buildx build --platform "$PLATFORM" --target sites \
   -f deploy/docker/sites.Dockerfile -t "$REGISTRY/sites:$TAG" --push .
 
+docker buildx build --platform "$PLATFORM" --target browser \
+  -f deploy/docker/browser.Dockerfile -t "$REGISTRY/browser:$TAG" --push .
+
 docker buildx build --platform "$PLATFORM" --target release-tools \
   -f deploy/docker/release-tools.Dockerfile -t "$REGISTRY/release-tools:$TAG" --push .
 

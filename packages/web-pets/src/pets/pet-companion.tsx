@@ -32,7 +32,7 @@ import { chatOpensAsPage, launcherFloats, pageIsAvailable } from './pet-surface'
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePetSurface } from './use-pet-surface';
 import { PetWorkTools } from './work-tools/pet-work-tools';
-import { Conversation } from './conversation/conversation';
+import { Conversation, type ConversationProps } from './conversation/conversation';
 
 /** The shell and note dock publish their bottom clearance so every launcher position stays
  * above whichever control reaches further into the viewport. */
@@ -54,7 +54,13 @@ export function petPageHref(workspaceId: string): string {
 
 export function PetCompanion({
   dock,
+  dialog,
+  jobsNeedDecision = false,
+  suspendDialog = false,
 }: {
+  readonly dialog?: ((props: ConversationProps) => ReactElement) | undefined;
+  readonly jobsNeedDecision?: boolean;
+  readonly suspendDialog?: boolean;
   readonly dock?: ((launcher: ReactElement) => ReactNode) | null | undefined;
 } = {}): ReactElement | null {
   const { workspaceId } = useWorkspace();
@@ -82,6 +88,9 @@ export function PetCompanion({
       pet={pet}
       settings={saved.settings}
       dock={dock}
+      dialog={dialog}
+      jobsNeedDecision={jobsNeedDecision}
+      suspendDialog={suspendDialog}
     />
   );
 }
@@ -91,17 +100,24 @@ function Companion({
   pet,
   settings,
   dock,
+  dialog,
+  jobsNeedDecision,
+  suspendDialog,
 }: {
   readonly workspaceId: string;
   readonly pet: PetProfile;
   readonly settings: PetSettings;
   readonly dock: ((launcher: ReactElement) => ReactNode) | null | undefined;
+  readonly dialog: ((props: ConversationProps) => ReactElement) | undefined;
+  readonly jobsNeedDecision: boolean;
+  readonly suspendDialog: boolean;
 }) {
   // `?pet=design` (the template library's "Design one with your pet") opens the conversation.
   const [search] = useSearchParams();
   const designEntry = search.get('pet') === 'design';
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  if (suspendDialog && open) setOpen(false);
   const client = useApiClient();
   const runtimeApi = usePetRuntime(workspaceId, pet.id, open);
   // The ids of the pending tools `PetWorkTools` itself reports as actually waiting on the owner
@@ -112,6 +128,7 @@ function Companion({
   // whichever one is currently live.
   const [needsDecisionIds, setNeedsDecisionIds] = useState<readonly string[]>([]);
   const toolPending = needsDecisionIds.length > 0;
+  const needsAttention = toolPending || jobsNeedDecision;
   const [unseenReply, setUnseenReply] = useState(false);
   const previousState = useRef(runtimeApi.runtime?.state);
   // A reply that finishes while the panel is closed sets the launcher badge; opening the panel
@@ -179,7 +196,7 @@ function Companion({
   const floats = launcherFloats(surface, narrow) || open;
   const launcherHidden = open || !floats || dock === null || (narrow && keyboardVisible);
   useEffect(() => {
-    if (!designEntry) return;
+    if (!designEntry || suspendDialog) return;
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
@@ -189,7 +206,7 @@ function Companion({
     return () => {
       active = false;
     };
-  }, [designEntry, opensAsPage, navigate, workspaceId]);
+  }, [designEntry, opensAsPage, navigate, workspaceId, suspendDialog]);
   // Close (or the back gesture) may fire while the keyboard still occludes the page, which
   // keeps the launcher `hidden`; a hidden button cannot take focus, so waiting for
   // `launcherHidden` to clear - rather than focusing right on close - is what makes focus land
@@ -207,7 +224,7 @@ function Companion({
   // owner. Without a launcher the same fact goes to the navigation entry (`pet-attention.ts`), so
   // a waiting approval is never silent. Cleared on unmount, which includes arriving on the pet
   // page, where the conversation itself shows it.
-  const attention = floats ? null : toolPending ? 'approval' : unseenReply ? 'reply' : null;
+  const attention = floats ? null : needsAttention ? 'approval' : unseenReply ? 'reply' : null;
   useEffect(() => {
     publishPetAttention(attention);
     return () => {
@@ -330,7 +347,13 @@ function Companion({
       className={`relative ${docked ? 'size-(--control-lg) shrink-0 p-0' : 'h-auto p-1 hover:bg-transparent active:bg-transparent'} ${movable ? 'touch-none' : ''} ${launcherHidden ? 'hidden' : ''}`}
       aria-expanded={opensAsPage ? undefined : open}
       aria-label={`${open ? `Close ${pet.name}` : opensAsPage ? `Open ${pet.name}` : `Talk with ${pet.name}`}${
-        !open && toolPending ? ' (needs approval)' : !open && unseenReply ? ' (new reply)' : ''
+        !open && toolPending
+          ? ' (needs approval)'
+          : !open && jobsNeedDecision
+            ? ' (pet job needs attention)'
+            : !open && unseenReply
+              ? ' (new reply)'
+              : ''
       }`}
       onMouseEnter={() => {
         setHover(true);
@@ -413,7 +436,7 @@ function Companion({
           size={docked ? 'header' : narrow ? 'compact' : 'regular'}
         />
       </span>
-      {!open && (toolPending || unseenReply) ? (
+      {!open && (needsAttention || unseenReply) ? (
         <span
           aria-hidden="true"
           className="absolute right-1 top-1 size-2.5 rounded-full bg-accent-fill ring-2 ring-background"
@@ -421,6 +444,19 @@ function Companion({
       ) : null}
     </Button>
   );
+  const conversationProps: ConversationProps = {
+    workspaceId,
+    pet,
+    settings,
+    layout: fullscreen ? 'fullscreen' : drawer ? 'drawer' : 'floating',
+    runtimeApi,
+    onNeedsDecisionChange: setNeedsDecisionIds,
+    ...(pageIsAvailable(surface, narrow) ? { onOpenAsPage: openPage } : {}),
+    onClose: () => {
+      setOpen(false);
+      returnFocus.current = true;
+    },
+  };
   return (
     <aside
       ref={aside}
@@ -435,20 +471,7 @@ function Companion({
       }
     >
       {open ? (
-        <Conversation
-          key={`${workspaceId}:${pet.id}`}
-          workspaceId={workspaceId}
-          pet={pet}
-          settings={settings}
-          layout={fullscreen ? 'fullscreen' : drawer ? 'drawer' : 'floating'}
-          runtimeApi={runtimeApi}
-          onNeedsDecisionChange={setNeedsDecisionIds}
-          {...(pageIsAvailable(surface, narrow) ? { onOpenAsPage: openPage } : {})}
-          onClose={() => {
-            setOpen(false);
-            returnFocus.current = true;
-          }}
-        />
+        (dialog?.(conversationProps) ?? <Conversation {...conversationProps} />)
       ) : runtimeApi.runtime ? (
         // Auto-run reads (READ_ONLY_OPERATIONS under readWithoutAsking)
         // must still run while the panel is closed, so a closed panel never stalls a turn on a

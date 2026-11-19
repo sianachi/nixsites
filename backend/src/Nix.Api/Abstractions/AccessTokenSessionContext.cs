@@ -34,6 +34,9 @@ public sealed class AccessTokenSessionContext
     /// </summary>
     public bool IsTokenSession { get; private set; }
 
+    /// <summary>Whether a validated pet turn credential authenticated this unit of work.</summary>
+    public bool IsPetTurn { get; private set; }
+
     /// <summary>
     /// Whether the acting credential may write content. Always <see langword="true"/> for an
     /// interactive session; for a token session, whether it holds the write scope.
@@ -68,6 +71,13 @@ public sealed class AccessTokenSessionContext
 
     /// <summary>Marks the unit of work as a person's browser session. Called only for a validated browser-session token.</summary>
     public void SetInteractive() => IsInteractive = true;
+
+    /// <summary>Records the ceiling of a validated pet turn credential and its pet identity.</summary>
+    public void SetPetTurn(bool mayWrite, bool mayAdminister)
+    {
+        SetTokenCeiling(mayWrite, mayAdminister);
+        IsPetTurn = true;
+    }
 
     /// <summary>
     /// Records the ceiling a token session was admitted under.

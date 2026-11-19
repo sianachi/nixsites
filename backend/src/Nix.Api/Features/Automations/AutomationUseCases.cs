@@ -94,7 +94,8 @@ public sealed class AutomationRuleSupport(
         foreach (var id in named)
         {
             var item = await tree.FindAsync(ItemId.From(id), cancellationToken).ConfigureAwait(false);
-            if (item is null || item.WorkspaceId != workspaceId || item.LifecycleState != ItemLifecycleState.Active)
+            if (item is null || item.WorkspaceId != workspaceId || item.LifecycleState != ItemLifecycleState.Active
+                || (id == definition.ScopeItemId && definition.Actions.Any(action => action is StartPetRunAction or PollPetMailboxAction) && item.Type != "note"))
             {
                 return AutomationErrors.Invalid(id == definition.ScopeItemId
                     ? "scopeItemId: must name a visible item in this workspace"
@@ -263,6 +264,11 @@ public sealed class CreateAutomationHandler(AutomationRuleSupport support, IPerm
             return Result.Failure<AutomationRuleResponse>(validated.Error);
         }
 
+        if (!command.VerifiedBrowserOwner && validated.Value.Actions.Any(action => action is StartPetRunAction or PollPetMailboxAction))
+        {
+            return Result.Failure<AutomationRuleResponse>(AutomationErrors.PetRoutineOwnerRequired);
+        }
+
         if (await support.CheckItemsAsync(command.WorkspaceId, validated.Value, cancellationToken).ConfigureAwait(false) is { } refused)
         {
             return Result.Failure<AutomationRuleResponse>(refused);
@@ -330,6 +336,11 @@ public sealed class UpdateAutomationHandler(AutomationRuleSupport support, IPerm
         if (validated.IsFailure)
         {
             return Result.Failure<AutomationRuleResponse>(validated.Error);
+        }
+
+        if (!command.VerifiedBrowserOwner && validated.Value.Actions.Any(action => action is StartPetRunAction or PollPetMailboxAction))
+        {
+            return Result.Failure<AutomationRuleResponse>(AutomationErrors.PetRoutineOwnerRequired);
         }
 
         // Turning a rule on (or keeping it on) is granting it the owner's write access again.

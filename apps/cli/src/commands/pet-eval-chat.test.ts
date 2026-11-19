@@ -1329,13 +1329,15 @@ describe('pet eval chat', () => {
       async (itemCount) => {
         inFixture();
         const base = taskPorts(false);
-        const query = vi.fn(() =>
-          Promise.resolve({
-            fingerprint: 'a'.repeat(64),
-            captureFingerprint: 'b'.repeat(64),
-            sourceTitle: 'Synthetic source',
-            itemCount,
-          }),
+        const query = vi.fn((endpoint: Parameters<typeof base.core.query>[0]) =>
+          endpoint.operation === 'templates.capture.preview'
+            ? Promise.resolve({
+                fingerprint: 'a'.repeat(64),
+                captureFingerprint: 'b'.repeat(64),
+                sourceTitle: 'Synthetic source',
+                itemCount,
+              })
+            : base.core.query(endpoint),
         );
         const ports = { ...base, core: { ...base.core, query } } as unknown as CompanionPorts;
         const approvedSource = { ...fixture, templateSourceId: DENTIST };

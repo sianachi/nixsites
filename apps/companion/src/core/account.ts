@@ -40,7 +40,10 @@ import {
 } from '../tools/flatten.ts';
 import { instructions, conversationScopeRules, noteScopeRules } from '../tools/instructions.ts';
 import { isToolItem, type InlineRun } from '../tools/inline.ts';
-import { providerFailureMessage } from '../providers/provider-errors.ts';
+import {
+  ProviderThreadUnavailableError,
+  providerFailureMessage,
+} from '../providers/provider-errors.ts';
 import {
   conversationToolRefusal,
   flattenConversationToolCall,
@@ -75,10 +78,9 @@ import {
 } from '../shared/util.ts';
 import { toolNamesChat } from '../tools/catalog.ts';
 
-/** Version 13 retires the personality and length presets in the provider instructions. Older provider threads
- * restart on their next send to receive the current catalog and rules; visible conversation
- * history and its protected-read hold are retained. */
-export const TOOL_VERSION = 13;
+/** Older provider threads restart on their next send to receive the current catalog and rules.
+ * The replacement thread receives the visible history and inherits its protected-read hold. */
+export const TOOL_VERSION = 15;
 export const MAX_TOOL_CALLS_PER_TURN = 20;
 export const MAX_CONCURRENT_WATCHERS = 4;
 export const MIN_WATCH_DWELL_MS = 120;
@@ -828,15 +830,21 @@ export class Account {
       }
       params.model = found.id;
     }
-    let method = 'thread/start';
-    if (thread === '' && supportsTools) params.dynamicTools = workspaceToolsForRequest(r);
-    if (thread !== '') {
-      method = 'thread/resume';
-      params.threadId = thread;
-    }
+    let method = thread === '' ? 'thread/start' : 'thread/resume';
     let started: unknown;
     try {
-      started = await this.transport.call(method, params, signal);
+      if (method === 'thread/resume') {
+        try {
+          started = await this.transport.call(method, { ...params, threadId: thread }, signal);
+        } catch (error) {
+          if (!(error instanceof ProviderThreadUnavailableError) || signal.aborted) throw error;
+          method = 'thread/start';
+        }
+      }
+      if (method === 'thread/start') {
+        if (supportsTools) params.dynamicTools = workspaceToolsForRequest(r);
+        started = await this.transport.call(method, params, signal);
+      }
     } catch (error) {
       this.diag.record(key, 'warn', 'turn.start_failed', {
         step: method,

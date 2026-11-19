@@ -1,4 +1,5 @@
 import { workspaceCalendar } from '@nix/api-client';
+import { petSourceIds } from '../guards.js';
 import type { CompanionPorts } from '../ports.js';
 import { isDay, WorkspaceToolRefusal } from '../tool-args.js';
 
@@ -72,31 +73,44 @@ export async function readCalendar(
     workspaceCalendar.workspaceCalendar(workspaceId, range.from, range.to),
     { signal, forceRefresh: true },
   );
-  const entries = calendar.entries.slice(0, CALENDAR_MAX_ROWS).map((entry) => {
-    const row: CalendarRow = {
-      itemId: entry.itemId,
-      title: entry.title,
-      containerTitle: entry.containerTitle,
-      value: entry.value,
-    };
-    if (entry.endValue !== null) row.endValue = entry.endValue;
-    if (entry.completed !== null) row.completed = entry.completed;
-    if (entry.generated) row.generated = true;
-    return row;
-  });
-  const cut = calendar.entries.length > CALENDAR_MAX_ROWS;
+  const sample = calendar.entries.slice(0, CALENDAR_MAX_ROWS);
+  const unplaceable = calendar.unplaceable.slice(0, CALENDAR_MAX_ROWS);
+  const visible = await petSourceIds(
+    ports,
+    workspaceId,
+    [...sample, ...unplaceable].flatMap(({ itemId, containerId }) => [itemId, containerId]),
+    signal,
+  );
+  const entries = sample
+    .filter((entry) => visible.has(entry.itemId))
+    .map((entry) => {
+      const row: CalendarRow = {
+        itemId: entry.itemId,
+        title: entry.title,
+        containerTitle: visible.has(entry.containerId) ? entry.containerTitle : null,
+        value: entry.value,
+      };
+      if (entry.endValue !== null) row.endValue = entry.endValue;
+      if (entry.completed !== null) row.completed = entry.completed;
+      if (entry.generated) row.generated = true;
+      return row;
+    });
+  const cut = calendar.entries.length > CALENDAR_MAX_ROWS || entries.length < sample.length;
   const result: CalendarRead = {
     from: calendar.from,
     to: calendar.to,
     entries,
     truncated: cut || calendar.entriesTruncated || calendar.seriesTruncated,
   };
-  if (calendar.unplaceable.length > 0) result.unplaceable = calendar.unplaceable.length;
+  const unplaceableCount = unplaceable.filter(({ itemId, containerId }) =>
+    visible.has(itemId ?? containerId),
+  ).length;
+  if (unplaceableCount > 0) result.unplaceable = unplaceableCount;
   if (result.truncated) result.hint = 'More entries exist. Read a shorter range for the rest.';
   // The containers the returned rows came from, so the caller can tell whether any sits under a
   // lock (`anyUnderLock`); never part of what the model reads.
-  const containerIds = calendar.entries
-    .slice(0, CALENDAR_MAX_ROWS)
-    .map((entry) => entry.containerId);
+  const containerIds = sample.flatMap((entry) =>
+    visible.has(entry.itemId) && visible.has(entry.containerId) ? [entry.containerId] : [],
+  );
   return { read: result, containerIds };
 }

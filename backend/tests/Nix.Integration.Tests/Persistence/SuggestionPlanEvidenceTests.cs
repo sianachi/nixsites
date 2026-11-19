@@ -108,8 +108,10 @@ public sealed class SuggestionPlanEvidenceTests : IAsyncLifetime
         Assert.DoesNotContain("Seq Scan on item_link", plan, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task Search_with_closed_locks_reads_the_hidden_set_once_and_anti_joins_the_title_arm()
+    [Theory]
+    [InlineData("zzqx", false)]
+    [InlineData("weekly review", true)]
+    public async Task Search_with_closed_locks_reads_the_hidden_set_once_and_anti_joins_the_title_arm(string query, bool petSourcesOnly)
     {
         // The data review's case: a query matching nothing, by someone with closed locks. A per-row
         // lock probe in the title arm was costed against the whole scan and JIT-compiled every
@@ -118,14 +120,15 @@ public sealed class SuggestionPlanEvidenceTests : IAsyncLifetime
             SearchSql.MatchingItems,
             [
                 Uuids("workspace_ids", [M0SchemaSeed.Alpha.WorkspaceId]),
-                Text("title_pattern", "%zzqx%"),
-                Text("query", "zzqx"),
+                Text("title_pattern", $"%{query}%"),
+                Text("query", query),
                 Integer("limit", 50),
+                new NpgsqlParameter("pet_sources_only", NpgsqlDbType.Boolean) { Value = petSourcesOnly },
                 Uuids("lock_ids", ClosedLockIds()),
                 Uuids("closed_lock_ids", ClosedLockIds()),
             ]);
 
-        _output.WriteLine("Search q=zzqx with closed locks, runtime role:");
+        _output.WriteLine("Search q={0} with closed locks, runtime role:", query);
         _output.WriteLine(plan);
         Assert.Contains("CTE closed_lock_descendants", plan, StringComparison.Ordinal);
         Assert.Contains("IX_item_closure_tenant_id_ancestor_id_depth", plan, StringComparison.Ordinal);

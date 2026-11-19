@@ -48,6 +48,18 @@ public static class AutomationRuleValidator
             violations.Add(new AutomationViolation("scopeItemId", "must be an item id or null"));
         }
 
+        if (actions.Value.Any(action => action is StartPetRunAction or PollPetMailboxAction)
+            && (actions.Value.Length != 1 || trigger.Value is not ScheduleTrigger || input.ScopeItemId is null))
+        {
+            violations.Add(new AutomationViolation("actions", "a pet routine must be the only action on a schedule with a scoped task"));
+        }
+
+        if (actions.Value.OfType<StartPetRunAction>().Any(action =>
+            action.AutoRename is not null && !action.Abilities.Contains("task.rename", StringComparer.Ordinal)))
+        {
+            violations.Add(new AutomationViolation("actions", "an automatic rename requires the task.rename ability"));
+        }
+
         if (trigger.Value is ScheduleTrigger)
         {
             if (!conditions.Value.IsDefaultOrEmpty)
@@ -105,6 +117,7 @@ public static class AutomationRuleValidator
             })
             .Where(reference => reference is { Kind: AutomationItemReferenceKind.Item })
             .Select(reference => reference!.ItemId!.Value)
+            .Concat(definition.Actions.OfType<StartPetRunAction>().SelectMany(action => action.SourceItemIds))
             .Distinct()];
     }
 

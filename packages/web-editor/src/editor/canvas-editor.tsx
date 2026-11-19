@@ -67,6 +67,7 @@ function CanvasEditorSession({
   const [syncState, setSyncState] = useState<SyncState>('connecting');
   const [readOnly, setReadOnly] = useState(false);
   const [elements, setElements] = useState<CanvasElement[]>([]);
+  const [initialFitElementIds, setInitialFitElementIds] = useState<readonly string[]>();
   // A stale local copy must remain read-only until the current version is loaded.
   const [stale, setStale] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -103,6 +104,13 @@ function CanvasEditorSession({
           setNoticeCode(null);
         }
         setSyncState(state);
+      },
+      onInitialSync: () => {
+        const ids = binding
+          .snapshot()
+          .filter((element) => !element.isDeleted)
+          .map(({ id }) => id);
+        setInitialFitElementIds((current) => current ?? ids);
       },
       onNotice: (notice) => {
         setNoticeCode(notice.code);
@@ -195,6 +203,7 @@ function CanvasEditorSession({
             <Suspense fallback={<Text as="p">Loading spatial canvas…</Text>}>
               <NixCanvas
                 elements={elements}
+                initialFitElementIds={initialFitElementIds}
                 workspaceId={workspaceId}
                 parentItemId={itemId}
                 awareness={awareness}

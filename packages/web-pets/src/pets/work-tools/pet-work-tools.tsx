@@ -17,11 +17,14 @@ import { readReadWithoutAsking } from '@nix/web-foundation/lib/device-preference
 import { createFileReader } from '../pet-file-reader';
 import {
   APPLYING_WITHOUT_ASKING,
+  CHANGES_REQUESTED,
   DECLINED_BY_USER,
   DONE_WITHOUT_ASKING,
   NOT_RUN,
+  REQUESTING_CHANGES,
   WITHOUT_ASKING_SUFFIX,
   buildOutcome,
+  revisionFeedback,
   type BuildLedger,
 } from './receipts';
 import { afterWrite } from '../approval/prepare-write';
@@ -186,13 +189,16 @@ function PetWorkToolsView({
     if (lock.current || tool.status !== 'pending' || decisions[key] || readActionReceipt(key))
       return false;
     lock.current = true;
+    const requestingChanges = !approved && revisionFeedback(refusalResult ?? '') !== undefined;
     // An auto-run never says the owner approved anything: its receipt names the switch from
     // the first moment, the way `readStatusText` guards an auto-run read.
     const submitted = withoutAsking
       ? APPLYING_WITHOUT_ASKING
       : approved
         ? 'Approval submitted. Waiting for confirmation.'
-        : 'Declined. Waiting for confirmation.';
+        : requestingChanges
+          ? REQUESTING_CHANGES
+          : 'Declined. Waiting for confirmation.';
     // A stale poll or reopening the panel must not ask for the same decision again.
     // This receipt only hides repeat prompts; the worker claim still gates execution.
     writeActionReceipt(key, submitted);
@@ -414,17 +420,17 @@ function PetWorkToolsView({
         setDecisions((old) => ({ ...old, [key]: NOT_RUN }));
         setOwnerReasons((old) => ({ ...old, [tool.id]: reason }));
       } else if (!approved) {
-        // Mirrors the approved branch above: once the `tool_result` POST for a decline - a
-        // plain user decline, or an automatic one sent back for a design's problems - has
-        // succeeded, its receipt reads "Declined" rather than staying on the submitted message.
-        writeActionReceipt(key, 'Declined');
-        setDecisions((old) => ({ ...old, [key]: 'Declined' }));
+        const receipt = requestingChanges ? CHANGES_REQUESTED : 'Declined';
+        writeActionReceipt(key, receipt);
+        setDecisions((old) => ({ ...old, [key]: receipt }));
       }
     } catch {
       // UX fix U23: name the recovery, not the failure - reload from the menu, then check the
       // workspace, before asking the pet again.
       setError(
-        "We couldn't confirm this change. Reload the conversation from the menu and check your workspace before asking again.",
+        requestingChanges
+          ? "We couldn't confirm that the feedback was sent. Reload the conversation from the menu before trying again."
+          : "We couldn't confirm this change. Reload the conversation from the menu and check your workspace before asking again.",
       );
     } finally {
       lock.current = false;

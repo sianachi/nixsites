@@ -32,6 +32,8 @@ export const itemSettingsSchema = z.object({
   reviewStates: z.boolean().default(false),
   /** Whether a note's body uses the full width of its pane. */
   fullWidth: z.boolean().default(false),
+  /** Whether this item is excluded from pet work and model inputs. */
+  withholdFromPets: z.boolean().default(false),
 });
 export type ItemSettings = z.infer<typeof itemSettingsSchema>;
 
@@ -144,6 +146,7 @@ export const itemSchema = z.object({
     suggesting: false,
     reviewStates: false,
     fullWidth: false,
+    withholdFromPets: false,
   }),
 
   /**

@@ -1,8 +1,11 @@
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Nix.Domain.Automations;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Errors;
+using Nix.Features.Linear;
 using Nix.Http;
 using Nix.Messaging;
 
@@ -38,10 +41,14 @@ internal static class AutomationEndpoints
             new(WorkspaceId.From(workspaceId)), context.RequestAborted).ConfigureAwait(false));
 
     private static async Task<Results<Created<AutomationRuleResponse>, ProblemHttpResult>> Create(
-        Guid workspaceId, AutomationRuleInput request, HttpContext context, [FromServices] NixDispatcher dispatcher)
+        Guid workspaceId, AutomationRuleInput request, HttpContext context, [FromServices] NixDispatcher dispatcher,
+        [FromServices] LinearBrowserAccess browser)
     {
         var result = await dispatcher.SendAsync<CreateAutomation, AutomationRuleResponse>(
-            new(WorkspaceId.From(workspaceId), request), context.RequestAborted).ConfigureAwait(false);
+            new(WorkspaceId.From(workspaceId), request)
+            {
+                VerifiedBrowserOwner = await VerifyRoutineOwnerAsync(request, context, browser).ConfigureAwait(false),
+            }, context.RequestAborted).ConfigureAwait(false);
         return result.Match<Results<Created<AutomationRuleResponse>, ProblemHttpResult>>(
             value => TypedResults.Created($"/api/v1/automations/{value.Id:D}", value),
             error => Problem(context, error));
@@ -52,9 +59,19 @@ internal static class AutomationEndpoints
         Map(context, await dispatcher.SendAsync<GetAutomation, AutomationRuleResponse>(new(ruleId), context.RequestAborted).ConfigureAwait(false));
 
     private static async Task<Results<Ok<AutomationRuleResponse>, ProblemHttpResult>> Update(
-        Guid ruleId, UpdateAutomationRequest request, HttpContext context, [FromServices] NixDispatcher dispatcher) =>
+        Guid ruleId, UpdateAutomationRequest request, HttpContext context, [FromServices] NixDispatcher dispatcher,
+        [FromServices] LinearBrowserAccess browser) =>
         Map(context, await dispatcher.SendAsync<UpdateAutomation, AutomationRuleResponse>(
-            new(ruleId, request.ExpectedRevision, request.Rule), context.RequestAborted).ConfigureAwait(false));
+            new(ruleId, request.ExpectedRevision, request.Rule)
+            {
+                VerifiedBrowserOwner = await VerifyRoutineOwnerAsync(request.Rule, context, browser).ConfigureAwait(false),
+            }, context.RequestAborted).ConfigureAwait(false));
+
+    private static async ValueTask<bool> VerifyRoutineOwnerAsync(AutomationRuleInput request, HttpContext context, LinearBrowserAccess browser) =>
+        request.Actions is JsonArray actions && actions.OfType<JsonObject>().Any(action =>
+            action["type"] is JsonValue field && field.TryGetValue<string>(out var type)
+            && type is StartPetRunAction.Type or PollPetMailboxAction.Type)
+        && await browser.VerifyAsync(context, requireOrigin: true).ConfigureAwait(false) is not null;
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
         Guid ruleId, HttpContext context, [FromServices] NixDispatcher dispatcher)
@@ -89,6 +106,7 @@ internal static class AutomationEndpoints
             AutomationErrors.ConflictCode => (StatusCodes.Status409Conflict, "Automation changed"),
             AutomationErrors.LimitReachedCode => (StatusCodes.Status422UnprocessableEntity, "Too many automations"),
             AutomationErrors.ActionUnavailableCode => (StatusCodes.Status422UnprocessableEntity, "Action is unavailable"),
+            AutomationErrors.PetRoutineOwnerRequiredCode => (StatusCodes.Status403Forbidden, "A browser session is required"),
             _ => (StatusCodes.Status422UnprocessableEntity, "Automation is invalid"),
         };
         return TypedResults.Problem(ApiProblem.Create(context, status, error.Code, title, error.Message));

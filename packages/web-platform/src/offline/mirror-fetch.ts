@@ -420,6 +420,8 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     const path = url.pathname;
     const query = url.searchParams;
 
+    if (path === '/api/v1/search' && query.has('petWorkspaceId')) return null;
+
     const viewAnswer = await computed(store, { method: 'GET', url, body: null });
     if (viewAnswer !== null) return viewAnswer;
 

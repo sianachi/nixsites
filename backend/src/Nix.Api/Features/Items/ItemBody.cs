@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Nix.Abstractions;
@@ -48,7 +49,12 @@ public sealed record ItemBodyResponse(
     string Markdown,
     int SchemaVersion,
     bool Empty,
-    IReadOnlyList<ItemBodyLoss> Losses);
+    IReadOnlyList<ItemBodyLoss> Losses)
+{
+    [JsonIgnore] internal ItemBodyRevision? Revision { get; init; }
+}
+
+internal sealed record ItemBodyRevision(Guid DocumentId, string HeadSeq);
 
 /// <summary>
 /// Counts of Markdown constructs that were kept as text rather than turned into Nix structure.
@@ -156,6 +162,10 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
             static (root, _) => ParseRead(root),
             cancellationToken);
 
+    internal Task<Result<ItemBodyResponse>> ReadWithRevisionAsync(Guid itemId, string accessToken, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Get, itemId, null, accessToken, ReadResponseBytes,
+            static (root, _) => ParseRead(root), cancellationToken, includeRevision: true);
+
     /// <summary>Replaces or appends the body.</summary>
     /// <param name="itemId">The item.</param>
     /// <param name="markdown">The Markdown.</param>
@@ -170,7 +180,14 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
         string accessToken,
         CancellationToken cancellationToken)
     {
-        using var content = JsonContent.Create(new MarkdownPayload(markdown));
+        return await WriteWithRevisionAsync(itemId, markdown, append, accessToken, revision: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal async Task<Result<ItemBodyWriteResponse>> WriteWithRevisionAsync(
+        Guid itemId, string markdown, bool append, string accessToken, ItemBodyRevision? revision,
+        CancellationToken cancellationToken)
+    {
+        using var content = JsonContent.Create(new MarkdownPayload(markdown, revision?.DocumentId, revision?.HeadSeq));
         return await SendAsync(
             append ? HttpMethod.Post : HttpMethod.Put,
             itemId,
@@ -188,7 +205,8 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
         string accessToken,
         int maxBytes,
         Func<JsonElement, Guid, Result<T>> parse,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeRevision = false)
     {
         if (!ExportEndpoints.TryCollaborationBaseUri(_configuration, out var origin))
         {
@@ -197,7 +215,7 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
-        using var request = new HttpRequestMessage(method, new Uri(origin, $"documents/{itemId:D}/markdown"))
+        using var request = new HttpRequestMessage(method, new Uri(origin, $"documents/{itemId:D}/markdown" + (includeRevision ? "?revision=true" : "")))
         {
             Content = content,
         };
@@ -300,7 +318,21 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
                 ItemErrors.BodyUnavailable("The note body service returned an invalid response."));
         }
 
-        return Result.Success(new ItemBodyResponse(markdown.GetString() ?? "", schemaVersion, empty.GetBoolean(), losses));
+        ItemBodyRevision? revision = null;
+        if (root.TryGetProperty("revision", out var revisionRow)
+            && revisionRow.ValueKind == JsonValueKind.Object
+            && revisionRow.TryGetProperty("documentId", out var documentId)
+            && documentId.ValueKind == JsonValueKind.String && documentId.TryGetGuid(out var id)
+            && revisionRow.TryGetProperty("headSeq", out var head)
+            && head.ValueKind == JsonValueKind.String && head.GetString() is { Length: > 0 and <= 19 } sequence
+            && sequence.All(char.IsAsciiDigit))
+        {
+            revision = new ItemBodyRevision(id, sequence);
+        }
+        return Result.Success(new ItemBodyResponse(markdown.GetString() ?? "", schemaVersion, empty.GetBoolean(), losses)
+        {
+            Revision = revision,
+        });
     }
 
     private static Result<ItemBodyWriteResponse> ParseWrite(Guid itemId, JsonElement root)
@@ -375,7 +407,10 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
             && count >= 0;
     }
 
-    private sealed record MarkdownPayload(string Markdown);
+    private sealed record MarkdownPayload(
+        string Markdown,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? ExpectedDocumentId,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ExpectedHeadSeq);
 }
 
 /// <summary>Reads and writes note bodies for the item routes.</summary>

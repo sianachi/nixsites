@@ -20,6 +20,13 @@ import {
   type AutomationTestResponse,
 } from '../schemas/automations.js';
 
+export {
+  petMailboxRoutineRuleInputSchema,
+  petRoutineRuleInputSchema,
+  type PetMailboxRoutineRuleInput,
+  type PetRoutineRuleInput,
+} from '../schemas/automations.js';
+
 const workspaceRulesPath = (workspaceId: string) =>
   `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/automations`;
 const rulePath = (ruleId: string) => `/api/v1/automations/${encodeURIComponent(ruleId)}`;

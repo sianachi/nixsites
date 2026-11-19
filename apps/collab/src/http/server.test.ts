@@ -1,5 +1,10 @@
+import { once } from 'node:events';
+import { get } from 'node:http';
+import { createConnection } from 'node:net';
+
 import type { Pool } from 'pg';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import WebSocket from 'ws';
 
 import type { Authorizer } from '../auth/authorize.ts';
 import type { TokenValidator } from '../auth/token.ts';
@@ -93,6 +98,170 @@ function track<T extends { close: () => Promise<unknown> }>(app: T): T {
 
 afterEach(async () => {
   await Promise.all(instances.splice(0).map((app) => app.close()));
+});
+
+function deferred() {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>((complete) => {
+    resolve = complete;
+  });
+  return {
+    promise,
+    resolve: () => {
+      resolve();
+    },
+  };
+}
+
+describe('collaboration shutdown', () => {
+  it('refuses reconnects while awaiting the document drain', async () => {
+    const started = deferred();
+    const drain = deferred();
+    const app = track(
+      server({
+        hub: {
+          join: () => Promise.reject(new Error('The test never authenticates a document.')),
+          handleMessage: () => undefined,
+          leave: () => undefined,
+          shutdown: () => {
+            started.resolve();
+            return drain.promise;
+          },
+        },
+      }),
+    );
+    const origin = await app.listen({ host: '127.0.0.1', port: 0 });
+    const client = new WebSocket(`${origin.replace('http:', 'ws:')}/documents/${ITEM}/ws`);
+    await once(client, 'open');
+    const disconnected = new Promise<number>((resolve) => client.once('close', resolve));
+    let finished = false;
+    const closing = app.close().then(() => {
+      finished = true;
+    });
+    let reconnect: WebSocket | undefined;
+
+    try {
+      await started.promise;
+      expect(await disconnected).toBe(1012);
+      const nextClient = new WebSocket(`${origin.replace('http:', 'ws:')}/documents/${ITEM}/ws`);
+      reconnect = nextClient;
+      const attempted = new Promise<Error>((resolve, reject) => {
+        nextClient.once('error', resolve);
+        nextClient.once('open', () => {
+          reject(new Error('A reconnect was accepted during drain.'));
+        });
+      });
+      await expect(attempted).resolves.toMatchObject({
+        message: 'Unexpected server response: 503',
+      });
+      expect(finished).toBe(false);
+      drain.resolve();
+      await closing;
+      expect(finished).toBe(true);
+    } finally {
+      reconnect?.terminate();
+      client.terminate();
+      drain.resolve();
+      await closing;
+    }
+  });
+
+  it('closes an unfinished HTTP body after the deployment grace period', async () => {
+    const app = track(server({}));
+    const boundary = deferred();
+    app.addHook('preClose', () => {
+      boundary.resolve();
+      return Promise.resolve();
+    });
+    const origin = new URL(await app.listen({ host: '127.0.0.1', port: 0 }));
+    const received = once(app.server, 'request');
+    const client = createConnection({ host: origin.hostname, port: Number(origin.port) });
+    await once(client, 'connect');
+    client.on('error', () => undefined);
+    client.write(
+      `POST /documents/${ITEM}/updates HTTP/1.1\r\n` +
+        'Host: localhost\r\nContent-Type: application/json\r\nContent-Length: 30\r\n\r\n{',
+    );
+    await received;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let finished = false;
+    const closing = app.close().then(() => {
+      finished = true;
+    });
+
+    try {
+      await boundary.promise;
+      await vi.advanceTimersByTimeAsync(59_999);
+      expect(finished).toBe(false);
+      expect(client.destroyed).toBe(false);
+      const disconnected = once(client, 'close', { signal: AbortSignal.timeout(1_000) });
+      await vi.advanceTimersByTimeAsync(1);
+      await disconnected;
+      await closing;
+      expect(finished).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      client.destroy();
+      await closing;
+      vi.useRealTimers();
+    }
+  });
+
+  it('lets an active HTTP response finish within grace and clears its deadline', async () => {
+    const app = track(server({}));
+    const started = deferred();
+    const responseReady = deferred();
+    const boundary = deferred();
+    app.get('/shutdown-proof', async () => {
+      started.resolve();
+      await responseReady.promise;
+      return { status: 'finished' };
+    });
+    app.addHook('preClose', () => {
+      boundary.resolve();
+      return Promise.resolve();
+    });
+    const origin = await app.listen({ host: '127.0.0.1', port: 0 });
+    const request = get(`${origin}/shutdown-proof`, { agent: false });
+    const response = new Promise<string>((resolve, reject) => {
+      request.once('error', reject);
+      request.once('response', (reply) => {
+        let body = '';
+        reply.setEncoding('utf8');
+        reply.on('data', (chunk: string) => {
+          body += chunk;
+        });
+        reply.once('end', () => {
+          resolve(body);
+        });
+        reply.once('error', reject);
+      });
+    });
+    await started.promise;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let finished = false;
+    const closing = app.close().then(() => {
+      finished = true;
+    });
+
+    try {
+      await boundary.promise;
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      await vi.advanceTimersByTimeAsync(59_999);
+      expect(finished).toBe(false);
+      responseReady.resolve();
+      expect(JSON.parse(await response)).toEqual({ status: 'finished' });
+      await closing;
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      responseReady.resolve();
+      const responseSettled = response.catch(() => undefined);
+      request.destroy();
+      await responseSettled;
+      await closing;
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('the collaboration service HTTP surface', () => {

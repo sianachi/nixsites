@@ -185,6 +185,32 @@ describe('server-run reads', () => {
     );
     expect(out).toEqual({ kind: 'app' });
   });
+  it('refuses a withheld item without asking Collab or falling back to the app', async () => {
+    const { out, seen } = await run(jwt(600_000), (res) =>
+      jsonResponse(res, 200, {
+        id: ITEM,
+        workspaceId: WS,
+        title: 'Sensitive title',
+        type: 'note',
+        parentId: null,
+        hasChildren: false,
+        seq: 1,
+        lifecycleState: 'active',
+        properties: {},
+        createdAt: '2026-11-10T00:00:00Z',
+        updatedAt: '2026-11-10T00:00:00Z',
+        isDeleted: false,
+        settings: { withholdFromPets: true },
+      }),
+    );
+    expect(out).toMatchObject({
+      kind: 'result',
+      success: false,
+      text: 'This item is unavailable to pets.',
+    });
+    expect(seen.every((request) => request.url === `/api/v1/items/${ITEM}`)).toBe(true);
+    expect(seen.length).toBeGreaterThan(0);
+  });
   it('turns any other failure into the uncertain-result text', async () => {
     const { out } = await run(jwt(600_000), (res) =>
       jsonResponse(res, 500, { title: 'boom', status: 500 }),

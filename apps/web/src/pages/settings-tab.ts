@@ -14,6 +14,7 @@ export const SettingsTabSchema = z.enum([
   'daily-notes',
   'pets',
   'integrations',
+  'connections',
   'access-tokens',
   'mcp',
   'api',

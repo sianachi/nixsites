@@ -118,7 +118,7 @@ export function useTurns({
     else if (errorKind === 'load') retryWatch();
     else if (errorKind === 'command') void reload();
   }
-  const loadErrorMessage = `Lost connection to ${petName}. Retrying…`;
+  const loadErrorMessage = runtimeApi.error || `Lost connection to ${petName}. Retrying…`;
 
   return { submit, resendTurn, retryLastTurn, retryLabel, retryError, loadErrorMessage };
 }

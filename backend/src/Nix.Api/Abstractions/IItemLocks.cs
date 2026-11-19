@@ -1,4 +1,5 @@
 using Nix.Domain.Items;
+using Nix.Domain.Tenancy;
 
 namespace Nix.Abstractions;
 
@@ -62,6 +63,9 @@ public interface IItemLocks
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <returns><see langword="true"/> when any lock covers part of the subtree.</returns>
     public ValueTask<bool> AnyInSubtreeAsync(ItemId itemId, CancellationToken cancellationToken);
+
+    /// <summary>Whether an item or workspace lock covers any content in the workspace.</summary>
+    public ValueTask<bool> AnyInWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => ValueTask.FromResult(true);
 
     /// <summary>Which of these items are locked, by their own lock or an ancestor's, whoever is asking.</summary>
     /// <param name="itemIds">The items.</param>

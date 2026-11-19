@@ -419,6 +419,16 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Pet_source_search_excludes_a_lock_and_its_children_even_for_the_unlocking_browser()
+    {
+        await LockAsync(Folder);
+
+        Assert.Contains(await SearchAsync("nested", credential: Locker), hit => hit.Id == ItemId.From(Child));
+        Assert.DoesNotContain(await SearchAsync("folder", credential: Locker, forPet: true), hit => hit.Id == ItemId.From(Folder));
+        Assert.DoesNotContain(await SearchAsync("nested", credential: Locker, forPet: true), hit => hit.Id == ItemId.From(Child));
+    }
+
+    [Fact]
     public async Task A_title_in_another_tenant_is_never_found_by_search()
     {
         Assert.DoesNotContain(await SearchAsync("beta launch", context: TestTenants.AlphaContext), hit => hit.Id == ItemId.From(M0SchemaSeed.Beta.ItemId));
@@ -570,7 +580,8 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
     private async Task<IReadOnlyList<ItemDigest>> SearchAsync(
         string query,
         NixSessionContext? context = null,
-        Guid? credential = null)
+        Guid? credential = null,
+        bool forPet = false)
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(context ?? MemberContext, Cancellation);
         await using (work.ConfigureAwait(false))
@@ -582,7 +593,7 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
 
             var result = await work.Resolve<NixDispatcher>()
                 .QueryAsync<SearchItems, Result<SearchResults>>(
-                    new SearchItems(query, SearchItemsHandler.DefaultLimit),
+                    new SearchItems(query, SearchItemsHandler.DefaultLimit, forPet ? WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId) : null),
                     Cancellation);
 
             Assert.True(result.IsSuccess, result.IsFailure ? result.Error.Message : string.Empty);

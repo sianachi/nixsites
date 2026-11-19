@@ -142,6 +142,40 @@ export function createMcpHttpHandler(
       response.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
       return;
     }
+    if (url.pathname.startsWith('/mcp/pets/')) {
+      const {
+        createPetMcpServer,
+        createPetPeerApi,
+        PetPeerRequestError,
+        peerBearer,
+        peerIdAt,
+        peerMode,
+      } = await import('./mcp-peer.ts');
+      const petId = peerIdAt(url.pathname);
+      const token = peerBearer.exec(request.headers.authorization ?? '')?.[1];
+      if (petId === undefined) {
+        response.writeHead(404).end();
+        return;
+      }
+      if (request.headers.origin !== undefined && request.headers.origin !== options.publicOrigin) {
+        response.writeHead(403).end();
+        return;
+      }
+      if (token === undefined) {
+        peerUnauthorised(response);
+        return;
+      }
+      const dispatch = createPetPeerApi(options, petId, token);
+      try {
+        const mode = peerMode.parse(await dispatch({ operation: 'probe' }));
+        await serveTools(request, response, createPetMcpServer(mode.kind, dispatch));
+      } catch (error) {
+        if (error instanceof PetPeerRequestError && error.status === 401)
+          peerUnauthorised(response);
+        else if (!response.headersSent) response.writeHead(503).end();
+      }
+      return;
+    }
     if (url.pathname !== path) {
       response.writeHead(404, { 'content-type': 'text/plain' }).end('not found');
       return;
@@ -186,30 +220,42 @@ export function createMcpHttpHandler(
         );
       return;
     }
-    const { StreamableHTTPServerTransport } =
-      await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
-    // Stateless: no session ids, so nothing lives between requests but the token's warm session,
-    // and a load balancer or restart loses nothing a client has to re-establish.
-    const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
-    const server = await build(() => Promise.resolve(session));
-    response.on('close', () => {
-      void transport.close();
-      void server.close();
-    });
-    try {
-      // The SDK's own transport, typed with optional setters this project's strictness refuses.
-      await server.connect(transport);
-      await transport.handleRequest(request, response);
-    } catch (error) {
-      if (!response.headersSent) {
-        response.writeHead(500, { 'content-type': 'application/json' }).end(
-          JSON.stringify({
-            error: error instanceof Error ? error.message : 'MCP request failed.',
-          }),
-        );
-      }
-    }
+    await serveTools(request, response, await build(() => Promise.resolve(session)));
   };
+}
+
+function peerUnauthorised(response: ServerResponse): void {
+  response
+    .writeHead(401, {
+      'content-type': 'application/json',
+      'www-authenticate': 'Bearer realm="nix-pet"',
+    })
+    .end(JSON.stringify({ error: 'A live credential for this pet registration is required.' }));
+}
+
+/** One disposable SDK transport per request, shared by the workspace and pet profiles. */
+async function serveTools(
+  request: IncomingMessage,
+  response: ServerResponse,
+  server: McpServer,
+): Promise<void> {
+  const { StreamableHTTPServerTransport } =
+    await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
+  const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
+  response.on('close', () => {
+    void transport.close();
+    void server.close();
+  });
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(request, response);
+  } catch {
+    if (!response.headersSent) {
+      response
+        .writeHead(500, { 'content-type': 'application/json' })
+        .end(JSON.stringify({ error: 'MCP request failed.' }));
+    }
+  }
 }
 
 /** Listens on `listen` (host:port) and answers MCP over HTTP until the process ends. */

@@ -95,6 +95,28 @@ describe('note-scoped workspace tools', () => {
     }
   });
 
+  it('omits a withheld intermediate item while preserving access to its unmarked child', async () => {
+    const fake = setup();
+    const marked = item(childId, rootId, 'Sensitive formula', { hasChildren: true });
+    fake.tree.set(childId, {
+      ...marked,
+      settings: { ...marked.settings, withholdFromPets: true },
+    });
+    fake.tree.set(outsideId, item(outsideId, childId, 'Shareable formula'));
+
+    const outcome = await runWorkspaceTool(
+      fake.ports,
+      workspaceId,
+      JSON.stringify(args('search', { query: 'formula' })),
+      fake.signal,
+      { scope },
+    );
+    expect(JSON.parse(outcome.text)).toMatchObject({
+      results: [{ id: outsideId, title: 'Shareable formula' }],
+    });
+    expect(outcome.text).not.toContain('Sensitive formula');
+  });
+
   it.each(['read_note', 'read_item', 'read_structure'] as const)(
     'refuses an outside %s before loading its body or structure',
     async (operation) => {

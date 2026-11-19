@@ -220,12 +220,20 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
         return Result.Success(await Response(found.Value, config, cancellationToken).ConfigureAwait(false));
     }
 
-    public async Task<Result<ConversationMessagesResponse>> Messages(Guid id, string? cursor, int limit, CancellationToken cancellationToken)
+    public Task<Result<ConversationMessagesResponse>> Messages(Guid id, string? cursor, int limit, CancellationToken cancellationToken) =>
+        Messages(id, cursor, limit, forModel: false, cancellationToken);
+
+    public async Task<Result<ConversationMessagesResponse>> Messages(
+        Guid id, string? cursor, int limit, bool forModel, CancellationToken cancellationToken)
     {
         var found = await Find(id, false, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure)
         {
             return Result.Failure<ConversationMessagesResponse>(found.Error);
+        }
+        if (forModel && ItemSettings.Read(found.Value.Settings).WithholdFromPets)
+        {
+            return Result.Failure<ConversationMessagesResponse>(Missing);
         }
 
         long? after = null;
@@ -266,7 +274,9 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
                     return Result.Failure<ConversationMessagesResponse>(Invalid("A saved message exceeds the supported history size."));
                 }
                 var state = locked.Contains(row.Id) ? await locks.GetStateAsync(row.Id, cancellationToken).ConfigureAwait(false) : null;
-                var hidden = state is { Locked: true, UnlockedUntil: null }
+                var hidden = (forModel
+                        ? state?.Locked == true || ItemSettings.Read(row.Settings).WithholdFromPets
+                        : state is { Locked: true, UnlockedUntil: null })
                     || role is not ("user" or "assistant" or "system") || text.Length == 0;
                 if (messageId != currentMessageId)
                 {
@@ -372,6 +382,10 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
         if (found.IsFailure)
         {
             return Result.Failure<ConversationResponse>(found.Error);
+        }
+        if (ItemSettings.Read(found.Value.Settings).WithholdFromPets)
+        {
+            return Result.Failure<ConversationResponse>(Missing);
         }
 
         var config = Configuration(found.Value)!;

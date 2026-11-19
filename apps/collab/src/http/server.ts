@@ -71,11 +71,28 @@ export function createServer(deps: ServerDependencies): FastifyInstance {
     },
   });
 
+  let httpDrainTimer: ReturnType<typeof setTimeout> | undefined;
+  app.addHook('onClose', () => {
+    clearTimeout(httpDrainTimer);
+    return Promise.resolve();
+  });
+
   // preClose, not onClose: Fastify only runs onClose once the HTTP server has closed its
   // connections, and an open WebSocket is one of those connections - draining there would
   // deadlock the shutdown against the very sockets it is trying to drain.
   app.addHook('preClose', async () => {
     clearInterval(sweeper);
+    // Match the Node deployment grace period while allowing HTTP responses to finish.
+    httpDrainTimer = setTimeout(() => {
+      app.server.closeAllConnections();
+    }, 60_000);
+    httpDrainTimer.unref();
+    // Refuse upgrades before flushing, since a browser can reconnect during that await.
+    const socketsClosed = new Promise<void>((resolve) => {
+      wss.close(() => {
+        resolve();
+      });
+    });
     // Every client is told the truth - the server is going away - rather than watching a
     // socket die. 1012 is "service restarting", which tells a client to reconnect. The
     // hub drains after the sockets are told, which is the preStop story: final flushes
@@ -84,11 +101,7 @@ export function createServer(deps: ServerDependencies): FastifyInstance {
       client.close(CLOSE_CODES.draining, 'The server is shutting down.');
     }
     await hub.shutdown?.();
-    await new Promise<void>((resolve) => {
-      wss.close(() => {
-        resolve();
-      });
-    });
+    await socketsClosed;
   });
 
   app.get('/healthz', () => ({ status: 'healthy', schema: describeSchema() }));

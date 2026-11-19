@@ -37,6 +37,7 @@ public sealed class WorkerOptions
         [JobFamilies.Calendar] = 2,
         [JobFamilies.Export] = 2,
         [JobFamilies.Import] = 2,
+        [JobFamilies.Pet] = 2,
     };
 
     /// <summary>Lease length per claim; renewed while the handler runs.</summary>

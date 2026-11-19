@@ -1,6 +1,7 @@
 import {
   isCanceledError,
   isNixApiError,
+  NixApiError,
   petConnectionSchema,
   pets,
   type PetConnection,
@@ -21,6 +22,7 @@ const streamDeltaSchema = z.object({
   id: z.string(),
   append: z.string(),
 });
+const watchLimitProblemSchema = z.object({ code: z.literal('pets.too_many_watches') });
 
 /** The floor on how often the watch loop starts a new request, whether that request is the
  * next iteration of a normal poll or the very first one after a pause. */
@@ -367,6 +369,13 @@ export function usePetRuntime(
               !body ||
               !response.headers.get('Content-Type')?.includes('text/event-stream')
             ) {
+              if (response.status === 429) {
+                const problem = watchLimitProblemSchema.safeParse(
+                  await response.json().catch(() => undefined),
+                );
+                if (problem.success)
+                  throw NixApiError.fromProblemDetails(response.status, problem.data);
+              }
               await body?.cancel().catch(() => undefined);
               if (rootItemId && [403, 404, 409].includes(response.status)) {
                 refuseNoteScope();
@@ -400,6 +409,7 @@ export function usePetRuntime(
                     ) ?? null,
                 });
               } else if (record.event === 'end') break;
+              if (!shouldWatch()) break;
             }
             continue;
           }
@@ -439,7 +449,9 @@ export function usePetRuntime(
             // Never overwrite a send or command failure the person has not acted on yet.
             if (errorKindRef.current === null || errorKindRef.current === 'load')
               reportError(
-                'Conversation could not be loaded. Check your connection and try again.',
+                isNixApiError(cause) && cause.code === 'pets.too_many_watches'
+                  ? 'Too many pet conversations are open. Close another Nix tab or chat pane, then retry.'
+                  : 'Conversation could not be loaded. Check your connection and try again.',
                 'load',
               );
           }

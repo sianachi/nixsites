@@ -102,6 +102,7 @@ for path in "${paths[@]}"; do
     apps/collab/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/collab' ;;
     apps/cli/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/cli' ;;
     apps/sites/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/sites' ;;
+    apps/browser-worker/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/browser-worker' ;;
     apps/companion/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/companion-service' ;;
     apps/node-host/*) has_frontend=true; has_frontend_sources=true; add_frontend_package '@nix/node-host' ;;
     packages/*/*)

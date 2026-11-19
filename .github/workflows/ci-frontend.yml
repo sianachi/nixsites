@@ -228,6 +228,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install sandboxed Chromium for browser-worker tests
+        run: |
+          pnpm --filter @nix/browser-worker exec playwright install --with-deps --no-shell chromium
+          if [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || true)" = 1 ]; then
+            chromium=$(pnpm --filter @nix/browser-worker exec node --input-type=module -e 'import { chromium } from "playwright"; process.stdout.write(chromium.executablePath())')
+            test -x "$chromium"
+            sudo apparmor_parser -r <<EOF
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile nix-ci-chromium "$chromium" flags=(unconfined) {
+            userns,
+          }
+          EOF
+          fi
+
       - name: Unit tests
         # The collaboration service's database suite needs a real Postgres with the
         # migrations applied, which this job has not got. It runs in collab-integration

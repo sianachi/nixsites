@@ -332,9 +332,9 @@ public sealed class NixDbContext : DbContext
         // A forgotten line here does NOT fail loudly on its own - EF would map the entity by
         // convention and the next scaffold would emit a new, unprotected table. What catches it is
         // the integration suite: The_security_classification_names_every_table_the_database
-        // _actually_has compares the live catalogue against NixTables.TenantScoped and
-        // NixTables.CapabilityOnly, so an undeclared table fails there. Both classes prove their
-        // isolation or exact-capability boundary and their explicit runtime privilege matrix.
+        // _actually_has compares the live catalogue against every NixTables security class,
+        // so an undeclared table fails there. Each class proves its
+        // isolation or exact-capability boundary and its explicit runtime privilege matrix.
         modelBuilder.ApplyConfiguration(new TenantConfiguration());
         modelBuilder.ApplyConfiguration(new WorkspaceConfiguration());
         modelBuilder.ApplyConfiguration(new IdentityProviderConfiguration());

@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    "resolveJsonModule": true,
     "lib": ["ES2023", "DOM"],
     "types": ["node"]
   },

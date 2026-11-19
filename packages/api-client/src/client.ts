@@ -245,6 +245,7 @@ export function createNixClient(config: NixClientConfig): NixClient {
         endpoint.operation,
         options.signal,
         endpoint.headers,
+        endpoint.timeoutMs,
       );
       for (const prefix of endpoint.invalidates) cache.invalidatePrefix(prefix);
       return result;

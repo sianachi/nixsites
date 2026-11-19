@@ -137,7 +137,7 @@ export function createHttpTransport(options: HttpTransportOptions): HttpTranspor
       ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
     },
     timeout: timeoutMs,
-    // Bearer tokens only; the client never relies on ambient cookies.
+    // With Request disabled, Axios leaves credentials to fetch's same-origin default.
     withCredentials: false,
     // Statuses are data at this layer - see the header comment.
     validateStatus: () => true,

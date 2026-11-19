@@ -25,7 +25,13 @@ const NOTES = item({
   title: 'Roadmap',
   hasChildren: true,
   // Comments are off until an item switches them on.
-  settings: { comments: true, suggesting: false, reviewStates: false, fullWidth: false },
+  settings: {
+    comments: true,
+    suggesting: false,
+    reviewStates: false,
+    fullWidth: false,
+    withholdFromPets: false,
+  },
 });
 
 const CHILD = item({
@@ -83,17 +89,18 @@ describe('an item nobody has configured', () => {
     stubCoreApi({ items: [NOTES, CHILD] });
     renderAt(<App />, `/?item=${NOTES.id}`);
 
-    await screen.findByRole('button', { name: 'Chat about this note' });
+    await screen.findByRole('button', { name: 'Ask pet' });
     const actions = screen.getByRole('button', { name: 'Item actions' });
     const controls = actions.parentElement;
     if (controls === null) throw new Error('The item actions control must sit in a group');
     expect(
       within(controls)
         .getAllByRole('button')
-        .map((button) => button.getAttribute('aria-label')),
-    ).toEqual(['Chat about this note', 'Item settings', 'Item actions']);
+        .map((button) => button.getAttribute('aria-label') ?? button.textContent),
+    ).toEqual(['Ask pet', 'Item settings', 'Item actions']);
 
     await userEvent.click(actions);
+    expect(screen.queryByRole('menuitem', { name: 'Ask pet' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Bookmark' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('menuitem', { name: 'Hide children from tree' }),

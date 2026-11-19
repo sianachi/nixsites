@@ -39,6 +39,13 @@ const notificationDtoSchema = z.object({
   body: z.string().max(1000),
   itemId: z.uuid().nullable(),
   workspaceId: z.uuid().nullable(),
+  petDecision: z
+    .object({
+      runId: z.uuid(),
+      decisionId: z.uuid(),
+      kind: z.enum(['question', 'proposal']),
+    })
+    .nullish(),
   createdAt: z.iso.datetime({ offset: true }),
   readAt: z.iso.datetime({ offset: true }).nullable(),
 });

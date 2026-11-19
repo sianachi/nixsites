@@ -1,4 +1,5 @@
 import { items } from '@nix/api-client';
+import { requirePetItem } from '../guards.js';
 import type { CompanionPorts } from '../ports.js';
 
 export const SANDBOX_TITLE = 'Pet drafts';
@@ -15,8 +16,14 @@ export async function findSandbox(
     items.listItems(workspaceId, { pageSize: PAGE_SIZE }),
     { signal, maxPages: MAX_PAGES },
   )) {
-    if (item.workspaceId === workspaceId && item.parentId === null && item.title === SANDBOX_TITLE)
+    if (
+      item.workspaceId === workspaceId &&
+      item.parentId === null &&
+      item.title === SANDBOX_TITLE
+    ) {
+      requirePetItem(item);
       return { id: item.id };
+    }
   }
   return null;
 }

@@ -14,6 +14,7 @@ import {
   PawPrint,
   PenLine,
   Plug,
+  PlugZap,
   ShieldCheck,
   SlidersHorizontal,
   Users,
@@ -54,6 +55,7 @@ import {
 import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 import { EmptyPanel } from '@nix/web-foundation/components/states/status-panels';
 import { SettingsNavigationContext } from './settings-navigation-context';
+import { LinearConnectionsSection } from './linear-connections-section';
 
 const fromState = z.object({ from: z.string() });
 const drilledState = z.object({ drilled: z.literal(true) });
@@ -99,6 +101,12 @@ const settingsSections: readonly {
   },
   { id: 'about', label: 'About', group: 'You' },
   { id: 'workspace', label: 'Workspace', group: 'Workspace' },
+  {
+    id: 'connections',
+    label: 'Connections',
+    group: 'Workspace',
+    keywords: 'linear integrations oauth',
+  },
   { id: 'access-tokens', label: 'Access tokens', group: 'Workspace' },
   { id: 'mcp', label: 'MCP', group: 'Workspace' },
   { id: 'api', label: 'API', group: 'Workspace' },
@@ -135,6 +143,7 @@ const sectionIcons: Record<SettingsTab, LucideIcon> = {
   pets: PawPrint,
   about: Info,
   workspace: Building2,
+  connections: PlugZap,
   'access-tokens': KeyRound,
   mcp: Plug,
   api: Code,
@@ -162,6 +171,8 @@ function SectionBody(props: { readonly id: SettingsTab }): ReactElement | null {
       return <PetSettingsSection />;
     case 'integrations':
       return <CalendarsSection />;
+    case 'connections':
+      return <LinearConnectionsSection />;
     case 'access-tokens':
       return <AccessTokensSection />;
     case 'mcp':

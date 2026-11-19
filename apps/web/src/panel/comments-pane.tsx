@@ -32,18 +32,21 @@ const KIND_LABELS: Readonly<Record<SuggestionEntry['kind'], string>> = {
 export function CommentsPane({
   itemId,
   conversation = false,
+  focusThreadId = null,
 }: {
   readonly itemId: string;
   readonly conversation?: boolean;
+  readonly focusThreadId?: string | null;
 }): ReactNode {
   useCommentFeed(itemId);
   const state = useItemComments(itemId);
   const { principal } = useCurrentPrincipal();
-  const [showResolved, setShowResolved] = useState(false);
+  const [resolvedVisibility, setResolvedVisibility] = useState<boolean | null>(null);
   const { problem, act, addThread } = useCommentWrites(itemId);
 
   const open = state.threads.filter((thread) => thread.resolvedAt === null);
   const resolved = state.threads.filter((thread) => thread.resolvedAt !== null);
+  const showResolved = resolvedVisibility ?? resolved.some((thread) => thread.id === focusThreadId);
   const me = principal?.id ?? null;
 
   // Resolved threads are never in `detached`, so one renderer serves both lists.
@@ -53,7 +56,8 @@ export function CommentsPane({
       itemId={itemId}
       thread={thread}
       me={me}
-      active={state.activeThreadId === thread.id}
+      active={state.activeThreadId === thread.id || focusThreadId === thread.id}
+      focusOnMount={focusThreadId === thread.id}
       detached={state.detached.includes(thread.id)}
       canComment={state.canComment === true}
       act={act}
@@ -121,7 +125,7 @@ export function CommentsPane({
               variant="ghost"
               aria-expanded={showResolved}
               onClick={() => {
-                setShowResolved((current) => !current);
+                setResolvedVisibility(!showResolved);
               }}
             >
               {showResolved ? 'Hide' : 'Show'} resolved ({resolved.length})

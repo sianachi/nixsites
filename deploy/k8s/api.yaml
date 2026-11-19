@@ -68,6 +68,36 @@ spec:
               valueFrom: { secretKeyRef: { name: nix-connections, key: core } }
             - name: Nix__InternalSecret
               valueFrom: { secretKeyRef: { name: nix-internal, key: secret } }
+            - name: Nix__PetRuns__Enabled
+              value: "${NIX_PET_RUNS_ENABLED}"
+            - name: Nix__PetRuns__AllowedWorkspaces__0
+              value: "${NIX_PET_RUNS_PILOT_WORKSPACE}"
+            - name: Nix__PetBrowser__Url
+              value: http://nix-pet-browser:8313
+            - name: Nix__PetBrowser__InternalSecret
+              valueFrom: { secretKeyRef: { name: nix-pet-browser, key: secret, optional: true } }
+            - name: Nix__Connectors__google__ClientId
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: google-client-id, optional: true } }
+            - name: Nix__Connectors__google__ClientSecret
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: google-client-secret, optional: true } }
+            - name: Nix__Connectors__microsoft__ClientId
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: microsoft-client-id, optional: true } }
+            - name: Nix__Connectors__microsoft__ClientSecret
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: microsoft-client-secret, optional: true } }
+            - name: Nix__Connectors__slack__ClientId
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: slack-client-id, optional: true } }
+            - name: Nix__Connectors__slack__ClientSecret
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: slack-client-secret, optional: true } }
+            - name: Nix__Connectors__github__ClientId
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: github-client-id, optional: true } }
+            - name: Nix__Connectors__github__ClientSecret
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: github-client-secret, optional: true } }
+            - name: Nix__Connectors__linear__ClientId
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: linear-client-id, optional: true } }
+            - name: Nix__Connectors__linear__ClientSecret
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: linear-client-secret, optional: true } }
+            - name: Nix__Connectors__microsoft__Tenant
+              valueFrom: { secretKeyRef: { name: nix-pet-connectors, key: microsoft-tenant, optional: true } }
             - name: Nix__Collaboration__BaseUrl
               value: http://nix-node:8100
             # Core only signs: a URL takes its host from the public origin and its path from this

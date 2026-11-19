@@ -32,6 +32,13 @@
 		}
 	}
 
+	handle /mcp/pets/* {
+		reverse_proxy {$NIX_MCP_UPSTREAM} {
+			flush_interval -1
+			header_up X-Forwarded-For {$NIX_CLIENT_IP}
+		}
+	}
+
 	# CLI sessions use Core's public PAT exchange, outside the browser BFF routes.
 	handle /public/v1/auth/token {
 		reverse_proxy nix-api:8080 {

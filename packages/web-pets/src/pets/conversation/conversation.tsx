@@ -45,6 +45,7 @@ import { useRename } from './state/use-rename';
 import { useResumeUndo } from './state/use-resume-undo';
 import { PetHistory } from '../pet-history';
 import { useTurns } from './state/use-turns';
+import { type ConversationJobDraft, type ConversationJobs } from './conversation-jobs';
 
 type ConversationPanel = 'chat' | 'settings' | 'history';
 
@@ -65,9 +66,12 @@ export interface ConversationProps {
   readonly noteScope?: {
     readonly rootItemId: string;
     readonly title: string;
+    readonly kindLabel?: string;
     readonly readOnly: boolean;
     readonly onReadOnlyChange: (readOnly: boolean) => void;
   };
+  readonly jobs?: ConversationJobs;
+  readonly inDialog?: boolean;
   readonly onClose?: () => void;
   /** Moves the conversation to its own page. Offered in the floating panel only; a prop rather
    * than a router call so `Conversation` stays free of the destination it would navigate to. */
@@ -85,6 +89,8 @@ export function Conversation({
   onOpenAsPage,
   noteScope,
   creationRequest,
+  jobs,
+  inDialog = false,
 }: ConversationProps): ReactElement {
   const fullscreen = layout === 'fullscreen';
   const smallScreen = useNarrowViewport();
@@ -209,6 +215,35 @@ export function Conversation({
     onSent: closeEditor,
   });
 
+  const jobDraft: ConversationJobDraft = {
+    text: draft,
+    onStarted: () => {
+      setDraft((current) => (current === draft ? '' : current));
+    },
+  };
+  const canRouteToJob = jobs !== undefined && context.contexts.length === 0;
+  const canSend =
+    !busy &&
+    !jobs?.busy &&
+    Boolean(draft.trim()) &&
+    (connected || (canRouteToJob && jobs.canSubmit(draft)));
+
+  function submitMessage(): void {
+    if (!canSend || running) return;
+    if (
+      canRouteToJob &&
+      jobs.submit({
+        ...jobDraft,
+        afterMessageId: messages.findLast((message) => !message.id.includes(':draft:'))?.id,
+        focusComposer: () => input.current?.focus(),
+      })
+    )
+      return;
+    if (connected) void submit();
+  }
+
+  const attachMessage = jobs?.busy ? undefined : jobs?.attachMessage;
+
   const startedCreation = useRef<string | null>(null);
   useEffect(() => {
     if (
@@ -314,6 +349,7 @@ export function Conversation({
   /** A generated-UI button's request: filled in, never sent, so the owner reads what a component
    * asks for (it may be a change) before the pet sees it. */
   function askFromComponent(text: string) {
+    if (jobs?.busy) return;
     setDraft(text);
     input.current?.focus();
   }
@@ -321,13 +357,14 @@ export function Conversation({
   /** An action from the empty state or the slash menu: it fills the composer, and "Summarize
    * this page" also attaches the open page. */
   function pickSuggestion(suggestion: string) {
+    if (jobs?.busy) return;
     setDraft(suggestion);
     if (suggestion === 'Summarize this page') context.attachPageContext();
     regenerateRequestId();
     input.current?.focus();
   }
 
-  if (noteScope && !runtime && error) {
+  if (noteScope && !runtime && error && jobs === undefined) {
     return (
       <div className="flex min-w-0 flex-col gap-2 p-3">
         <Text role="alert">{error}</Text>
@@ -341,12 +378,16 @@ export function Conversation({
     );
   }
 
+  const hasJobEntries = (jobs?.timeline.length ?? 0) > 0;
+  const statusDimension = hasJobEntries ? 'max-h-1/3 shrink-0' : 'flex-1';
+  const scopeKind = noteScope?.kindLabel ?? 'Note';
+
   return (
     <div
       ref={dialog}
-      role="dialog"
+      role={inDialog ? 'region' : 'dialog'}
       tabIndex={-1}
-      aria-modal={fullscreen}
+      aria-modal={inDialog ? undefined : fullscreen}
       aria-label={`Conversation with ${pet.name}`}
       className={dialogClass(layout)}
     >
@@ -462,7 +503,9 @@ export function Conversation({
           // Must-fix 11/12: while nothing has ever loaded yet, the body says so plainly instead of
           // showing the empty-state suggestions as if the conversation were simply quiet - and once
           // a load error shows up here, it replaces the "Loading" text rather than sitting beside it.
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-4 text-center">
+          <div
+            className={`flex min-h-0 flex-col items-center justify-center gap-2 overflow-y-auto p-4 text-center ${statusDimension}`}
+          >
             {errorKind === 'load' && error ? (
               <>
                 <Text role="alert">{loadErrorMessage}</Text>
@@ -477,7 +520,7 @@ export function Conversation({
             )}
           </div>
         ) : !connected ? (
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className={`min-h-0 overflow-y-auto p-4 ${statusDimension}`}>
             {pet.provider === 'chatgpt' ? (
               <PetConnectionPanel />
             ) : (
@@ -527,6 +570,16 @@ export function Conversation({
               resendTurn={resendTurn}
               retryLastTurn={retryLastTurn}
               onSaveInsight={setInsight}
+              jobEntries={jobs?.timeline}
+              onAttachToJob={
+                attachMessage === undefined
+                  ? undefined
+                  : (text) => {
+                      setDraft(attachMessage(text, draft));
+                      regenerateRequestId();
+                      input.current?.focus();
+                    }
+              }
             />
             {error ? (
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-divider px-3 py-2 @sm:px-4">
@@ -538,54 +591,70 @@ export function Conversation({
                 ) : null}
               </div>
             ) : null}
-            <Composer
-              petName={pet.name}
-              scopeLabel={
-                noteScope !== undefined
-                  ? `Note: ${noteScope.title}${noteScope.readOnly ? ' (read only)' : ''}`
-                  : workspaceAccess
-                    ? 'Workspace chat · workspace access on'
-                    : 'Workspace chat · workspace access off'
-              }
-              input={input}
-              draft={draft}
-              onDraftChange={(text) => {
-                setDraft(text);
-                regenerateRequestId();
-              }}
-              touchLikeComposer={touchLikeComposer}
-              slash={slash}
-              onSubmit={() => void submit()}
-              onInterrupt={() => void interrupt()}
-              running={running}
-              canSend={!busy && Boolean(draft.trim()) && connected}
-              chips={context.chips}
-              onRemoveChip={context.removeContext}
-              needsWorkspaceAccess={context.contexts.length > 0 && !workspaceAccess}
-              onTurnOnWorkspaceAccess={() => {
-                setWorkspaceAccess(true);
-                writeWorkspaceAccess(workspaceId, pet.id, true);
-              }}
-              workspaceAccess={workspaceAccess}
-              hasNoteScope={noteScope !== undefined}
-              noteReadOnly={noteScope?.readOnly ?? false}
-              onToggleWorkspaceAccess={() => {
-                const next = !workspaceAccess;
-                setWorkspaceAccess(next);
-                writeWorkspaceAccess(workspaceId, pet.id, next);
-                // Nothing can be applied without workspace tools, so the switch goes with it.
-                if (!next) setApplyWithoutAsking(false);
-              }}
-              applyWithoutAsking={applyWithoutAsking}
-              onApplyChange={setApplyWithoutAsking}
-              hasPage={Boolean(currentItem)}
-              contextCount={context.contexts.length}
-              hasSelection={context.hasSelection}
-              onAttachPage={context.attachPageContext}
-              onShareSelection={context.shareSelection}
-            />
           </>
         )}
+        {panel === 'chat' && !connected && hasJobEntries ? (
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pb-3">
+            {jobs?.timeline.map((entry) => (
+              <div key={entry.id}>{entry.content}</div>
+            ))}
+          </div>
+        ) : null}
+        {panel === 'chat' && (connected || jobs?.ready) ? (
+          <Composer
+            petName={pet.name}
+            scopeLabel={
+              noteScope !== undefined
+                ? `${scopeKind}: ${noteScope.title}${noteScope.readOnly ? ' (read only)' : ''}`
+                : workspaceAccess
+                  ? 'Workspace chat · workspace access on'
+                  : 'Workspace chat · workspace access off'
+            }
+            input={input}
+            draft={draft}
+            readOnly={jobs?.busy ?? false}
+            onDraftChange={(text) => {
+              setDraft(text);
+              regenerateRequestId();
+            }}
+            touchLikeComposer={touchLikeComposer}
+            slash={slash}
+            onSubmit={submitMessage}
+            onInterrupt={() => void interrupt()}
+            running={running}
+            canSend={canSend}
+            chips={context.chips}
+            onRemoveChip={context.removeContext}
+            needsWorkspaceAccess={context.contexts.length > 0 && !workspaceAccess}
+            onTurnOnWorkspaceAccess={() => {
+              setWorkspaceAccess(true);
+              writeWorkspaceAccess(workspaceId, pet.id, true);
+            }}
+            workspaceAccess={workspaceAccess}
+            hasNoteScope={noteScope !== undefined}
+            noteReadOnly={noteScope?.readOnly ?? false}
+            onToggleWorkspaceAccess={() => {
+              const next = !workspaceAccess;
+              setWorkspaceAccess(next);
+              writeWorkspaceAccess(workspaceId, pet.id, next);
+              // Nothing can be applied without workspace tools, so the switch goes with it.
+              if (!next) setApplyWithoutAsking(false);
+            }}
+            applyWithoutAsking={applyWithoutAsking}
+            onApplyChange={setApplyWithoutAsking}
+            hasPage={Boolean(currentItem)}
+            contextCount={context.contexts.length}
+            hasSelection={context.hasSelection}
+            onAttachPage={context.attachPageContext}
+            onShareSelection={context.shareSelection}
+          />
+        ) : null}
+        {panel === 'chat' && jobs ? (
+          <div className="min-h-0 max-h-1/2 shrink-0 overflow-y-auto overscroll-contain">
+            {jobs.panel(jobDraft)}
+            {jobs.options}
+          </div>
+        ) : null}
       </div>
     </div>
   );

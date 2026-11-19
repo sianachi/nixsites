@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Nix.Abstractions;
 using Nix.Authentication;
+using Nix.Domain.Items;
 using Nix.Domain.Notifications;
+using Nix.Domain.Tenancy;
 using Nix.Features.Notifications;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
@@ -85,6 +87,10 @@ public sealed class NotifyPushEndToEndTests : IAsyncLifetime
                 itemId: null, Nix.Domain.Tenancy.WorkspaceId.From(TestTenants.AlphaWorkspace), "notify-e2e:once", Cancellation);
             Assert.True(created.Created);
             notificationId = created.Notification.Id;
+            await work.Resolve<INotificationWriter>().CreatePetDecisionAsync(
+                TestTenants.AlphaContext.PrincipalId, ItemId.From(M0SchemaSeed.Alpha.ItemId),
+                WorkspaceId.From(TestTenants.AlphaWorkspace),
+                new(Guid.NewGuid(), Guid.NewGuid(), IsQuestion: false), Cancellation);
             await work.CommitAsync(Cancellation);
         }
 
@@ -105,6 +111,12 @@ public sealed class NotifyPushEndToEndTests : IAsyncLifetime
         {
             var attempted = await RawSql.TextListAsync(connection, $"SELECT (push_attempted_at IS NOT NULL)::text FROM notification WHERE id = '{notificationId}'");
             Assert.Equal("true", Assert.Single(attempted));
+            var petPushJobs = await RawSql.TextListAsync(connection, """
+                SELECT idempotency_key FROM worker_job
+                WHERE kind = 'notify.push'
+                  AND idempotency_key IN (SELECT 'notify:' || id::text FROM notification WHERE pet_run_id IS NOT NULL)
+                """);
+            Assert.Empty(petPushJobs);
             var failures = await RawSql.TextListAsync(connection, "SELECT failures::text FROM push_subscription");
             Assert.Equal("0", Assert.Single(failures));
         }

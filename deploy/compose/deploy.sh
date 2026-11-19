@@ -42,9 +42,8 @@ if missing:
   false) ;;
   *) echo 'NIX_BOOTSTRAP_IDENTITY must be true or false' >&2; exit 2 ;;
 esac
-# Sites (ADR-0063) and remote MCP roll with the release when the env file enables them:
-# COMPOSE_PROFILES=sites,mcp (visible only without --profile flags), or NIX_SITES_DOMAIN for
-# sites. Otherwise they are left alone.
+# Profile services roll with the release when Compose enables them. Sites can also be enabled
+# by NIX_SITES_DOMAIN.
 optional_services=()
 active_services=$("${compose[@]}" config --services)
 if [ -n "$sites_domain" ] || grep -qx nix-sites-serve <<< "$active_services"; then
@@ -52,6 +51,9 @@ if [ -n "$sites_domain" ] || grep -qx nix-sites-serve <<< "$active_services"; th
 fi
 if grep -qx nix-mcp <<< "$active_services"; then
   optional_services+=(nix-mcp)
+fi
+if grep -qx nix-pet-browser <<< "$active_services"; then
+  optional_services+=(nix-pet-browser)
 fi
 export NIX_SMOKE_ORIGIN
 # Smoke checks run from the release-tools image at the release tag; the host needs no Node.

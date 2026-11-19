@@ -13,12 +13,13 @@ namespace Nix.Persistence;
 /// unprotected because the test's copy of the name no longer matches anything.
 /// </para>
 /// <para>
-/// <see cref="TenantScoped"/> is the list the tenant isolation tests iterate. Customer state belongs
-/// in it. <see cref="CapabilityOnly"/> is the narrow pre-authentication or instance-wide operational
-/// exception: anonymous login challenges have no tenant until a person approves them, and backup
-/// results belong to no tenant, so only exact security-definer functions can reach these tables.
+/// <see cref="TenantScoped"/> carries tenant identity directly; <see cref="ParentScoped"/> derives
+/// tenant and owner identity through protected parent rows. <see cref="CapabilityOnly"/> is the
+/// narrow pre-authentication or instance-wide operational exception: anonymous login challenges
+/// have no tenant until a person approves them, and backup results belong to no tenant, so only
+/// exact security-definer functions can reach these tables.
 /// They have forced RLS, no ordinary policies and no runtime or PUBLIC DML.
-/// An exhaustive database test checks both classes; a new table cannot silently escape scrutiny.
+/// An exhaustive database test checks every class; a new table cannot silently escape scrutiny.
 /// </para>
 /// </remarks>
 public static class NixTables
@@ -191,6 +192,33 @@ public static class NixTables
     /// <summary>The visible calendar sync log, retained 30 days.</summary>
     public const string CalendarSyncLog = "calendar_sync_log";
 
+    /// <summary>A workspace owner's protected Linear grant.</summary>
+    public const string LinearConnection = "linear_connection";
+
+    /// <summary>A request and receipt for one Linear issue lookup on an item.</summary>
+    public const string LinearTaskRequest = "linear_task_request";
+
+    /// <summary>An owner's exact link and observed status for one Linear issue.</summary>
+    public const string LinearItemLink = "linear_item_link";
+
+    /// <summary>A workspace owner's scoped provider connection with encrypted credentials.</summary>
+    public const string PetConnectorGrant = "pet_connector_grant";
+
+    /// <summary>The task scope and durable checkpoint for one pet run.</summary>
+    public const string PetRun = "pet_run";
+
+    /// <summary>Owner-registered task scope and credentials for a pet peer.</summary>
+    public const string PetPeer = "pet_peer";
+
+    /// <summary>A submitted or approved task handoff and its receipt.</summary>
+    public const string PetPeerWork = "pet_peer_work";
+
+    /// <summary>A mailbox poll checkpoint scoped through its rule and connection.</summary>
+    public const string PetMailboxCursor = "pet_mailbox_cursor";
+
+    /// <summary>A mailbox message receipt scoped through its rule and connection.</summary>
+    public const string PetMailboxSeen = "pet_mailbox_seen";
+
     /// <summary>One row per item a principal has kept.</summary>
     public const string Bookmark = "bookmark";
 
@@ -295,8 +323,7 @@ public static class NixTables
     public const string SiteOperator = "site_operator";
 
     /// <summary>
-    /// Every table that holds customer data, and therefore every table that must carry an
-    /// isolation policy.
+    /// Customer tables whose isolation policies use their own tenant identity.
     /// </summary>
     public static ImmutableArray<string> TenantScoped { get; } =
     [
@@ -344,6 +371,13 @@ public static class NixTables
         CalendarLink,
         CalendarEventMap,
         CalendarSyncLog,
+        LinearConnection,
+        LinearTaskRequest,
+        LinearItemLink,
+        PetConnectorGrant,
+        PetRun,
+        PetPeer,
+        PetPeerWork,
         Bookmark,
         NoteComment,
         NoteCommentRevision,
@@ -383,6 +417,9 @@ public static class NixTables
         SiteActivation,
         SiteOperator,
     ];
+
+    /// <summary>Customer tables whose isolation derives from tenant- and owner-scoped parent rows.</summary>
+    public static ImmutableArray<string> ParentScoped { get; } = [PetMailboxCursor, PetMailboxSeen];
 
     /// <summary>Pre-authentication capability state with no direct application, collaboration or PUBLIC access.</summary>
     /// <remarks>
@@ -565,6 +602,15 @@ public static class NixTables
             [CalendarLink] = FullDml,
             [CalendarEventMap] = FullDml,
             [CalendarSyncLog] = FullDml,
+            [LinearConnection] = RevocableHistory,
+            [LinearTaskRequest] = RevocableHistory,
+            [LinearItemLink] = FullDml,
+            [PetConnectorGrant] = RevocableHistory,
+            [PetRun] = RevocableHistory,
+            [PetPeer] = RevocableHistory,
+            [PetPeerWork] = RevocableHistory,
+            [PetMailboxCursor] = RevocableHistory,
+            [PetMailboxSeen] = ImmutableRegistration,
 
             // Revoked, never deleted: the rows are the audit of what has been able to act as a
             // principal, and an application that can erase that record can erase evidence.

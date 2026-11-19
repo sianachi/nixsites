@@ -1,6 +1,7 @@
 using System.Globalization;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
+using Nix.Domain.Tenancy;
 using Nix.Features.Search;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
@@ -108,6 +109,27 @@ public sealed class SearchAuthorizationTests : IAsyncLifetime
 
         Assert.Equal(ItemId.From(VisibleSource), found.Hits[0].Id);
         Assert.Contains(found.Hits, hit => hit.Id == ItemId.From(VisibleItem));
+    }
+
+    [Theory]
+    [InlineData("true")]
+    [InlineData("null")]
+    public async Task A_pet_source_search_omits_withheld_items_before_the_limit(string protection)
+    {
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(connection, transaction: null, $$"""
+                UPDATE item SET settings = '{"withholdFromPets": {{protection}}}'::jsonb
+                WHERE id = {{Literal(VisibleSource)}};
+                """);
+        }
+
+        var workspace = WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId);
+        Assert.Equal(ItemId.From(VisibleSource), Assert.Single((await SearchAsync("ledger", limit: 1)).Hits).Id);
+        Assert.Equal(ItemId.From(VisibleItem), Assert.Single((await SearchAsync("ledger", limit: 1, petWorkspace: workspace)).Hits).Id);
+        Assert.Empty((await SearchAsync("numbers", petWorkspace: workspace)).Hits);
+        Assert.Empty((await SearchAsync("ledger", petWorkspace: WorkspaceId.From(PrivateWorkspace))).Hits);
     }
 
     [Fact]
@@ -385,14 +407,15 @@ public sealed class SearchAuthorizationTests : IAsyncLifetime
         }
     }
 
-    private async Task<SearchResults> SearchAsync(string query, int limit = SearchItemsHandler.DefaultLimit)
+    private async Task<SearchResults> SearchAsync(
+        string query, int limit = SearchItemsHandler.DefaultLimit, WorkspaceId? petWorkspace = null)
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(MemberContext, Cancellation);
         await using (work.ConfigureAwait(false))
         {
             var result = await work.Resolve<NixDispatcher>()
                 .QueryAsync<SearchItems, Result<SearchResults>>(
-                    new SearchItems(query, limit),
+                    new SearchItems(query, limit, petWorkspace),
                     Cancellation);
 
             Assert.True(result.IsSuccess);

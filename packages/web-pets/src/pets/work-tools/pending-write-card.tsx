@@ -4,6 +4,7 @@ import { Text, cn, focusRing } from '@nix/ui';
 import type { ReactElement } from 'react';
 import { Link } from 'react-router';
 import { ApprovalActions, ApprovalFrame, touchLink } from '../approval/approval-frame';
+import { approvalLabels } from '../approval/approval-labels';
 import { ApprovalSummary } from '../approval/approval-summary';
 import { EditRequest, isEditable, type EditedRequest } from '../approval/edit-request';
 import type { PreparedPreview } from '../approval/prepare-write';
@@ -12,6 +13,7 @@ import type { writeTextItems } from '../approval/write-gate';
 import { PetBodyEditPreview } from '../pet-body-edit-preview';
 import { PetStructurePreview } from '../pet-structure-preview';
 import type { Resolver } from './activity-rows';
+import { REVISION_FEEDBACK_PREFIX } from './receipts';
 
 /** The card a write wears while it waits for its first real decision. */
 export function PendingWriteCard({
@@ -89,6 +91,7 @@ export function PendingWriteCard({
         tool.status === 'pending' && !submitted ? (
           <ApprovalActions
             headingId={headingId}
+            approveLabel={args ? approvalLabels[args.operation] : undefined}
             approveDisabled={approveDisabled}
             busy={busy}
             editLabel={edit === null ? 'Edit' : 'Edit again'}
@@ -113,6 +116,13 @@ export function PendingWriteCard({
             onDecline={() => {
               void onResolve(tool, false);
             }}
+            onRequestChanges={
+              supported && !editing
+                ? (feedback) => {
+                    void onResolve(tool, false, undefined, REVISION_FEEDBACK_PREFIX + feedback);
+                  }
+                : undefined
+            }
             onEdit={
               originalArgs && isEditable(originalArgs) && !editing
                 ? () => {

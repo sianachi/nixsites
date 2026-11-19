@@ -7,6 +7,7 @@ import { logSafeError } from '../shared/diagnostics.ts';
 import { PROVIDER_ERROR_HEADER, providerFailureToken } from '../providers/provider-errors.ts';
 import type { Request } from '../shared/types.ts';
 import { aborted, isRecord, str, UUID } from '../shared/util.ts';
+import { TASK_PLAN_INSTRUCTIONS, TASK_PLAN_OPERATION, taskPlanInput } from './task-plan.ts';
 
 /**
  * Inline writing is the pet's model used as a plain writing tool inside the note editor. It is
@@ -176,12 +177,13 @@ export async function inlineStart(
   r: Request,
   input: string,
   run: InlineRun,
+  baseInstructions = INLINE_BASE_INSTRUCTIONS,
 ): Promise<{ thread: string; turn: string }> {
   const params: Record<string, unknown> = {
     cwd: join(account.home, 'empty'),
     sandbox: 'read-only',
     approvalPolicy: 'never',
-    baseInstructions: INLINE_BASE_INSTRUCTIONS,
+    baseInstructions,
     ephemeral: true,
   };
   if (r.model !== '') {
@@ -270,12 +272,17 @@ export async function serveInline(
   request: Request,
   client: AbortSignal,
 ): Promise<void> {
-  const reason = inlineValid(request);
+  const planning = request.operation === TASK_PLAN_OPERATION;
+  const reason = planning ? '' : inlineValid(request);
   if (reason !== '') {
     sendError(res, 422, `Invalid inline request: ${reason}`);
     return;
   }
-  const input = inlineInput(request);
+  const input = planning ? taskPlanInput(request) : inlineInput(request);
+  if (input === undefined) {
+    sendError(res, 422, 'Invalid pet task plan request');
+    return;
+  }
   const started = Date.now();
   const setup = AbortSignal.any([client, AbortSignal.timeout(INLINE_SETUP_TIMEOUT_MS)]);
   const a = await account(setup);
@@ -305,7 +312,8 @@ export async function serveInline(
     let thread: string;
     let turn: string;
     try {
-      ({ thread, turn } = await inlineStart(a, setup, request, input, run));
+      const instructions = planning ? TASK_PLAN_INSTRUCTIONS : INLINE_BASE_INSTRUCTIONS;
+      ({ thread, turn } = await inlineStart(a, setup, request, input, run, instructions));
     } catch (error) {
       a.diag.record('', 'warn', 'inline.failed', {
         operation: 'inline',

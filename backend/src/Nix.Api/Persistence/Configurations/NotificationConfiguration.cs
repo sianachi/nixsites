@@ -10,10 +10,16 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
     public void Configure(EntityTypeBuilder<Notification> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        builder.ToTable(NixTables.Notification, table => table.HasCheckConstraint(
-            "notification_bounded",
-            "char_length(title) <= 200 AND char_length(body) <= 1000"
-                + " AND kind IN ('reminder', 'automation', 'calendar', 'system', 'invitation', 'comment')"));
+        builder.ToTable(NixTables.Notification, table =>
+        {
+            table.HasCheckConstraint("notification_bounded",
+                "char_length(title) <= 200 AND char_length(body) <= 1000"
+                    + " AND kind IN ('reminder', 'automation', 'calendar', 'system', 'invitation', 'comment')");
+            table.HasCheckConstraint("notification_pet_decision",
+                "(pet_run_id IS NULL AND pet_decision_id IS NULL AND pet_decision_is_question IS NULL)"
+                    + " OR (pet_run_id IS NOT NULL AND pet_decision_id IS NOT NULL AND pet_decision_is_question IS NOT NULL"
+                    + " AND kind = 'system' AND item_id IS NOT NULL AND workspace_id IS NOT NULL)");
+        });
         builder.HasKey(row => row.Id);
         builder.Property(row => row.Id).HasColumnName("id");
         builder.Property(row => row.TenantId).HasColumnName(NixTables.TenantIdColumn);
@@ -29,6 +35,10 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         builder.Property(row => row.Body).HasColumnName("body").IsRequired();
         builder.Property(row => row.ItemId).HasColumnName("item_id");
         builder.Property(row => row.WorkspaceId).HasColumnName("workspace_id");
+        builder.Property(row => row.PetRunId).HasColumnName("pet_run_id");
+        builder.Property(row => row.PetDecisionId).HasColumnName("pet_decision_id");
+        builder.Property(row => row.PetDecisionIsQuestion).HasColumnName("pet_decision_is_question");
+        builder.Ignore(row => row.PetDecision);
         builder.Property(row => row.CreatedAt).HasColumnName("created_at");
         builder.Property(row => row.Seq).HasColumnName("seq").ValueGeneratedOnAdd();
         builder.Property(row => row.ReadAt).HasColumnName("read_at");

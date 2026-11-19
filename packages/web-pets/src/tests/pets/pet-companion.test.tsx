@@ -204,6 +204,7 @@ describe('companion workflow', () => {
           title: 'Tasks',
           type: 'note',
           hasChildren: false,
+          settings: { withholdFromPets: false },
         };
     });
     Object.assign(client, { paginate, cache: { peek: vi.fn() } });
@@ -624,7 +625,7 @@ describe('companion workflow', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Talk with Cat' }));
     await screen.findByText('I can create this note.');
-    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create note' })).not.toBeInTheDocument();
     expect(screen.getByRole('status')).not.toHaveTextContent('Waiting for your approval');
 
     const pendingConnection = {

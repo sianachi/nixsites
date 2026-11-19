@@ -108,4 +108,37 @@ describe.runIf(DB_TESTS_ENABLED)('note body Markdown, against Postgres', () => {
     );
     expect(rows[0]?.matches).toBe(true);
   });
+
+  it('rejects a reviewed note change after a collaborator edits the body', async () => {
+    const harness = await startLiveServer(TENANTS.alpha);
+    harnesses.push(harness);
+    const url = `${harness.url.replace('ws://', 'http://')}/documents/${TENANTS.alpha.itemId}/markdown`;
+    const headers = { authorization: 'Bearer anyone', 'content-type': 'application/json' };
+    const preview = await fetch(`${url}?revision=true`, { headers });
+    expect(preview.status).toBe(200);
+    const { revision } = (await preview.json()) as {
+      revision: { documentId: string; headSeq: string };
+    };
+    const reviewedChange = {
+      markdown: 'Text from the pet.',
+      expectedDocumentId: revision.documentId,
+      expectedHeadSeq: revision.headSeq,
+    };
+
+    const editor = open(harness.url, TENANTS.alpha.itemId);
+    await editor.ready;
+    typeParagraph(editor.doc, 'A collaborator just changed the note.');
+    await until(async () => (await countUpdates(verify, TENANTS.alpha)) >= 1, 'the editor flush');
+
+    const stale = await fetch(url, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(reviewedChange),
+    });
+    expect(stale.status).toBe(409);
+    const current = await fetch(url, { headers });
+    expect(current.status).toBe(200);
+    const { markdown } = (await current.json()) as { markdown: string };
+    expect(markdown.trim()).toBe('A collaborator just changed the note.');
+  });
 });

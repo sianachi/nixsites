@@ -194,6 +194,12 @@ export type {
   AutomationTestResponse,
 } from './schemas/automations.js';
 export * as calendarSync from './resources/calendar-sync.js';
+export * as linear from './resources/linear.js';
+export type {
+  LinearIssueResponse,
+  LinearLinkResponse,
+  LinearRequestResponse,
+} from './resources/linear.js';
 export type {
   CalendarConnection,
   CalendarLink,
@@ -290,6 +296,20 @@ export { type HabitTracker } from './schemas/habits.js';
 export type { SetHabitInput } from './resources/habits.js';
 
 export * as conversations from './resources/conversations.js';
+export * as petRuns from './resources/pet-runs.js';
+export * as petConnections from './resources/pet-connections.js';
+export type {
+  AuthorizePetConnection,
+  PetConnectionList,
+  PetServiceConnection,
+} from './resources/pet-connections.js';
+export type {
+  PetRunAbility,
+  PetRunList,
+  PetRunProposal,
+  PetRunResponse,
+  StartPetRun,
+} from './resources/pet-runs.js';
 export * from './schemas/conversations.js';
 export {
   OPERATIONS,
@@ -302,3 +322,12 @@ export {
   operationRisk,
 } from './operations.js';
 export type { OperationCall, OperationEntry, OperationRisk } from './operations.js';
+export { petCapability, petCapabilityIds, type PetCapability } from './pet-capabilities.js';
+
+export * as petPeers from './resources/pet-peers.js';
+export type {
+  PetPeer,
+  PetPeerKind,
+  PetPeerRegistration,
+  PetPeerWork,
+} from './resources/pet-peers.js';

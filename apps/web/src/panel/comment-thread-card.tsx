@@ -134,6 +134,7 @@ export function ThreadCard({
   thread,
   me,
   active,
+  focusOnMount = false,
   detached,
   canComment,
   act,
@@ -152,6 +153,7 @@ export function ThreadCard({
   readonly thread: CommentThread;
   readonly me: string | null;
   readonly active: boolean;
+  readonly focusOnMount?: boolean;
   readonly detached: boolean;
   readonly canComment: boolean;
   readonly act: (write: () => Promise<unknown>) => Promise<boolean>;
@@ -177,6 +179,8 @@ export function ThreadCard({
   return (
     <article
       aria-label={`Comment thread${thread.quote === null ? '' : ` on ${thread.quote}`}`}
+      ref={focusOnMount ? focusComment : undefined}
+      tabIndex={focusOnMount ? -1 : undefined}
       className={`flex flex-col gap-3 ${
         inline || conversation
           ? ''
@@ -248,6 +252,10 @@ export function ThreadCard({
       ) : null}
     </article>
   );
+}
+
+function focusComment(node: HTMLElement | null): void {
+  node?.focus();
 }
 
 function CommentRow({

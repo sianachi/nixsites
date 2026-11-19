@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CanvasElement } from '../../editor/canvas-binding';
 import { CanvasEditor } from '../../editor/canvas-editor';
+import type { CollabSyncOptions } from '../../editor/collab-sync';
 import type { NixCanvasProps } from '../../editor/nix-canvas';
 import { stubViewport } from '@nix/web-foundation/testing/stub-viewport';
 
@@ -11,6 +12,7 @@ const canvasHarness = vi.hoisted(() => ({
   props: null as NixCanvasProps | null,
   rendered: vi.fn(),
   destroyed: vi.fn(),
+  syncStarted: vi.fn<(options: CollabSyncOptions) => void>(),
   getAccessToken: vi.fn(() => Promise.resolve('token')),
 }));
 
@@ -24,7 +26,10 @@ vi.mock('@nix/web-foundation/lib/session-store', () => ({
 }));
 
 vi.mock('../../editor/collab-sync', () => ({
-  startCollabSync: () => ({ destroy: canvasHarness.destroyed }),
+  startCollabSync: (options: CollabSyncOptions) => {
+    canvasHarness.syncStarted(options);
+    return { destroy: canvasHarness.destroyed };
+  },
 }));
 
 vi.mock('../../editor/presence-list', () => ({
@@ -60,6 +65,32 @@ describe('canvas document identity', () => {
     vi.clearAllMocks();
     canvasHarness.props = null;
   });
+
+  it.each([
+    ['populated', true],
+    ['empty', false],
+  ])(
+    'captures a %s first sync before later collaboration changes arrive',
+    async (_name, populated) => {
+      render(
+        <MemoryRouter>
+          <CanvasEditor itemId="10000000-0000-4000-8000-000000000001" />
+        </MemoryRouter>,
+      );
+      await screen.findByTestId('canvas-elements');
+      const sync = canvasHarness.syncStarted.mock.lastCall?.[0];
+      if (sync === undefined) throw new Error('Collab did not start.');
+      const map = sync.doc.getMap<CanvasElement>('elements');
+      act(() => {
+        if (populated) map.set('first', element('first'));
+        sync.onInitialSync?.();
+        map.set('later', element('later'));
+        sync.onInitialSync?.();
+      });
+      expect(currentCanvasProps().initialFitElementIds).toEqual(populated ? ['first'] : []);
+      expect(screen.getByTestId('canvas-elements')).toHaveTextContent('later');
+    },
+  );
 
   it('replaces the Y.Doc when the item changes instead of carrying the old scene across', async () => {
     const view = render(

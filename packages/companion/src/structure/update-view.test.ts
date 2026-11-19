@@ -41,17 +41,19 @@ function setup(version: string | null = 'a'.repeat(64)) {
   };
   fake.query.mockImplementation((endpoint: { operation: string }) =>
     Promise.resolve(
-      endpoint.operation === 'schema.get'
-        ? { declared: state.fields, properties: state.fields, inherit: state.inherit }
-        : endpoint.operation === 'views.getConfigurations'
-          ? {
-              views: state.views,
-              default: state.default,
-              unrenderable: [],
-              hideDocument: false,
-              version,
-            }
-          : { id: itemId, workspaceId: workspace, parentId: null, title: 'Tasks', type: 'note' },
+      endpoint.operation === 'items.getWorkspacePetProtection'
+        ? { hasProtectedItems: false }
+        : endpoint.operation === 'schema.get'
+          ? { declared: state.fields, properties: state.fields, inherit: state.inherit }
+          : endpoint.operation === 'views.getConfigurations'
+            ? {
+                views: state.views,
+                default: state.default,
+                unrenderable: [],
+                hideDocument: false,
+                version,
+              }
+            : { id: itemId, workspaceId: workspace, parentId: null, title: 'Tasks', type: 'note' },
     ),
   );
   fake.execute.mockResolvedValue({ updated: true });

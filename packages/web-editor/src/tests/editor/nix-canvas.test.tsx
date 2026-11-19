@@ -422,6 +422,101 @@ describe('the Excalidraw canvas integration', () => {
     expect(excalidrawHarness.updateScene).not.toHaveBeenCalled();
   });
 
+  it('fits the changes in a read-only preview and keeps the surrounding drawing visible', async () => {
+    const context = sceneElement({ id: 'surrounding-drawing', x: 800 });
+    const addition = sceneElement({ id: 'new-shape', x: 450 });
+    const removed = sceneElement({ id: 'removed', isDeleted: true });
+    const onReady = vi.fn();
+    const onChange = vi.fn();
+    await renderCanvas({
+      elements: [context, addition, removed],
+      fitToElementIds: ['new-shape', 'removed'],
+      readOnly: true,
+      onReady,
+      onChange,
+    });
+
+    await waitFor(() => {
+      expect(onReady).toHaveBeenLastCalledWith(true);
+    });
+    expect(excalidrawHarness.api.scrollToContent).toHaveBeenLastCalledWith(
+      [expect.objectContaining({ id: 'new-shape' })],
+      { fitToContent: true, viewportZoomFactor: 0.9 },
+    );
+    const props = currentExcalidrawProps();
+    expect(props.initialData).toMatchObject({
+      elements: [
+        { id: 'surrounding-drawing', x: 800 },
+        { id: 'new-shape', x: 450 },
+        { id: 'removed', isDeleted: true },
+      ],
+    });
+    act(() => {
+      props.onChange?.([context], appState(), {});
+      void props.onLibraryChange?.([libraryItem('preview-library')]);
+    });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(libraryHarness.current.save).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { initial: 'loaded drawing', populated: true, moved: false },
+    { initial: 'empty canvas', populated: false, moved: false },
+    { initial: 'canvas already being moved', populated: true, moved: true },
+  ])(
+    'only fits the first loaded scene in an untouched viewport ($initial)',
+    async ({ populated, moved }) => {
+      const first = sceneElement({ id: 'first', x: 900 });
+      const later = sceneElement({ id: 'later', x: 2100, index: 'a1' });
+      const view = await renderCanvas();
+      if (moved) fireEvent.wheel(screen.getByRole('region', { name: 'Canvas workspace' }));
+      const initialFitElementIds = populated ? ['first'] : [];
+      const initial = populated ? [first] : [];
+      excalidrawHarness.state.appState = appState({ zoom: { value: 0.8 } });
+
+      view.rerender(
+        <NixCanvas
+          elements={initial}
+          initialFitElementIds={initialFitElementIds}
+          onChange={() => undefined}
+        />,
+      );
+      await act(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => {
+              resolve();
+            }),
+          ),
+      );
+      view.rerender(
+        <NixCanvas
+          elements={[...initial, later]}
+          initialFitElementIds={initialFitElementIds}
+          onChange={() => undefined}
+        />,
+      );
+      await act(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => {
+              resolve();
+            }),
+          ),
+      );
+
+      if (populated && !moved) {
+        expect(excalidrawHarness.api.scrollToContent).toHaveBeenCalledOnce();
+        expect(excalidrawHarness.api.scrollToContent).toHaveBeenCalledWith(
+          [expect.objectContaining({ id: 'first' })],
+          { fitToContent: true, viewportZoomFactor: 0.9, maxZoom: 0.8 },
+        );
+      } else {
+        expect(excalidrawHarness.api.scrollToContent).not.toHaveBeenCalled();
+      }
+    },
+  );
+
   it('reconciles remote elements outside undo and suppresses their Excalidraw echo', async () => {
     const onChange = vi.fn();
     const view = await renderCanvas({ onChange });

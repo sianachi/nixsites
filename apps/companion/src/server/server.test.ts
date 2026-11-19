@@ -69,6 +69,32 @@ describe('routes and authentication', () => {
     expect((await fetch(`${b.url}/v1/companion`)).status).toBe(405);
     expect((await fetch(`${b.url}/healthz`, { method: 'POST' })).status).toBe(405);
   });
+
+  it('requires Core authentication and keeps Linear worker replies uncached', async () => {
+    const b = await up();
+    const path = `${b.url}/v1/sani/linear`;
+    const body = JSON.stringify({
+      operation: 'read',
+      issueId: 'TEST-7',
+      oauthState: {},
+      callbackUrl: 'https://nix.example/oauth/callback',
+    });
+    const denied = await fetch(path, { method: 'POST', body });
+    expect(denied.status).toBe(401);
+    expect(denied.headers.get('Cache-Control')).toBe('no-store');
+    const headers = { 'X-Nix-Internal-Secret': SECRET };
+    const invalid = await fetch(path, { method: 'POST', headers, body: '{' });
+    expect(invalid.status).toBe(400);
+    expect(await invalid.json()).toEqual({ code: 'invalid_linear_request' });
+    const disconnected = await fetch(path, { method: 'POST', headers, body });
+    expect(disconnected.status).toBe(200);
+    expect(disconnected.headers.get('Cache-Control')).toBe('no-store');
+    expect(await disconnected.json()).toEqual({
+      oauthState: {},
+      sent: false,
+      failure: 'linear_read_failed',
+    });
+  });
 });
 
 describe('request handling', () => {
@@ -193,6 +219,35 @@ describe('request handling', () => {
     await Promise.all(watches);
     await eventually(() => [...b.manager.accounts.values()].every((a) => a.watchers === 0));
     expect((await b.call({ operation: 'watch', after: 0 })).status).toBe(200);
+  });
+
+  it('releases SSE slots when HTTP clients cancel or abort and lets another stream open', async () => {
+    const b = await up();
+    await b.call({ operation: 'read' });
+    const streams = await Promise.all(
+      Array.from({ length: 4 }, () => b.call({ operation: 'watch_stream' })),
+    );
+    expect(streams.map((response) => response.status)).toEqual([200, 200, 200, 200]);
+    const refused = await b.call({ operation: 'watch_stream' });
+    expect(refused.status).toBe(429);
+    expect(await refused.text()).toBe('Too many open watches\n');
+
+    await streams[0]?.body?.cancel();
+    await eventually(() => [...b.manager.accounts.values()].every((a) => a.watchers === 3));
+    const reopened = await b.call({ operation: 'watch_stream' });
+    expect(reopened.status).toBe(200);
+    await Promise.all(
+      [...streams.slice(1), reopened].map(async (response) => {
+        await response.body?.cancel();
+      }),
+    );
+    await eventually(() => [...b.manager.accounts.values()].every((a) => a.watchers === 0));
+
+    const controller = new AbortController();
+    const streaming = await b.call({ operation: 'watch_stream' }, controller.signal);
+    expect(streaming.status).toBe(200);
+    controller.abort();
+    await eventually(() => [...b.manager.accounts.values()].every((a) => a.watchers === 0));
   });
 
   it('maps replace failures to 400 and 409, and other failures to 502', async () => {

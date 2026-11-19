@@ -81,6 +81,9 @@ public interface IAutomationRuleStore
     /// <summary>One of the session owner's rules, or <see langword="null"/>.</summary>
     public Task<AutomationRule?> GetAsync(Guid ruleId, CancellationToken cancellationToken);
 
+    /// <summary>Locks an owner-visible rule through the current transaction for a policy decision and effect.</summary>
+    public Task<AutomationRule?> GetForUpdateAsync(Guid ruleId, CancellationToken cancellationToken);
+
     /// <summary>
     /// Serialises rule creation for one owner in one workspace until the calling transaction
     /// ends, so two concurrent creates cannot both pass the per-owner ceiling's count.

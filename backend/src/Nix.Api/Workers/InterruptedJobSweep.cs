@@ -26,7 +26,8 @@ public sealed class InterruptedJobSweep(
     /// <summary>The error code an interrupted job carries.</summary>
     public const string ErrorCode = "interrupted_by_restart";
 
-    private static readonly string[] Resumable = ["notify.push", "object.cleanup"];
+    // A resumed pet step consults the persisted checkpoint before starting any effect.
+    private static readonly string[] Resumable = ["notify.push", "object.cleanup", JobFamilies.PetAdvance];
     private readonly ILogger<InterruptedJobSweep> _logger = logger ?? NullLogger<InterruptedJobSweep>.Instance;
 
     public async Task StartAsync(CancellationToken cancellationToken)

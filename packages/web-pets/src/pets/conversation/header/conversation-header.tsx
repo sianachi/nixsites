@@ -22,6 +22,7 @@ function renderMenuLink({
 interface NoteScope {
   readonly rootItemId: string;
   readonly title: string;
+  readonly kindLabel?: string;
   readonly readOnly: boolean;
   readonly onReadOnlyChange: (readOnly: boolean) => void;
 }
@@ -36,10 +37,11 @@ function NoteAccessChip({
   readonly locked: boolean;
 }): ReactElement {
   const current = noteScope.readOnly ? 'Read only' : 'Can edit';
+  const kind = noteScope.kindLabel ?? 'Note';
   return (
     <>
       <Menu
-        label="Note chat access"
+        label={`${kind} chat access`}
         items={[
           {
             label: 'Read only',
@@ -66,7 +68,7 @@ function NoteAccessChip({
             variant="ghost"
             className="shrink-0"
             disabled={locked}
-            aria-label={`Note access: ${current}`}
+            aria-label={`${kind} access: ${current}`}
             aria-describedby="pet-note-access-hint"
           >
             {current}
@@ -75,8 +77,8 @@ function NoteAccessChip({
         )}
       </Menu>
       <Text as="span" variant="note" className="sr-only" id="pet-note-access-hint">
-        Reads this note and its readable children on demand. Search and results can be partial.
-        Every change asks first.
+        Reads this {kind.toLowerCase()} and its readable children on demand. Search and results can
+        be partial. Every change asks first.
       </Text>
     </>
   );

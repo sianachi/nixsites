@@ -28,6 +28,7 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Imports](#imports)
 - [Item locks](#item-locks)
 - [Items](#items)
+- [Linear](#linear)
 - [LocalSecurity](#localsecurity)
 - [Me](#me)
 - [NativeSync](#nativesync)
@@ -35,6 +36,9 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [OAuth](#oauth)
 - [Operations](#operations)
 - [People](#people)
+- [Pet Connections](#pet-connections)
+- [Pet peers](#pet-peers)
+- [Pet Runs](#pet-runs)
 - [Pets](#pets)
 - [PublicLinks](#publiclinks)
 - [Query](#query)
@@ -2097,6 +2101,30 @@ Parameters:
 
 Responses: `200`, `404`, `422`.
 
+### PUT /api/v1/items/{itemId}/pet-protection
+
+<a id="setitempetprotection"></a>
+
+Control whether pets can use an item
+
+Operation id: `SetItemPetProtection`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+A workspace owner may withhold this item from pets in a signed-in browser session.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `SetItemPetProtectionRequest`.
+
+Responses: `200`, `400`, `403`, `404`.
+
 ### PUT /api/v1/items/{itemId}/protection
 
 <a id="setitemprotection"></a>
@@ -2260,6 +2288,307 @@ Parameters:
 - `limit` in query (optional, integer | string)
 
 Responses: `200`, `404`.
+
+### GET /api/v1/workspaces/{workspaceId}/pet-protection
+
+<a id="getworkspacepetprotection"></a>
+
+Check whether a workspace contains any items withheld from pets
+
+Operation id: `GetWorkspacePetProtection`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Available only in the workspace owner's browser or its signed pet turn. Returns a boolean without item details.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Responses: `200`, `404`.
+
+## Linear
+
+<a id="linear"></a>
+
+### GET /api/v1/items/{itemId}/linear-link
+
+<a id="getlinearlink"></a>
+
+Read an owner's linked Linear issue and observed status.
+
+Operation id: `GetLinearLink`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### PUT /api/v1/items/{itemId}/linear-link
+
+<a id="linklinearissue"></a>
+
+Link one exact issue from an authorized Linear team.
+
+Operation id: `LinkLinearIssue`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `LinkLinearIssueRequest`.
+
+Responses: `200`.
+
+### DELETE /api/v1/items/{itemId}/linear-link
+
+<a id="unlinklinearissue"></a>
+
+Remove the exact linked issue without changing Linear.
+
+Operation id: `UnlinkLinearIssue`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `revision` in query (required, string (uuid))
+
+Responses: `204`.
+
+### POST /api/v1/items/{itemId}/linear-link/copy-status
+
+<a id="copylinkedlinearstatus"></a>
+
+Copy an observed Linear status into the selected Nix task.
+
+Operation id: `CopyLinkedLinearStatus`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `CopyLinearStatusRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/linear-link/refresh
+
+<a id="refreshlinearlink"></a>
+
+Refresh the linked issue status in Nix without changing Linear.
+
+Operation id: `RefreshLinearLink`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### GET /api/v1/items/{itemId}/linear-requests
+
+<a id="listlinearrequests"></a>
+
+List visible Linear issue requests for a Nix task.
+
+Operation id: `ListLinearRequests`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/linear-requests
+
+<a id="requestlinearissue"></a>
+
+Queue a one-issue lookup for approval on a Nix task.
+
+Operation id: `RequestLinearIssue`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `RequestLinearIssueRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/linear-requests/hand-to-pet
+
+<a id="handtopet"></a>
+
+Hand a pet a single Linear issue lookup for approval on the task.
+
+Operation id: `HandToPet`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `HandToPetRequest`.
+
+Responses: `200`.
+
+### GET /api/v1/items/{itemId}/linear-requests/{requestId}
+
+<a id="getlinearissuerequest"></a>
+
+Read the status of a Linear issue request on a Nix task.
+
+Operation id: `GetLinearIssueRequest`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `requestId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/linear-requests/{requestId}/decision
+
+<a id="decidelinearissuerequest"></a>
+
+Approve or decline a single pending Linear issue lookup in the browser.
+
+Operation id: `DecideLinearIssueRequest`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `requestId` in path (required, string (uuid))
+
+Request body: `DecideLinearIssueRequest`.
+
+Responses: `200`.
+
+### GET /api/v1/workspaces/{workspaceId}/linear
+
+<a id="getlinearconnection"></a>
+
+Read the Linear connection status for this workspace.
+
+Operation id: `GetLinearConnection`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### DELETE /api/v1/workspaces/{workspaceId}/linear
+
+<a id="disconnectlinearconnection"></a>
+
+Remove this workspace's Linear connection.
+
+Operation id: `DisconnectLinearConnection`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Responses: `204`.
+
+### POST /api/v1/workspaces/{workspaceId}/linear/authorize
+
+<a id="authorizelinearconnection"></a>
+
+Start a browser OAuth connection to read-only Linear.
+
+Operation id: `AuthorizeLinearConnection`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `one of several shapes`.
+
+Responses: `200`.
 
 ## LocalSecurity
 
@@ -2877,6 +3206,463 @@ Parameters:
 - `id` in path (required, string (uuid))
 
 Request body: `one of several shapes`.
+
+Responses: `200`.
+
+## Pet Connections
+
+<a id="pet-connections"></a>
+
+### GET /api/v1/workspaces/{workspaceId}/pet-connections
+
+<a id="listpetconnections"></a>
+
+List the owner’s scoped pet connections and provider actions.
+
+Operation id: `ListPetConnections`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-connections/authorize
+
+<a id="authorizepetconnection"></a>
+
+Begin browser consent for a scoped pet connection.
+
+Operation id: `AuthorizePetConnection`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `AuthorizePetConnectionRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-connections/browser-site
+
+<a id="savepetbrowsersite"></a>
+
+Connect a site-scoped browser session
+
+Operation id: `SavePetBrowserSite`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `SavePetBrowserSiteRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-connections/register-mcp
+
+<a id="registerpetmcpconnection"></a>
+
+Register one exact remote MCP tool against its input schema.
+
+Operation id: `RegisterPetMcpConnection`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `RegisterPetMcpConnectionRequest`.
+
+Responses: `204`.
+
+### DELETE /api/v1/workspaces/{workspaceId}/pet-connections/{connectionId}
+
+<a id="disconnectpetconnection"></a>
+
+Revoke a pet connection in Nix.
+
+Operation id: `DisconnectPetConnection`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `connectionId` in path (required, string (uuid))
+
+Responses: `204`.
+
+## Pet peers
+
+<a id="pet-peers"></a>
+
+### GET /api/v1/items/{itemId}/pet-peers
+
+<a id="listpetpeers"></a>
+
+Operation id: `ListPetPeers`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-peers
+
+<a id="registerpetpeer"></a>
+
+Operation id: `RegisterPetPeer`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `RegisterPetPeerRequest`.
+
+Responses: `201`.
+
+### GET /api/v1/items/{itemId}/pet-peers/work
+
+<a id="listpetpeerwork"></a>
+
+Operation id: `ListPetPeerWork`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### DELETE /api/v1/items/{itemId}/pet-peers/{peerId}
+
+<a id="revokepetpeer"></a>
+
+Operation id: `RevokePetPeer`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `peerId` in path (required, string (uuid))
+
+Responses: `204`.
+
+## Pet Runs
+
+<a id="pet-runs"></a>
+
+### GET /api/v1/items/{itemId}/pet-runs
+
+<a id="listitempetruns"></a>
+
+List the caller's pet jobs on the task.
+
+Operation id: `ListItemPetRuns`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-runs
+
+<a id="createpetrun"></a>
+
+Queue a task-scoped pet job.
+
+Operation id: `CreatePetRun`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `StartPetRunRequest`.
+
+Responses: `200`.
+
+### GET /api/v1/items/{itemId}/pet-runs/{runId}
+
+<a id="getpetrun"></a>
+
+Read an owned pet job and its action receipts.
+
+Operation id: `GetPetRun`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-runs/{runId}/answer
+
+<a id="answerpetrun"></a>
+
+Answer the pet's pending question.
+
+Operation id: `AnswerPetRun`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `AnswerPetRunRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-runs/{runId}/cancel
+
+<a id="cancelpetrun"></a>
+
+Cancel an owned pet job.
+
+Operation id: `CancelPetRun`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/decision
+
+<a id="decidepetrunproposal"></a>
+
+Approve or decline the exact pending proposal in an active browser.
+
+Operation id: `DecidePetRunProposal`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `proposalId` in path (required, string (uuid))
+
+Request body: `DecidePetProposalRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/revise
+
+<a id="revisepetrunproposal"></a>
+
+Supersede the current proposal and prepare a fresh draft in the same job.
+
+Operation id: `RevisePetRunProposal`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `proposalId` in path (required, string (uuid))
+
+Request body: `RevisePetRunProposalRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-runs/{runId}/retry
+
+<a id="retrypetrun"></a>
+
+Retry a failed pet job with a known outcome.
+
+Operation id: `RetryPetRun`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-runs/{runId}/scope
+
+<a id="decidepetrunscope"></a>
+
+Decide the exact pending request for a read-only source or one ability.
+
+Operation id: `DecidePetRunScope`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `DecidePetRunScopeRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/items/{itemId}/pet-runs/{runId}/steps/{stepId}/undo
+
+<a id="undopetrunstep"></a>
+
+Queue the supported undo of an applied step.
+
+Operation id: `UndoPetRunStep`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `stepId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### GET /api/v1/items/{itemId}/pet-runs/{runId}/watch
+
+<a id="watchpetrun"></a>
+
+Read the current pet job checkpoint for polling.
+
+Operation id: `WatchPetRun`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `after` in query (optional, integer | string)
+
+Responses: `200`.
+
+### GET /api/v1/workspaces/{workspaceId}/pet-runs
+
+<a id="listworkspacepetruns"></a>
+
+List the caller's pet jobs in a workspace.
+
+Operation id: `ListWorkspacePetRuns`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
 
 Responses: `200`.
 
@@ -3685,12 +4471,13 @@ Operation id: `SearchItems`.
 
 **Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
 
-Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. The search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. An item in a workspace the caller cannot reach is omitted entirely rather than redacted. A blank query returns no results rather than every item.
+Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. The search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. An item in a workspace the caller cannot reach is omitted entirely rather than redacted. A blank query returns no results rather than every item. 'petWorkspaceId' limits the search to items available to pet work in one workspace.
 
 Parameters:
 
 - `q` in query (optional, string)
 - `limit` in query (optional, integer | string)
+- `petWorkspaceId` in query (optional, string (uuid))
 
 Responses: `200`.
 

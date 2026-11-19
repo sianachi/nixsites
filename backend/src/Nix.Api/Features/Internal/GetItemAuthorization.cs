@@ -59,7 +59,7 @@ public sealed class GetItemAuthorizationHandler(
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
         var item = await tree.FindAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
-        if (item is null)
+        if (item is null || scope.IsPetTurn && ItemSettings.Read(item.Settings).WithholdFromPets)
         {
             return Result.Failure<ItemAuthorization>(
                 InternalErrors.NotFound($"No item {query.ItemId} is visible."));

@@ -25,6 +25,16 @@ public sealed class WorkerLoopbackClient(
 
     private Uri? _baseAddress;
 
+    internal Uri PetActionAddress(string target)
+    {
+        var origin = BaseAddress;
+        if (!origin.IsLoopback || !target.StartsWith("/api/v1/", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("The pet action transport requires Core's loopback address.");
+        }
+        return new Uri(origin, target);
+    }
+
     /// <summary>A strict JSON POST, with or without a body, bounded to <paramref name="responseLimit"/> bytes.</summary>
     public async Task<TResponse?> PostJsonAsync<TResponse>(
         WorkerExecution execution,

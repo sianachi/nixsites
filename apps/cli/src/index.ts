@@ -141,6 +141,23 @@ export function buildProgram(): Command {
       },
     );
 
+  program
+    .command('pet-peer-worker')
+    .description('Execute approved jobs for a registered Claude Code or Codex pet peer.')
+    .requiredOption('--endpoint <url>', 'the pet MCP URL shown when registering the runner')
+    .option('--once', 'claim at most one job', false)
+    .action((options: { endpoint: string; once: boolean }) =>
+      run(async () => {
+        const { servePetPeer } = await import('./commands/pet-peer-worker.ts');
+        await servePetPeer({
+          endpoint: options.endpoint,
+          once: options.once,
+          credential: process.env.NIX_PET_PEER_TOKEN ?? '',
+          apiKey: process.env.NIX_PET_PEER_MODEL_KEY ?? '',
+        });
+      }),
+    );
+
   registerTemplateCommands(program, act);
   registerNoteCommands(program, act);
   registerStructureCommands(program, act);

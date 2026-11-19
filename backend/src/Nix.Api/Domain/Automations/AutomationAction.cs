@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text;
 using System.Text.Json.Nodes;
 
 namespace Nix.Domain.Automations;
@@ -54,6 +55,33 @@ public sealed record NotifyAction(string Title, string Body) : AutomationAction
 {
     /// <inheritdoc />
     public override string TypeText => "notify";
+}
+
+/// <summary>The precise title transition the routine owner allows without another decision.</summary>
+public sealed record PetRoutineRename(string From, string To);
+
+/// <summary>Hands a scheduled job to the rule owner's pet on the task in scope.</summary>
+public sealed record StartPetRunAction(
+    string Brief, ImmutableArray<Guid> SourceItemIds, ImmutableArray<string> Abilities, PetRoutineRename? AutoRename,
+    bool? IncludeTargetText = null) : AutomationAction
+{
+    /// <summary>The action discriminator used in rules.</summary>
+    public const string Type = "start_pet_run";
+
+    /// <inheritdoc />
+    public override string TypeText => Type;
+}
+
+/// <summary>Watches the exact mailbox resource the owner selected when saving a schedule.</summary>
+public sealed record PollPetMailboxAction(
+    string Provider, Guid ConnectionId, Guid ConnectionRevision, string ResourceId, string Brief,
+    bool? IncludeTargetText = null) : AutomationAction
+{
+    /// <summary>The action discriminator used in rules.</summary>
+    public const string Type = "poll_pet_mailbox";
+
+    /// <inheritdoc />
+    public override string TypeText => Type;
 }
 
 /// <summary>Reads and writes a rule's action list.</summary>
@@ -117,6 +145,8 @@ public static class AutomationActionJson
                 "set_property" => ReadSetProperty(entry, path, violations),
                 "create_item" => ReadCreateItem(entry, path, violations),
                 "notify" => ReadNotify(entry, path, violations),
+                StartPetRunAction.Type => ReadStartPetRun(entry, path, violations),
+                PollPetMailboxAction.Type => ReadPollPetMailbox(entry, path, violations),
                 "create_from_template" => Unavailable(path, violations),
                 _ => Unknown(path, violations),
             };
@@ -166,6 +196,31 @@ public static class AutomationActionJson
                 case NotifyAction notify:
                     entry["title"] = notify.Title;
                     entry["body"] = notify.Body;
+                    break;
+                case StartPetRunAction pet:
+                    entry["brief"] = pet.Brief;
+                    entry["sourceItemIds"] = new JsonArray(pet.SourceItemIds.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
+                    entry["abilities"] = new JsonArray(pet.Abilities.Select(ability => (JsonNode?)JsonValue.Create(ability)).ToArray());
+                    if (pet.IncludeTargetText is { } includeText)
+                    {
+                        entry["includeTargetText"] = includeText;
+                    }
+                    if (pet.AutoRename is { } rename)
+                    {
+                        entry["autoRename"] = new JsonObject { ["from"] = rename.From, ["to"] = rename.To };
+                    }
+
+                    break;
+                case PollPetMailboxAction mailbox:
+                    entry["provider"] = mailbox.Provider;
+                    entry["connectionId"] = mailbox.ConnectionId.ToString("D");
+                    entry["connectionRevision"] = mailbox.ConnectionRevision.ToString("D");
+                    entry["resourceId"] = mailbox.ResourceId;
+                    entry["brief"] = mailbox.Brief;
+                    if (mailbox.IncludeTargetText is { } includeMailboxText)
+                    {
+                        entry["includeTargetText"] = includeMailboxText;
+                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(actions), action.TypeText, "Unknown action.");
@@ -246,6 +301,141 @@ public static class AutomationActionJson
         }
 
         return title is null ? null : new NotifyAction(title, body);
+    }
+
+    private static StartPetRunAction? ReadStartPetRun(JsonObject entry, string path, List<AutomationViolation> violations)
+    {
+        AutomationJsonRead.RefuseUnknown(entry, path, violations, "type", "brief", "sourceItemIds", "abilities", "autoRename", "includeTargetText");
+        var brief = AutomationJsonRead.String(entry, "brief", path, violations);
+        CheckTemplate(brief, 4000, $"{path}.brief", violations);
+        if (brief is not null && (Encoding.UTF8.GetByteCount(brief) > 8000 || brief.Contains('\0', StringComparison.Ordinal)))
+        {
+            violations.Add(new AutomationViolation($"{path}.brief", "must be at most 8000 UTF-8 bytes without null characters"));
+        }
+
+        var sources = ReadRoutineValues(entry, "sourceItemIds", path, 24, text => Guid.TryParse(text, out var id) && id != Guid.Empty, violations)
+            .Select(Guid.Parse).ToImmutableArray();
+        if (sources.Distinct().Count() != sources.Length)
+        {
+            violations.Add(new AutomationViolation($"{path}.sourceItemIds", "must contain unique item ids"));
+        }
+
+        var abilities = ReadRoutineValues(entry, "abilities", path, 32,
+            text => text.Length is > 0 and <= 100 && text.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-'), violations);
+
+        PetRoutineRename? autoRename = null;
+        if (entry.ContainsKey("autoRename"))
+        {
+            var renamePath = $"{path}.autoRename";
+            if (entry["autoRename"] is JsonObject rename)
+            {
+                AutomationJsonRead.RefuseUnknown(rename, renamePath, violations, "from", "to");
+                var from = AutomationJsonRead.String(rename, "from", renamePath, violations);
+                var to = AutomationJsonRead.String(rename, "to", renamePath, violations);
+                if (from is not null && to is not null)
+                {
+                    if (!ValidPetTitle(from) || !ValidPetTitle(to) || from == to)
+                    {
+                        violations.Add(new AutomationViolation(renamePath, "must have different titles of 1 to 500 characters without control characters"));
+                    }
+
+                    autoRename = new PetRoutineRename(from, to);
+                }
+            }
+            else
+            {
+                violations.Add(new AutomationViolation(renamePath, "must be an object"));
+            }
+        }
+
+        var includeText = ReadOptionalTargetText(entry, path, violations);
+        return brief is null ? null : new StartPetRunAction(brief, sources, abilities, autoRename, includeText);
+    }
+
+    private static PollPetMailboxAction? ReadPollPetMailbox(JsonObject entry, string path, List<AutomationViolation> violations)
+    {
+        AutomationJsonRead.RefuseUnknown(entry, path, violations, "type", "provider", "connectionId", "connectionRevision", "resourceId", "brief", "includeTargetText");
+        var provider = AutomationJsonRead.String(entry, "provider", path, violations);
+        var connection = AutomationJsonRead.String(entry, "connectionId", path, violations);
+        var revision = AutomationJsonRead.String(entry, "connectionRevision", path, violations);
+        var resource = AutomationJsonRead.String(entry, "resourceId", path, violations);
+        var brief = AutomationJsonRead.String(entry, "brief", path, violations);
+        CheckTemplate(brief, 2_000, $"{path}.brief", violations);
+        if (brief?.Contains('\0', StringComparison.Ordinal) == true)
+        {
+            violations.Add(new AutomationViolation($"{path}.brief", "cannot contain null characters"));
+        }
+
+        if (provider is not ("gmail" or "outlook-mail"))
+        {
+            violations.Add(new AutomationViolation($"{path}.provider", "must be gmail or outlook-mail"));
+        }
+
+        if (!Guid.TryParse(connection, out var connectionId) || connectionId == Guid.Empty)
+        {
+            violations.Add(new AutomationViolation($"{path}.connectionId", "must be a connection id"));
+        }
+
+        if (!Guid.TryParse(revision, out var connectionRevision) || connectionRevision == Guid.Empty)
+        {
+            violations.Add(new AutomationViolation($"{path}.connectionRevision", "must be a connection revision"));
+        }
+
+        if (resource is not { Length: > 0 and <= 512 } || resource.Any(char.IsControl))
+        {
+            violations.Add(new AutomationViolation($"{path}.resourceId", "must be a label or folder identifier of 1 to 512 characters"));
+        }
+
+        var includeText = ReadOptionalTargetText(entry, path, violations);
+        return provider is null || resource is null || brief is null ? null
+            : new PollPetMailboxAction(provider, connectionId, connectionRevision, resource, brief, includeText);
+    }
+
+    private static bool? ReadOptionalTargetText(JsonObject entry, string path, List<AutomationViolation> violations)
+    {
+        if (!entry.TryGetPropertyValue("includeTargetText", out var value))
+        {
+            return null;
+        }
+        if (value is JsonValue node && node.TryGetValue<bool>(out var includeText))
+        {
+            return includeText;
+        }
+        violations.Add(new AutomationViolation($"{path}.includeTargetText", "must be true or false"));
+        return null;
+    }
+
+    internal static bool ValidPetTitle(string title) =>
+        !string.IsNullOrWhiteSpace(title) && title.Length <= MaximumItemTitle && !title.Any(char.IsControl);
+
+    private static ImmutableArray<string> ReadRoutineValues(
+        JsonObject entry, string key, string path, int maximum, Func<string, bool> valid, List<AutomationViolation> violations)
+    {
+        if (!entry.ContainsKey(key))
+        {
+            return [];
+        }
+
+        if (entry[key] is not JsonArray array || array.Count > maximum)
+        {
+            violations.Add(new AutomationViolation($"{path}.{key}", $"must be a list of at most {maximum} values"));
+            return [];
+        }
+
+        var values = new HashSet<string>(StringComparer.Ordinal);
+        var result = ImmutableArray.CreateBuilder<string>(array.Count);
+        foreach (var value in array)
+        {
+            if (value is not JsonValue node || !node.TryGetValue<string>(out var text) || !valid(text) || !values.Add(text))
+            {
+                violations.Add(new AutomationViolation($"{path}.{key}", "must contain valid and unique values"));
+                return [];
+            }
+
+            result.Add(text);
+        }
+
+        return result.MoveToImmutable();
     }
 
     private static void CheckTemplate(string? template, int maximum, string path, List<AutomationViolation> violations)

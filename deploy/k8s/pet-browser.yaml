@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nix-pet-browser
+  namespace: nix
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: nix-pet-browser }
+  template:
+    metadata:
+      labels: { app: nix-pet-browser }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: Localhost, localhostProfile: nix/pet-browser.json }
+      containers:
+        - name: browser
+          image: ${REGISTRY}/browser:${TAG}
+          env:
+            - name: NIX_BROWSER_INTERNAL_SECRET
+              valueFrom: { secretKeyRef: { name: nix-pet-browser, key: secret } }
+            - name: NIX_BROWSER_ATTACHMENT_ORIGIN
+              valueFrom: { secretKeyRef: { name: nix-object-store, key: public-origin } }
+          ports: [{ containerPort: 8313, name: http }]
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            timeoutSeconds: 12
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - { name: temp, mountPath: /tmp }
+            - { name: shared-memory, mountPath: /dev/shm }
+      volumes:
+        - name: temp
+          emptyDir: { sizeLimit: 512Mi }
+        - name: shared-memory
+          emptyDir: { medium: Memory, sizeLimit: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nix-pet-browser
+  namespace: nix
+spec:
+  selector: { app: nix-pet-browser }
+  ports: [{ name: http, port: 8313, targetPort: http }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nix-pet-browser
+  namespace: nix
+spec:
+  podSelector:
+    matchLabels: { app: nix-pet-browser }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: nix-api }
+      ports: [{ protocol: TCP, port: 8313 }]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports: [{ protocol: TCP, port: 53 }, { protocol: UDP, port: 53 }]
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16]
+      ports: [{ protocol: TCP, port: 80 }, { protocol: TCP, port: 443 }]

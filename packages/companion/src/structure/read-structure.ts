@@ -6,7 +6,7 @@ import {
   type ViewConfiguration,
 } from '@nix/api-client';
 import { isComputedType, LIMITS } from '@nix/structure-spec';
-import { checkItem } from '../guards.js';
+import { checkItem, isPetItemWithheld } from '../guards.js';
 import type { CompanionPorts } from '../ports.js';
 
 export interface ReadStructureField {
@@ -92,9 +92,9 @@ async function boundedChildCount(
   let count = 0;
   for await (const row of ports.core.paginate(
     items.listItems(workspaceId, { parentId, pageSize: 1 }),
-    { signal, forceRefresh: true },
+    { signal, forceRefresh: true, maxPages: 2 },
   )) {
-    void row;
+    if (isPetItemWithheld(row)) continue;
     count += 1;
     if (count >= 2) return 'many';
   }

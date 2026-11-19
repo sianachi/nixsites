@@ -91,6 +91,20 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     }
 
     [Fact]
+    public async Task The_private_planning_operation_is_refused_by_public_pet_runtime()
+    {
+        using var handler = new RecordingWorker();
+        using var http = new HttpClient(handler);
+        var gateway = KeyedGateway(http, "anthropic");
+
+        var result = await gateway.ExecuteAsync(new("plan_task_step", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Draft a comment"), Cancellation);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("pets.invalid_request", result.Error.Code);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    [Fact]
     public async Task Inline_provider_credit_rejection_is_a_safe_503_problem()
     {
         using var handler = new ProviderErrorWorker(HttpStatusCode.BadGateway, ["anthropic.credit_balance.400"]);
@@ -972,12 +986,12 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
-        var gateway = new PetWorkerClient(http, Configuration(), Session(), Dispatcher(), new StubPermissions(), new NoCredentials(), new PetProviderKeyProtector(new EphemeralDataProtectionProvider()));
+        var gateway = new PetWorkerClient(http, Configuration(), Session(), Dispatcher(itemTitle: "Tasks"), new StubPermissions(), new NoCredentials(), new PetProviderKeyProtector(new EphemeralDataProtectionProvider()));
         var container = Guid.NewGuid();
 
         var result = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "What is due?",
             Today: "2026-10-09", TimeZone: "Europe/London",
-            WorkspaceMap: [new(container, "Tasks", "note", ["board", "calendar"])]), Cancellation);
+            WorkspaceMap: [new(container, "Browser alias", "note", ["board", "calendar"])]), Cancellation);
 
         Assert.True(result.IsSuccess);
         using var body = JsonDocument.Parse(handler.Body);

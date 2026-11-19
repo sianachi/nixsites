@@ -64,6 +64,7 @@ services:
     image: busybox:1.37@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
     restart: "no"
     command: ["sh", "-c", "chown -R 1654:1654 /var/lib/nix/data-protection"]
+    networks: [default, pet-browser-control]
     volumes:
       - nix-api-data-protection:/var/lib/nix/data-protection
     cap_drop:
@@ -169,6 +170,21 @@ services:
       # Server-side pet tools (off | reads | all). Core's value is the kill switch: turn the
       # companion's on first, then this one.
       Nix__Pets__ServerTools: ${NIX_PETS_SERVER_TOOLS:-off}
+      Nix__PetRuns__Enabled: ${NIX_PET_RUNS_ENABLED:-false}
+      Nix__PetRuns__AllowedWorkspaces__0: ${NIX_PET_RUNS_PILOT_WORKSPACE:-}
+      Nix__PetBrowser__Url: ${NIX_PET_BROWSER_URL:-}
+      Nix__PetBrowser__InternalSecret: ${NIX_PET_BROWSER_INTERNAL_SECRET:-}
+      Nix__Connectors__google__ClientId: ${NIX_PET_GOOGLE_CLIENT_ID:-}
+      Nix__Connectors__google__ClientSecret: ${NIX_PET_GOOGLE_CLIENT_SECRET:-}
+      Nix__Connectors__microsoft__ClientId: ${NIX_PET_MICROSOFT_CLIENT_ID:-}
+      Nix__Connectors__microsoft__ClientSecret: ${NIX_PET_MICROSOFT_CLIENT_SECRET:-}
+      Nix__Connectors__slack__ClientId: ${NIX_PET_SLACK_CLIENT_ID:-}
+      Nix__Connectors__slack__ClientSecret: ${NIX_PET_SLACK_CLIENT_SECRET:-}
+      Nix__Connectors__github__ClientId: ${NIX_PET_GITHUB_CLIENT_ID:-}
+      Nix__Connectors__github__ClientSecret: ${NIX_PET_GITHUB_CLIENT_SECRET:-}
+      Nix__Connectors__linear__ClientId: ${NIX_PET_LINEAR_CLIENT_ID:-}
+      Nix__Connectors__linear__ClientSecret: ${NIX_PET_LINEAR_CLIENT_SECRET:-}
+      Nix__Connectors__microsoft__Tenant: ${NIX_PET_MICROSOFT_TENANT:-organizations}
       Nix__Collaboration__BaseUrl: http://nix-node:8100
       Nix__ObjectStorage__Endpoint: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT}
       Nix__ObjectStorage__PublicOrigin: ${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
@@ -261,6 +277,32 @@ services:
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
+
+  nix-pet-browser:
+    image: ${NIX_IMAGE_REGISTRY:-ghcr.io/sianachi/nix}/browser:${NIX_IMAGE_TAG:?set NIX_IMAGE_TAG}
+    profiles: [pet-browser]
+    restart: unless-stopped
+    init: true
+    environment:
+      NIX_BROWSER_INTERNAL_SECRET: ${NIX_PET_BROWSER_INTERNAL_SECRET:-}
+      NIX_BROWSER_ATTACHMENT_ORIGIN: ${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}
+    expose: ["8313"]
+    networks: [pet-browser-control, pet-browser-egress]
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    shm_size: 256m
+    mem_limit: 1g
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:${NIX_PET_BROWSER_SECCOMP_PROFILE:-./pet-browser-seccomp.json}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8313/readyz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      start_period: 20s
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   # One Node process runs collaboration (8100), the pet companion (8302) and, when sites are
   # enabled, the sites worker (8301). Each role keeps its own port and environment.
@@ -463,6 +505,9 @@ services:
       - no-new-privileges:true
 
 networks:
+  pet-browser-control:
+    internal: true
+  pet-browser-egress: {}
   default:
     name: nix
     ipam:

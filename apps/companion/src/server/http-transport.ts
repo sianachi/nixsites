@@ -2,7 +2,10 @@ import { randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { providerFailureToken } from '../providers/provider-errors.ts';
+import {
+  ProviderThreadUnavailableError,
+  providerFailureToken,
+} from '../providers/provider-errors.ts';
 import type { ModelInfo, Notify, RequestHandler, Transport } from '../shared/types.ts';
 import { errorMessage, isRecord, str } from '../shared/util.ts';
 import {
@@ -270,7 +273,8 @@ export class HttpTransport implements Transport {
     try {
       if (!THREAD_ID.test(id)) throw new Error('bad id');
       raw = readFileSync(this.threadPath(id), 'utf8');
-    } catch {
+    } catch (error) {
+      if (isRecord(error) && error.code === 'ENOENT') throw new ProviderThreadUnavailableError();
       throw new Error("that conversation's thread is no longer available; start a new one");
     }
     let parsed: unknown;

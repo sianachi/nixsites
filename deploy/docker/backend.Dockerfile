@@ -23,6 +23,7 @@ COPY scripts/fetch-pdf-fonts.sh scripts/
 RUN sh scripts/fetch-pdf-fonts.sh backend/fonts
 
 COPY backend/ backend/
+COPY packages/api-client/src/pet-capabilities.json packages/api-client/src/pet-capabilities.json
 # The build regenerates backend/openapi/nix-api.json as a side effect (see Nix.Api.csproj).
 # That is harmless here; the committed contract is what CI verifies, not this copy.
 RUN dotnet publish backend/src/Nix.Api/Nix.Api.csproj \

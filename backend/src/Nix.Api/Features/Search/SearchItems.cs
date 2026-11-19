@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Nix.Abstractions;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
+using Nix.Domain.Tenancy;
 using Nix.Messaging;
 
 namespace Nix.Features.Search;
@@ -10,7 +11,8 @@ namespace Nix.Features.Search;
 /// <summary>Finds items by what they are called and by what their documents say.</summary>
 /// <param name="Query">What the person typed.</param>
 /// <param name="Limit">The most results to return.</param>
-public sealed record SearchItems(string Query, int Limit) : IQuery<Result<SearchResults>>;
+/// <param name="PetWorkspaceId">When set, find only items available to pet work in that workspace.</param>
+public sealed record SearchItems(string Query, int Limit, WorkspaceId? PetWorkspaceId = null) : IQuery<Result<SearchResults>>;
 
 /// <summary>What a search found, and whether it found more than it returned.</summary>
 /// <param name="Query">The query that was run.</param>
@@ -48,7 +50,9 @@ public sealed record SearchResults(string Query, IReadOnlyList<ItemDigest> Hits,
 /// </remarks>
 public sealed class SearchItemsHandler(
     IItemSearch search,
-    IPermissionResolver permissions)
+    IPermissionResolver permissions,
+    IWorkspaceLocks workspaceLocks,
+    AccessTokenSessionContext access)
     : IQueryHandler<SearchItems, Result<SearchResults>>
 {
     /// <summary>The most results one search may return.</summary>
@@ -109,12 +113,23 @@ public sealed class SearchItemsHandler(
             return Result.Success(new SearchResults(text, [], limit));
         }
 
-        var workspaces = await permissions
-            .ReadableWorkspacesAsync(cancellationToken)
-            .ConfigureAwait(false);
+        IReadOnlyList<WorkspaceId> workspaces;
+        if (query.PetWorkspaceId is { } workspace)
+        {
+            if (!await permissions.CanReadWorkspaceAsync(workspace, cancellationToken).ConfigureAwait(false)
+                || (await workspaceLocks.GetStateAsync(workspace, cancellationToken).ConfigureAwait(false)).PasswordProtected)
+            {
+                return Result.Success(new SearchResults(text, [], limit));
+            }
+            workspaces = [workspace];
+        }
+        else
+        {
+            workspaces = await permissions.ReadableWorkspacesAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         var hits = await _search
-            .FindAsync(text, workspaces, limit, cancellationToken)
+            .FindAsync(text, workspaces, limit, query.PetWorkspaceId.HasValue || access.IsPetTurn, cancellationToken)
             .ConfigureAwait(false);
 
         return Result.Success(new SearchResults(text, hits, limit));
@@ -135,16 +150,18 @@ internal static class SearchItemsEndpoint
     /// <param name="dispatcher">Sends the query to its handler.</param>
     /// <param name="q">What to look for.</param>
     /// <param name="limit">The most results to return.</param>
+    /// <param name="petWorkspaceId">Optionally restricts the matches to items available to pet work in this workspace.</param>
     /// <returns>The matches.</returns>
     internal static async Task<Results<Ok<SearchResponse>, ProblemHttpResult>> Handle(
         HttpContext httpContext,
         [FromServices] NixDispatcher dispatcher,
         string? q = null,
-        int limit = SearchItemsHandler.DefaultLimit)
+        int limit = SearchItemsHandler.DefaultLimit,
+        Guid? petWorkspaceId = null)
     {
         var result = await dispatcher
             .QueryAsync<SearchItems, Result<SearchResults>>(
-                new SearchItems(q ?? string.Empty, limit),
+                new SearchItems(q ?? string.Empty, limit, petWorkspaceId is { } workspace ? WorkspaceId.From(workspace) : null),
                 httpContext.RequestAborted)
             .ConfigureAwait(false);
 

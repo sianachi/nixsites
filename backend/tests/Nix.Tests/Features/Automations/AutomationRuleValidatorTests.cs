@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Nix.Domain.Automations;
 using Nix.Features.Automations;
 
 namespace Nix.Tests.Features.Automations;
@@ -10,6 +11,7 @@ namespace Nix.Tests.Features.Automations;
 public sealed class AutomationRuleValidatorTests
 {
     private static readonly Guid Scope = Guid.Parse("0199a000-0000-7000-8000-0000000000c0");
+    private const string Schedule = """{"type":"schedule","freq":"daily","interval":1,"time":"09:00"}""";
 
     private static AutomationRuleInput Input(
         string trigger,
@@ -146,4 +148,48 @@ public sealed class AutomationRuleValidatorTests
         Assert.Contains("trigger", result.Error.Message, StringComparison.Ordinal);
         Assert.Contains("actions", result.Error.Message, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_pet_routine_preserves_its_exact_titles_named_sources_and_note_text_consent(bool? includeTargetText)
+    {
+        var source = Guid.NewGuid();
+        var action = $$"""[{"type":"start_pet_run","brief":"Prepare the next shift","sourceItemIds":["{{source:D}}"],"abilities":["task.rename"],"autoRename":{"from":" Task ","to":"Next shift"} }]""";
+
+        var input = Input(Schedule, action, scope: Scope);
+        if (includeTargetText is { } includeText)
+        {
+            input.Actions[0]!.AsObject()["includeTargetText"] = includeText;
+        }
+        var checkedRule = AutomationRuleValidator.Validate(input);
+
+        Assert.True(checkedRule.IsSuccess);
+        Assert.Equal(source, Assert.Single(AutomationRuleValidator.NamedItems(checkedRule.Value)));
+        var stored = AutomationActionJson.WriteAll(checkedRule.Value.Actions).ToJsonString();
+        var reread = Assert.IsType<StartPetRunAction>(Assert.Single(AutomationActionJson.ReadStored(stored)));
+        Assert.Equal(new PetRoutineRename(" Task ", "Next shift"), reread.AutoRename);
+        Assert.Equal(includeTargetText, reread.IncludeTargetText);
+    }
+
+    [Fact]
+    public void A_pet_routine_requires_a_schedule_and_a_scoped_task()
+    {
+        const string PetAction = """[{"type":"start_pet_run","brief":"Prepare the next shift"}]""";
+
+        Assert.Equal(AutomationErrors.InvalidCode, AutomationRuleValidator.Validate(Input(Schedule, PetAction)).Error.Code);
+        Assert.Equal(AutomationErrors.InvalidCode, AutomationRuleValidator.Validate(Input(
+            """{"type":"property_changed","key":"status"}""", PetAction, scope: Scope)).Error.Code);
+    }
+
+    [Theory]
+    [InlineData("""[{"type":"start_pet_run","brief":"Prepare","workspaceScope":true}]""")]
+    [InlineData("""[{"type":"start_pet_run","brief":"Prepare","includeTargetText":"false"}]""")]
+    [InlineData("""[{"type":"start_pet_run","brief":"Prepare","autoRename":{"from":"Today","to":"Later"}}]""")]
+    [InlineData("""[{"type":"start_pet_run","brief":"Prepare","abilities":["task.rename"],"autoRename":{"from":"Today","to":"Today"}}]""")]
+    [InlineData("""[{"type":"start_pet_run","brief":"Prepare","abilities":["task.rename"],"autoRename":{"from":"Today","to":"Later","target":"somewhere else"}}]""")]
+    [InlineData("""[{"type":"start_pet_run","brief":"Prepare"},{"type":"notify","title":"Also notify"}]""")]
+    public void A_pet_routine_rejects_more_scope_or_automatic_authority_than_was_bound(string actions) =>
+        Assert.Equal(AutomationErrors.InvalidCode, AutomationRuleValidator.Validate(Input(Schedule, actions, scope: Scope)).Error.Code);
 }

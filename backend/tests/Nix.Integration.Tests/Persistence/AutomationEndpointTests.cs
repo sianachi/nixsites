@@ -134,6 +134,31 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task An_admin_token_cannot_create_or_replace_a_pet_routine()
+    {
+        var admin = await AccessTokenAsync("admin", [AccessTokenScopes.Read, AccessTokenScopes.Write, AccessTokenScopes.Admin]);
+        var routine = new
+        {
+            name = "Prepare the next shift",
+            enabled = true,
+            scopeItemId = Guid.NewGuid(),
+            trigger = JsonElement.Parse("""{"type":"schedule","freq":"daily","interval":1,"time":"09:00"}"""),
+            actions = JsonElement.Parse("""[{"type":"start_pet_run","brief":"Prepare","abilities":["task.rename"],"autoRename":{"from":"Today","to":"Later"}}]"""),
+        };
+
+        using var denied = await SendAsync(HttpMethod.Post, Collection, admin, routine);
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+        Assert.Equal("automation.pet_routine_owner_required", await ProblemCodeAsync(denied));
+
+        using var ordinaryRule = await SendAsync(HttpMethod.Post, Collection, admin, Rule("Notify", PropertyTrigger));
+        Assert.Equal(HttpStatusCode.Created, ordinaryRule.StatusCode);
+        using var changed = await SendAsync(HttpMethod.Put, ordinaryRule.Headers.Location!.OriginalString, admin,
+            new { expectedRevision = 1, rule = routine });
+        Assert.Equal(HttpStatusCode.Forbidden, changed.StatusCode);
+        Assert.Equal("automation.pet_routine_owner_required", await ProblemCodeAsync(changed));
+    }
+
+    [Fact]
     public async Task An_owner_keeps_at_most_fifty_rules_per_workspace()
     {
         var admin = await AccessTokenAsync("admin", [AccessTokenScopes.Read, AccessTokenScopes.Write, AccessTokenScopes.Admin]);

@@ -225,8 +225,19 @@ export const WorkApproval = {
 };
 export const DarkWorkApproval = { ...WorkApproval, globals: { ground: 'dark' } };
 
-/** Two writes waiting at once: each card is named by its own change, and its buttons are
- * described by that name, so the owner can tell which one Approve request approves. */
+export const AskForWorkChanges = {
+  ...WorkApproval,
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole('group', { name: /Weekly plan/ }, { timeout: 10_000 });
+    canvas.getByRole('button', { name: 'Ask for changes' }).click();
+    await canvas.findByRole('textbox', { name: 'What should change?' });
+    canvas.getByText('Draft the release notes', { exact: false });
+  },
+};
+export const DarkAskForWorkChanges = { ...AskForWorkChanges, globals: { ground: 'dark' } };
+
+/** Each pending write identifies its target and names its effect. */
 export const TwoWritesWaiting = {
   render: (): ReactElement => {
     const note = (title: string) =>
@@ -276,8 +287,8 @@ export const TwoWritesWaiting = {
     const canvas = within(canvasElement);
     await canvas.findByRole('group', { name: /Weekly plan/ }, { timeout: 10_000 });
     await canvas.findByRole('group', { name: /Monthly plan/ });
-    if (canvas.getAllByRole('button', { name: 'Approve request' }).length !== 2)
-      throw new Error('Each waiting card has its own Approve request.');
+    if (canvas.getAllByRole('button', { name: 'Create note' }).length !== 2)
+      throw new Error('Each waiting card has its own Create note action.');
   },
 };
 export const DarkTwoWritesWaiting = { ...TwoWritesWaiting, globals: { ground: 'dark' } };
@@ -479,7 +490,7 @@ export const ViewUpdateApproval = {
     const canvas = within(canvasElement);
     await canvas.findByText('Before: Status (status)', {}, { timeout: 10_000 });
     await canvas.findByText('After: Category (category)');
-    if (!canvas.getByRole('button', { name: 'Approve request' }).isConnected)
+    if (!canvas.getByRole('button', { name: 'Update view' }).isConnected)
       throw new Error('A view change must wait for approval.');
     canvas.getByRole('group');
     if (canvas.queryByRole('region', { name: 'View id' }) !== null)
@@ -531,7 +542,7 @@ export const ViewReadActivity = {
     canvas.getByText('Result details').click();
     canvas.getByText(/Returned 5 of 18 matching items/);
     canvas.getByText(/does not reproduce temporary browser filters or personally hidden items/);
-    if (canvas.queryByRole('button', { name: 'Approve request' }) !== null)
+    if (canvas.queryByRole('button', { name: 'Read view' }) !== null)
       throw new Error('A completed read does not need an approval card.');
   },
 };

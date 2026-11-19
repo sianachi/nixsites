@@ -22,6 +22,29 @@ import { WorkspaceToolRefusal } from './tool-args.js';
 
 /** Path parameters that name an item: each is checked to be in this workspace before a run. */
 const ITEM_PARAMS = ['itemId', 'sourceItemId', 'containerItemId'];
+const SCOPED_ACTION_PARAMS = ['workspaceId', 'siteId', 'ruleId', 'templateId', ...ITEM_PARAMS];
+
+function canUseAction(entry: OperationEntry): boolean {
+  return (
+    !isHumanOnlyOperation(entry) &&
+    entry.id !== 'GetWorkspacePetProtection' &&
+    SCOPED_ACTION_PARAMS.some((param) => entry.path.includes(`{${param}}`))
+  );
+}
+
+/** These response shapes are bound to the workspace checked by the caller. */
+export function hasWorkspaceResult(run: ActionRun): boolean {
+  return [
+    'GetItem',
+    'GetWorkspace',
+    'ListItems',
+    'ListTrash',
+    'RunWorkspaceQuery',
+    'AggregateWorkspaceQuery',
+    'GetWorkspaceCalendar',
+    'RunItemChart',
+  ].includes(run.entry.id);
+}
 
 export interface ActionRun {
   entry: OperationEntry;
@@ -57,6 +80,10 @@ export function parseActionRun(query: string, specJson: string, workspaceId: str
     throw new WorkspaceToolRefusal(
       'This changes credentials or the pet’s own settings. The owner does it in Settings; nothing was run.',
       'This is something only you can do, in Settings, so nothing was run.',
+    );
+  if (!canUseAction(entry))
+    throw new WorkspaceToolRefusal(
+      'This action is unavailable in pet chat because its workspace scope cannot be checked. Choose a task or use a specific workspace tool.',
     );
   let parts: z.infer<typeof callSchema>;
   try {
@@ -161,7 +188,7 @@ export function findActions(query: string): {
   actions: (Omit<OperationEntry, 'area' | 'uuidParams'> & { risk: OperationRisk })[];
 } {
   return {
-    actions: findOperations(query, 8, (entry) => !isHumanOnlyOperation(entry)).map((entry) => ({
+    actions: findOperations(query, 8, canUseAction).map((entry) => ({
       id: entry.id,
       method: entry.method,
       path: entry.path,

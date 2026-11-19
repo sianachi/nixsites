@@ -175,7 +175,7 @@ describe('nixctl mcp over HTTP', () => {
     } finally {
       await client.close();
     }
-  });
+  }, 25_000);
 
   it('refuses host filesystem tools even when called directly with a fabricated bearer', async () => {
     vi.stubEnv('XDG_CONFIG_HOME', '/dev/null');

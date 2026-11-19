@@ -1,6 +1,12 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
-import { snapshotAtOrBefore, updatesAfter } from '../../db/documents.ts';
+import {
+  findUpdateReceipt,
+  lockDocByItem,
+  snapshotAtOrBefore,
+  updatesAfter,
+} from '../../db/documents.ts';
+import { lockedAmong } from '../../db/locks.ts';
 import { withTenantScope } from '../../db/tenant-scope.ts';
 import { strategyFor } from '../../documents/body-kinds.ts';
 import { LIMITS, rejection } from '../../documents/limits.ts';
@@ -82,7 +88,11 @@ export function registerUpdateRoutes(app: FastifyInstance, deps: RouteDependenci
   });
 
   app.post('/documents/:itemId/updates', async (request: FastifyRequest, reply: FastifyReply) => {
-    const context = await establish(request, reply, deps);
+    const body = request.body as
+      | { update?: unknown; clientId?: unknown; expectedDocId?: unknown; expectedHeadSeq?: unknown }
+      | undefined;
+    const guarded = body?.expectedHeadSeq !== undefined;
+    const context = await establish(request, reply, deps, guarded);
     if (context === null) {
       return reply;
     }
@@ -94,8 +104,6 @@ export function registerUpdateRoutes(app: FastifyInstance, deps: RouteDependenci
       return problem(reply, refusal.status, refusal.code, refusal.detail);
     }
 
-    const body = request.body as
-      { update?: unknown; clientId?: unknown; expectedDocId?: unknown } | undefined;
     if (typeof body?.update !== 'string' || typeof body.clientId !== 'string') {
       return problem(
         reply,
@@ -112,6 +120,18 @@ export function registerUpdateRoutes(app: FastifyInstance, deps: RouteDependenci
       return problem(reply, 400, 'invalid_body', "'expectedDocId' must be a UUID.");
     }
     const expectedDocId = body.expectedDocId?.toLowerCase();
+    const expectedHead =
+      typeof body.expectedHeadSeq === 'string' && body.expectedHeadSeq.length <= 19
+        ? parseAfterCursor(body.expectedHeadSeq)
+        : null;
+    if (guarded && (expectedDocId === undefined || expectedHead === null)) {
+      return problem(
+        reply,
+        400,
+        'invalid_body',
+        "'expectedHeadSeq' must be a non-negative sequence string and requires 'expectedDocId'.",
+      );
+    }
 
     // Applied before any database work: backpressure that costs a round trip is not much
     // backpressure.
@@ -128,16 +148,24 @@ export function registerUpdateRoutes(app: FastifyInstance, deps: RouteDependenci
       return problem(reply, 400, 'invalid_body', "'update' is not valid base64.");
     }
 
+    const { tenantId, principalId } = context.scope;
+    const { clientId } = body;
     const outcome = await withTenantScope(deps.pool, context.scope, async (sql) => {
-      const doc = await openDocument(
-        sql,
-        context.scope.tenantId,
-        context.itemId,
-        context.workspaceId,
-        newDocId,
-      );
+      if (expectedHead !== null) {
+        // Core's lock and move writers hold this workspace key exclusively.
+        await sql.query('SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))', [
+          `finance-workspace:${context.workspaceId.toLowerCase()}`,
+        ]);
+        if ((await lockedAmong(sql, tenantId, [context.itemId])).size !== 0) {
+          return { kind: 'body_locked' } as const;
+        }
+      }
 
-      if (doc === null) {
+      const doc =
+        expectedHead === null
+          ? await openDocument(sql, tenantId, context.itemId, context.workspaceId, newDocId)
+          : await lockDocByItem(sql, tenantId, context.itemId);
+      if (doc?.workspace_id !== context.workspaceId) {
         return null;
       }
 
@@ -145,12 +173,29 @@ export function registerUpdateRoutes(app: FastifyInstance, deps: RouteDependenci
         return { kind: 'document_changed' } as const;
       }
 
+      if (expectedHead !== null && expectedHead !== BigInt(doc.head_seq)) {
+        const receipt =
+          expectedHead < BigInt(doc.head_seq)
+            ? await findUpdateReceipt(sql, {
+                tenantId,
+                docId: doc.doc_id,
+                seq: expectedHead + 1n,
+                actorId: principalId,
+                clientId,
+                updateBytes,
+              })
+            : null;
+        return receipt === null
+          ? ({ kind: 'revision_changed' } as const)
+          : ({ kind: 'replayed', docId: doc.doc_id, receipt } as const);
+      }
+
       const applied = await applyUpdate(sql, {
-        tenantId: context.scope.tenantId,
+        tenantId,
         doc,
         updateBytes,
-        actorId: context.scope.principalId,
-        clientId: body.clientId as string,
+        actorId: principalId,
+        clientId,
         // Publish on every REST write, not on the resident cadence. A socket session snapshots
         // when the last editor detaches - "exactly when they are owed" - because the snapshot is
         // what publishes a document's searchable text and its link edges. A stateless request has
@@ -175,6 +220,21 @@ export function registerUpdateRoutes(app: FastifyInstance, deps: RouteDependenci
         'document_changed',
         'The document body changed before this upload.',
       );
+    }
+    if (outcome.kind === 'body_locked') {
+      return problem(reply, 403, 'body_locked', 'This item is locked.');
+    }
+    if (outcome.kind === 'revision_changed') {
+      return problem(
+        reply,
+        409,
+        'revision_changed',
+        'The document changed after the edit was prepared.',
+      );
+    }
+    if (outcome.kind === 'replayed') {
+      await refreshResident(request, deps, context.itemId);
+      return reply.code(202).send({ docId: outcome.docId, ...outcome.receipt });
     }
     const { docId, applied } = outcome;
     if (!applied.ok) {

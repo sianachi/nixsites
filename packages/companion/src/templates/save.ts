@@ -13,7 +13,7 @@ import {
 } from '@nix/api-client';
 import { resolveFieldRef, type SaveSpec } from '@nix/structure-spec';
 import type { CompanionPorts } from '../ports.js';
-import { checkItem } from '../guards.js';
+import { checkItem, requirePetItem } from '../guards.js';
 import { WorkspaceToolRefusal } from '../tool-args.js';
 
 const MAX_SOURCE_ITEMS = 200;
@@ -73,6 +73,7 @@ export async function readSourceTree(
         throw new WorkspaceToolRefusal(
           'The item tree changed or left this workspace. No template was saved.',
         );
+      requirePetItem(child);
       children.push(child);
       flat.push(child);
       if (flat.length > MAX_SOURCE_ITEMS)

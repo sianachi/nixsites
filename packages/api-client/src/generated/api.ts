@@ -24,6 +24,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/workspaces/{workspaceId}/pet-protection': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Check whether a workspace contains any items withheld from pets
+     * @description Available only in the workspace owner's browser or its signed pet turn. Returns a boolean without item details.
+     */
+    get: operations['GetWorkspacePetProtection'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/me': {
     parameters: {
       query?: never;
@@ -118,6 +138,40 @@ export interface paths {
      */
     put: operations['SaveCanvasLibrary'];
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-runs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the caller's pet jobs in a workspace. */
+    get: operations['ListWorkspacePetRuns'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-connections/browser-site': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Connect a site-scoped browser session */
+    post: operations['SavePetBrowserSite'];
     delete?: never;
     options?: never;
     head?: never;
@@ -882,6 +936,26 @@ export interface paths {
      * @description Sets comments, suggesting, file review states and full width for one item. All are off until switched on. A field left null is unchanged. Anyone who may edit the item may change them. Turning comments off keeps existing threads but refuses new ones with 'comments.disabled' (409).
      */
     put: operations['SetItemSettings'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-protection': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Control whether pets can use an item
+     * @description A workspace owner may withhold this item from pets in a signed-in browser session.
+     */
+    put: operations['SetItemPetProtection'];
     post?: never;
     delete?: never;
     options?: never;
@@ -1697,7 +1771,7 @@ export interface paths {
     };
     /**
      * Find items by title or document text
-     * @description Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. The search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. An item in a workspace the caller cannot reach is omitted entirely rather than redacted. A blank query returns no results rather than every item.
+     * @description Returns items whose title contains 'q', or whose document text matches it, with title matches ranked first. The search covers every workspace the caller may read and nothing else - the filter is a predicate inside the query, so the limit is never spent on rows that would then be discarded. An item in a workspace the caller cannot reach is omitted entirely rather than redacted. A blank query returns no results rather than every item. 'petWorkspaceId' limits the search to items available to pet work in one workspace.
      */
     get: operations['SearchItems'];
     put?: never;
@@ -2010,6 +2084,450 @@ export interface paths {
      * @description The same events as the chat stream, for the conversation attached to 'rootItemId'.
      */
     post: operations['StreamPetNoteRuntime'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the caller's pet jobs on the task. */
+    get: operations['ListItemPetRuns'];
+    put?: never;
+    /** Queue a task-scoped pet job. */
+    post: operations['CreatePetRun'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read an owned pet job and its action receipts. */
+    get: operations['GetPetRun'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}/watch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the current pet job checkpoint for polling. */
+    get: operations['WatchPetRun'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}/answer': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Answer the pet's pending question. */
+    post: operations['AnswerPetRun'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/decision': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Approve or decline the exact pending proposal in an active browser. */
+    post: operations['DecidePetRunProposal'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}/scope': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Decide the exact pending request for a read-only source or one ability. */
+    post: operations['DecidePetRunScope'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}/proposals/{proposalId}/revise': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Supersede the current proposal and prepare a fresh draft in the same job. */
+    post: operations['RevisePetRunProposal'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancel an owned pet job. */
+    post: operations['CancelPetRun'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}/retry': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Retry a failed pet job with a known outcome. */
+    post: operations['RetryPetRun'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-runs/{runId}/steps/{stepId}/undo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Queue the supported undo of an applied step. */
+    post: operations['UndoPetRunStep'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-peers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ListPetPeers'];
+    put?: never;
+    post: operations['RegisterPetPeer'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-peers/work': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ListPetPeerWork'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-peers/{peerId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations['RevokePetPeer'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/linear': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the Linear connection status for this workspace. */
+    get: operations['GetLinearConnection'];
+    put?: never;
+    post?: never;
+    /** Remove this workspace's Linear connection. */
+    delete: operations['DisconnectLinearConnection'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/linear/authorize': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start a browser OAuth connection to read-only Linear. */
+    post: operations['AuthorizeLinearConnection'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/linear-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List visible Linear issue requests for a Nix task. */
+    get: operations['ListLinearRequests'];
+    put?: never;
+    /** Queue a one-issue lookup for approval on a Nix task. */
+    post: operations['RequestLinearIssue'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/linear-requests/{requestId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the status of a Linear issue request on a Nix task. */
+    get: operations['GetLinearIssueRequest'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/linear-requests/hand-to-pet': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Hand a pet a single Linear issue lookup for approval on the task. */
+    post: operations['HandToPet'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/linear-requests/{requestId}/decision': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Approve or decline a single pending Linear issue lookup in the browser. */
+    post: operations['DecideLinearIssueRequest'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/linear-link': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read an owner's linked Linear issue and observed status. */
+    get: operations['GetLinearLink'];
+    /** Link one exact issue from an authorized Linear team. */
+    put: operations['LinkLinearIssue'];
+    post?: never;
+    /** Remove the exact linked issue without changing Linear. */
+    delete: operations['UnlinkLinearIssue'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/linear-link/refresh': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Refresh the linked issue status in Nix without changing Linear. */
+    post: operations['RefreshLinearLink'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/linear-link/copy-status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Copy an observed Linear status into the selected Nix task. */
+    post: operations['CopyLinkedLinearStatus'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-connections': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the owner’s scoped pet connections and provider actions. */
+    get: operations['ListPetConnections'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-connections/authorize': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Begin browser consent for a scoped pet connection. */
+    post: operations['AuthorizePetConnection'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-connections/{connectionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Revoke a pet connection in Nix. */
+    delete: operations['DisconnectPetConnection'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-connections/register-mcp': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Register one exact remote MCP tool against its input schema. */
+    post: operations['RegisterPetMcpConnection'];
     delete?: never;
     options?: never;
     head?: never;
@@ -3747,6 +4265,11 @@ export interface components {
       /** Format: int64 */
       skipped: number | string;
     };
+    AnswerPetRunRequest: {
+      /** Format: uuid */
+      questionId: string;
+      answer: null | string;
+    };
     AppendViewSetupRequest: {
       properties: components['schemas']['PropertyDefinitionRequest'][];
       views: components['schemas']['ViewRequest'][];
@@ -3775,6 +4298,21 @@ export interface components {
       returnTo: null | string;
     };
     AuthorizeCalendarResponse: {
+      authorizationUrl: string;
+    };
+    AuthorizeLinearConnectionRequest: {
+      returnTo: null | string;
+    };
+    AuthorizePetConnectionRequest: {
+      provider: string;
+      resourceKind: string;
+      resourceId: string;
+      actions: string[];
+      returnTo: null | string;
+      /** Format: uuid */
+      calendarLinkId?: null | string;
+    };
+    AuthorizePetConnectionResponse: {
       authorizationUrl: string;
     };
     AutomationActionPreview: {
@@ -3968,6 +4506,11 @@ export interface components {
       /** Format: int64 */
       byteLength: number | string;
       idempotencyKey: string;
+    };
+    BrowserSiteCookie: {
+      name: string;
+      value: string;
+      path: string;
     };
     CalendarConnectionResponse: {
       /** Format: uuid */
@@ -4194,6 +4737,40 @@ export interface components {
       /** Format: uuid */
       petId: string;
     };
+    ConnectorActionDefinition: {
+      id: string;
+      provider: string;
+      resourceKind: string;
+      kind: string;
+      description: string;
+      schema: components['schemas']['JsonElement'];
+      schemaHash: string;
+      configured: boolean;
+    };
+    ConnectorCalendarLink: {
+      /** Format: uuid */
+      linkId: string;
+      provider: string;
+      resourceId: string;
+      name: string;
+      writable: boolean;
+    };
+    ConnectorConnection: {
+      /** Format: uuid */
+      id: string;
+      provider: string;
+      resourceKind: string;
+      resourceId: string;
+      actions: string[];
+      /** Format: uuid */
+      revision: string;
+    };
+    ConnectorList: {
+      enabled: boolean;
+      connections: components['schemas']['ConnectorConnection'][];
+      actions: components['schemas']['ConnectorActionDefinition'][];
+      calendars: components['schemas']['ConnectorCalendarLink'][];
+    };
     ContainerViewsResponse: {
       views: components['schemas']['ViewResponse'][];
       unrenderable: string[];
@@ -4254,6 +4831,11 @@ export interface components {
       error: null | string;
       /** @default  */
       text: string;
+    };
+    CopyLinearStatusRequest: {
+      /** Format: uuid */
+      revision: string;
+      localStatus: null | string;
     };
     CreateAccessTokenRequest: {
       name: null | string;
@@ -4395,6 +4977,19 @@ export interface components {
       /** Format: int32 */
       rolloverHour: number | string;
       showOnCalendar: boolean;
+    };
+    DecideLinearIssueRequest: {
+      approve: boolean;
+    };
+    DecidePetProposalRequest: {
+      approve: boolean;
+    };
+    DecidePetRunScopeRequest: {
+      /** Format: uuid */
+      questionId: string;
+      approve: boolean;
+      /** Format: uuid */
+      sourceItemId?: null | string;
     };
     DocumentImportPreviewCapabilityResponse: {
       /** Format: uri */
@@ -4780,6 +5375,11 @@ export interface components {
       /** Format: date */
       to: string;
     };
+    HandToPetRequest: {
+      /** Format: uuid */
+      petId: string;
+      issueId: string;
+    };
     HealthCheckResponse: {
       name: string;
       status: string;
@@ -4912,6 +5512,8 @@ export interface components {
       reviewStates: boolean;
       /** @default false */
       fullWidth: boolean;
+      /** @default false */
+      withholdFromPets: boolean;
     };
     JsonArray: unknown[];
     JsonElement: unknown;
@@ -4939,6 +5541,68 @@ export interface components {
       workspaceId: string;
       /** Format: date-time */
       keptAt: string;
+    };
+    LinearAuthorizationResponse: {
+      authorizationUrl: string;
+    };
+    LinearConnectionResponse: {
+      connected: boolean;
+    };
+    LinearIssueResponse: {
+      id: string;
+      title: string;
+      status: string;
+      url: string;
+    };
+    LinearLinkConnection: {
+      /** Format: uuid */
+      id: string;
+      teamId: string;
+    };
+    LinearLinkedIssue: {
+      /** Format: uuid */
+      revision: string;
+      connected: boolean;
+      identifier: null | string;
+      url: null | string;
+      remoteStatus: null | string;
+      /** Format: date-time */
+      checkedAt: null | string;
+      localStatus: null | string;
+      change: null | string;
+      canCopyStatus: boolean;
+    };
+    LinearLinkResponse: {
+      link: null | components['schemas']['LinearLinkedIssue'];
+      connections: components['schemas']['LinearLinkConnection'][];
+    };
+    LinearRequestResponse: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      itemId: string;
+      issueId: string;
+      status: string;
+      requestedBy: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      expiresAt: string;
+      canDecide: boolean;
+      result: null | components['schemas']['LinearIssueResponse'];
+      /** Format: uuid */
+      petId: null | string;
+      /** Format: uuid */
+      commentId: null | string;
+    };
+    LinearRequestsResponse: {
+      requests: components['schemas']['LinearRequestResponse'][];
+      canHandToPet: boolean;
+    };
+    LinkLinearIssueRequest: {
+      /** Format: uuid */
+      connectionId: string;
+      issue: string;
     };
     LivenessResponse: {
       status: string;
@@ -5080,6 +5744,14 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       readAt: null | string;
+      petDecision?: null | components['schemas']['NotificationPetDecisionDto'];
+    };
+    NotificationPetDecisionDto: {
+      /** Format: uuid */
+      runId: string;
+      /** Format: uuid */
+      decisionId: string;
+      kind: string;
     };
     NotificationReadResponse: {
       /** Format: int32 */
@@ -5216,6 +5888,41 @@ export interface components {
       /** @default true */
       supportsTools: boolean;
     };
+    PetPeerRegistration: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      petId: string;
+      /** Format: uuid */
+      workspaceId: string;
+      /** Format: uuid */
+      itemId: string;
+      name: string;
+      kind: string;
+      /** Format: date-time */
+      expiresAt: string;
+      /** Format: date-time */
+      revokedAt: null | string;
+    };
+    PetPeersResponse: {
+      peers: components['schemas']['PetPeerRegistration'][];
+    };
+    PetPeerWorkResponse: {
+      work: components['schemas']['PetPeerWorkView'][];
+    };
+    PetPeerWorkView: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      peerId: string;
+      /** Format: uuid */
+      runId: string;
+      direction: string;
+      status: string;
+      result: null | string;
+      /** Format: date-time */
+      createdAt: string;
+    };
     PetProfile: {
       /** Format: uuid */
       id: string;
@@ -5235,6 +5942,74 @@ export interface components {
     };
     PetProvidersResponse: {
       keys: components['schemas']['PetProviderKeyResponse'][];
+    };
+    PetRunAbility: {
+      id: string;
+      name: string;
+      description: string;
+    };
+    PetRunFailure: {
+      stage: string;
+      code: string;
+      message: string;
+    };
+    PetRunProposal: {
+      /** Format: uuid */
+      id: string;
+      capability: string;
+      description: string;
+      preview: components['schemas']['JsonElement'];
+      status: string;
+      /** Format: date-time */
+      decisionAt?: null | string;
+      receipt?: null | string;
+      /** Format: uuid */
+      undoId?: null | string;
+      /** @default false */
+      automatic: boolean;
+    };
+    PetRunQuestion: {
+      /** Format: uuid */
+      id: string;
+      text: string;
+      scope?: null | string;
+      ability?: null | string;
+    };
+    PetRunResponse: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      itemId: string;
+      /** Format: uuid */
+      workspaceId: string;
+      brief: string;
+      sourceItemIds: string[];
+      workspaceScope: boolean;
+      abilities: string[];
+      status: string;
+      /** Format: int64 */
+      revision: number | string;
+      question: null | components['schemas']['PetRunQuestion'];
+      proposals: components['schemas']['PetRunProposal'][];
+      results: components['schemas']['PetRunResult'][];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      includeTargetText?: null | boolean;
+      afterMessageId?: null | string;
+      failure?: null | components['schemas']['PetRunFailure'];
+    };
+    PetRunResult: {
+      /** Format: uuid */
+      id: string;
+      text: string;
+      reversible: boolean;
+    };
+    PetRunsResponse: {
+      enabled: boolean;
+      abilities: components['schemas']['PetRunAbility'][];
+      runs: components['schemas']['PetRunResponse'][];
     };
     PetRuntimeRequest: {
       operation: string;
@@ -5564,6 +6339,25 @@ export interface components {
     ReferencesResponse: {
       references: components['schemas']['ReferenceResolutionResponse'][];
     };
+    RegisteredPetPeer: {
+      peer: components['schemas']['PetPeerRegistration'];
+      endpoint: string;
+      credential: string;
+    };
+    RegisterPetMcpConnectionRequest: {
+      url: string;
+      tool: string;
+      token: string;
+    };
+    RegisterPetPeerRequest: {
+      name: null | string;
+      kind: null | string;
+      /**
+       * Format: int32
+       * @default 30
+       */
+      days: number | string;
+    };
     RejectSiteApprovalRequest: {
       note: null | string;
     };
@@ -5594,11 +6388,17 @@ export interface components {
       body: string;
       mentionIds: null | string[];
     };
+    RequestLinearIssueRequest: {
+      issueId: string;
+    };
     RequestSiteApprovalRequest: {
       acknowledgeDisclosure: boolean;
     };
     ResetLinkRequest: {
       currentPassword: null | string;
+    };
+    RevisePetRunProposalRequest: {
+      feedback?: null | string;
     };
     RoleGrantResponse: {
       subjectType: string;
@@ -5624,6 +6424,11 @@ export interface components {
       /** Format: int32 */
       rolloverHour: number | string;
       showOnCalendar: boolean;
+    };
+    SavePetBrowserSiteRequest: {
+      origin: null | string;
+      cookies: null | components['schemas']['BrowserSiteCookie'][];
+      allowSubmissions: boolean;
     };
     SavePetProviderKeyRequest: {
       key: string;
@@ -5699,6 +6504,9 @@ export interface components {
     SetItemLockRequest: {
       password: string;
       currentPassword: null | string;
+    };
+    SetItemPetProtectionRequest: {
+      withholdFromPets: null | boolean;
     };
     SetItemProtectionRequest: {
       noDelete: null | boolean;
@@ -5907,6 +6715,15 @@ export interface components {
       spacing: string;
       /** Format: uuid */
       themeItemId?: null | string;
+    };
+    StartPetRunRequest: {
+      brief: null | string;
+      sourceItemIds?: null | string[];
+      /** @default false */
+      workspaceScope: boolean;
+      abilities?: null | string[];
+      includeTargetText?: null | boolean;
+      afterMessageId?: null | string;
     };
     StructuredItemResponse: {
       item: components['schemas']['ItemResponse'];
@@ -6523,6 +7340,9 @@ export interface components {
     WorkspacePasswordRequest: {
       password: string;
     };
+    WorkspacePetProtectionResponse: {
+      hasProtectedItems: boolean;
+    };
     WorkspacePrincipalResponse: {
       /** Format: uuid */
       principalId: string;
@@ -6653,6 +7473,37 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['LivenessResponse'];
+        };
+      };
+    };
+  };
+  GetWorkspacePetProtection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkspacePetProtectionResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
     };
@@ -6866,6 +7717,54 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListWorkspacePetRuns: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunsResponse'];
+        };
+      };
+    };
+  };
+  SavePetBrowserSite: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SavePetBrowserSiteRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ConnectorConnection'];
         };
       };
     };
@@ -9057,6 +9956,59 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ItemResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SetItemPetProtection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetItemPetProtectionRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ItemResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
       /** @description Not Found */
@@ -11342,6 +12294,7 @@ export interface operations {
       query?: {
         q?: string;
         limit?: number | string;
+        petWorkspaceId?: string;
       };
       header?: never;
       path?: never;
@@ -12093,6 +13046,776 @@ export interface operations {
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
+      };
+    };
+  };
+  ListItemPetRuns: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunsResponse'];
+        };
+      };
+    };
+  };
+  CreatePetRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StartPetRunRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  GetPetRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  WatchPetRun: {
+    parameters: {
+      query?: {
+        after?: number | string;
+      };
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  AnswerPetRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AnswerPetRunRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  DecidePetRunProposal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+        proposalId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DecidePetProposalRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  DecidePetRunScope: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DecidePetRunScopeRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  RevisePetRunProposal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+        proposalId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RevisePetRunProposalRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  CancelPetRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  RetryPetRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  UndoPetRunStep: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        runId: string;
+        stepId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetRunResponse'];
+        };
+      };
+    };
+  };
+  ListPetPeers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPeersResponse'];
+        };
+      };
+    };
+  };
+  RegisterPetPeer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegisterPetPeerRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RegisteredPetPeer'];
+        };
+      };
+    };
+  };
+  ListPetPeerWork: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPeerWorkResponse'];
+        };
+      };
+    };
+  };
+  RevokePetPeer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        peerId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GetLinearConnection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearConnectionResponse'];
+        };
+      };
+    };
+  };
+  DisconnectLinearConnection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthorizeLinearConnection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        'application/json': null | components['schemas']['AuthorizeLinearConnectionRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearAuthorizationResponse'];
+        };
+      };
+    };
+  };
+  ListLinearRequests: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearRequestsResponse'];
+        };
+      };
+    };
+  };
+  RequestLinearIssue: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RequestLinearIssueRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearRequestResponse'];
+        };
+      };
+    };
+  };
+  GetLinearIssueRequest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        requestId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearRequestResponse'];
+        };
+      };
+    };
+  };
+  HandToPet: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HandToPetRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearRequestResponse'];
+        };
+      };
+    };
+  };
+  DecideLinearIssueRequest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        requestId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DecideLinearIssueRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearRequestResponse'];
+        };
+      };
+    };
+  };
+  GetLinearLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearLinkResponse'];
+        };
+      };
+    };
+  };
+  LinkLinearIssue: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LinkLinearIssueRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearLinkResponse'];
+        };
+      };
+    };
+  };
+  UnlinkLinearIssue: {
+    parameters: {
+      query: {
+        revision: string;
+      };
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RefreshLinearLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearLinkResponse'];
+        };
+      };
+    };
+  };
+  CopyLinkedLinearStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CopyLinearStatusRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LinearLinkResponse'];
+        };
+      };
+    };
+  };
+  ListPetConnections: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ConnectorList'];
+        };
+      };
+    };
+  };
+  AuthorizePetConnection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AuthorizePetConnectionRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AuthorizePetConnectionResponse'];
+        };
+      };
+    };
+  };
+  DisconnectPetConnection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        connectionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RegisterPetMcpConnection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegisterPetMcpConnectionRequest'];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

@@ -133,7 +133,7 @@ public sealed class NotificationStore(
     }
 
     /// <inheritdoc />
-    public async Task<NotificationWriteResult> CreateAsync(
+    public Task<NotificationWriteResult> CreateAsync(
         PrincipalId principal,
         NotificationKind kind,
         string title,
@@ -141,6 +141,33 @@ public sealed class NotificationStore(
         ItemId? itemId,
         WorkspaceId? workspaceId,
         string dedupeKey,
+        CancellationToken cancellationToken) =>
+        CreateCoreAsync(principal, kind, title, body, itemId, workspaceId, dedupeKey, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<NotificationWriteResult> CreatePetDecisionAsync(
+        PrincipalId principal,
+        ItemId itemId,
+        WorkspaceId workspaceId,
+        NotificationPetDecisionTarget target,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        return CreateCoreAsync(principal, NotificationKind.System,
+            target.IsQuestion ? "Pet has a question" : "Pet needs approval",
+            "Open the pet dialog to continue.",
+            itemId, workspaceId, $"pet-run:{target.RunId:D}:attention:{target.DecisionId:D}", target, cancellationToken);
+    }
+
+    private async Task<NotificationWriteResult> CreateCoreAsync(
+        PrincipalId principal,
+        NotificationKind kind,
+        string title,
+        string body,
+        ItemId? itemId,
+        WorkspaceId? workspaceId,
+        string dedupeKey,
+        NotificationPetDecisionTarget? petDecision,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dedupeKey);
@@ -162,16 +189,20 @@ public sealed class NotificationStore(
         // redelivered trigger or a retried worker call lands on the row that already exists
         // instead of a second one, and the affected-row count says which happened.
         var inserted = await db.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO notification (tenant_id, id, principal_id, kind, title, body, item_id, workspace_id, created_at, dedupe_key)
+            INSERT INTO notification (tenant_id, id, principal_id, kind, title, body, item_id, workspace_id,
+                created_at, dedupe_key, pet_run_id, pet_decision_id, pet_decision_is_question)
             VALUES ({context.TenantId.Value}, {id}, {principal.Value}, {kindText}, {title}, {body},
-                {itemIdValue}, {workspaceIdValue},
-                {createdAt}, {dedupeKey})
+                {itemIdValue}, {workspaceIdValue}, {createdAt}, {dedupeKey}, {petDecision?.RunId},
+                {petDecision?.DecisionId}, {petDecision?.IsQuestion})
             ON CONFLICT (tenant_id, principal_id, dedupe_key) DO NOTHING
             """, cancellationToken).ConfigureAwait(false);
         if (inserted == 1)
         {
             await BumpRevisionAsync(context.TenantId, principal, cancellationToken).ConfigureAwait(false);
-            await EnqueuePushAsync(context.TenantId, principal, id, workspaceId, cancellationToken).ConfigureAwait(false);
+            if (petDecision is null)
+            {
+                await EnqueuePushAsync(context.TenantId, principal, id, workspaceId, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         var row = await db.Set<Notification>().AsNoTracking()
@@ -186,7 +217,7 @@ public sealed class NotificationStore(
             UPDATE notification
                SET push_attempted_at = clock_timestamp()
              WHERE tenant_id = {tenantId.Value} AND principal_id = {principalId.Value} AND id = {notificationId}
-               AND push_attempted_at IS NULL
+               AND push_attempted_at IS NULL AND pet_run_id IS NULL
             """, cancellationToken).ConfigureAwait(false) == 1;
 
     // A push is enqueued only for a newly created notification (never a deduplicated one), only
