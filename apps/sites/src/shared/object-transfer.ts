@@ -104,8 +104,9 @@ export class ObjectTransfer {
     rawUrl: string,
     bytes: Uint8Array,
     signal?: AbortSignal,
+    sha256Hex?: string,
   ): Promise<PutOutcome> {
-    return this.put(rawUrl, bytes, true, signal);
+    return this.put(rawUrl, bytes, true, signal, sha256Hex);
   }
 
   /** A checksum-bound write that replaces what is there (a host manifest). */
@@ -128,11 +129,15 @@ export class ObjectTransfer {
     bytes: Uint8Array,
     createOnly: boolean,
     signal: AbortSignal | undefined,
+    sha256Hex?: string,
   ): Promise<PutOutcome> {
     // The signed headers are exactly content-length, the base64 checksum and (for create-only)
     // if-none-match; fetch derives content-length from the body.
     const headers: Record<string, string> = {
-      'x-amz-checksum-sha256': createHash('sha256').update(bytes).digest('base64'),
+      'x-amz-checksum-sha256':
+        sha256Hex === undefined
+          ? createHash('sha256').update(bytes).digest('base64')
+          : Buffer.from(sha256Hex, 'hex').toString('base64'),
     };
     if (createOnly) headers['if-none-match'] = '*';
     const response = await this.send(rawUrl, { method: 'PUT', headers, body: bytes }, signal);
