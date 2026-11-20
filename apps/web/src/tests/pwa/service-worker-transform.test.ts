@@ -207,4 +207,44 @@ describe('the PWA asset build transform', () => {
     expect(shell).not.toContain('/assets/canvas.js');
     expect(shell).not.toContain('/assets/pdf.js');
   });
+  it('keeps the graph and template studio chunks out of the shell but in the offline asset list', async () => {
+    const emitted: Record<string, string> = {};
+    const chunk = (fileName: string, dynamicImports: string[] = [], isEntry = false) => ({
+      type: 'chunk',
+      fileName,
+      isEntry,
+      moduleIds: [],
+      modules: {},
+      imports: [],
+      dynamicImports,
+    });
+
+    await findPwaAssetsPlugin().generateBundle.call(
+      {
+        emitFile: (asset) => {
+          emitted[asset.fileName] = asset.source;
+        },
+        getModuleInfo: () => null,
+      },
+      {},
+      {
+        'assets/index-main.js': chunk('assets/index-main.js', ['assets/app-main.js'], true),
+        'assets/app-main.js': chunk('assets/app-main.js', [
+          'assets/graph-page.js',
+          'assets/template-studio-page.js',
+        ]),
+        'assets/graph-page.js': chunk('assets/graph-page.js'),
+        'assets/template-studio-page.js': chunk('assets/template-studio-page.js'),
+        'assets/index-main.css': { type: 'asset' },
+      },
+    );
+
+    const worker = emitted['service-worker.js'];
+    const shell = worker?.match(/const SHELL_ASSETS = (\[.*?\]);/u)?.[1];
+    const all = worker?.match(/const ASSETS = (\[.*?\]);/u)?.[1];
+    for (const file of ['graph-page.js', 'template-studio-page.js']) {
+      expect(shell).not.toContain(`/assets/${file}`);
+      expect(all).toContain(`/assets/${file}`);
+    }
+  });
 });
