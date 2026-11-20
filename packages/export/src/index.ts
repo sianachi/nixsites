@@ -77,7 +77,7 @@ export {
   validateTemplateArchive,
   type ReadArchiveResult,
 } from './reader.js';
-export { readBundleStream, type BundleStream } from './bundle-stream.js';
+export { readBundleStream, readBundleStreamAsync, type BundleStream } from './bundle-stream.js';
 export {
   RENDER_FORMAT,
   RENDER_VERSION,

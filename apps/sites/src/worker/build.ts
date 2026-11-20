@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { readBundleStream, type ItemBody, type LossEntry } from '@nix/export';
+import { readBundleStreamAsync, type ItemBody, type LossEntry } from '@nix/export';
 import {
   MAX_DOWNLOAD_BYTES,
   MAX_VIDEO_BYTES,
@@ -200,14 +200,14 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
   const withContent = pages.filter((page) => page.content !== null && page.content.seq > 0);
   await mapLimited(withContent, BODY_CONCURRENCY, signal, async (page) => {
     const source = await core.body(execution, page.itemId, signal);
-    const text = Buffer.from(
-      await deps.collab.download(source.sourceUrl, MAX_BODY_BYTES, signal, {
+    const stream = await readBundleStreamAsync(
+      deps.collab.downloadLines(source.sourceUrl, MAX_BODY_BYTES, signal, {
         authorization: `Bearer ${source.bearerToken}`,
         'x-nix-internal-secret': deps.internalSecret,
       }),
-    ).toString('utf8');
-    const stream = readBundleStream(text.split('\n'));
-    const bundle = stream.bundles.find((candidate) => candidate.id === page.itemId);
+      (candidate) => candidate.id === page.itemId,
+    );
+    const bundle = stream.bundles[0];
     const body = bundle?.body ?? null;
     if (body === null) {
       // Never publish a hole where a page's text should be.

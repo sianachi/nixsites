@@ -70,6 +70,46 @@ export class ObjectTransfer {
     signal?: AbortSignal,
     headers?: Readonly<Record<string, string>>,
   ): Promise<Uint8Array> {
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for await (const chunk of this.chunks(rawUrl, maxBytes, signal, headers)) {
+      total += chunk.byteLength;
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks, total);
+  }
+
+  /**
+   * A download read as UTF-8 lines without holding the whole body: same status, declared-length and
+   * byte-bound checks as `download`. A final line without a newline is still yielded.
+   */
+  async *downloadLines(
+    rawUrl: string,
+    maxBytes: number,
+    signal?: AbortSignal,
+    headers?: Readonly<Record<string, string>>,
+  ): AsyncGenerator<string> {
+    const decoder = new TextDecoder();
+    let pending = '';
+    for await (const chunk of this.chunks(rawUrl, maxBytes, signal, headers)) {
+      pending += decoder.decode(chunk, { stream: true });
+      let newline = pending.indexOf('\n');
+      while (newline >= 0) {
+        yield pending.slice(0, newline);
+        pending = pending.slice(newline + 1);
+        newline = pending.indexOf('\n');
+      }
+    }
+    pending += decoder.decode();
+    if (pending.length > 0) yield pending;
+  }
+
+  private async *chunks(
+    rawUrl: string,
+    maxBytes: number,
+    signal: AbortSignal | undefined,
+    headers: Readonly<Record<string, string>> | undefined,
+  ): AsyncGenerator<Uint8Array> {
     const response = await this.send(rawUrl, { method: 'GET', headers }, signal);
     if (!response.ok) {
       throw new TransferError(
@@ -82,7 +122,6 @@ export class ObjectTransfer {
       await response.body?.cancel();
       throw new TransferError('The source object exceeds the configured byte limit.');
     }
-    const chunks: Uint8Array[] = [];
     let total = 0;
     try {
       for await (const chunk of (response.body ?? []) as AsyncIterable<Uint8Array>) {
@@ -90,13 +129,12 @@ export class ObjectTransfer {
         if (total > maxBytes) {
           throw new TransferError('The source object exceeds the configured byte limit.');
         }
-        chunks.push(chunk);
+        yield chunk;
       }
     } catch (error) {
       if (error instanceof TransferError) throw error;
       throw new TransferError('The source download was interrupted.');
     }
-    return Buffer.concat(chunks, total);
   }
 
   /** A create-only, checksum-bound write. An object that is already there counts as written. */
