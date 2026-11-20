@@ -22,8 +22,19 @@ export interface NoteStats {
   readonly outline: readonly NoteOutlineEntry[];
 }
 
+/** Documents are immutable, so the footer, status bar and outline share one scan per document. */
+const statsByDoc = new WeakMap<ProseMirrorNode, NoteStats>();
+
 /** The note as it reads now: text proposed for deletion is left out, proposed insertions stay in. */
 export function readNoteStats(doc: ProseMirrorNode): NoteStats {
+  const cached = statsByDoc.get(doc);
+  if (cached) return cached;
+  const stats = scanNoteStats(doc);
+  statsByDoc.set(doc, stats);
+  return stats;
+}
+
+function scanNoteStats(doc: ProseMirrorNode): NoteStats {
   const outline: NoteOutlineEntry[] = [];
   let words = 0;
   doc.descendants((node, pos) => {

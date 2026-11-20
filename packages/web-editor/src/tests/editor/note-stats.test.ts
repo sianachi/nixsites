@@ -60,4 +60,14 @@ describe('readNoteStats', () => {
     ]);
     expect(doc.nodeAt(outline[1]?.pos ?? -1)?.type.name).toBe('heading');
   });
+
+  it('shares one result per document and keeps other documents independent', () => {
+    const other = nixSchema.nodeFromJSON({
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'solo' }] }],
+    });
+    expect(readNoteStats(doc)).toBe(readNoteStats(doc));
+    expect(readNoteStats(other)).not.toBe(readNoteStats(doc));
+    expect(readNoteStats(other).words).toBe(1);
+  });
 });
