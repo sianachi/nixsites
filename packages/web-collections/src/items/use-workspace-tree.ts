@@ -663,31 +663,44 @@ export function useWorkspaceTree(): WorkspaceTree {
 
         // The ancestors are now present but their other children are not, so a revealed note would
         // appear as its parent's only child. Fetching each level puts its siblings back.
-        for (const parentId of expand) {
-          let siblings: readonly TreeItem[];
-          try {
-            siblings = await fetchChildren(parentId, controller.signal);
-          } catch (reason) {
-            if (
-              !requestCanCommit(controller.signal, mounted.current) ||
-              revision !== readRevision.current
-            )
-              return;
-            // A locked ancestor withholds its other children. The path to the revealed item is
-            // already known, so it is shown on its own rather than the reveal failing.
-            if (isLockedListing(reason)) {
-              markLocked(parentId, true);
-              continue;
+        // The levels are independent reads, so at most four run at once, as in `refresh`.
+        const levels = [...expand];
+        await Promise.all(
+          Array.from({ length: Math.min(4, levels.length) }, async () => {
+            while (levels.length > 0) {
+              const parentId = levels.shift();
+              if (parentId === undefined) return;
+              let siblings: readonly TreeItem[];
+              try {
+                siblings = await fetchChildren(parentId, controller.signal);
+              } catch (reason) {
+                if (
+                  !requestCanCommit(controller.signal, mounted.current) ||
+                  revision !== readRevision.current
+                )
+                  return;
+                // A locked ancestor withholds its other children. The path to the revealed item
+                // is already known, so it is shown on its own rather than the reveal failing.
+                if (isLockedListing(reason)) {
+                  markLocked(parentId, true);
+                  continue;
+                }
+                throw reason;
+              }
+              if (
+                !requestCanCommit(controller.signal, mounted.current) ||
+                revision !== readRevision.current
+              )
+                return;
+              absorb(parentId, siblings, revision);
             }
-            throw reason;
-          }
-          if (
-            !requestCanCommit(controller.signal, mounted.current) ||
-            revision !== readRevision.current
-          )
-            return;
-          absorb(parentId, siblings, revision);
-        }
+          }),
+        );
+        if (
+          !requestCanCommit(controller.signal, mounted.current) ||
+          revision !== readRevision.current
+        )
+          return;
 
         settle('found');
       }
