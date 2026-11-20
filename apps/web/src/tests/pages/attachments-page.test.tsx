@@ -49,6 +49,8 @@ interface Options {
   readonly rows?: readonly Record<string, unknown>[];
   readonly listStatus?: number;
   readonly linkStatus?: number;
+  /** Answers a list request itself, so a test can finish responses in any order. */
+  readonly onList?: (search: string) => Promise<Response>;
 }
 
 function stubAttachments(options: Options = {}): Call[] {
@@ -84,6 +86,7 @@ function stubAttachments(options: Options = {}): Call[] {
       });
 
       if (path.endsWith('/attachments')) {
+        if (options.onList !== undefined) return options.onList(url.search);
         return options.listStatus === undefined
           ? json({ items: options.rows ?? [row()], nextCursor: null })
           : json(
@@ -246,6 +249,45 @@ describe('the attachments page', () => {
       expect(last?.search).toContain('expiring=true');
       expect(last?.search).toContain('state=approved');
     });
+  });
+
+  it('ignores a list answer that arrives after a newer filter started', async () => {
+    const pending: { search: string; answer: (rows: unknown[]) => void }[] = [];
+    stubAttachments({
+      onList: (search) =>
+        new Promise<Response>((resolve) => {
+          pending.push({
+            search,
+            answer: (rows) => {
+              resolve(json({ items: rows, nextCursor: null }));
+            },
+          });
+        }),
+    });
+    renderAt(<App />, PAGE);
+    const user = userEvent.setup();
+    await waitFor(() => {
+      expect(pending).toHaveLength(1);
+    });
+    pending[0]?.answer([row()]);
+    await screen.findByRole('list', { name: 'Attachments' });
+
+    await user.click(screen.getByRole('checkbox', { name: 'Show images' }));
+    await waitFor(() => {
+      expect(pending).toHaveLength(2);
+    });
+    await user.click(screen.getByRole('checkbox', { name: 'Expiring only' }));
+    await waitFor(() => {
+      expect(pending).toHaveLength(3);
+    });
+
+    // The newer request answers first; the older one finishes last and must not replace it.
+    pending[2]?.answer([row({ title: 'Newest.pdf' })]);
+    expect(await screen.findByText('Newest.pdf')).toBeVisible();
+    pending[1]?.answer([row({ title: 'Obsolete.pdf' })]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByText('Obsolete.pdf')).toBeNull();
+    expect(screen.getByText('Newest.pdf')).toBeVisible();
   });
 
   it('submits for review and approves through the state route', async () => {

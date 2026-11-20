@@ -31,6 +31,7 @@ import {
   ErrorPanel,
   LoadingPanel,
 } from '@nix/web-foundation/components/states/status-panels';
+import { settleLimited } from '@nix/web-foundation/lib/settle-limited';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { selectedItemSearch } from '@nix/web-platform/routing/selected-item';
 import { useCapabilities } from '@nix/web-platform/session/capabilities-context';
@@ -39,6 +40,7 @@ import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-contex
 import { fileIcon } from '@nix/web-views/drive/drive-icons';
 
 const PAGE = 50;
+const BULK_LIMIT = 4;
 const STATE_LABEL: Record<FileVersionState, string> = {
   draft: 'Draft',
   in_review: 'In review',
@@ -166,25 +168,36 @@ export function AttachmentsPage(): ReactElement {
   const shown = useRef(PAGE);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const iterator = useRef<AsyncIterator<AttachmentRow> | null>(null);
+  const latest = useRef<AbortController | null>(null);
 
-  const pull = useCallback(async (limit: number): Promise<readonly AttachmentRow[]> => {
-    const taken: AttachmentRow[] = [];
-    const source = iterator.current;
-    while (source !== null && taken.length < limit) {
-      const next = await source.next();
-      if (next.done === true) {
-        iterator.current = null;
-        break;
+  /** Takes up to `limit` rows from `source`; `exhausted` is true once the list has no more. */
+  const pull = useCallback(
+    async (
+      source: AsyncIterator<AttachmentRow>,
+      limit: number,
+    ): Promise<{ rows: readonly AttachmentRow[]; exhausted: boolean }> => {
+      const taken: AttachmentRow[] = [];
+      while (taken.length < limit) {
+        const next = await source.next();
+        if (next.done === true) return { rows: taken, exhausted: true };
+        taken.push(next.value);
       }
-      taken.push(next.value);
-    }
-    setMore(iterator.current !== null);
-    return taken;
-  }, []);
+      return { rows: taken, exhausted: false };
+    },
+    [],
+  );
 
-  /** Fetches the list again; `count` keeps as many rows as were on screen, so an action never jumps back to page one. */
+  /**
+   * Fetches the list again; `count` keeps as many rows as were on screen, so an action never jumps
+   * back to page one. A newer load supersedes this one: its requests are cancelled and, should
+   * they still finish, their result is dropped.
+   */
   const load = useCallback(
     async (count: number = PAGE): Promise<void> => {
+      latest.current?.abort();
+      const controller = new AbortController();
+      latest.current = controller;
+      const current = (): boolean => latest.current === controller;
       setLoading(true);
       setError(null);
       try {
@@ -197,16 +210,23 @@ export function AttachmentsPage(): ReactElement {
               limit: PAGE,
               cursor,
             }),
-            { forceRefresh: true },
+            { forceRefresh: true, signal: controller.signal },
           ),
         );
-        iterator.current = pages[Symbol.asyncIterator]();
-        setRows(await pull(count));
+        const source = pages[Symbol.asyncIterator]();
+        const taken = await pull(source, count);
+        if (!current()) return;
+        iterator.current = taken.exhausted ? null : source;
+        setMore(!taken.exhausted);
+        setRows(taken.rows);
       } catch (reason) {
+        if (!current()) return;
+        iterator.current = null;
+        setMore(false);
         setRows([]);
         setError(reasonOf(reason, 'Attachments could not be loaded.'));
       } finally {
-        setLoading(false);
+        if (current()) setLoading(false);
       }
     },
     [client, workspaceId, state, includeImages, expiring, pull],
@@ -221,9 +241,14 @@ export function AttachmentsPage(): ReactElement {
   }, [load]);
 
   const showMore = async (): Promise<void> => {
+    const source = iterator.current;
+    if (source === null) return;
     try {
-      const next = await pull(PAGE);
-      setRows((current) => [...current, ...next]);
+      const next = await pull(source, PAGE);
+      if (iterator.current !== source) return;
+      if (next.exhausted) iterator.current = null;
+      setMore(!next.exhausted);
+      setRows((current) => [...current, ...next.rows]);
     } catch (reason) {
       setNotice(reasonOf(reason, 'More attachments could not be loaded.'));
     }
@@ -252,7 +277,7 @@ export function AttachmentsPage(): ReactElement {
     async (changes, words) => {
       if (changes.length === 0) return;
       setNotice(null);
-      const results = await Promise.allSettled(changes.map((change) => change.apply()));
+      const results = await settleLimited(changes, BULK_LIMIT, (change) => change.apply());
       const done = changes.filter((_, index) => results[index]?.status === 'fulfilled');
       const failed = results.find((result) => result.status === 'rejected');
       if (failed !== undefined || done.length === 0) {
@@ -272,7 +297,7 @@ export function AttachmentsPage(): ReactElement {
         );
         if (reverts.length === done.length) {
           undo.push(words.done, async () => {
-            await Promise.allSettled(reverts.map((revert) => revert()));
+            await settleLimited(reverts, BULK_LIMIT, (revert) => revert());
             await load(shown.current);
           });
         } else if (failed === undefined) {
