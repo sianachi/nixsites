@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Browser processing has its own image and receives only its dedicated ingress secret.
-FROM node:22-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS browser
+FROM node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS browser
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN corepack enable
 WORKDIR /repo
