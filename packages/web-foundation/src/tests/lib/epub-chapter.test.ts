@@ -12,6 +12,7 @@ it('rebuilds hostile chapters with inert links, no active content and a network-
     toc: [],
     readEntry: () => strToU8(source),
     hasEntry: () => true,
+    release: () => undefined,
   };
   const html = buildEpubChapterDocument(book, 0, {
     fragment: null,

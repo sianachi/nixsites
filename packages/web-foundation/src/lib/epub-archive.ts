@@ -21,6 +21,8 @@ export const EPUB_MAX_ENTRIES = 5_000;
 export const EPUB_MAX_ENTRY_BYTES = 50 * 1024 * 1024;
 /** Every entry, uncompressed, together. */
 export const EPUB_MAX_TOTAL_BYTES = 300 * 1024 * 1024;
+/** Validated entries kept for one open book so a revisited chapter or image is not re-inflated. */
+export const EPUB_ENTRY_CACHE_BYTES = 16 * 1024 * 1024;
 
 /** A reason the book cannot be opened, written for the person who chose the file. */
 export class EpubRefusal extends Error {
@@ -57,6 +59,8 @@ export interface EpubBook {
    */
   readonly readEntry: (path: string) => Uint8Array | null;
   readonly hasEntry: (path: string) => boolean;
+  /** Drops the entries kept for repeat reads. The book still reads, from the archive again. */
+  readonly release: () => void;
 }
 
 const CONTAINER_PATH = 'META-INF/container.xml';
@@ -235,7 +239,34 @@ export function parseEpub(bytes: Uint8Array): EpubBook {
   }
 
   const decoder = new TextDecoder('utf-8');
+  // Only an entry that passed the size checks below is kept, so a hit repeats work, never skips
+  // a check. Map order is recency: a hit is re-inserted, and the oldest is evicted first.
+  const cache = new Map<string, Uint8Array>();
+  let cachedBytes = 0;
+  const release = (): void => {
+    cache.clear();
+    cachedBytes = 0;
+  };
   const readEntry = (path: string): Uint8Array | null => {
+    const hit = cache.get(path);
+    if (hit !== undefined) {
+      cache.delete(path);
+      cache.set(path, hit);
+      return hit;
+    }
+    const result = inflateEntry(path);
+    if (result !== null && result.byteLength <= EPUB_ENTRY_CACHE_BYTES) {
+      for (const [oldest, kept] of cache) {
+        if (cachedBytes + result.byteLength <= EPUB_ENTRY_CACHE_BYTES) break;
+        cache.delete(oldest);
+        cachedBytes -= kept.byteLength;
+      }
+      cache.set(path, result);
+      cachedBytes += result.byteLength;
+    }
+    return result;
+  };
+  const inflateEntry = (path: string): Uint8Array | null => {
     const declared = names.get(path);
     if (declared === undefined || path.endsWith('/')) return null;
     try {
@@ -394,5 +425,6 @@ export function parseEpub(bytes: Uint8Array): EpubBook {
     toc,
     readEntry,
     hasEntry,
+    release,
   };
 }

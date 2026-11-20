@@ -90,10 +90,13 @@ export function EpubReader({
   useEffect(() => {
     if (blob === undefined) return;
     let current = true;
+    let opened: EpubBook | null = null;
     void blob
       .arrayBuffer()
       .then((buffer) => {
-        if (current) setOpening({ status: 'ready', book: parseEpub(new Uint8Array(buffer)) });
+        if (!current) return;
+        opened = parseEpub(new Uint8Array(buffer));
+        setOpening({ status: 'ready', book: opened });
       })
       .catch((reason: unknown) => {
         if (current)
@@ -105,6 +108,7 @@ export function EpubReader({
       });
     return () => {
       current = false;
+      opened?.release();
     };
   }, [blob]);
 

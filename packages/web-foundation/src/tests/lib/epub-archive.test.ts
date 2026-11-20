@@ -29,6 +29,17 @@ describe('EPUB archive boundary', () => {
     expect(book.spine).toEqual([{ path: 'OEBPS/chapter.xhtml' }]);
     expect(book.readEntry('missing')).toBeNull();
   });
+  it('reads a validated entry once, and again from the archive after release', () => {
+    const book = parseEpub(bookZip());
+    const first = book.readEntry('OEBPS/chapter.xhtml');
+    expect(first).not.toBeNull();
+    expect(book.readEntry('OEBPS/chapter.xhtml')).toBe(first);
+    expect(book.readEntry('missing')).toBeNull();
+    book.release();
+    const again = book.readEntry('OEBPS/chapter.xhtml');
+    expect(again).not.toBe(first);
+    expect(again).toEqual(first);
+  });
   it.each([
     '../../secret',
     'https://example.com/a',
