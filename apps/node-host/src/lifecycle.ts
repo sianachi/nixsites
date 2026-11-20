@@ -19,13 +19,18 @@ export async function stopAll(
 ): Promise<unknown[]> {
   let timer: NodeJS.Timeout | undefined;
   const budget = new Promise<'timeout'>((resolve) => {
-    timer = setTimeout(() => resolve('timeout'), budgetMs);
+    timer = setTimeout(() => {
+      resolve('timeout');
+    }, budgetMs);
   });
   const settled = Promise.allSettled(running.map((role) => role.stop()));
   const outcome = await Promise.race([settled, budget]);
   clearTimeout(timer);
-  if (outcome === 'timeout') return [new Error(`Roles did not stop within ${budgetMs} ms.`)];
-  return outcome.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
+  if (outcome === 'timeout')
+    return [new Error(`Roles did not stop within ${String(budgetMs)} ms.`)];
+  return outcome.flatMap((result): unknown[] =>
+    result.status === 'rejected' ? [result.reason] : [],
+  );
 }
 
 /** Starts roles in order; when one fails, stops the ones already started, then rethrows. */

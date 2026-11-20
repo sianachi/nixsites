@@ -49,7 +49,7 @@ try {
 
 const probeRole = async (role: Role): Promise<boolean> => {
   const { port, path } = READINESS_PATHS[role];
-  const response = await fetch(`http://127.0.0.1:${port}${path}`, {
+  const response = await fetch(`http://127.0.0.1:${String(port)}${path}`, {
     signal: AbortSignal.timeout(3000),
   });
   return response.ok;
@@ -68,7 +68,9 @@ const host = createServer((request, response) => {
 });
 const hostPort = Number(process.env.NIX_NODE_HOST_PORT ?? 8099);
 host.listen(hostPort, () => {
-  process.stdout.write(`nix node host running: ${roles.join(', ')} (probes on ${hostPort})\n`);
+  process.stdout.write(
+    `nix node host running: ${roles.join(', ')} (probes on ${String(hostPort)})\n`,
+  );
 });
 
 let stopping = false;
