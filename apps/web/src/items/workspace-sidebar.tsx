@@ -1,6 +1,12 @@
 import { Button, ContextMenu, Icon, Skeleton, chromeSurface, Text, cn, useFlash } from '@nix/ui';
 import { CirclePlus } from 'lucide-react';
-import { collectDropped, uploadErrorText, uploadWorkspaceEntries } from './drop-upload';
+import {
+  collectDropped,
+  progressText,
+  uploadErrorText,
+  uploadWorkspaceEntries,
+  type UploadProgress,
+} from './drop-upload';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { announce } from '@nix/web-foundation/a11y/announcer';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -112,6 +118,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
   } = props;
   const [dragged, setDragged] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
   // The row that just moved, tinted once where it landed (`useFlash` in the row).
   const [flashed, setFlashed] = useState<{ readonly id: string; readonly n: number } | null>(null);
   const flash = (id: string): void => {
@@ -182,7 +189,13 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     if (dropped.length === 0) return;
     setRefusal(null);
     try {
-      const outcome = await uploadWorkspaceEntries(client, workspaceId, dropped, parentId);
+      const outcome = await uploadWorkspaceEntries(
+        client,
+        workspaceId,
+        dropped,
+        parentId,
+        setProgress,
+      );
       const { folders, uploaded, failed, error } = outcome;
       if (failed > 0) {
         setRefusal(
@@ -196,6 +209,7 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
     } catch (error) {
       setRefusal(uploadErrorText(error));
     } finally {
+      setProgress(null);
       await tree.reload();
     }
   }
@@ -237,6 +251,16 @@ export function WorkspaceSidebar(props: WorkspaceSidebarProps): ReactNode {
           ) : null
         }
       >
+        {progress === null ? null : (
+          <Text
+            variant="caption"
+            as="p"
+            role="status"
+            className="mx-2 mb-2 rounded-md bg-background px-3 py-2"
+          >
+            {progressText(progress)}
+          </Text>
+        )}
         {refusal === null ? null : (
           <Text
             variant="caption"
