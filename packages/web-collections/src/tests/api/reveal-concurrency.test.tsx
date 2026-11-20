@@ -50,10 +50,10 @@ function setup() {
 
 const CHAIN = Array.from({ length: 7 }, (_, index) =>
   item({
-    id: `e2000000-0000-4000-8000-00000000000${index}`,
+    id: `e2000000-0000-4000-8000-00000000000${String(index)}`,
     workspaceId: STUB_WORKSPACE.id,
-    parentId: index === 0 ? null : `e2000000-0000-4000-8000-00000000000${index - 1}`,
-    title: `Level ${index}`,
+    parentId: index === 0 ? null : `e2000000-0000-4000-8000-00000000000${String(index - 1)}`,
+    title: `Level ${String(index)}`,
     hasChildren: index < 6,
   }),
 );
@@ -88,7 +88,8 @@ describe('reveal of a deep item', () => {
       expect(result.current.status).toBe('ready');
     });
     peak = 0;
-    const target = CHAIN[6]!;
+    const target = CHAIN[6];
+    if (!target) throw new Error('the chain fixture has seven items');
     await act(() => result.current.reveal(target.id));
 
     expect(result.current.revealOf(target.id)).toBe('found');
