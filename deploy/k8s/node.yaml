@@ -44,7 +44,7 @@ spec:
       containers:
         - name: node
           image: ${REGISTRY}/collab:${TAG}
-          ports: [{ containerPort: 8100 }, { containerPort: 8301 }, { containerPort: 8302 }]
+          ports: [{ containerPort: 8100 }, { containerPort: 8301 }, { containerPort: 8302 }, { containerPort: 8099 }]
           env:
             # The release this pod runs, shown in Settings > About (deploy/k8s/deploy.sh sets both).
             - name: NIX_RELEASE_VERSION
@@ -102,7 +102,7 @@ spec:
             httpGet: { path: /healthz, port: 8100 }
             periodSeconds: 10
           readinessProbe:
-            httpGet: { path: /healthz, port: 8100 }
+            httpGet: { path: /readyz, port: 8099 }
             periodSeconds: 5
           resources:
             requests: { cpu: 150m, memory: 448Mi }
