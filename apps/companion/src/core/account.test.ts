@@ -1,4 +1,4 @@
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
@@ -628,5 +628,33 @@ describe('Account type', () => {
       status: 'disconnected',
       canConnect: true,
     });
+  });
+});
+
+describe('history listing', () => {
+  it('lists archives newest first, identically after a restart, and fails on a corrupt entry', async () => {
+    const home = tempDir();
+    const r = request({ operation: 'history' });
+    const dir = join(home, `${keyOf(r)}-history`);
+    mkdirSync(dir, { recursive: true });
+    const ids = Array.from(
+      { length: 12 },
+      (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+    );
+    ids.forEach((id, i) => {
+      const createdAt = `2026-01-${String(i + 1).padStart(2, '0')}T00:00:00Z`;
+      writeFileSync(
+        join(dir, `${id}.json`),
+        JSON.stringify({ id, title: `t${String(i)}`, createdAt, messages: [], tools: [] }),
+      );
+    });
+    const first = await harness({ home }).account.handle(new AbortController().signal, r);
+    expect(first.history.map((e) => e.id)).toEqual([...ids].reverse());
+    const second = await harness({ home }).account.handle(new AbortController().signal, r);
+    expect(second.history).toEqual(first.history);
+    writeFileSync(join(dir, '00000000-0000-4000-8000-0000000000ff.json'), '{not json');
+    await expect(harness({ home }).account.handle(new AbortController().signal, r)).rejects.toThrow(
+      'history could not be loaded',
+    );
   });
 });
