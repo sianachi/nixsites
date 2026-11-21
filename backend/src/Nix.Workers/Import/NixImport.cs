@@ -1,43 +1,161 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Nix.Workers.Archive;
 
 namespace Nix.Workers.Import;
 
-internal sealed record NixManifestItem(string Id, string? ParentId, string Seq, string Title, string Type);
+// The archive's documents as they are read. A member the archive leaves out keeps its default;
+// the validation that follows decides what an empty value means.
+internal sealed record NixManifestItem
+{
+    public string Id { get; init; } = string.Empty;
 
-internal sealed record NixSchemaSnapshot(JsonElement? Properties, JsonElement? Declared, bool Inherit);
+    public string? ParentId { get; init; }
 
-internal sealed record NixManifest(
-    string Format,
-    int FormatVersion,
-    int SchemaVersion,
-    JsonElement? Profile,
-    string ExportedAt,
-    string Root,
-    NixSchemaSnapshot? RootEffectiveSchema,
-    List<NixManifestItem> Items,
-    List<FileVersionEntry>? Files,
-    List<(string? Id, string ParentId, string Reason, string Detail)> Omitted,
-    List<(string ItemId, string Kind, string Detail)> Loss);
+    public string Seq { get; init; } = string.Empty;
 
-internal sealed record NixBundle(
-    string Id,
-    string? ParentId,
-    string WorkspaceId,
-    string Type,
-    string Title,
-    string Seq,
-    string LifecycleState,
-    JsonElement? Properties,
-    JsonElement? Recurrence,
-    NixSchemaSnapshot? Schema,
-    JsonElement? Views,
-    JsonElement? ViewRows,
-    JsonElement? Body,
-    JsonElement? Comments);
+    public string Title { get; init; } = string.Empty;
+
+    public string Type { get; init; } = string.Empty;
+}
+
+internal sealed record NixSchemaSnapshot
+{
+    public JsonElement? Properties { get; init; }
+
+    public JsonElement? Declared { get; init; }
+
+    public bool Inherit { get; init; }
+}
+
+internal sealed record NixOmission
+{
+    public string? Id { get; init; }
+
+    public string ParentId { get; init; } = string.Empty;
+
+    public string Reason { get; init; } = string.Empty;
+
+    public string Detail { get; init; } = string.Empty;
+}
+
+internal sealed record NixLoss
+{
+    public string ItemId { get; init; } = string.Empty;
+
+    public string Kind { get; init; } = string.Empty;
+
+    public string Detail { get; init; } = string.Empty;
+}
+
+internal sealed record NixManifest
+{
+    public string Format { get; init; } = string.Empty;
+
+    public int FormatVersion { get; init; }
+
+    public int SchemaVersion { get; init; }
+
+    public JsonElement? Profile { get; init; }
+
+    public string ExportedAt { get; init; } = string.Empty;
+
+    public string Root { get; init; } = string.Empty;
+
+    public NixSchemaSnapshot? RootEffectiveSchema { get; init; }
+
+    public bool IncludesDeleted { get; init; }
+
+    [AllowNull]
+    public List<NixManifestItem> Items { get; init => field = value ?? []; } = [];
+
+    public List<FileVersionEntry>? Files { get; init; }
+
+    [AllowNull]
+    public List<NixOmission> Omitted { get; init => field = value ?? []; } = [];
+
+    [AllowNull]
+    public List<NixLoss> Loss { get; init => field = value ?? []; } = [];
+}
+
+internal sealed record NixBundle
+{
+    public string Id { get; init; } = string.Empty;
+
+    public string? ParentId { get; init; }
+
+    public string WorkspaceId { get; init; } = string.Empty;
+
+    public string Type { get; init; } = string.Empty;
+
+    public string Title { get; init; } = string.Empty;
+
+    public string Seq { get; init; } = string.Empty;
+
+    public string LifecycleState { get; init; } = string.Empty;
+
+    public string CreatedAt { get; init; } = string.Empty;
+
+    public string UpdatedAt { get; init; } = string.Empty;
+
+    public JsonElement? Properties { get; init; }
+
+    public JsonElement? Recurrence { get; init; }
+
+    public NixSchemaSnapshot? Schema { get; init; }
+
+    public JsonElement? Views { get; init; }
+
+    public JsonElement? ViewRows { get; init; }
+
+    public bool ViewRowsTruncated { get; init; }
+
+    public JsonElement? Body { get; init; }
+
+    public JsonElement? Comments { get; init; }
+}
+
+/// <summary>An item body as the archive wraps it: one of the three documents, by item type.</summary>
+internal sealed record NixBodyEnvelope
+{
+    public int SchemaVersion { get; init; }
+
+    public JsonElement? Prosemirror { get; init; }
+
+    public JsonElement? Sheet { get; init; }
+
+    public JsonElement? Canvas { get; init; }
+}
+
+/// <summary>The parts of a property definition the import checks; the rest passes through to Core.</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
+internal sealed record NixSchemaProperty
+{
+    public string Key { get; init; } = string.Empty;
+
+    public string Type { get; init; } = string.Empty;
+
+    public List<string>? Options { get; init; }
+
+    public bool Required { get; init; }
+
+    public string? Expression { get; init; }
+
+    public string? Aggregate { get; init; }
+
+    public string? Source { get; init; }
+}
+
+internal sealed record NixViewsSnapshot
+{
+    public List<JsonElement>? Views { get; init; }
+
+    public string Default { get; init; } = string.Empty;
+}
 
 internal sealed record ValidatedNixArchive(NixManifest Manifest, List<(NixManifestItem Entry, NixBundle Bundle)> Items);
 
@@ -77,12 +195,12 @@ internal static class NixImport
                 Title = bundle.Title,
                 ItemType = bundle.Type,
                 Properties = bundle.Properties,
-                Recurrence = GoJson.Nullable(bundle.Recurrence),
+                Recurrence = WorkerJson.Nullable(bundle.Recurrence),
                 Schema = ImportSchema(entry.Id == parsed.Manifest.Root, parsed.Manifest.RootEffectiveSchema, bundle.Schema),
-                Views = GoJson.Nullable(bundle.Views),
+                Views = WorkerJson.Nullable(bundle.Views),
                 FinalLifecycleState = bundle.LifecycleState,
-                Comments = GoJson.Nullable(bundle.Comments),
-                Body = GoJson.IsNull(bundle.Body) ? null : new ImportBody { Encoding = "archive", Archive = bundle.Body },
+                Comments = WorkerJson.Nullable(bundle.Comments),
+                Body = WorkerJson.IsNull(bundle.Body) ? null : new ImportBody { Encoding = "archive", Archive = bundle.Body },
             });
         }
         return new ImportPlan
@@ -112,7 +230,7 @@ internal static class NixImport
         JsonElement manifestRoot;
         try
         {
-            manifestRoot = GoJson.Parse(manifestBody);
+            manifestRoot = WorkerJson.Parse(manifestBody);
             manifest = ReadManifest(manifestRoot);
         }
         catch (JsonException exception)
@@ -160,7 +278,7 @@ internal static class NixImport
             NixBundle bundle;
             try
             {
-                bundle = ReadBundle(GoJson.Parse(body));
+                bundle = ReadBundle(WorkerJson.Parse(body));
             }
             catch (JsonException exception)
             {
@@ -262,64 +380,11 @@ internal static class NixImport
         }
     }
 
-    private static NixManifest ReadManifest(JsonElement root)
-    {
-        var fields = GoFields.Require(root, true, "format", "formatVersion", "schemaVersion", "profile", "exportedAt", "root", "rootEffectiveSchema", "includesDeleted", "items", "files", "omitted", "loss");
-        fields.Bool("includesDeleted");
-        return new NixManifest(
-            fields.String("format"),
-            fields.Int("formatVersion"),
-            fields.Int("schemaVersion"),
-            fields.Raw("profile"),
-            fields.String("exportedAt"),
-            fields.String("root"),
-            fields.TryGet("rootEffectiveSchema", out var schema) ? ReadSchema(schema) : null,
-            fields.List("items", element =>
-            {
-                var item = GoFields.Require(element, true, "id", "parentId", "seq", "title", "type");
-                return new NixManifestItem(item.String("id"), item.OptionalString("parentId"), item.String("seq"), item.String("title"), item.String("type"));
-            }) ?? [],
-            fields.List("files", PlanJson.ReadFileVersion),
-            fields.List("omitted", element =>
-            {
-                var omission = GoFields.Require(element, true, "id", "parentId", "reason", "detail");
-                return (omission.OptionalString("id"), omission.String("parentId"), omission.String("reason"), omission.String("detail"));
-            }) ?? [],
-            fields.List("loss", element =>
-            {
-                var loss = GoFields.Require(element, true, "itemId", "kind", "detail");
-                return (loss.String("itemId"), loss.String("kind"), loss.String("detail"));
-            }) ?? []);
-    }
+    private static NixManifest ReadManifest(JsonElement root) =>
+        WorkerJson.Read(root, ImportJsonContext.Default.NixManifest) ?? new NixManifest();
 
-    private static NixSchemaSnapshot ReadSchema(JsonElement element)
-    {
-        var fields = GoFields.Require(element, true, "properties", "declared", "inherit");
-        return new NixSchemaSnapshot(fields.Raw("properties"), fields.Raw("declared"), fields.Bool("inherit"));
-    }
-
-    internal static NixBundle ReadBundle(JsonElement root)
-    {
-        var fields = GoFields.Require(root, true, "id", "parentId", "workspaceId", "type", "title", "seq", "lifecycleState", "createdAt", "updatedAt", "properties", "recurrence", "schema", "views", "viewRows", "viewRowsTruncated", "body", "comments");
-        fields.String("createdAt");
-        fields.String("updatedAt");
-        fields.Bool("viewRowsTruncated");
-        return new NixBundle(
-            fields.String("id"),
-            fields.OptionalString("parentId"),
-            fields.String("workspaceId"),
-            fields.String("type"),
-            fields.String("title"),
-            fields.String("seq"),
-            fields.String("lifecycleState"),
-            fields.Raw("properties"),
-            fields.Raw("recurrence"),
-            fields.TryGet("schema", out var schema) ? ReadSchema(schema) : null,
-            fields.Raw("views"),
-            fields.Raw("viewRows"),
-            fields.Raw("body"),
-            fields.Raw("comments"));
-    }
+    internal static NixBundle ReadBundle(JsonElement root) =>
+        WorkerJson.Read(root, ImportJsonContext.Default.NixBundle) ?? new NixBundle();
 
     private static void ValidateManifest(NixManifest manifest, ImportPlanLimits limits)
     {
@@ -377,17 +442,17 @@ internal static class NixImport
                 throw new ImportPlanException("the Nix archive manifest contains an invalid item");
             }
         }
-        foreach (var (id, parentId, reason, detail) in manifest.Omitted)
+        foreach (var omission in manifest.Omitted)
         {
-            if (!NixArchive.SafeId(parentId) || (id is not null && !NixArchive.SafeId(id))
-                || (reason is not "not-readable" and not "soft-deleted" and not "limit-reached") || Encoding.UTF8.GetByteCount(detail) > 1000)
+            if (!NixArchive.SafeId(omission.ParentId) || (omission.Id is not null && !NixArchive.SafeId(omission.Id))
+                || (omission.Reason is not "not-readable" and not "soft-deleted" and not "limit-reached") || Encoding.UTF8.GetByteCount(omission.Detail) > 1000)
             {
                 throw new ImportPlanException("the Nix archive manifest contains an invalid omission");
             }
         }
-        foreach (var (itemId, kind, detail) in manifest.Loss)
+        foreach (var loss in manifest.Loss)
         {
-            if (!NixArchive.SafeId(itemId) || kind.Trim().Length == 0 || Encoding.UTF8.GetByteCount(kind) > 100 || Encoding.UTF8.GetByteCount(detail) > 1000)
+            if (!NixArchive.SafeId(loss.ItemId) || loss.Kind.Trim().Length == 0 || Encoding.UTF8.GetByteCount(loss.Kind) > 100 || Encoding.UTF8.GetByteCount(loss.Detail) > 1000)
             {
                 throw new ImportPlanException("the Nix archive manifest contains an invalid loss entry");
             }
@@ -399,7 +464,7 @@ internal static class NixImport
         if (!NixArchive.SafeId(bundle.Id) || !NixArchive.SafeId(bundle.WorkspaceId)
             || (bundle.ParentId is not null && !NixArchive.SafeId(bundle.ParentId)) || !ValidIntegerString(bundle.Seq)
             || bundle.Type.Trim().Length == 0 || Encoding.UTF8.GetByteCount(bundle.Type) > 64 || Encoding.UTF8.GetByteCount(bundle.Title) > 500
-            || !GoJson.IsObject(bundle.Properties) || !GoJson.IsArray(bundle.ViewRows) || GoJson.RawLength(bundle.Body) > limits.MaxBodyBytes)
+            || !WorkerJson.IsObject(bundle.Properties) || !WorkerJson.IsArray(bundle.ViewRows) || WorkerJson.RawLength(bundle.Body) > limits.MaxBodyBytes)
         {
             return "the item envelope is invalid";
         }
@@ -407,30 +472,29 @@ internal static class NixImport
         {
             return schemaError;
         }
-        if (!GoJson.IsNull(bundle.Views) && !GoJson.IsObject(bundle.Views))
+        if (!WorkerJson.IsNull(bundle.Views) && !WorkerJson.IsObject(bundle.Views))
         {
             return "the item views are invalid";
         }
-        if (!GoJson.IsNull(bundle.Body))
+        if (!WorkerJson.IsNull(bundle.Body))
         {
-            GoFields body;
-            int schemaVersion;
+            NixBodyEnvelope? body;
             try
             {
-                body = GoFields.Require(bundle.Body!.Value, true, "schemaVersion", "prosemirror", "sheet", "canvas");
-                schemaVersion = body.Int("schemaVersion");
+                body = WorkerJson.Read(bundle.Body!.Value, ImportJsonContext.Default.NixBodyEnvelope);
             }
             catch (JsonException)
             {
                 return "the item body is invalid";
             }
-            if (schemaVersion < 1)
+            if (body is null || body.SchemaVersion < 1)
             {
                 return "the item body is invalid";
             }
+            var schemaVersion = body.SchemaVersion;
             var sheet = bundle.Type is "sheet" or "spreadsheet";
-            var expected = bundle.Type == "canvas" ? body.Raw("canvas") : sheet ? body.Raw("sheet") : body.Raw("prosemirror");
-            if (!GoJson.IsObject(expected) || (!sheet && schemaVersion > manifestSchema))
+            var expected = bundle.Type == "canvas" ? body.Canvas : sheet ? body.Sheet : body.Prosemirror;
+            if (!WorkerJson.IsObject(expected) || (!sheet && schemaVersion > manifestSchema))
             {
                 return "the item body does not match its type or schema";
             }
@@ -442,31 +506,23 @@ internal static class NixImport
     {
         foreach (var encoded in (JsonElement?[])[schema.Properties, schema.Declared])
         {
-            if (!GoJson.IsArray(encoded))
+            if (!WorkerJson.IsArray(encoded))
             {
                 return "the property schema is invalid";
             }
             foreach (var element in encoded!.Value.EnumerateArray())
             {
-                string key, type;
-                List<string>? options;
-                bool required;
-                string? expression, aggregate, source;
+                NixSchemaProperty property;
                 try
                 {
-                    var property = GoFields.Require(element, false, "key", "type", "options", "required", "expression", "aggregate", "source");
-                    key = property.String("key");
-                    type = property.String("type");
-                    options = property.List("options", GoFields.StringValue);
-                    required = property.Bool("required");
-                    expression = property.OptionalString("expression");
-                    aggregate = property.OptionalString("aggregate");
-                    source = property.OptionalString("source");
+                    property = WorkerJson.Read(element, ImportJsonContext.Default.NixSchemaProperty) ?? new NixSchemaProperty();
                 }
                 catch (JsonException)
                 {
                     return "the property schema is invalid";
                 }
+                var (key, type, options, required) = (property.Key, property.Type, property.Options, property.Required);
+                var (expression, aggregate, source) = (property.Expression, property.Aggregate, property.Source);
                 if (key.Trim().Length == 0)
                 {
                     return "the property schema contains an invalid property";
@@ -522,9 +578,13 @@ internal static class NixImport
         {
             return null;
         }
-        var writer = new GoJsonWriter();
-        writer.Begin().Name("properties").Raw(root ? selected.Properties : selected.Declared).Name("inherit").Bool(!root && selected.Inherit).End();
-        return GoJson.Parse(writer.ToUtf8());
+        return WorkerJson.Parse(WorkerJson.Write(writer =>
+        {
+            writer.WriteStartObject();
+            WorkerJson.WriteRaw(writer, "properties", root ? selected.Properties : selected.Declared);
+            writer.WriteBoolean("inherit", !root && selected.Inherit);
+            writer.WriteEndObject();
+        }));
     }
 
     private static bool TryItemId(string name, out string id)

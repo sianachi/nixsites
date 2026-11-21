@@ -72,7 +72,7 @@ public static class ImportPlanner
         ImportPlan plan;
         try
         {
-            plan = PlanJson.Read(GoJson.Parse(body));
+            plan = PlanJson.Read(WorkerJson.Parse(body));
         }
         catch (JsonException exception)
         {

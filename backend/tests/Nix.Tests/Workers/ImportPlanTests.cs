@@ -115,14 +115,15 @@ public sealed class ImportPlanTests
         var bombError = await Assert.ThrowsAsync<ImportPlanException>(() => ImportPlanner.ParseAsync(bomb, Limits, Token));
         Assert.Contains("compression ratio", bombError.Message, StringComparison.Ordinal);
 
-        var deepXml = string.Concat(Enumerable.Repeat("<w:x>", 40)) + string.Concat(Enumerable.Repeat("</w:x>", 40));
+        var deepXml = "<w:x xmlns:w=\"w\">" + string.Concat(Enumerable.Repeat("<w:x>", 39)) + string.Concat(Enumerable.Repeat("</w:x>", 40));
         var deep = Zip("deep.docx", "docx", ("word/document.xml", Utf8(deepXml)));
         var deepError = await Assert.ThrowsAsync<ImportPlanException>(() => ImportPlanner.ParseAsync(deep, Limits, Token));
         Assert.Contains("structure", deepError.Message, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData("<w:document><w:p>text</w:p></w:document>", false)]
+    [InlineData("<w:document xmlns:w=\"w\"><w:p>text</w:p></w:document>", false)]
+    [InlineData("<w:document><w:p>text</w:p></w:document>", true)]
     [InlineData("<?xml version=\"1.0\" encoding=\"UTF-16\"?><w:document/>", true)]
     [InlineData("<?php echo 1 ?><w:document/>", true)]
     [InlineData("<x><y></x>", true)]
@@ -244,6 +245,33 @@ public sealed class ImportPlanTests
             ("notes.txt", Utf8("hidden")));
         var error = await Assert.ThrowsAsync<ImportPlanException>(() => ImportPlanner.ParseAsync(extra, Limits, Token));
         Assert.Contains("unlisted or missing", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    // Lists another writer left null read as empty, and text outside ASCII is kept as written.
+    [InlineData("""{"version":1,"format":"txt","title":"日本語","sourceSha256":"s","items":[{"sourceId":"root","order":0,"title":"t","itemType":"note","finalLifecycleState":"active"}],"loss":null,"omissions":null}""", true)]
+    [InlineData("""{"version":1,"format":"txt","title":"t","sourceSha256":"s","items":[{"sourceId":"root","surprise":1}],"loss":[],"omissions":[]}""", false)]
+    [InlineData("""{"version":1,"format":"txt","title":null,"sourceSha256":"s","items":[{"sourceId":"root"}],"loss":[],"omissions":[]}""", false)]
+    [InlineData("""{"version":1,"format":"nix","title":"t","sourceSha256":"s","items":[{"sourceId":"root"}],"fileVersions":[{"itemId":"root","version":1}],"loss":[],"omissions":[]}""", false)]
+    [InlineData("""{"version":1,"format":"txt","title":"t","sourceSha256":"s","items":[{"sourceId":"root"}],"loss":[],"omissions":[]} {}""", false)]
+    public void Plan_decoding_is_strict_about_shape_and_lenient_about_null_lists(string json, bool accepted)
+    {
+        var body = Utf8(json);
+        var digest = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(body));
+        if (!accepted)
+        {
+            Assert.Equal(ImportPlanException.PlanInvalid, Assert.Throws<ImportPlanException>(() => ImportPlanner.Decode(body, digest, Limits)).Code);
+            return;
+        }
+        var plan = ImportPlanner.Decode(body, digest, Limits);
+        Assert.Empty(plan.Loss);
+        Assert.Empty(plan.Omissions);
+        Assert.Contains("日本語", System.Text.Encoding.UTF8.GetString(ImportPlanner.Encode(plan, Limits.MaxPlanBytes).Bytes), StringComparison.Ordinal);
+
+        // A lone surrogate cannot be written as UTF-8; it becomes the replacement character, not a failure.
+        plan.Title = "a\ud800b";
+        var (bytes, digestOfBytes) = ImportPlanner.Encode(plan, Limits.MaxPlanBytes);
+        Assert.Equal("a\ufffdb", ImportPlanner.Decode(bytes, digestOfBytes, Limits).Title);
     }
 
     [Fact]
