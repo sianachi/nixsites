@@ -31,7 +31,6 @@ class NixBackgroundSyncTest {
         }
         assertTrue(NixBackgroundSync.runPass(startWaitMs = 5_000, limitMs = 5_000))
         assertEquals(1, dispatched)
-        assertFalse(NixBackgroundSync.running)
     }
 
     @Test fun endsWhenNoPassStartsInTime() {
@@ -44,13 +43,13 @@ class NixBackgroundSyncTest {
     @Test fun endsAtTheLimitWhenThePassNeverFinishes() {
         NixBackgroundSync.dispatcher = { thread { NixBackgroundSync.keepAwake(true) }; true }
         assertFalse(NixBackgroundSync.runPass(startWaitMs = 5_000, limitMs = 150))
-        assertTrue(NixBackgroundSync.running)
     }
 
-    @Test fun trackedStateFollowsThePage() {
+    @Test fun aMessageWithNoPassWaitingChangesNothing() {
         NixBackgroundSync.keepAwake(true)
-        assertTrue(NixBackgroundSync.running)
         NixBackgroundSync.keepAwake(false)
-        assertFalse(NixBackgroundSync.running)
+        NixBackgroundSync.dispatcher = { true }
+        // The earlier messages did not leave a pass started or finished.
+        assertFalse(NixBackgroundSync.runPass(startWaitMs = 100, limitMs = 100))
     }
 }

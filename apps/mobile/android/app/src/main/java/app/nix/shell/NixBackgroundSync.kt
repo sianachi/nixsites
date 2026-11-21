@@ -32,16 +32,11 @@ object NixBackgroundSync {
 
     @Volatile private var pass: Pass? = null
 
-    /** Whether the page's sync pass is running, as `SyncKeepAwake` tracks it on iOS. */
-    @Volatile var running = false
-        private set
-
     /** Asks the open server page to run a pass; set by the shell while its activity lives, null otherwise. */
     @Volatile var dispatcher: (() -> Boolean)? = null
 
-    /** The page's `keepAwake` message. */
+    /** The page's `keepAwake` message: its pass started (true) or ended (false). Only a waiting background pass reacts. */
     fun keepAwake(on: Boolean) {
-        running = on
         pass?.let {
             it.started.countDown()
             if (!on) it.finished.countDown()

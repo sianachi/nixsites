@@ -157,7 +157,7 @@ class NixShellPlugin : Plugin() {
                 // A browser without ephemeral tabs ignores the flag and opens a normal one.
                 CustomTabsIntent.Builder().setEphemeralBrowsingEnabled(true).build()
                     .launchUrl(activity, Uri.parse(NixSignIn.loginUrl(origin, challenge, returnTo)))
-                // If the app never pauses the browser did not open; do not leave sign-in blocked.
+                // If the app never pauses the browser may not have opened; do not leave sign-in blocked for good.
                 main.postDelayed({ signInFlow.expire(waiting, "Sign-in could not be started.") }, LAUNCH_TIMEOUT_MS)
             } catch (_: Exception) {
                 signInFlow.expire(waiting, "Sign-in could not be started.")
@@ -264,7 +264,8 @@ class NixShellPlugin : Plugin() {
         const val LISTENER = "nixPickerAndroid"
         const val STORE = "nixStoreAndroid"
         const val SIGN_IN = "nixSignInAndroid"
-        const val LAUNCH_TIMEOUT_MS = 5_000L
+        // No reliable signal that the tab opened (in multi-window mode the app is never paused), so a sign-in the browser never opened is given up only after a real one could have finished.
+        const val LAUNCH_TIMEOUT_MS = 5 * 60_000L
         const val WIPE_TIMEOUT_MS = 15_000L
     }
 }
