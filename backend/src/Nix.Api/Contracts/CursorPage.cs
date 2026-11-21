@@ -29,16 +29,10 @@ namespace Nix.Contracts;
 internal sealed record CursorPage<TItem>(IReadOnlyList<TItem> Items, string? NextCursor);
 
 /// <summary>
-/// The query-string parameter names every paginated endpoint accepts.
+/// Paging limits shared by every paginated endpoint.
 /// </summary>
 internal static class CursorPaging
 {
-    /// <summary>Opaque position to resume from. Absent means "from the beginning".</summary>
-    public const string CursorParameter = "cursor";
-
-    /// <summary>Requested slice size. The server decides what it actually returns.</summary>
-    public const string LimitParameter = "limit";
-
     /// <summary>Slice size used when a request does not ask for one.</summary>
     public const int DefaultLimit = 50;
 

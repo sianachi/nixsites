@@ -9,12 +9,6 @@ namespace Nix.Domain.Automations;
 /// </summary>
 public static class AutomationGuards
 {
-    /// <summary>
-    /// The deepest causation chain that still runs: a person's change fires A at depth 0, A's
-    /// action fires B at depth 1, and B's action is recorded as suppressed rather than firing C.
-    /// </summary>
-    public const int MaxChainDepth = 1;
-
     /// <summary>A rule fires at most once per item per this interval; later ones are throttled.</summary>
     public static readonly TimeSpan PerItemMinInterval = TimeSpan.FromSeconds(60);
 
@@ -29,9 +23,6 @@ public static class AutomationGuards
 
     /// <summary>How many runs are kept per rule; older ones are trimmed on each run.</summary>
     public const int RunsKeptPerRule = 500;
-
-    /// <summary>How long a run is kept at all before retention purges it.</summary>
-    public static readonly TimeSpan RunRetention = TimeSpan.FromDays(30);
 }
 
 /// <summary>The hash a property-change rule compares against to tell a real change from a repeat.</summary>
