@@ -27,10 +27,10 @@ namespace Nix.Features.Properties;
 /// somebody edited a definition - is the worse failure.
 /// </para>
 /// </remarks>
+public sealed record SetItemSchema(ItemId ItemId, PropertySchema? Schema, SchemaBase? Base = null) : ICommand<PropertySchema>;
+
 /// <summary>The schema a caller edited from. When given, the write happens only if it is still what is stored.</summary>
 public sealed record SchemaBase(PropertySchema Schema);
-
-public sealed record SetItemSchema(ItemId ItemId, PropertySchema? Schema, SchemaBase? Base = null) : ICommand<PropertySchema>;
 
 /// <summary>Handles <see cref="SetItemSchema"/>.</summary>
 public sealed class SetItemSchemaHandler(
