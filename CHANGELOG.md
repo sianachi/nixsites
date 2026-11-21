@@ -70,6 +70,24 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- The explorer shows progress while a dropped folder is read and while its files upload. Uploads
+  start as files are found, not after the whole folder has been read.
+- Attachments bulk actions and undo send a bounded number of requests at a time, and a slow answer
+  for an earlier filter no longer replaces the current list.
+- Saving an item as a template with its examples captures from the preview without reading
+  every child first, so large trees save faster.
+- The note footer, status bar and outline share one scan of the note per edit.
+- Opening a deep link in the explorer loads the ancestor levels up to four at a time.
+- Revisiting an EPUB chapter, or reusing its images and stylesheets, no longer rescans the book.
+- Pet chat no longer reparses earlier replies for generated UI on every streaming update.
+- The graph and template studio screens load on first visit, which shrinks the initial download.
+- Site builds hash an unchanged published download once, and read each page's export bundle as
+  a stream, which lowers peak memory on large sites.
+- Companion history listing reads archives asynchronously, so a large history no longer blocks
+  the Node host.
+- The Node host stops every started role within 10 seconds after a partial startup or a failed
+  stop, and serves role-aware `/readyz` and `/healthz` on port 8099 (`NIX_NODE_HOST_PORT`). The
+  Kubernetes readiness probe uses it.
 - The landing page's macOS, Windows and Linux buttons read "Early build, from source". iOS and
   Android still read "Coming soon".
 - New installs no longer include Zitadel and need one hostname instead of two. `NIX_AUTH_MODE`
@@ -178,6 +196,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Security
 
+- Updated hono and @hono/node-server in the CLI's MCP dependency tree to patched releases.
 - Pet search keeps excerpts from marked or locked notes out of workspace and folder results.
 - Pet job briefs and observations are screened for recognizable credentials before they reach
   the planning model.
