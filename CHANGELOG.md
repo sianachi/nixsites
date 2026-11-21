@@ -77,6 +77,9 @@ follows semantic versioning (`0.x` pre-1.0).
   same account signs in again. Signing out, signing in with another account, or the account being
   closed still removes it.
 - The iOS and Android apps use the Nix icon and launch screen.
+- A note opened from a board opens on its conversation, and notes under an item with a board view
+  have comments on unless someone has switched them off. Existing board cards are switched on once
+  when upgrading. A card with comments off offers a "Turn on comments" button in its Comments tab.
 - The explorer shows progress while a dropped folder is read and while its files upload. Uploads
   start as files are found, not after the whole folder has been read.
 - Attachments bulk actions and undo send a bounded number of requests at a time, and a slow answer

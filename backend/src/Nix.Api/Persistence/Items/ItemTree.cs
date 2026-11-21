@@ -284,6 +284,21 @@ public sealed partial class ItemTree(
             _dbContext.Entry(item).Property(row => row.Settings).CurrentValue = defaults;
         }
 
+        // A board's cards open on their conversation, so a note created under a board starts with
+        // comments on unless the workspace defaults already say either way.
+        if (item.Type == "note" && item.ParentId is { } parent)
+        {
+            var settings = _dbContext.Entry(item).Property(row => row.Settings);
+            if (ItemSettings.WithCommentsOn(settings.CurrentValue) is { } withComments
+                && await _dbContext.Database.SqlQuery<bool>($"""
+                    SELECT jsonb_path_exists(views, '$.views[*] ? (@.kind == "board")') AS "Value"
+                    FROM item WHERE id = {parent.Value} AND tenant_id = {Tenant.Value} AND views IS NOT NULL
+                    """).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false))
+            {
+                settings.CurrentValue = withComments;
+            }
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // The row has to exist before its edges do: item_closure references it both ways, and the
@@ -433,7 +448,8 @@ public sealed partial class ItemTree(
         string? views,
         PrincipalId actor,
         DateTimeOffset at,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken)
+    {
         await _dbContext.Items
             .Where(item => item.Id == id)
             .ExecuteUpdateAsync(
@@ -443,6 +459,21 @@ public sealed partial class ItemTree(
                     .SetProperty(item => item.LastModifiedAt, at),
                 cancellationToken)
             .ConfigureAwait(false);
+        await TurnOnBoardCardCommentsAsync(id, cancellationToken).ConfigureAwait(false);
+    }
+
+    // Gaining a board view makes the children cards: notes nobody has set comments on get them on.
+    // An explicit off (the key is present) is left alone. Moving a note under a board does not do this.
+    private async ValueTask TurnOnBoardCardCommentsAsync(ItemId parent, CancellationToken cancellationToken) =>
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE item c
+            SET settings = COALESCE(c.settings, jsonb_build_object()) || jsonb_build_object('comments', true)
+            FROM item p
+            WHERE p.id = {parent.Value} AND p.tenant_id = {Tenant.Value}
+              AND jsonb_path_exists(p.views, '$.views[*] ? (@.kind == "board")')
+              AND c.tenant_id = p.tenant_id AND c.parent_id = p.id AND c.type = 'note'
+              AND NOT jsonb_exists(COALESCE(c.settings, jsonb_build_object()), 'comments')
+            """, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<bool> TryUpdateViewsAsync(
@@ -467,6 +498,11 @@ public sealed partial class ItemTree(
                     .SetProperty(item => item.LastModifiedAt, at),
                 cancellationToken)
             .ConfigureAwait(false);
+        if (changed == 1)
+        {
+            await TurnOnBoardCardCommentsAsync(id, cancellationToken).ConfigureAwait(false);
+        }
+
         return changed == 1;
     }
 

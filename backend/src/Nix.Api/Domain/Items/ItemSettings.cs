@@ -70,6 +70,28 @@ public sealed record ItemSettings(
         return patch.ToJsonString();
     }
 
+    /// <summary>Switches comments on in stored settings that do not say either way.</summary>
+    /// <param name="json">The stored object, or null.</param>
+    /// <returns>The JSON with comments on, or null when it already has a comments value or cannot be read.</returns>
+    public static string? WithCommentsOn(string? json)
+    {
+        try
+        {
+            var node = string.IsNullOrWhiteSpace(json) ? [] : JsonNode.Parse(json) as JsonObject;
+            if (node is null || node.ContainsKey("comments"))
+            {
+                return null;
+            }
+
+            node["comments"] = true;
+            return node.ToJsonString();
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
     private static bool Flag(JsonObject? node, string key) =>
         node?[key] is JsonValue value && value.TryGetValue<bool>(out var on) && on;
 }

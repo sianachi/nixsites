@@ -30,6 +30,15 @@ public sealed class ItemSettingsTests
     public void Pet_protection_requires_an_explicit_false_when_the_key_exists(string stored, bool withheld) =>
         Assert.Equal(withheld, ItemSettings.Read(stored).WithholdFromPets);
 
+    [Theory]
+    [InlineData(null, "{\"comments\":true}")]
+    [InlineData("{\"fullWidth\":true}", "{\"fullWidth\":true,\"comments\":true}")]
+    [InlineData("{\"comments\":false}", null)]
+    [InlineData("{\"comments\":true}", null)]
+    [InlineData("not json", null)]
+    public void Comments_default_on_only_where_nothing_says_either_way(string? stored, string? expected) =>
+        Assert.Equal(expected, ItemSettings.WithCommentsOn(stored));
+
     [Fact]
     public void A_patch_holds_only_the_switches_named()
     {

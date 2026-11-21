@@ -29,6 +29,35 @@ const KIND_LABELS: Readonly<Record<SuggestionEntry['kind'], string>> = {
   block: 'Block change',
 };
 
+/** What a board card's conversation tab shows while the card's comments are off: one switch. */
+export function CommentsOff({
+  onTurnOn,
+}: {
+  readonly onTurnOn: () => Promise<string | null>;
+}): ReactNode {
+  const [problem, setProblem] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <Text variant="note" tone="muted">
+        Comments are off for this item.
+      </Text>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          void onTurnOn().then(setProblem);
+        }}
+      >
+        Turn on comments
+      </Button>
+      {problem === null ? null : (
+        <Text variant="note" role="alert">
+          {problem}
+        </Text>
+      )}
+    </div>
+  );
+}
+
 export function CommentsPane({
   itemId,
   conversation = false,
