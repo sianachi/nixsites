@@ -35,8 +35,5 @@ export function programChanges(before: string, after: string): ProgramChange[] {
   return out;
 }
 
-export const countChanges = (before: string, after: string): number =>
-  before === after ? 0 : Math.max(1, programChanges(before, after).length);
-
 export const plural = (count: number): string =>
   `${String(count)} ${count === 1 ? 'change' : 'changes'}`;

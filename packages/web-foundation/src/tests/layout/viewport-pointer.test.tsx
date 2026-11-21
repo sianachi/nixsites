@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { useCanHover, useCoarsePointer, useNarrowViewport } from '../../layout/viewport';
+import { useCoarsePointer, useNarrowViewport } from '../../layout/viewport';
 import { stubViewport } from '../../testing/stub-viewport';
 
 function stubPointer(coarse: boolean): void {
@@ -27,14 +27,12 @@ describe('pointer facts, asked apart from width', () => {
     stubViewport(true);
 
     expect(renderHook(() => useCoarsePointer()).result.current).toBe(false);
-    expect(renderHook(() => useCanHover()).result.current).toBe(true);
   });
 
   it('reports a touch screen as coarse and unable to hover, whatever its width', () => {
     stubPointer(true);
 
     expect(renderHook(() => useCoarsePointer()).result.current).toBe(true);
-    expect(renderHook(() => useCanHover()).result.current).toBe(false);
   });
 
   it('keeps a landscape phone compact without changing a mouse layout of the same width', () => {

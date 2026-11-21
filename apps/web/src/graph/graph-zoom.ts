@@ -1,5 +1,3 @@
-import type { GraphLayout } from './graph-layout';
-
 /**
  * How far in or out the drawing is.
  *
@@ -23,23 +21,6 @@ import type { GraphLayout } from './graph-layout';
  */
 const STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3] as const;
 
-export type Zoom = (typeof STEPS)[number];
-
-/** Where the graph opens, and where the reset control returns to. */
-export const ZOOM_DEFAULT: Zoom = 1;
-
-/**
- * The next step in, or the same value at the ceiling.
- *
- * Saturating rather than wrapping or throwing, so a caller can compare the answer to its input to
- * decide whether the control should be disabled - which is exactly what the buttons do. A version
- * that threw at the ceiling would make the ordinary end of the ladder an error path.
- */
-export function zoomIn(zoom: Zoom): Zoom {
-  const next = STEPS[STEPS.indexOf(zoom) + 1];
-  return next ?? zoom;
-}
-
 /**
  * The nearest step above an arbitrary scale, or that scale when it is already past the top.
  *
@@ -53,25 +34,4 @@ export function stepIn(scale: number): number {
 /** The nearest step below an arbitrary scale, or that scale when it is already past the bottom. */
 export function stepOut(scale: number): number {
   return [...STEPS].reverse().find((step) => step < scale - 1e-6) ?? scale;
-}
-
-/** The next step out, or the same value at the floor. */
-export function zoomOut(zoom: Zoom): Zoom {
-  const index = STEPS.indexOf(zoom);
-  return index <= 0 ? zoom : (STEPS[index - 1] ?? zoom);
-}
-
-/**
- * The drawing's painted size at a zoom level.
- *
- * The `viewBox` deliberately does **not** move: holding it at the layout's own coordinates and
- * changing only the rendered width and height is what makes the SVG scale as a picture - strokes,
- * text and all - rather than revealing more empty canvas. It also keeps every coordinate the layout
- * produced valid at every zoom level, so nothing downstream has to know the zoom exists.
- */
-export function atZoom(
-  layout: Pick<GraphLayout, 'width' | 'height'>,
-  zoom: Zoom,
-): { readonly width: number; readonly height: number } {
-  return { width: layout.width * zoom, height: layout.height * zoom };
 }

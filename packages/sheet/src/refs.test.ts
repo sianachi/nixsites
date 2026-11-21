@@ -7,7 +7,6 @@ import {
   normalizeRange,
   parseA1,
   parseCellKey,
-  rangeCellCount,
   rangeContains,
 } from './refs.js';
 
@@ -78,9 +77,8 @@ describe('ranges', () => {
     expect(range).toEqual({ startRow: 1, endRow: 5, startCol: 3, endCol: 7 });
   });
 
-  it('counts cells and answers containment', () => {
+  it('answers containment', () => {
     const range = normalizeRange({ row: 0, col: 0 }, { row: 2, col: 1 });
-    expect(rangeCellCount(range)).toBe(6);
     expect(rangeContains(range, { row: 1, col: 1 })).toBe(true);
     expect(rangeContains(range, { row: 3, col: 0 })).toBe(false);
   });

@@ -96,10 +96,6 @@ export function normalizeRange(a: CellRef, b: CellRef): CellRange {
   };
 }
 
-export function rangeCellCount(range: CellRange): number {
-  return (range.endRow - range.startRow + 1) * (range.endCol - range.startCol + 1);
-}
-
 export function rangeContains(range: CellRange, ref: CellRef): boolean {
   return (
     ref.row >= range.startRow &&

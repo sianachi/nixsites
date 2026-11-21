@@ -2083,11 +2083,6 @@ export function vimStatusMode(state: EditorState): VimMode | null {
   return vim.enabled ? vim.mode : null;
 }
 
-/** The keys typed toward a command that is not complete yet, for the status line. */
-export function vimPendingKeys(state: EditorState): string {
-  return current(state).pending;
-}
-
 export interface VimStatus {
   readonly mode: VimMode;
   /** What is being typed: a partial command, or the `:`, `/` or `?` command line. */
