@@ -1,41 +1,30 @@
+import { createServer } from 'node:http';
+
+import {
+  READINESS_PATHS,
+  rolesReady,
+  startRoles,
+  stopAll,
+  type Running,
+  type Starters,
+} from './lifecycle.ts';
 import { parseRoles, type Role } from './roles.ts';
 
 /**
  * One process for the Node services. Each role keeps its own port and environment, so a role
  * behaves the same here as it did in its own container. A role that cannot start takes the
- * whole process down: a half-running host would pass its healthcheck for the roles that did.
+ * whole process down after the roles already started have been stopped. `/healthz` on the
+ * host port is liveness; `/readyz` is ready only when every configured role is.
  */
 
-interface Running {
-  stop: () => Promise<void>;
-}
-
-const starters: Record<Role, () => Promise<Running>> = {
+const starters: Starters = {
   collab: async () => (await import('../../collab/src/main.ts')).startCollab(),
   'sites-worker': async () => (await import('../../sites/src/worker/main.ts')).startSitesWorker(),
   companion: async () => {
     const { readConfig } = await import('../../companion/src/core/config.ts');
     const { stdoutLogger } = await import('../../companion/src/shared/diagnostics.ts');
-    const { createCompanionServer } = await import('../../companion/src/server/server.ts');
-    const config = readConfig(process.env);
-    const logger = stdoutLogger();
-    const server = createCompanionServer(config, { logger });
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(config.address.port, config.address.host, () => {
-        logger.log('info', 'companion listening', { port: config.address.port });
-        resolve();
-      });
-    });
-    return {
-      stop: () =>
-        new Promise<void>((resolve) => {
-          server.close(() => {
-            resolve();
-          });
-          server.closeAllConnections();
-        }),
-    };
+    const { startCompanion } = await import('../../companion/src/server/lifecycle.ts');
+    return startCompanion(readConfig(process.env), stdoutLogger());
   },
 };
 
@@ -51,22 +40,48 @@ try {
   fail('Invalid NIX_NODE_ROLES.', cause);
 }
 
-const running: Running[] = [];
+let running: Running[];
 try {
-  for (const role of roles) running.push(await starters[role]());
+  running = await startRoles(roles, starters);
 } catch (cause) {
   fail('A role failed to start.', cause);
 }
-process.stdout.write(`nix node host running: ${roles.join(', ')}\n`);
+
+const probeRole = async (role: Role): Promise<boolean> => {
+  const { port, path } = READINESS_PATHS[role];
+  const response = await fetch(`http://127.0.0.1:${String(port)}${path}`, {
+    signal: AbortSignal.timeout(3000),
+  });
+  return response.ok;
+};
+const host = createServer((request, response) => {
+  void (async () => {
+    if (request.url === '/healthz') {
+      response.writeHead(200).end('ok');
+    } else if (request.url === '/readyz') {
+      const ready = await rolesReady(roles, probeRole);
+      response.writeHead(ready ? 200 : 503).end(ready ? 'ready' : 'not ready');
+    } else {
+      response.writeHead(404).end();
+    }
+  })();
+});
+const hostPort = Number(process.env.NIX_NODE_HOST_PORT ?? 8099);
+host.listen(hostPort, () => {
+  process.stdout.write(
+    `nix node host running: ${roles.join(', ')} (probes on ${String(hostPort)})\n`,
+  );
+});
 
 let stopping = false;
 function shutdown(): void {
   if (stopping) return;
   stopping = true;
-  void Promise.all(running.map((role) => role.stop())).then(
-    () => process.exit(0),
-    (cause: unknown) => fail('Shutdown did not complete cleanly.', cause),
-  );
+  host.close();
+  void stopAll(running).then((failures) => {
+    if (failures.length === 0) process.exit(0);
+    fail('Shutdown did not complete cleanly.', failures[0]);
+  });
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

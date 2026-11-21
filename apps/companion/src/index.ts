@@ -1,6 +1,6 @@
 import { readConfig } from './core/config.ts';
 import { stdoutLogger } from './shared/diagnostics.ts';
-import { createCompanionServer } from './server/server.ts';
+import { startCompanion } from './server/lifecycle.ts';
 
 /**
  * The pet companion service: `POST /v1/companion` for Core's PetWorkerClient, `/healthz` for
@@ -18,14 +18,18 @@ try {
   process.exit(1);
 }
 
-const server = createCompanionServer(config, { logger });
-server.listen(config.address.port, config.address.host, () => {
-  logger.log('info', 'companion host listening', { port: config.address.port });
-});
+let running: Awaited<ReturnType<typeof startCompanion>>;
+try {
+  running = await startCompanion(config, logger);
+} catch (error) {
+  logger.log('error', 'companion failed to start', {
+    error: error instanceof Error ? error.message : String(error),
+  });
+  process.exit(1);
+}
 
 function shutdown(): void {
-  server.close(() => process.exit(0));
-  server.closeAllConnections();
+  void running.stop().then(() => process.exit(0));
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
