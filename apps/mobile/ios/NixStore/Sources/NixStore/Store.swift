@@ -13,13 +13,16 @@ private let pagePragmas: Set<String> = ["foreign_keys", "journal_mode", "synchro
 final class PageGate { var active = false }
 
 private let authorize: @convention(c) (UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?, UnsafePointer<CChar>?,
-                                       UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Int32 = { context, action, first, _, _, _ in
+                                       UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Int32 = { context, action, first, second, _, _ in
     guard let context, Unmanaged<PageGate>.fromOpaque(context).takeUnretainedValue().active else { return SQLITE_OK }
     switch action {
     case SQLITE_ATTACH, SQLITE_DETACH, SQLITE_TRANSACTION, SQLITE_SAVEPOINT:
         return SQLITE_DENY
     case SQLITE_PRAGMA:
         return pagePragmas.contains(first.map { String(cString: $0).lowercased() } ?? "") ? SQLITE_OK : SQLITE_DENY
+    case SQLITE_FUNCTION:
+        // With a bound argument it returns, or registers and later calls, a raw native pointer.
+        return second.map { String(cString: $0).lowercased() } == "fts3_tokenizer" ? SQLITE_DENY : SQLITE_OK
     default:
         return SQLITE_OK
     }

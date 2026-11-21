@@ -140,6 +140,8 @@ final class NixStoreTests: XCTestCase {
             "PRAGMA writable_schema = ON",
             "BEGIN",
             "SAVEPOINT s",
+            "SELECT fts3_tokenizer('simple')",
+            "SELECT \"FTS3_tokenizer\"('simple')",
         ]
         for sql in refused {
             do {
