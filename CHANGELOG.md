@@ -7,6 +7,14 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- The Android app keeps an offline copy of each server, as the iOS app does: notes, views and
+  files sync to an on-device database that only that server's pages can read, and it is deleted
+  when you sign out, are refused by the server, or remove the server.
+- Passkey sign-in works in the Android app. Sign-in opens in a Custom Tab and hands a one-time code
+  back to the app, as it does on iOS.
+- Android release builds sign with a keystore named by the `NIX_ANDROID_KEYSTORE`,
+  `NIX_ANDROID_KEYSTORE_PASSWORD`, `NIX_ANDROID_KEY_ALIAS` and `NIX_ANDROID_KEY_PASSWORD`
+  environment variables or Gradle properties, and build unsigned without them.
 - Shared links to the public pages show a preview card. The web app document carries Open Graph and
   Twitter card tags for the title, description, image, URL and site name, using
   `apps/web/public/nix-og.png` (1200 by 630).

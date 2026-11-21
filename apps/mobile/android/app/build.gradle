@@ -17,8 +17,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing reads its secrets from the environment or ~/.gradle/gradle.properties, never from
+    // the repo: NIX_ANDROID_KEYSTORE (path), NIX_ANDROID_KEYSTORE_PASSWORD, NIX_ANDROID_KEY_ALIAS and
+    // NIX_ANDROID_KEY_PASSWORD. With any of them missing, the release build is unsigned.
+    def signingValue = { String name -> System.getenv(name) ?: project.findProperty(name) }
+    def canSign = ['NIX_ANDROID_KEYSTORE', 'NIX_ANDROID_KEYSTORE_PASSWORD', 'NIX_ANDROID_KEY_ALIAS', 'NIX_ANDROID_KEY_PASSWORD']
+        .every { signingValue(it) }
+    signingConfigs {
+        if (canSign) {
+            release {
+                storeFile file(signingValue('NIX_ANDROID_KEYSTORE'))
+                storePassword signingValue('NIX_ANDROID_KEYSTORE_PASSWORD')
+                keyAlias signingValue('NIX_ANDROID_KEY_ALIAS')
+                keyPassword signingValue('NIX_ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (canSign) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -38,6 +55,9 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation "androidx.webkit:webkit:$androidxWebkitVersion"
+    implementation "androidx.browser:browser:$androidxBrowserVersion"
+    // Its own SQLite: the platform's has no FTS5, which the offline mirror's search index needs.
+    implementation "androidx.sqlite:sqlite-bundled:$androidxSqliteVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

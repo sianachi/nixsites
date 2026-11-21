@@ -7,7 +7,7 @@ import type {
   SqliteValue,
 } from './driver.js';
 
-// Client for the iOS shell's `nixStore` message handler; the wire contract is the
+// Client for the iOS shell's `nixStore` message handler (and the Android shell's WebMessageListener, same messages); the wire contract is the
 // "nixStore protocol" table in docs/plans/full-sync.md.
 
 type WireValue = null | number | string | { $b64: string };
@@ -36,8 +36,55 @@ interface WebkitWindow {
   };
 }
 
+/**
+ * The Android shell's channel: a WebMessageListener object whose `postMessage` takes a string and
+ * whose `onmessage` receives the replies, matched to requests by `id`. A native error string rejects.
+ */
+interface AndroidChannel {
+  postMessage(message: string): void;
+  onmessage: ((event: { data: string }) => void) | null;
+}
+
+const androidPosts = new WeakMap<AndroidChannel, (request: unknown) => Promise<unknown>>();
+
+/** The shell's channel as a promise-returning post, or undefined outside the Android shell. */
+export function androidChannelPost(
+  name: string,
+): ((request: unknown) => Promise<unknown>) | undefined {
+  const channel = (globalThis as unknown as Record<string, AndroidChannel | undefined>)[name];
+  if (typeof channel?.postMessage !== 'function') return undefined;
+  let post = androidPosts.get(channel);
+  if (!post) {
+    const pending = new Map<number, { resolve(v: unknown): void; reject(e: unknown): void }>();
+    let nextId = 0;
+    channel.onmessage = (event) => {
+      const { id, result, error } = JSON.parse(event.data) as {
+        id: number;
+        result?: unknown;
+        error?: unknown;
+      };
+      const waiting = pending.get(id);
+      pending.delete(id);
+      if (error !== undefined) waiting?.reject(error);
+      else waiting?.resolve(result);
+    };
+    post = (request) =>
+      new Promise((resolve, reject) => {
+        pending.set(++nextId, { resolve, reject });
+        channel.postMessage(JSON.stringify({ ...(request as object), id: nextId }));
+      });
+    androidPosts.set(channel, post);
+  }
+  return post;
+}
+
 export function windowNixStorePost(): NixStorePost {
-  const handler = (globalThis as unknown as WebkitWindow).webkit?.messageHandlers?.nixStore;
+  const handler: { postMessage(message: unknown): Promise<unknown> } | undefined =
+    (globalThis as unknown as WebkitWindow).webkit?.messageHandlers?.nixStore ??
+    (() => {
+      const post = androidChannelPost('nixStoreAndroid');
+      return post && { postMessage: post };
+    })();
   if (!handler) throw new Error('The nixStore message handler is not available');
   return async (request) => {
     try {

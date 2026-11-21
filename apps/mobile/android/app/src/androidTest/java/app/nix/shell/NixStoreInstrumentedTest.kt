@@ -1,0 +1,207 @@
+package app.nix.shell
+
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
+// Needs a device or emulator (SQLite is not in the JVM unit tests): ./gradlew connectedDebugAndroidTest.
+// Ports apps/mobile/ios/NixStore/Tests/NixStoreTests; the statement rules without SQLite are in NixStoreRulesTest.
+@RunWith(AndroidJUnit4::class)
+class NixStoreInstrumentedTest {
+    private lateinit var dir: File
+    private lateinit var stores: NixStores
+    private val a = "https://a.example"
+    private val b = "https://b.example"
+
+    @Before fun setUp() {
+        dir = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "store-test-${System.nanoTime()}")
+        stores = NixStores(dir, idleMs = 300)
+    }
+
+    @After fun tearDown() {
+        dir.deleteRecursively()
+    }
+
+    private fun send(origin: String, request: JSONObject): Pair<JSONObject?, String?> {
+        val latch = CountDownLatch(1)
+        var out: Pair<JSONObject?, String?> = null to "no reply"
+        stores.handle(origin, request) { result, error -> out = result to error; latch.countDown() }
+        assertTrue("timed out: $request", latch.await(20, TimeUnit.SECONDS))
+        return out
+    }
+
+    private fun call(origin: String, request: JSONObject) = send(origin, request).also { assertEquals(null, it.second) }.first!!
+
+    private fun sql(origin: String, text: String, vararg params: Any?, tx: String? = null): JSONObject =
+        call(origin, JSONObject().put("op", "execute").put("sql", text).put("params", JSONArray(params.toList())).also { if (tx != null) it.put("tx", tx) })
+
+    private fun refused(origin: String, text: String) {
+        val (_, error) = send(origin, JSONObject().put("op", "execute").put("sql", text))
+        assertNotNull("allowed: $text", error)
+    }
+
+    private fun rows(result: JSONObject) = result.getJSONArray("rows")
+
+    @Test fun valuesRoundTripIncludingBlobs() {
+        sql(a, "CREATE TABLE t(i INTEGER, f REAL, s TEXT, b BLOB, n)")
+        sql(a, "INSERT INTO t VALUES (?,?,?,?,?)", 42, 1.5, "héllo", JSONObject().put("\$b64", "AAEC/w=="), JSONObject.NULL)
+        val row = rows(sql(a, "SELECT * FROM t")).getJSONObject(0)
+        assertEquals(42, row.getLong("i"))
+        assertEquals(1.5, row.getDouble("f"), 0.0)
+        assertEquals("héllo", row.getString("s"))
+        assertEquals("AAEC/w==", row.getJSONObject("b").getString("\$b64"))
+        assertTrue(row.isNull("n"))
+        // An integer bound as an integer stays one in an untyped column.
+        sql(a, "INSERT INTO t(n) VALUES (?)", 7)
+        assertEquals("integer", rows(sql(a, "SELECT typeof(n) AS k FROM t WHERE i IS NULL")).getJSONObject(0).getString("k"))
+    }
+
+    @Test fun jsonFunctionsInsertReturningAndTriggersWork() {
+        sql(a, "CREATE TABLE t(id INTEGER PRIMARY KEY, v TEXT)")
+        val inserted = rows(sql(a, "INSERT INTO t(v) VALUES (?) RETURNING id", "x"))
+        assertEquals(1, inserted.length())
+        assertEquals("1", rows(sql(a, "SELECT json_extract(value,'$.a') AS first FROM json_each(?)", "[{\"a\":1},{\"a\":2}]")).getJSONObject(0).get("first").toString())
+        val deleted = rows(sql(a, "DELETE FROM t WHERE id=? RETURNING id", 1))
+        assertEquals(1, deleted.length())
+    }
+
+    @Test fun fullTextIndexAndItsTriggerRun() {
+        sql(a, "CREATE VIRTUAL TABLE s USING fts5(t)")
+        sql(a, "INSERT INTO s(s,rank) VALUES('secure-delete',1)")
+        sql(a, "INSERT INTO s(t) VALUES ('hello')")
+        assertEquals(1, rows(sql(a, "SELECT t FROM s WHERE s MATCH 'hello'")).length())
+        sql(a, "CREATE TABLE m(id)")
+        sql(a, "CREATE TRIGGER IF NOT EXISTS m_del AFTER DELETE ON m BEGIN DELETE FROM s WHERE rowid=old.id; END")
+        sql(a, "INSERT INTO m VALUES (1)")
+        sql(a, "DELETE FROM m")
+    }
+
+    @Test fun transactionsCommitRollbackAndRefuseAWrongId() {
+        sql(a, "CREATE TABLE t(a)")
+        val tx = call(a, JSONObject().put("op", "begin")).getString("tx")
+        sql(a, "INSERT INTO t VALUES (1)", tx = tx)
+        call(a, JSONObject().put("op", "commit").put("tx", tx))
+        assertEquals(1, rows(sql(a, "SELECT * FROM t")).length())
+        val tx2 = call(a, JSONObject().put("op", "begin")).getString("tx")
+        sql(a, "INSERT INTO t VALUES (2)", tx = tx2)
+        call(a, JSONObject().put("op", "rollback").put("tx", tx2))
+        assertEquals(1, rows(sql(a, "SELECT * FROM t")).length())
+        assertNotNull(send(a, JSONObject().put("op", "commit").put("tx", "nope")).second)
+        assertNotNull(send(a, JSONObject().put("op", "execute").put("sql", "SELECT 1").put("tx", "nope")).second)
+    }
+
+    @Test fun requestsWithoutATransactionWaitForTheOpenOneInOrder() {
+        sql(a, "CREATE TABLE t(a)")
+        val tx = call(a, JSONObject().put("op", "begin")).getString("tx")
+        val order = java.util.Collections.synchronizedList(ArrayList<String>())
+        val done = CountDownLatch(2)
+        stores.handle(a, JSONObject().put("op", "execute").put("sql", "INSERT INTO t VALUES ('outside')").put("params", JSONArray())) { _, _ -> order.add("outside"); done.countDown() }
+        stores.handle(a, JSONObject().put("op", "begin")) { result, _ ->
+            order.add("second begin")
+            stores.handle(a, JSONObject().put("op", "rollback").put("tx", result!!.getString("tx"))) { _, _ -> done.countDown() }
+        }
+        sql(a, "INSERT INTO t VALUES ('inside')", tx = tx)
+        assertTrue(order.isEmpty())
+        call(a, JSONObject().put("op", "commit").put("tx", tx))
+        assertTrue(done.await(20, TimeUnit.SECONDS))
+        assertEquals(listOf("outside", "second begin"), order.toList())
+        assertEquals(listOf("inside", "outside"), (0 until 2).map { rows(sql(a, "SELECT a FROM t ORDER BY rowid")).getJSONObject(it).getString("a") })
+    }
+
+    @Test fun anIdleTransactionRollsBackAndItsIdIsRefused() {
+        sql(a, "CREATE TABLE t(a)")
+        val tx = call(a, JSONObject().put("op", "begin")).getString("tx")
+        sql(a, "INSERT INTO t VALUES (1)", tx = tx)
+        Thread.sleep(900)
+        assertNotNull(send(a, JSONObject().put("op", "commit").put("tx", tx)).second)
+        assertEquals(0, rows(sql(a, "SELECT * FROM t")).length())
+    }
+
+    @Test fun aBatchIsAtomic() {
+        sql(a, "CREATE TABLE t(a UNIQUE)")
+        val statements = { second: Int ->
+            JSONArray().put(JSONObject().put("sql", "INSERT INTO t VALUES (?)").put("params", JSONArray("[[1],[2]]")))
+                .put(JSONObject().put("sql", "INSERT INTO t VALUES (?)").put("params", JSONArray("[[3],[$second]]")))
+        }
+        assertNotNull(send(a, JSONObject().put("op", "batch").put("statements", statements(3))).second)
+        assertEquals(0, rows(sql(a, "SELECT * FROM t")).length())
+        call(a, JSONObject().put("op", "batch").put("statements", statements(4)))
+        assertEquals(4, rows(sql(a, "SELECT * FROM t")).length())
+    }
+
+    @Test fun originsAreIsolated() {
+        sql(a, "CREATE TABLE t(a)")
+        sql(a, "INSERT INTO t VALUES ('a')")
+        assertNotNull(send(b, JSONObject().put("op", "execute").put("sql", "SELECT * FROM t")).second)
+        assertEquals(1, rows(sql(a, "SELECT * FROM t")).length())
+    }
+
+    @Test fun pageSqlCannotReachOtherFilesOrTheTransactionGate() {
+        sql(b, "CREATE TABLE secret(a)")
+        sql(b, "INSERT INTO secret VALUES ('b')")
+        val other = File(dir, "${NixStoreRules.storeId(b)}.sqlite").path
+        for (text in listOf(
+            "ATTACH '$other' AS v",
+            "VACUUM INTO '${File(dir, "copy.sqlite").path}'",
+            "PRAGMA database_list",
+            "PRAGMA writable_schema = ON",
+            "BEGIN",
+            "SAVEPOINT s",
+            "COMMIT",
+        )) refused(a, text)
+        assertFalse(File(dir, "copy.sqlite").exists())
+        refused(a, "SELECT * FROM v.secret")
+        for (text in listOf("PRAGMA foreign_keys=ON", "PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", "PRAGMA secure_delete=ON")) sql(a, text)
+        // The store's own transactions still work.
+        val tx = call(a, JSONObject().put("op", "begin")).getString("tx")
+        sql(a, "CREATE TABLE t(a)", tx = tx)
+        call(a, JSONObject().put("op", "commit").put("tx", tx))
+    }
+
+    @Test fun filesUsageAndWipe() {
+        sql(a, "CREATE TABLE t(a)")
+        assertTrue(call(a, JSONObject().put("op", "fileGet").put("key", "k")).isNull("data"))
+        File(dir, "${NixStoreRules.storeId(a)}-files").mkdirs()
+        File(dir, "${NixStoreRules.storeId(a)}-files/${NixStoreRules.storeId("k")}").writeBytes(byteArrayOf(1, 2, 3))
+        assertEquals("AQID", call(a, JSONObject().put("op", "fileGet").put("key", "k")).getString("data"))
+        val usage = call(a, JSONObject().put("op", "usage"))
+        assertEquals(3, usage.getLong("fileBytes"))
+        assertTrue(usage.getLong("databaseBytes") > 0)
+        call(a, JSONObject().put("op", "fileDelete").put("key", "k"))
+        assertTrue(call(a, JSONObject().put("op", "fileGet").put("key", "k")).isNull("data"))
+        File(dir, "${NixStoreRules.storeId(a)}-files/x").writeBytes(byteArrayOf(9))
+        call(a, JSONObject().put("op", "wipe"))
+        assertTrue(dir.listFiles().isNullOrEmpty())
+        assertEquals(0, call(a, JSONObject().put("op", "usage")).getLong("fileBytes"))
+    }
+
+    @Test fun downloadsRefuseNonHttpsAndFailWithoutStoringAnything() {
+        for (url in listOf("http://a.example/x", "ftp://a.example/x", "file:///etc/passwd", "not a url"))
+            assertNotNull(url, send(a, JSONObject().put("op", "fileDownload").put("key", "k").put("url", url)).second)
+        // A host that does not resolve (the .invalid TLD never does): an error, and no file.
+        assertNotNull(send(a, JSONObject().put("op", "fileDownload").put("key", "k").put("url", "https://nix-test.invalid/x")).second)
+        assertTrue(call(a, JSONObject().put("op", "fileGet").put("key", "k")).isNull("data"))
+        assertTrue(File(dir, "${NixStoreRules.storeId(a)}-files").listFiles().orEmpty().isEmpty())
+    }
+
+    @Test fun unknownOpsAndBadParamsAreErrors() {
+        assertNotNull(send(a, JSONObject().put("op", "nope")).second)
+        assertNotNull(send(a, JSONObject()).second)
+        assertNotNull(send(a, JSONObject().put("op", "execute").put("sql", "SELECT ?").put("params", JSONArray())).second)
+        assertNotNull(send(a, JSONObject().put("op", "execute").put("sql", "SELECT 1").put("params", JSONArray("[1]"))).second)
+        assertNotNull(send(a, JSONObject().put("op", "execute").put("sql", "SELECT ?").put("params", JSONArray("[[1]]"))).second)
+        assertNotNull(send(a, JSONObject().put("op", "execute").put("sql", "SELECT 1; SELECT 2")).second)
+    }
+}
