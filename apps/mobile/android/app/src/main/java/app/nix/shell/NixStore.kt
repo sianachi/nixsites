@@ -21,7 +21,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -31,20 +33,22 @@ typealias StoreDone = (JSONObject?, String?) -> Unit
 /**
  * The per-origin stores behind the page's `nixStore` channel; the port of apps/mobile/ios/NixStore.
  * The caller has already bound `origin` to the frame that sent the request (NixStoreRules.frameOrigin).
- * Every statement runs on one thread, so they never interleave; a transaction gate decides which
- * requests may run while one is open.
+ * Each store runs its statements on its own thread, so they never interleave and one page's endless
+ * query stalls only its own origin; a transaction gate decides which requests may run while one is open.
  */
 class NixStores(val baseDir: File, private val idleMs: Long = 30_000) {
-    private val worker = ScheduledThreadPoolExecutor(1) { Thread(it, "nix-store") }
-    private val net: ExecutorService = Executors.newCachedThreadPool { Thread(it, "nix-store-download") }
-    private val stores = HashMap<String, NixStore>()
+    private val net: ExecutorService = Executors.newCachedThreadPool { Thread(it, "nix-store-download").apply { isDaemon = true } }
+    // Only wakes a store's own thread; it never runs a store's work, so a stuck store cannot stall the others' timers.
+    private val timers = ScheduledThreadPoolExecutor(1) { Thread(it, "nix-store-timer").apply { isDaemon = true } }
+    private val stores = ConcurrentHashMap<String, NixStore>()
 
-    private fun store(origin: String) = stores.getOrPut(origin) { NixStore(origin, baseDir, worker, net, idleMs) }
+    private fun store(origin: String) = stores.computeIfAbsent(origin) { NixStore(origin, baseDir, net, timers, idleMs) }
 
     fun handle(origin: String, request: JSONObject, done: StoreDone) {
-        worker.execute {
+        val store = store(origin)
+        store.worker.execute {
             try {
-                store(origin).handle(request, done)
+                store.handle(request, done)
             } catch (e: Exception) {
                 done(null, e.message ?: "The request failed.")
             }
@@ -52,8 +56,9 @@ class NixStores(val baseDir: File, private val idleMs: Long = 30_000) {
     }
 
     fun wipe(origin: String, done: StoreDone) {
-        worker.execute {
-            try { store(origin).wipe(); done(JSONObject(), null) } catch (e: Exception) { done(null, e.message ?: "Could not delete local data.") }
+        val store = store(origin)
+        store.worker.execute {
+            try { store.wipe(); done(JSONObject(), null) } catch (e: Exception) { done(null, e.message ?: "Could not delete local data.") }
         }
     }
 }
@@ -62,10 +67,13 @@ class NixStores(val baseDir: File, private val idleMs: Long = 30_000) {
 class NixStore(
     origin: String,
     baseDir: File,
-    private val worker: ScheduledThreadPoolExecutor,
     private val net: ExecutorService,
+    private val timers: ScheduledThreadPoolExecutor,
     private val idleMs: Long,
 ) {
+    val worker: ExecutorService = Executors.newSingleThreadExecutor { Thread(it, "nix-store").apply { isDaemon = true } }
+    /** Bumped by every wipe; a download that started before one must not land after it. */
+    @Volatile private var wipes = 0
     private val id = NixStoreRules.storeId(origin)
     private val dbFile = File(baseDir, "$id.sqlite")
     private val filesDir = File(baseDir, "$id-files")
@@ -184,10 +192,12 @@ class NixStore(
         val mine = ++generation
         timer?.cancel(false)
         // One timer, not one task per statement: a first sync runs tens of thousands.
-        timer = worker.schedule({
-            if (activeTx != null && mine == generation) {
-                try { db?.execSQL("ROLLBACK") } catch (_: Exception) {}
-                release()
+        timer = timers.schedule({
+            worker.execute {
+                if (activeTx != null && mine == generation) {
+                    try { db?.execSQL("ROLLBACK") } catch (_: Exception) {}
+                    release()
+                }
             }
         }, idleMs, TimeUnit.MILLISECONDS)
     }
@@ -268,11 +278,12 @@ class NixStore(
             }
             "fileGet" -> reply { put("data", fileGet(string("key"))?.let { Base64.encode(it) } ?: JSONObject.NULL) }
             "fileDelete" -> { fileOf(string("key")).delete(); reply {} }
-            "fileDownload" -> fileDownload(string("key"), string("url"), done)
+            "fileDownload" -> fileDownload(string("key"), string("url"), request.optLong("bytes", 0), done)
             "usage" -> reply { usage().let { (d, f) -> put("databaseBytes", d); put("fileBytes", f) } }
             "wipe" -> { wipe(); reply {} }
-            // The shell keeps no background task or notification of its own yet; the page ignores the difference.
-            "keepAwake", "notify" -> reply {}
+            "keepAwake" -> { NixBackgroundSync.keepAwake(request.optBoolean("running")); reply {} }
+            // No notification of its own yet; the page ignores the difference.
+            "notify" -> reply {}
             else -> throw StoreError("Unknown op.")
         }
     }
@@ -289,20 +300,21 @@ class NixStore(
      * page can verify the bytes. A download already going for the key is joined; a file already there
      * is reused. Runs off the worker thread: a large file must not hold up the database.
      */
-    private fun fileDownload(key: String, url: String, done: StoreDone) {
+    private fun fileDownload(key: String, url: String, expected: Long, done: StoreDone) {
         val target = try { URL(url) } catch (_: Exception) { null }
         if (target == null || target.protocol.lowercase() != "https" || target.host.isNullOrEmpty()) throw StoreError("Downloads must use https.")
         val dest = fileOf(key)
+        val started = wipes
         val job = synchronized(downloads) {
             downloads.getOrPut(dest.name) {
-                var connection: HttpURLConnection? = null
+                val connection = AtomicReference<HttpURLConnection?>(null)
                 Download(net.submit(Callable {
                     try {
-                        download(target, dest) { connection = it }
+                        download(target, dest, if (expected > 0) expected else NixDownload.MAX_FILE_BYTES, started) { connection.set(it) }
                     } finally {
                         synchronized(downloads) { downloads.remove(dest.name) }
                     }
-                }), { connection })
+                }), { connection.get() })
             }
         }
         net.execute {
@@ -310,43 +322,21 @@ class NixStore(
                 val (bytes, sha) = job.future.get()
                 done(JSONObject().put("bytes", bytes).put("sha256", sha), null)
             } catch (e: Exception) {
-                done(null, (e.cause ?: e).message ?: "Download failed.")
+                // Never the cause's own message: a signed URL can end up in a network error's text.
+                done(null, (e.cause as? StoreError)?.message ?: "Download failed.")
             }
         }
     }
 
-    private fun download(first: URL, dest: File, track: (HttpURLConnection?) -> Unit): Pair<Long, String> {
-        filesDir.mkdirs()
+    internal fun download(first: URL, dest: File, maxBytes: Long, started: Int, track: (HttpURLConnection?) -> Unit): Pair<Long, String> {
         if (!dest.exists()) {
+            // A wipe since this download began removed the directory on purpose; it is not made again.
+            if (wipes != started) throw StoreError("Download failed.")
+            filesDir.mkdirs()
             val part = File(filesDir, dest.name + ".part")
-            var url = first
             try {
-                for (hop in 0..MAX_REDIRECTS) {
-                    val connection = (url.openConnection() as HttpURLConnection).apply {
-                        instanceFollowRedirects = false
-                        useCaches = false
-                        connectTimeout = 30_000
-                        readTimeout = 60_000
-                    }
-                    track(connection)
-                    try {
-                        val status = connection.responseCode
-                        if (status in 300..399) {
-                            // Only plain https hops, as on iOS.
-                            val next = connection.getHeaderField("Location")?.let { URL(url, it) }
-                            if (next == null || next.protocol.lowercase() != "https" || hop == MAX_REDIRECTS) throw StoreError("Download failed.")
-                            url = next
-                            continue
-                        }
-                        if (status !in 200..299) throw StoreError("Download failed.")
-                        connection.inputStream.use { input -> part.outputStream().use { input.copyTo(it) } }
-                        if (!part.renameTo(dest)) throw StoreError("Download failed.")
-                        break
-                    } finally {
-                        connection.disconnect()
-                        track(null)
-                    }
-                }
+                NixDownload.fetch(first, part, maxBytes, { wipes == started }, track)
+                if (wipes != started || !part.renameTo(dest)) throw StoreError("Download failed.")
             } finally {
                 part.delete()
             }
@@ -379,6 +369,7 @@ class NixStore(
      * keep admission closed. Downloads into this store stop first, so none lands afterwards.
      */
     fun wipe() {
+        wipes++
         val running = synchronized(downloads) { downloads.values.toList() }
         for (d in running) { d.connection()?.disconnect(); d.future.cancel(true) }
         for (d in running) try { d.future.get(10, TimeUnit.SECONDS) } catch (_: Exception) {}
@@ -391,7 +382,4 @@ class NixStore(
         if (!gone) throw StoreError("Could not delete local data.")
     }
 
-    private companion object {
-        const val MAX_REDIRECTS = 5
-    }
 }

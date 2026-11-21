@@ -56,6 +56,8 @@ dependencies {
     implementation project(':capacitor-android')
     implementation "androidx.webkit:webkit:$androidxWebkitVersion"
     implementation "androidx.browser:browser:$androidxBrowserVersion"
+    // The periodic background sync job.
+    implementation "androidx.work:work-runtime:$androidxWorkVersion"
     // Its own SQLite: the platform's has no FTS5, which the offline mirror's search index needs.
     implementation "androidx.sqlite:sqlite-bundled:$androidxSqliteVersion"
     testImplementation "junit:junit:$junitVersion"
