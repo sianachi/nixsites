@@ -96,7 +96,7 @@ public static class CalendarSql
     /// and the ordering apply to the two arms together, so truncation stays honest.
     /// </para>
     /// </remarks>
-    public const string WorkspaceCalendar = $"""
+    public static readonly string WorkspaceCalendar = $"""
         WITH calendar_view AS (
             SELECT container.id AS container_id,
                    container.properties ->> 'title' AS container_title,
@@ -111,24 +111,7 @@ public static class CalendarSql
               AND container.workspace_id = ANY(@workspace_ids)
               AND container.lifecycle_state = 'active'
               AND container.template_id IS NULL
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM item_closure AS visibility_edge
-                  LEFT JOIN LATERAL (
-                      SELECT visibility_ancestor.template_id,
-                             visibility_ancestor.lifecycle_state
-                      FROM item AS visibility_ancestor
-                      WHERE visibility_ancestor.tenant_id = @tenant_id
-                        AND visibility_ancestor.id = visibility_edge.ancestor_id
-                      LIMIT 1
-                  ) AS stored_ancestor ON TRUE
-                  WHERE visibility_edge.tenant_id = @tenant_id
-                    AND visibility_edge.descendant_id = container.id
-                    AND visibility_edge.depth > 0
-                    AND (stored_ancestor.template_id IS NOT NULL
-                         OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-                  OFFSET 0
-              )
+              AND {ItemVisibilitySql.NoHiddenStoredAncestor("container.id")}
               AND container.views IS NOT NULL
               AND entry.value ->> 'kind' = 'calendar'
               AND {ItemLockSql.ContainerIsOpen}
@@ -209,24 +192,7 @@ public static class CalendarSql
                   AND note.properties ->> '$daily' ~ '^[0-9][0-9][0-9][0-9]-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
                   AND note.properties ->> '$daily' >= @from
                   AND note.properties ->> '$daily' <= @to
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM item_closure AS visibility_edge
-                      LEFT JOIN LATERAL (
-                          SELECT visibility_ancestor.template_id,
-                                 visibility_ancestor.lifecycle_state
-                          FROM item AS visibility_ancestor
-                          WHERE visibility_ancestor.tenant_id = @tenant_id
-                            AND visibility_ancestor.id = visibility_edge.ancestor_id
-                          LIMIT 1
-                      ) AS stored_ancestor ON TRUE
-                      WHERE visibility_edge.tenant_id = @tenant_id
-                        AND visibility_edge.descendant_id = note.id
-                        AND visibility_edge.depth > 0
-                        AND (stored_ancestor.template_id IS NOT NULL
-                             OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-                      OFFSET 0
-                  )
+                  AND {ItemVisibilitySql.NoHiddenStoredAncestor("note.id")}
                   AND {ItemLockSql.ContainerIsOpen}
                   AND NOT EXISTS (
                       SELECT 1

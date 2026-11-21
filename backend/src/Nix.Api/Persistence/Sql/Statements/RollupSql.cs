@@ -189,24 +189,7 @@ public static class RollupSql
               AND c.template_id IS NULL
             GROUP BY k.key
         ) AS fold
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM item_closure AS visibility_edge
-            LEFT JOIN LATERAL (
-                SELECT visibility_ancestor.template_id,
-                       visibility_ancestor.lifecycle_state
-                FROM item AS visibility_ancestor
-                WHERE visibility_ancestor.tenant_id = @tenant_id
-                  AND visibility_ancestor.id = visibility_edge.ancestor_id
-                LIMIT 1
-            ) AS stored_ancestor ON TRUE
-            WHERE visibility_edge.tenant_id = @tenant_id
-              AND visibility_edge.descendant_id = container.id
-              AND visibility_edge.depth >= 0
-              AND (stored_ancestor.template_id IS NOT NULL
-                   OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-            OFFSET 0
-        )
+        WHERE {ItemVisibilitySql.NoHiddenStoredAncestor("container.id", includeSelf: true)}
           AND {ItemLockSql.ContainerIsOpen}
         """;
 
@@ -249,24 +232,7 @@ public static class RollupSql
           AND c.parent_id = @parent_id
           AND c.lifecycle_state = 'active'
           AND c.template_id IS NULL
-          AND NOT EXISTS (
-              SELECT 1
-              FROM item_closure AS visibility_edge
-              LEFT JOIN LATERAL (
-                  SELECT visibility_ancestor.template_id,
-                         visibility_ancestor.lifecycle_state
-                  FROM item AS visibility_ancestor
-                  WHERE visibility_ancestor.tenant_id = @tenant_id
-                    AND visibility_ancestor.id = visibility_edge.ancestor_id
-                  LIMIT 1
-              ) AS stored_ancestor ON TRUE
-              WHERE visibility_edge.tenant_id = @tenant_id
-                AND visibility_edge.descendant_id = @parent_id
-                AND visibility_edge.depth >= 0
-                AND (stored_ancestor.template_id IS NOT NULL
-                     OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-              OFFSET 0
-          )
+          AND {ItemVisibilitySql.NoHiddenStoredAncestor("@parent_id", includeSelf: true)}
         GROUP BY c.properties ->> @group_key
         ORDER BY count(*) DESC, bucket ASC NULLS LAST
         LIMIT @limit
@@ -317,24 +283,7 @@ public static class RollupSql
               AND c.parent_id = @parent_id
               AND c.lifecycle_state = 'active'
               AND c.template_id IS NULL
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM item_closure AS visibility_edge
-                  LEFT JOIN LATERAL (
-                      SELECT visibility_ancestor.template_id,
-                             visibility_ancestor.lifecycle_state
-                      FROM item AS visibility_ancestor
-                      WHERE visibility_ancestor.tenant_id = @tenant_id
-                        AND visibility_ancestor.id = visibility_edge.ancestor_id
-                      LIMIT 1
-                  ) AS stored_ancestor ON TRUE
-                  WHERE visibility_edge.tenant_id = @tenant_id
-                    AND visibility_edge.descendant_id = @parent_id
-                    AND visibility_edge.depth >= 0
-                    AND (stored_ancestor.template_id IS NOT NULL
-                         OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-                  OFFSET 0
-              )
+              AND {ItemVisibilitySql.NoHiddenStoredAncestor("@parent_id", includeSelf: true)}
         ),
         series_ranked AS (
             SELECT cell.series,
@@ -430,24 +379,7 @@ public static class RollupSql
               AND c.parent_id = @parent_id
               AND c.lifecycle_state = 'active'
               AND c.template_id IS NULL
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM item_closure AS visibility_edge
-                  LEFT JOIN LATERAL (
-                      SELECT visibility_ancestor.template_id,
-                             visibility_ancestor.lifecycle_state
-                      FROM item AS visibility_ancestor
-                      WHERE visibility_ancestor.tenant_id = @tenant_id
-                        AND visibility_ancestor.id = visibility_edge.ancestor_id
-                      LIMIT 1
-                  ) AS stored_ancestor ON TRUE
-                  WHERE visibility_edge.tenant_id = @tenant_id
-                    AND visibility_edge.descendant_id = @parent_id
-                    AND visibility_edge.depth >= 0
-                    AND (stored_ancestor.template_id IS NOT NULL
-                         OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-                  OFFSET 0
-              )
+              AND {{ItemVisibilitySql.NoHiddenStoredAncestor("@parent_id", includeSelf: true)}}
         ),
         windowed AS (
             SELECT placed.day,

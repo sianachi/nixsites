@@ -41,7 +41,7 @@ public static class BookmarkSql
     /// the column directly.
     /// </para>
     /// </remarks>
-    public const string ListShelf = """
+    public static readonly string ListShelf = $"""
         SELECT item.id AS item_id,
                item.properties ->> 'title' AS title,
                item.type AS type,
@@ -55,24 +55,7 @@ public static class BookmarkSql
           AND item.lifecycle_state = 'active'
           AND item.template_id IS NULL
           AND item.workspace_id = ANY(@workspace_ids)
-          AND NOT EXISTS (
-              SELECT 1
-              FROM item_closure AS visibility_edge
-              LEFT JOIN LATERAL (
-                  SELECT visibility_ancestor.template_id,
-                         visibility_ancestor.lifecycle_state
-                  FROM item AS visibility_ancestor
-                  WHERE visibility_ancestor.tenant_id = @tenant_id
-                    AND visibility_ancestor.id = visibility_edge.ancestor_id
-                  LIMIT 1
-              ) AS stored_ancestor ON TRUE
-              WHERE visibility_edge.tenant_id = @tenant_id
-                AND visibility_edge.descendant_id = item.id
-                AND visibility_edge.depth > 0
-                AND (stored_ancestor.template_id IS NOT NULL
-                     OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-              OFFSET 0
-          )
+          AND {ItemVisibilitySql.NoHiddenStoredAncestor("item.id")}
         ORDER BY bookmark.seq DESC
         """;
 
@@ -120,7 +103,7 @@ public static class BookmarkSql
     /// <c>seq</c> is left to its identity default, so the database assigns the position.
     /// </para>
     /// </remarks>
-    public const string Keep = """
+    public static readonly string Keep = $"""
         INSERT INTO bookmark (principal_id, tenant_id, item_id, created_at)
         SELECT @principal_id, @tenant_id, item.id, now()
         FROM item
@@ -129,24 +112,7 @@ public static class BookmarkSql
           AND item.lifecycle_state = 'active'
           AND item.template_id IS NULL
           AND item.workspace_id = ANY(@workspace_ids)
-          AND NOT EXISTS (
-              SELECT 1
-              FROM item_closure AS visibility_edge
-              LEFT JOIN LATERAL (
-                  SELECT visibility_ancestor.template_id,
-                         visibility_ancestor.lifecycle_state
-                  FROM item AS visibility_ancestor
-                  WHERE visibility_ancestor.tenant_id = @tenant_id
-                    AND visibility_ancestor.id = visibility_edge.ancestor_id
-                  LIMIT 1
-              ) AS stored_ancestor ON TRUE
-              WHERE visibility_edge.tenant_id = @tenant_id
-                AND visibility_edge.descendant_id = item.id
-                AND visibility_edge.depth > 0
-                AND (stored_ancestor.template_id IS NOT NULL
-                     OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-              OFFSET 0
-          )
+          AND {ItemVisibilitySql.NoHiddenStoredAncestor("item.id")}
         ON CONFLICT (principal_id, item_id) DO NOTHING
         """;
 
