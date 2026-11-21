@@ -74,8 +74,10 @@ public sealed class NativeReplayHandler(
             // The commands behind a request take their own locks (a habit's advisory lock first, then
             // topology and the row), so taking topology and the row here first could deadlock with the
             // direct routes. Only existence in this workspace and read access are checked here.
+            // A password-locked item stays closed to a device even for the credential that holds its unlock:
+            // the snapshot never carries it, so nothing queued against it is applied from here.
             if (!await receipts.ItemExistsAsync(command.WorkspaceId, ItemId.From(request.ItemId), cancellationToken).ConfigureAwait(false)
-                || await CurrentAsync(command.WorkspaceId, request.ItemId, cancellationToken).ConfigureAwait(false) is null
+                || await CurrentAsync(command.WorkspaceId, request.ItemId, cancellationToken).ConfigureAwait(false) is not { Locked: false }
                 || !await locks.MayReadBodyAsync(ItemId.From(request.ItemId), cancellationToken).ConfigureAwait(false))
             {
                 return await RememberAsync(command, fingerprint, Refused(request), cancellationToken).ConfigureAwait(false);

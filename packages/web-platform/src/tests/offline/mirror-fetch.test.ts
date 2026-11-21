@@ -766,10 +766,11 @@ describe('habit and recurrence writes offline', () => {
           kind: 'request',
           itemId: TASK,
           expectedRevision: null,
-          payload: expect.objectContaining({
+          payload: {
             method: 'PUT',
+            path: `/api/v1/items/${TASK}/protection`,
             body: { noDelete: true, base: { noDelete: false, noChildren: false } },
-          }),
+          },
         }),
       ]);
     });

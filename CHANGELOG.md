@@ -7,6 +7,12 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Item protection, a container's views and an item's property schema can be edited offline in the
+  native apps. Each change is sent with what the device saw before the edit (the protection flags,
+  the views version, the schema), and Core refuses it, listing it among the changes that could not be
+  applied, when someone changed that meanwhile, so a late offline edit never undoes another person's.
+  A further views edit on the same item waits for the first to sync. Pet turns cannot change protection
+  this way. Core's sync snapshot gains `viewsVersion` for this.
 - Habit check-ins, undoing a check-in, and completing an occurrence of a repeating item can be done
   offline in the native apps. They are kept in the queue and sent when the connection returns, the
   habit and calendar views show them at once, and one Core refuses (a paused habit, a day that is not

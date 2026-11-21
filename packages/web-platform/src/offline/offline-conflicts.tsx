@@ -53,6 +53,7 @@ const WHY: Record<string, string> = {
   'items.locked': 'It is locked.',
   'items.move_would_create_cycle': 'It cannot be moved inside itself.',
   'items.schema_violation': 'A property value is not allowed here.',
+  'properties.invalid': 'A property value is not allowed here.',
   'items.protection_base_changed':
     'Its protection was changed on the server after you went offline.',
   'views.version_conflict': 'Its views were changed on the server after you went offline.',

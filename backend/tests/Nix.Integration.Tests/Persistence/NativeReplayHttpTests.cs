@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Nix.Abstractions;
 using Nix.Authentication;
+using Microsoft.Extensions.DependencyInjection;
 using Nix.Domain.Identity;
 using Nix.Domain.Sync;
 using Nix.Domain.Tenancy;
@@ -466,6 +467,11 @@ public sealed class NativeReplayHttpTests(NixPostgresFixture fixture) : IAsyncLi
     [InlineData("GET", "/api/v1/items/{0}/habit")]
     [InlineData("POST", "/api/v1/workspaces/{0}/sync/replay")]
     [InlineData("PUT", "https://elsewhere.test/api/v1/items/{0}/habit/check-ins/2026-09-10")]
+    [InlineData("PUT", "/api/v1/items/{0}/habit/check-ins/2026-09-10?x=1")]
+    [InlineData("PUT", "/api/v1/items/{0}/habit/check-ins/2026-09-10/")]
+    [InlineData("PUT", "/api/v1/items/{0}/habit/check-ins/2026-09-10\n")]
+    [InlineData("PUT", "/api/v1/items/{0}/habit%2Fcheck-ins/2026-09-10")]
+    [InlineData("put", "/api/v1/items/{0}/habit/check-ins/2026-09-10")]
     public async Task A_request_outside_the_allowlist_is_invalid_and_nothing_is_applied(string method, string template)
     {
         var bearer = await AccessTokenAsync();
@@ -526,9 +532,287 @@ public sealed class NativeReplayHttpTests(NixPostgresFixture fixture) : IAsyncLi
         Assert.Equal(0L, await CheckInCountAsync(habit));
     }
 
-    private async Task<Guid> CreateHabitAsync(string bearer)
+    private static JsonObject RequestOperation(Guid itemId, string method, string path, object? body, Guid? operationId = null)
     {
-        var habit = await CreateAsync(bearer, "Water", null);
+        var operation = Operation("request", itemId, null, new { method, path, body });
+        if (operationId is { } id)
+        {
+            operation["operationId"] = id;
+        }
+        return operation;
+    }
+
+    private static string CheckInPath(Guid habit) => $"/api/v1/items/{habit:D}/habit/check-ins/2026-09-10";
+
+    [Fact]
+    public async Task An_operation_id_reused_for_another_request_is_a_conflict_of_identity()
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        var id = Guid.NewGuid();
+        using var first = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            RequestOperation(habit, "PUT", CheckInPath(habit), new { completed = true, quantity = (int?)null }, id));
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        foreach (var other in new[]
+        {
+            RequestOperation(habit, "PUT", CheckInPath(habit), new { completed = false, quantity = (int?)null }, id),
+            RequestOperation(habit, "PUT", CheckInPath(habit).Replace("09-10", "09-11", StringComparison.Ordinal), new { completed = true, quantity = (int?)null }, id),
+            RequestOperation(habit, "DELETE", CheckInPath(habit), null, id),
+        })
+        {
+            using var reused = await SendAsync(HttpMethod.Post, ReplayPath, bearer, other);
+            Assert.Equal(HttpStatusCode.Conflict, reused.StatusCode);
+            Assert.Equal("sync.idempotency_conflict", (await ReadAsync(reused))["code"]!.GetValue<string>());
+        }
+        Assert.Equal(1L, await CheckInCountAsync(habit));
+    }
+
+    [Theory]
+    [InlineData("{\"completed\":true,\"quantity\":null,\"extra\":1}")]
+    [InlineData("{\"Completed\":true}")]
+    [InlineData("{\"COMPLETED\":true,\"quantity\":null}")]
+    public async Task A_body_with_an_unknown_or_miscased_member_is_refused_but_the_direct_route_still_takes_it(string json)
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        var operation = RequestOperation(habit, "PUT", CheckInPath(habit), null);
+        operation["payload"]!["body"] = JsonNode.Parse(json);
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer, operation);
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        Assert.Equal(0L, await CheckInCountAsync(habit));
+    }
+
+    [Fact]
+    public async Task A_delete_with_a_body_is_invalid()
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            RequestOperation(habit, "DELETE", CheckInPath(habit), new { completed = true }));
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+    }
+
+    [Fact]
+    public async Task An_item_of_another_workspace_the_caller_can_write_is_refused_before_any_command_runs()
+    {
+        var bearer = await AccessTokenAsync();
+        using var created = await SendAsync(HttpMethod.Post, "/api/v1/workspaces", bearer, new { name = "Second" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var second = (await ReadAsync(created))["id"]!.GetValue<Guid>();
+        using var made = await SendAsync(HttpMethod.Post, $"/api/v1/workspaces/{second:D}/items", bearer,
+            new { type = "note", title = "Elsewhere", parentId = (Guid?)null });
+        Assert.Equal(HttpStatusCode.Created, made.StatusCode);
+        var elsewhere = (await ReadAsync(made))["id"]!.GetValue<Guid>();
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            RequestOperation(elsewhere, "PUT", CheckInPath(elsewhere), new { completed = true, quantity = (int?)null }));
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        AssertRefused(await ReadAsync(replay), "sync.refused");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_locked_item_or_one_under_a_locked_ancestor_is_refused(bool lockAncestor)
+    {
+        var bearer = await AccessTokenAsync();
+        var parent = await CreateAsync(bearer, "Parent", null);
+        var habit = await CreateHabitAsync(bearer, parent);
+        using var locked = await SendAsync(HttpMethod.Put, $"/api/v1/items/{(lockAncestor ? parent : habit):D}/lock", bearer,
+            new { password = "native-replay-password" });
+        Assert.Equal(HttpStatusCode.NoContent, locked.StatusCode);
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            RequestOperation(habit, "PUT", CheckInPath(habit), new { completed = true, quantity = (int?)null }));
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        AssertRefused(await ReadAsync(replay), "sync.refused");
+        Assert.Equal(0L, await CheckInCountAsync(habit));
+    }
+
+    [Fact]
+    public async Task A_workspace_closed_by_its_password_answers_423_for_a_request()
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        await ExecuteAsync(
+            "INSERT INTO workspace_lock (workspace_id, tenant_id, password_hash, locked_by, locked_at) VALUES (@workspace, @tenant, repeat('a', 64), @principal, now())",
+            new NpgsqlParameter("workspace", M0SchemaSeed.Alpha.WorkspaceId), new NpgsqlParameter("tenant", M0SchemaSeed.Alpha.TenantId),
+            new NpgsqlParameter("principal", M0SchemaSeed.Alpha.PrincipalId));
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            RequestOperation(habit, "PUT", CheckInPath(habit), new { completed = true, quantity = (int?)null }));
+        Assert.Equal(HttpStatusCode.Locked, replay.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_habit_replay_and_a_direct_check_in_can_run_together_without_deadlocking()
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        var days = Enumerable.Range(1, 8).Select(day => $"2026-09-{day:00}").ToArray();
+        var work = days.SelectMany(day => new[]
+        {
+            SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(habit, "PUT", $"/api/v1/items/{habit:D}/habit/check-ins/{day}", new { completed = true, quantity = (int?)null })),
+            SendAsync(HttpMethod.Put, $"/api/v1/items/{habit:D}/habit/check-ins/{day}", bearer, new { completed = true, quantity = (int?)null }),
+        }).ToArray();
+        var responses = await Task.WhenAll(work).WaitAsync(TimeSpan.FromSeconds(60), Cancellation);
+        foreach (var response in responses)
+        {
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            response.Dispose();
+        }
+        Assert.Equal(days.Length, await CheckInCountAsync(habit));
+    }
+
+    [Fact]
+    public async Task Protection_replays_with_the_flags_the_device_saw_and_conflicts_when_they_changed()
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Guarded", null);
+        var path = $"/api/v1/items/{itemId:D}/protection";
+        using var applied = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path,
+            new { noDelete = true, @base = new { noDelete = false, noChildren = false } }));
+        Assert.Equal("applied", (await ReadAsync(applied))["status"]!.GetValue<string>());
+        Assert.True((await ItemAsync(itemId, bearer))["noDelete"]!.GetValue<bool>());
+
+        // Another person turned deletion protection off and children protection on meanwhile.
+        using var other = await SendAsync(HttpMethod.Put, path, bearer, new { noDelete = false, noChildren = true });
+        Assert.Equal(HttpStatusCode.OK, other.StatusCode);
+        using var stale = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path,
+            new { noDelete = true, noChildren = false, @base = new { noDelete = true, noChildren = false } }));
+        var conflict = await ReadAsync(stale);
+        Assert.Equal("conflict", conflict["status"]!.GetValue<string>());
+        Assert.Equal("items.protection_base_changed", conflict["code"]!.GetValue<string>());
+        var after = await ItemAsync(itemId, bearer);
+        Assert.False(after["noDelete"]!.GetValue<bool>());
+        Assert.True(after["noChildren"]!.GetValue<bool>());
+    }
+
+    [Theory]
+    [InlineData("{\"noDelete\":true}")]
+    [InlineData("{\"noDelete\":true,\"base\":{\"noDelete\":false}}")]
+    [InlineData("{\"noDelete\":true,\"collaboration\":true,\"base\":{\"noDelete\":false,\"noChildren\":false}}")]
+    [InlineData("{\"noDelete\":\"yes\",\"base\":{\"noDelete\":false,\"noChildren\":false}}")]
+    public async Task A_protection_request_without_its_base_or_with_other_fields_is_invalid(string json)
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Guarded", null);
+        var operation = RequestOperation(itemId, "PUT", $"/api/v1/items/{itemId:D}/protection", null);
+        operation["payload"]!["body"] = JsonNode.Parse(json);
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer, operation);
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        Assert.False((await ItemAsync(itemId, bearer))["noDelete"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task A_pet_turn_cannot_change_protection_through_replay_though_it_can_replay_a_check_in()
+    {
+        var humanBearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(humanBearer);
+        var pet = _factory.Services.GetRequiredService<SelfIssuedTokenService>()
+            .MintPetTurn(PrincipalId.From(M0SchemaSeed.Alpha.PrincipalId), TenantId.From(M0SchemaSeed.Alpha.TenantId), Guid.NewGuid(), PetTurnMode.Write);
+        using var refused = await SendAsync(HttpMethod.Post, ReplayPath, pet, RequestOperation(habit, "PUT", $"/api/v1/items/{habit:D}/protection",
+            new { noDelete = true, @base = new { noDelete = false, noChildren = false } }));
+        Assert.Equal(HttpStatusCode.OK, refused.StatusCode);
+        AssertRefused(await ReadAsync(refused), "sync.refused");
+        Assert.False((await ItemAsync(habit, humanBearer))["noDelete"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task Views_replay_with_the_version_the_device_saw_and_conflict_when_it_changed()
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Board", null);
+        var path = $"/api/v1/items/{itemId:D}/views";
+        string Version(JsonObject views) => views["version"]!.GetValue<string>();
+        using var read = await SendAsync(HttpMethod.Get, path, bearer);
+        var seen = Version(await ReadAsync(read));
+        object Body(string name, string? version) => new
+        {
+            views = new[] { new { id = "list", name, kind = "list", sortDescending = false } },
+            @default = "list",
+            expectedVersion = version,
+        };
+
+        using var applied = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path, Body("Mine", seen)));
+        Assert.Equal("applied", (await ReadAsync(applied))["status"]!.GetValue<string>());
+
+        using var stale = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path, Body("Late", seen)));
+        var conflict = await ReadAsync(stale);
+        Assert.Equal("conflict", conflict["status"]!.GetValue<string>());
+        Assert.Equal("views.version_conflict", conflict["code"]!.GetValue<string>());
+        using var now = await SendAsync(HttpMethod.Get, path, bearer);
+        Assert.Equal("Mine", (await ReadAsync(now))["views"]![0]!["name"]!.GetValue<string>());
+
+        using var without = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path, Body("None", null)));
+        Assert.Equal(HttpStatusCode.BadRequest, without.StatusCode);
+    }
+
+    [Fact]
+    public async Task The_snapshot_carries_the_version_a_views_replay_needs()
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Board", null);
+        using var read = await SendAsync(HttpMethod.Get, $"/api/v1/items/{itemId:D}/views", bearer);
+        var version = (await ReadAsync(read))["version"]!.GetValue<string>();
+        Assert.Equal(version, (await SnapshotAsync(itemId)).ViewsVersion);
+    }
+
+    [Fact]
+    public async Task Schema_replays_against_the_document_the_device_edited_from_and_conflicts_otherwise()
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Tasks", null);
+        var path = $"/api/v1/items/{itemId:D}/schema";
+        object Property(string key, string type = "text") => new { key, label = key, type, required = false };
+        var empty = new { properties = Array.Empty<object>(), inherit = true };
+
+        using var applied = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path,
+            new { properties = new[] { Property("a") }, inherit = true, @base = empty }));
+        Assert.Equal("applied", (await ReadAsync(applied))["status"]!.GetValue<string>());
+
+        // Someone else adds "b" directly; a device still holding the old document must not drop it.
+        using var other = await SendAsync(HttpMethod.Put, path, bearer, new { properties = new[] { Property("a"), Property("b") }, inherit = true });
+        Assert.Equal(HttpStatusCode.OK, other.StatusCode);
+        using var stale = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path,
+            new { properties = new[] { Property("a"), Property("c") }, inherit = true, @base = new { properties = new[] { Property("a") }, inherit = true } }));
+        var conflict = await ReadAsync(stale);
+        Assert.Equal("conflict", conflict["status"]!.GetValue<string>());
+        Assert.Equal("items.schema_base_changed", conflict["code"]!.GetValue<string>());
+        using var now = await SendAsync(HttpMethod.Get, path, bearer);
+        Assert.Equal(["a", "b"], ((await ReadAsync(now))["declared"]!.AsArray()).Select(property => property!["key"]!.GetValue<string>()).ToArray());
+
+        using var unknown = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path,
+            new { properties = new[] { Property("a") }, inherit = true, extra = 1, @base = empty }));
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        using var noBase = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path,
+            new { properties = new[] { Property("a") }, inherit = true }));
+        Assert.Equal(HttpStatusCode.BadRequest, noBase.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_property_edit_queued_behind_a_schema_change_that_no_longer_fits_is_refused()
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Tasks", null);
+        var path = $"/api/v1/items/{itemId:D}/schema";
+        using var schema = await SendAsync(HttpMethod.Post, ReplayPath, bearer, RequestOperation(itemId, "PUT", path,
+            new
+            {
+                properties = new[] { new { key = "n", label = "n", type = "number", required = false } },
+                inherit = true,
+                @base = new { properties = Array.Empty<object>(), inherit = true },
+            }));
+        var applied = await ReadAsync(schema);
+        Assert.Equal("applied", applied["status"]!.GetValue<string>());
+        using var edit = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            Operation("properties", itemId, applied["revision"]!.GetValue<string>(), new { changes = new { n = "not a number" } }));
+        var response = await ReadAsync(edit);
+        // Refused like any violation; the device records every refusal as a change that could not be applied.
+        Assert.Equal("refused", response["status"]!.GetValue<string>());
+        Assert.Equal("properties.invalid", response["code"]!.GetValue<string>());
+    }
+
+    private async Task<Guid> CreateHabitAsync(string bearer, Guid? parent = null)
+    {
+        var habit = await CreateAsync(bearer, "Water", parent);
         using var configured = await SendAsync(HttpMethod.Put, $"/api/v1/items/{habit:D}/habit", bearer,
             new { frequency = "daily", weekdays = Array.Empty<int>(), timezone = "UTC", startDate = "2026-01-01", target = 2, unit = "reps" });
         Assert.Equal(HttpStatusCode.OK, configured.StatusCode);
