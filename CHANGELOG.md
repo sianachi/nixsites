@@ -7,6 +7,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- The iPhone and iPad app syncs in the background. When iOS gives the app time while it is off
+  screen and still open, it sends waiting changes and fetches new ones.
 - Shared links to the public pages show a preview card. The web app document carries Open Graph and
   Twitter card tags for the title, description, image, URL and site name, using
   `apps/web/public/nix-og.png` (1200 by 630).
@@ -70,6 +72,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- When a session ends on its own in the iOS or desktop app, changes that were not sent yet are no
+  longer deleted. The offline copy stays on the device, closed, and the changes are sent when the
+  same account signs in again. Signing out, or signing in with another account, still removes it.
+- The iOS and Android apps use the Nix icon and launch screen.
 - The explorer shows progress while a dropped folder is read and while its files upload. Uploads
   start as files are found, not after the whole folder has been read.
 - Attachments bulk actions and undo send a bounded number of requests at a time, and a slow answer

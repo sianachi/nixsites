@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider, useAuth } from '../../auth/auth-provider';
-import { setNativeMirror, type NativeMirror } from '../../offline/native-mirror';
+import { getNativeMirror, setNativeMirror, type NativeMirror } from '../../offline/native-mirror';
 import { getOfflineState, setOfflineState } from '../../offline/offline-state';
 
 // The iOS shell: the offline paths of the provider only exist there.
@@ -39,6 +39,8 @@ function fakeMirror(initial: typeof stored | null, wiped = true) {
   });
   const mirror = {
     wipe,
+    // Nothing unsent: an ended session wipes, as a sign-out does.
+    expire: () => wipe().then((done) => (done ? 'wiped' : 'failed')),
     current: () => ({}),
     openStored: () => Promise.resolve(session === null ? null : {}),
     session: () => Promise.resolve(session),
@@ -137,6 +139,28 @@ describe('an online launch that the server refuses', () => {
       expect(getOfflineState().bootOffline).toBe(false);
     },
   );
+
+  it('keeps a copy with unsent changes locked on a refusal: no wipe, no offline launch', async () => {
+    const wipe = fakeMirror(stored);
+    let locked = false;
+    const mirror = getNativeMirror() as unknown as Record<string, unknown>;
+    mirror.expire = () => {
+      locked = true;
+      return Promise.resolve('kept');
+    };
+    mirror.openStored = () => Promise.resolve(locked ? null : {});
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({}, 401)));
+    mount();
+    await screen.findByText('failed');
+    expect(wipe).not.toHaveBeenCalled();
+    expect(useSessionStore.getState().error).toContain('kept');
+    cleanup();
+    useSessionStore.setState({ status: 'unknown', profile: null, error: null });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Load failed')));
+    mount();
+    await screen.findByText('unreachable');
+    expect(getOfflineState().bootOffline).toBe(false);
+  });
 
   it('wipes the copy when the session is anonymous', async () => {
     const wipe = fakeMirror(stored);

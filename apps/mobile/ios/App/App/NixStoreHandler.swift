@@ -1,3 +1,4 @@
+import BackgroundTasks
 import NixStore
 import UIKit
 import UserNotifications
@@ -68,12 +69,63 @@ final class NixStoreHandler: NSObject, WKScriptMessageHandlerWithReply {
 @MainActor enum SyncKeepAwake {
     private static var task = UIBackgroundTaskIdentifier.invalid
 
+    static var running: Bool { task != .invalid }
+
     static func set(_ running: Bool) {
         if running, task == .invalid {
             task = UIApplication.shared.beginBackgroundTask(withName: "Nix sync") { set(false) }
         } else if !running, task != .invalid {
             UIApplication.shared.endBackgroundTask(task)
             task = .invalid
+            BackgroundSync.passEnded()
         }
+    }
+}
+
+/// Background refresh: when iOS grants the suspended app some time, the open page is asked for one
+/// sync pass and the time is handed back as soon as that pass ends. The sync itself stays in the
+/// page, with the page's own session, so nothing here holds a credential or talks to a server.
+// shortcut: syncs only while the app is still in memory with a signed-in page; a launch from
+// terminated has no page and ends at once. Upgrade to a native sync engine if that is not enough.
+@MainActor enum BackgroundSync {
+    static let identifier = "app.nix.shell.sync"
+    static weak var webView: WKWebView?
+    private static var current: BGTask?
+
+    static func register() {
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: .main) { task in
+            MainActor.assumeIsolated { run(task) }
+        }
+    }
+
+    /// Asks for the next wake; iOS decides when, never sooner than 15 minutes.
+    static func schedule() {
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    private static func run(_ task: BGTask) {
+        schedule()
+        // Only a saved server's page is asked; the picker and a page mid-sign-in are left alone.
+        guard let webView, let origin = NixShellPlugin.origin(webView.url),
+              NixShellPlugin.savedOrigins.contains(origin) else {
+            return task.setTaskCompleted(success: false)
+        }
+        current = task
+        task.expirationHandler = { MainActor.assumeIsolated { finish(false) } }
+        webView.evaluateJavaScript("window.dispatchEvent(new Event('nix:background-sync'))") { _, _ in
+            // A page with nothing to do (signed out, offline) never starts a pass: stop waiting.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                if !SyncKeepAwake.running { finish(false) }
+            }
+        }
+    }
+
+    static func passEnded() { finish(true) }
+
+    private static func finish(_ success: Bool) {
+        current?.setTaskCompleted(success: success)
+        current = nil
     }
 }
