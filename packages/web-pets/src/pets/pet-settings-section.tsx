@@ -286,9 +286,10 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                       updatePet({ provider: petProviderSchema.parse(event.currentTarget.value) });
                     }}
                   >
-                    <option value="chatgpt">ChatGPT</option>
+                    <option value="chatgpt">ChatGPT (sign in)</option>
                     <option value="anthropic">Claude</option>
                     <option value="openrouter">OpenRouter</option>
+                    <option value="openai">OpenAI (API key)</option>
                   </Select>
                 )}
               </Field>

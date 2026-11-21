@@ -43,7 +43,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         if (credential is null)
         {
             return Result.Failure<(string, string?)>(new("pets.no_provider_key",
-                $"No API key is saved for {(provider == PetProviders.Anthropic ? "Claude" : "OpenRouter")}. Add one in Settings > Pets."));
+                $"No API key is saved for {ProviderName(provider)}. Add one in Settings > Pets."));
         }
 
         try
@@ -55,6 +55,9 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             return Result.Failure<(string, string?)>(new("pets.no_provider_key", "The saved API key could not be read. Save it again in Settings > Pets."));
         }
     }
+
+    private static string ProviderName(string provider) =>
+        provider == PetProviders.Anthropic ? "Claude" : provider == PetProviders.OpenAi ? "OpenAI" : "OpenRouter";
 
     private static NixError? ProviderFailure(HttpResponseMessage response, string provider)
     {
@@ -76,13 +79,14 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             return null;
         }
 
-        var name = provider == PetProviders.Anthropic ? "Claude" : "OpenRouter";
+        var name = ProviderName(provider);
         return token[(provider.Length + 1)..] switch
         {
             "credit_balance.400" when provider == PetProviders.Anthropic => new("pets.provider_credit_balance", $"{name} reports that this API key has insufficient credit. Check API billing for the key, then try again."),
             "credit_balance.402" => new("pets.provider_credit_balance", $"{name} reports that this API key has insufficient credit. Check API billing for the key, then try again."),
             "authentication.401" => new("pets.provider_authentication", $"{name} rejected the API key. Update it in Settings > Pets."),
             "permission.403" => new("pets.provider_permission", $"{name} refused access for this API key. Check the key's permissions and API access."),
+            "credit_balance.429" when provider == PetProviders.OpenAi => new("pets.provider_credit_balance", $"{name} reports that this API key has insufficient credit. Check API billing for the key, then try again."),
             "rate_limited.429" => new("pets.provider_rate_limited", $"{name} is rate limiting this API key. Wait briefly, then try again."),
             "models_rejected.400" when provider == PetProviders.Anthropic => new("pets.provider_models_rejected", $"{name} rejected model discovery for this API key. Check its API access and billing, then try again."),
             _ => null,

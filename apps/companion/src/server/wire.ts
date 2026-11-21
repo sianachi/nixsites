@@ -44,6 +44,7 @@ export const emptyUsage = (): ProviderUsage => ({
 });
 
 export interface WireContext {
+  kind: string;
   fetch: typeof fetch;
   base: string;
   apiKey: string;
@@ -405,17 +406,33 @@ export const anthropicWire: ProviderWire = {
   },
 };
 
-// ---- OpenRouter ----
+// ---- OpenRouter and OpenAI: both speak the chat completions API ----
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
+const OPENAI_BASE = 'https://api.openai.com/v1';
 
-function openrouterInit(apiKey: string, signal: AbortSignal, body?: unknown): RequestInit {
+// OpenAI lists every model it serves; these are the ones chat completions can run. Dated
+// snapshots and previews pass too, which is what the picker should show.
+const OPENAI_CHAT = /^(gpt-|chatgpt-|o\d)/;
+const OPENAI_NOT_CHAT =
+  /audio|realtime|transcribe|tts|image|embedding|moderation|search|instruct|codex|-pro\b|deep-research/;
+
+const chatName = (kind: string): string => (kind === 'openai' ? 'OpenAI' : 'OpenRouter');
+const chatBase = (kind: string, base: string): string =>
+  base !== '' ? base : kind === 'openai' ? OPENAI_BASE : OPENROUTER_BASE;
+
+function openrouterInit(
+  kind: string,
+  apiKey: string,
+  signal: AbortSignal,
+  body?: unknown,
+): RequestInit {
   return {
     method: body === undefined ? 'GET' : 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'content-type': 'application/json',
-      'X-Title': 'Nix companion',
+      ...(kind === 'openrouter' ? { 'X-Title': 'Nix companion' } : {}),
     },
     redirect: 'manual',
     signal,
@@ -423,28 +440,51 @@ function openrouterInit(apiKey: string, signal: AbortSignal, body?: unknown): Re
   };
 }
 
+/** Serves both providers; `context.kind` picks the origin, the name in errors and the model filter. */
 export const openrouterWire: ProviderWire = {
-  async listModels({ fetch: doFetch, base, apiKey, signal }) {
+  async listModels({ kind, fetch: doFetch, base, apiKey, signal }) {
     const timed = AbortSignal.any([signal, AbortSignal.timeout(LIST_TIMEOUT_MS)]);
     let response: Response;
     try {
       response = await doFetch(
-        `${base === '' ? OPENROUTER_BASE : base}/models`,
-        openrouterInit(apiKey, timed),
+        `${chatBase(kind, base)}/models`,
+        openrouterInit(kind, apiKey, timed),
       );
     } catch {
-      throw new Error('OpenRouter could not be reached');
+      throw new Error(`${chatName(kind)} could not be reached`);
     }
-    if (response.status !== 200) throw await providerResponseError('openrouter', response, true);
+    if (response.status !== 200) throw await providerResponseError(kind, response, true);
     let page: unknown;
     try {
       page = JSON.parse(await readBounded(response, 4 << 20));
     } catch {
-      throw new Error('OpenRouter returned an unreadable model list');
+      throw new Error(`${chatName(kind)} returned an unreadable model list`);
     }
     const data = isRecord(page) && Array.isArray(page.data) ? (page.data as unknown[]) : [];
     const models: ModelInfo[] = [];
-    for (const entry of data) {
+    if (kind === 'openai') {
+      // The list carries no capabilities: every chat model takes tools and pictures.
+      const chat = data
+        .filter(isRecord)
+        .map((entry) => ({ id: str(entry.id), created: Number(entry.created) || 0 }))
+        .filter(
+          ({ id }) =>
+            OPENAI_CHAT.test(id) && !OPENAI_NOT_CHAT.test(id) && Buffer.byteLength(id) <= 160,
+        )
+        .sort((a, b) => b.created - a.created);
+      for (const { id } of chat.slice(0, 100)) {
+        models.push({
+          id,
+          name: id,
+          default: false,
+          supportsTools: true,
+          supportedEfforts: [],
+          defaultEffort: '',
+          textOnly: false,
+        });
+      }
+    }
+    for (const entry of kind === 'openai' ? [] : data) {
       if (!isRecord(entry)) continue;
       const id = str(entry.id);
       if (id === '' || Buffer.byteLength(id) > 160 || models.length === 100) continue;
@@ -468,12 +508,12 @@ export const openrouterWire: ProviderWire = {
       });
     }
     const first = models[0];
-    if (first === undefined) throw new Error('OpenRouter listed no models for this key');
+    if (first === undefined) throw new Error(`${chatName(kind)} listed no models for this key`);
     first.default = true;
     return models;
   },
 
-  async stream({ fetch: doFetch, base, apiKey, signal }, thread, onDelta) {
+  async stream({ kind, fetch: doFetch, base, apiKey, signal }, thread, onDelta) {
     const ctx = AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]);
     const system: Block = { role: 'system', content: thread.system };
     // OpenRouter passes Anthropic's cache breakpoints through, and only Claude models need one.
@@ -522,14 +562,14 @@ export const openrouterWire: ProviderWire = {
     let response: Response;
     try {
       response = await doFetch(
-        `${base === '' ? OPENROUTER_BASE : base}/chat/completions`,
-        openrouterInit(apiKey, ctx, body),
+        `${chatBase(kind, base)}/chat/completions`,
+        openrouterInit(kind, apiKey, ctx, body),
       );
     } catch {
       if (ctx.aborted) throw ctx.reason instanceof Error ? ctx.reason : new Error('aborted');
-      throw new Error('OpenRouter could not be reached');
+      throw new Error(`${chatName(kind)} could not be reached`);
     }
-    if (response.status !== 200) throw await providerResponseError('openrouter', response, false);
+    if (response.status !== 200) throw await providerResponseError(kind, response, false);
     let text = '';
     const partials = new Map<number, { id: string; name: string; arguments: string }>();
     const order: number[] = [];
@@ -542,7 +582,7 @@ export const openrouterWire: ProviderWire = {
       }
       if (!isRecord(chunk)) return;
       if (isRecord(chunk.error))
-        throw new Error('OpenRouter reported an error during the response');
+        throw new Error(`${chatName(kind)} reported an error during the response`);
       for (const choice of Array.isArray(chunk.choices) ? (chunk.choices as unknown[]) : []) {
         if (!isRecord(choice)) continue;
         if (choice.finish_reason === 'length') throw new ResponseTooLongError();

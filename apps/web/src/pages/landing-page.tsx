@@ -571,8 +571,8 @@ export function LandingPage({ onSignIn, demo }: LandingPageProps): ReactNode {
                 in place.
               </Point>
               <Point title="Your model, your key">
-                Sign in with ChatGPT, or add an Anthropic or OpenRouter key. Search runs on a small
-                model inside your server, with no key and no cost.
+                Sign in with ChatGPT, or add an Anthropic, OpenAI or OpenRouter key. Search runs on
+                a small model inside your server, with no key and no cost.
               </Point>
               <Point title="Every agent, every action">
                 <code className="font-mono">nixctl</code> and its MCP server give AI tools every
