@@ -21,6 +21,9 @@ import org.json.JSONObject
 import java.io.File
 import java.net.URI
 import java.util.Collections
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /** The origin rule and the server-list validation, free of Android types so JVM tests can run them. */
@@ -80,6 +83,8 @@ class NixShellPlugin : Plugin() {
     private fun savedOrigins(): Set<String> = savedServers().mapNotNull { it["origin"] }.toSet()
 
     override fun load() {
+        NixDownload.ensureGuard()
+        NixBackgroundSync.dispatcher = ::dispatchBackgroundSync
         // Registered before the first page loads. The picker's channel answers only the bundled page.
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
         val local = localOrigin ?: return
@@ -99,14 +104,16 @@ class NixShellPlugin : Plugin() {
         val view = bridge.webView
         for (name in listOf(STORE, SIGN_IN)) try { WebViewCompat.removeWebMessageListener(view, name) } catch (_: Exception) {}
         val origins = savedOrigins()
+        NixBackgroundSync.schedule(context, origins.isNotEmpty())
         if (origins.isEmpty()) return
         addServerChannel(STORE, origins) { origin, request, respond -> stores.handle(origin, request, respond) }
         addServerChannel(SIGN_IN, origins) { origin, request, respond -> signIn(origin, request, respond) }
     }
 
     private fun addServerChannel(name: String, origins: Set<String>, serve: (String, JSONObject, StoreDone) -> Unit) {
-        try {
-            WebViewCompat.addWebMessageListener(bridge.webView, name, origins) { _, message, sourceOrigin, isMainFrame, reply ->
+        val view = bridge.webView
+        fun add(listenerName: String, rules: Set<String>) {
+            WebViewCompat.addWebMessageListener(view, listenerName, rules) { _, message, sourceOrigin, isMainFrame, reply ->
                 val request = try { JSONObject(message.data ?: return@addWebMessageListener) } catch (_: Exception) { return@addWebMessageListener }
                 val id = request.opt("id")
                 val respond: StoreDone = { result, error ->
@@ -117,56 +124,75 @@ class NixShellPlugin : Plugin() {
                 val origin = NixStoreRules.frameOrigin(sourceOrigin.toString(), isMainFrame, savedOrigins())
                 if (origin == null) respond(null, "Not allowed.") else serve(origin, request, respond)
             }
+        }
+        try {
+            add(name, origins)
         } catch (_: Exception) {
-            // The channel stays absent; the page falls back to online-only.
+            // One origin WebView rejects must not cost the others their channel: keep those it accepts.
+            val usable = origins.filter { origin ->
+                val probe = "${name}Probe"
+                try { WebViewCompat.addWebMessageListener(view, probe, setOf(origin)) { _, _, _, _, _ -> }; true } catch (_: Exception) { false }
+                    .also { try { WebViewCompat.removeWebMessageListener(view, probe) } catch (_: Exception) {} }
+            }.toSet()
+            if (usable.isNotEmpty()) try { add(name, usable) } catch (_: Exception) {}
         }
     }
 
     // Sign-in handoff: passkeys do not work in the WebView for an arbitrary server domain, so the
     // server's sign-in runs in a Custom Tab and the page redeems a one-time code for its cookie.
 
-    private class PendingSignIn(val issuer: String, val verifier: String, val respond: StoreDone) {
-        var left = false
-    }
+    private val signInFlow = NixSignInFlow()
 
-    private var pending: PendingSignIn? = null
-
-    /** Opens the server's sign-in in a Custom Tab; answers `{code, verifier}`, or an error string (`cancelled` when the person closes the tab). */
+    /** Opens the server's sign-in in an ephemeral Custom Tab where the browser has them; answers `{code, verifier}`, or an error string (`cancelled` when the person closes the tab). */
     private fun signIn(origin: String, request: JSONObject, respond: StoreDone) {
         main.post {
-            if (pending != null) return@post respond(null, "Sign-in is not available from this page.")
             val (verifier, challenge) = NixSignIn.newVerifier()
+            val answer = NixSignInFlow.Respond { code, v, error ->
+                if (code != null) respond(JSONObject().put("code", code).put("verifier", v), null) else respond(null, error)
+            }
+            val waiting = signInFlow.start(origin, verifier, answer)
+                ?: return@post respond(null, "Sign-in is not available from this page.")
             val returnTo = NixSignIn.safeReturnTo(request.optString("returnTo").takeIf { it.isNotEmpty() })
-            pending = PendingSignIn(origin, verifier, respond)
             try {
-                CustomTabsIntent.Builder().build().launchUrl(activity, Uri.parse(NixSignIn.loginUrl(origin, challenge, returnTo)))
+                // A browser without ephemeral tabs ignores the flag and opens a normal one.
+                CustomTabsIntent.Builder().setEphemeralBrowsingEnabled(true).build()
+                    .launchUrl(activity, Uri.parse(NixSignIn.loginUrl(origin, challenge, returnTo)))
+                // If the app never pauses the browser did not open; do not leave sign-in blocked.
+                main.postDelayed({ signInFlow.expire(waiting, "Sign-in could not be started.") }, LAUNCH_TIMEOUT_MS)
             } catch (_: Exception) {
-                pending = null
-                respond(null, "Sign-in could not be started.")
+                signInFlow.expire(waiting, "Sign-in could not be started.")
             }
         }
     }
 
-    /** The browser's redirect to `app.nix.shell://auth`. Single use: it answers the one sign-in waiting, valid or not. */
+    /**
+     * Asks the page to run one sync pass, if the WebView shows a saved server's page. Called by the
+     * background worker; the event runs on the main thread, as the page's own code does.
+     */
+    private fun dispatchBackgroundSync(): Boolean {
+        val task = FutureTask<Boolean> {
+            val view = bridge.webView
+            if (NixServers.origin(view.url) in savedOrigins()) {
+                view.evaluateJavascript(NixBackgroundSync.EVENT_SCRIPT, null)
+                true
+            } else false
+        }
+        main.post(task)
+        return try { task.get(5, TimeUnit.SECONDS) } catch (_: Exception) { false }
+    }
+
+    override fun handleOnDestroy() {
+        NixBackgroundSync.dispatcher = null
+    }
+
+    /** The browser's redirect to `app.nix.shell://auth`. */
     override fun handleOnNewIntent(intent: Intent) {
-        val waiting = pending ?: return
-        val data = intent.data?.takeIf { it.scheme.equals(NixSignIn.SCHEME, ignoreCase = true) } ?: return
-        pending = null
-        val code = NixSignIn.handoffCode(data.toString(), waiting.issuer)
-        if (code != null) waiting.respond(JSONObject().put("code", code).put("verifier", waiting.verifier), null)
-        else waiting.respond(null, "Sign-in could not be completed.")
+        intent.data?.takeIf { it.scheme.equals(NixSignIn.SCHEME, ignoreCase = true) }?.let { signInFlow.callback(it.toString()) }
     }
 
-    override fun handleOnPause() {
-        pending?.left = true
-    }
+    override fun handleOnPause() = signInFlow.paused()
 
-    /** Back in the app with no callback: a Custom Tab reports no cancel, so the return itself is the cancel. */
-    override fun handleOnResume() {
-        val waiting = pending?.takeIf { it.left } ?: return
-        pending = null
-        waiting.respond(null, "cancelled")
-    }
+    override fun handleOnResume() = signInFlow.resumed()
 
     private fun handle(message: WebMessageCompat, reply: JavaScriptReplyProxy) {
         val request = try { JSONObject(message.data ?: return) } catch (_: Exception) { return }
@@ -185,16 +211,25 @@ class NixShellPlugin : Plugin() {
                     // A removed server's offline copy goes with it; say so if any of it stays behind.
                     val failed = Collections.synchronizedList(ArrayList<String>())
                     val left = AtomicInteger(dropped.size)
+                    val unanswered = Collections.synchronizedSet(HashSet(dropped))
+                    val replied = AtomicBoolean(false)
                     fun finish() {
+                        if (!replied.compareAndSet(false, true)) return
                         if (failed.isEmpty()) response.put("result", JSONObject().put("servers", JSONArray(valid.map(::JSONObject))))
                         else response.put("error", "Removed, but the offline copy of ${failed.joinToString(", ")} could not be deleted.")
                         main.post { reply.postMessage(response.toString()) }
                     }
                     if (dropped.isEmpty()) return finish()
                     for (origin in dropped) stores.wipe(origin) { _, error ->
+                        unanswered.remove(origin)
                         if (error != null) failed.add(origin)
                         if (left.decrementAndGet() == 0) finish()
                     }
+                    // A store whose thread is stuck must not hold the picker: answer without it, naming it.
+                    main.postDelayed({
+                        failed.addAll(unanswered)
+                        finish()
+                    }, WIPE_TIMEOUT_MS)
                     return
                 }
                 else -> response.put("error", "Unknown request.")
@@ -229,5 +264,7 @@ class NixShellPlugin : Plugin() {
         const val LISTENER = "nixPickerAndroid"
         const val STORE = "nixStoreAndroid"
         const val SIGN_IN = "nixSignInAndroid"
+        const val LAUNCH_TIMEOUT_MS = 5_000L
+        const val WIPE_TIMEOUT_MS = 15_000L
     }
 }

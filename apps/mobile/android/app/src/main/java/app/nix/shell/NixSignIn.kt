@@ -9,6 +9,54 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
+ * The one sign-in that may wait for its browser callback: single use, answered by the first callback
+ * (valid or not), and closed by a return to the app without one. Main thread only. A Custom Tab
+ * reports no cancel, so the pause that opens it and the resume that follows without a callback
+ * stand in for one.
+ */
+class NixSignInFlow {
+    /** Exactly one of `code` (with `verifier`) or `error`. */
+    fun interface Respond { fun answer(code: String?, verifier: String?, error: String?) }
+
+    class Pending(val issuer: String, val verifier: String, val respond: Respond) {
+        var left = false
+    }
+
+    private var pending: Pending? = null
+
+    fun waiting(): Boolean = pending != null
+
+    /** Registers a sign-in; null when one is already waiting. */
+    fun start(issuer: String, verifier: String, respond: Respond): Pending? =
+        if (pending != null) null else Pending(issuer, verifier, respond).also { pending = it }
+
+    /** The browser's redirect. Ignored when nothing waits; otherwise answers the waiting sign-in once. */
+    fun callback(url: String?): Boolean {
+        val waiting = pending ?: return false
+        pending = null
+        val code = NixSignIn.handoffCode(url, waiting.issuer)
+        if (code != null) waiting.respond.answer(code, waiting.verifier, null)
+        else waiting.respond.answer(null, null, "Sign-in could not be completed.")
+        return true
+    }
+
+    fun paused() { pending?.left = true }
+
+    fun resumed() {
+        val waiting = pending?.takeIf { it.left } ?: return
+        pending = null
+        waiting.respond.answer(null, null, "cancelled")
+    }
+
+    /** The tab was launched but the app never paused (the browser did not open): give up. */
+    fun expire(p: Pending, message: String) {
+        if (pending !== p || p.left) return
+        pending = null
+        p.respond.answer(null, null, message)
+    }
+}
+
+/**
  * The pure half of the sign-in handoff (NixShellPlugin does the Custom Tab and the intent). Mirrors
  * NixShell.swift and apps/desktop/src/shell-rules.mjs: passkeys do not work in the WebView for an
  * arbitrary server domain, so sign-in runs in the browser and the page redeems a one-time code, with
