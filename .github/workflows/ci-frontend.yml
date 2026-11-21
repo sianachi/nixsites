@@ -252,6 +252,34 @@ jobs:
           NIX_COLLAB_SKIP_DB_TESTS: '1'
         run: pnpm -r --if-present --filter '!@nix/web' test
 
+  # The Electron desktop app: its unit tests already run in frontend-unit (`pnpm -r test`); this adds
+  # what needs a display and a real window: the app against a fake server (boundary run) and the
+  # sync-sqlite suites with the desktop store under the driver. The Electron binary downloads on
+  # first use, so there is no install script to allow.
+  desktop:
+    name: desktop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: frontend-static
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: sync-sqlite suites through the desktop store
+        run: pnpm --filter @nix/desktop test:mirror
+
+      - name: Boundary run against a fake server
+        run: xvfb-run -a pnpm --filter @nix/desktop test:e2e
+
   # The web app keeps its integration tests (about 280 files; the web-* packages run their own in
   # frontend-unit) and most of the unit time, so it runs as three shards beside the other packages. Vitest splits files by a
   # hash of the path, which measured within 20% on CPU time; the required check names are

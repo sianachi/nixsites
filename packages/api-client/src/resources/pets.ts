@@ -62,7 +62,7 @@ export const providers = (): QueryEndpoint<PetProvidersResponse> =>
 
 /** Stores or replaces the owner's key for a provider; the key is never returned. */
 export const saveProviderKey = (
-  provider: 'anthropic' | 'openrouter',
+  provider: 'anthropic' | 'openrouter' | 'openai',
   key: string,
 ): CommandEndpoint<PetProviderKey> =>
   defineCommand({
@@ -75,7 +75,7 @@ export const saveProviderKey = (
   });
 
 export const removeProviderKey = (
-  provider: 'anthropic' | 'openrouter',
+  provider: 'anthropic' | 'openrouter' | 'openai',
 ): CommandEndpoint<undefined> =>
   defineCommand({
     operation: 'pets.removeProviderKey',

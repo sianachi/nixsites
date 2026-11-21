@@ -1,14 +1,15 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Nix.Workers.Import;
 
 namespace Nix.Tests.Workers;
 
 /// <summary>
-/// Replays the import scenarios the Go worker planned (<c>fixtures/parity/import/*</c>, recorded by
-/// <c>TestRecordParity</c> in apps/go-workers/internal/importplan): the encoded plan bytes, and so
-/// the checksum Core stores, must be identical. PDF has no golden: PdfPig extracts text differently
-/// from pdftotext by design, and its structure is covered in <see cref="ImportPlanTests"/>.
+/// Replays the recorded import scenarios (<c>fixtures/parity/import/*</c>): the plan must hold the
+/// same values, member for member, and survive a decode and re-encode unchanged. The bytes are not
+/// compared, because the checksum is taken over whatever was stored. PDF has no recording: its
+/// structure is covered in <see cref="ImportPlanTests"/>.
 /// </summary>
 public sealed class ImportPlanParityTests
 {
@@ -24,7 +25,7 @@ public sealed class ImportPlanParityTests
 
     [Theory]
     [MemberData(nameof(Scenarios))]
-    public async Task Encoded_plan_matches_the_go_worker(string scenario)
+    public async Task Encoded_plan_matches_the_recording(string scenario)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var directory = Path.Combine(FixtureRoot(), scenario);
@@ -51,7 +52,9 @@ public sealed class ImportPlanParityTests
         }
 
         var expected = await File.ReadAllBytesAsync(expectedPath, cancellationToken);
-        Assert.True(expected.AsSpan().SequenceEqual(actual), $"{scenario} differs:\n{Encoding.UTF8.GetString(expected)}\n---\n{Encoding.UTF8.GetString(actual)}");
+        Assert.True(
+            JsonNode.DeepEquals(JsonNode.Parse(expected), JsonNode.Parse(actual)),
+            $"{scenario} differs:\n{Encoding.UTF8.GetString(expected)}\n---\n{Encoding.UTF8.GetString(actual)}");
     }
 
     private static string Digest(byte[] body) => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(body));

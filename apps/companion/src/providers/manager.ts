@@ -34,7 +34,7 @@ export interface ManagerDeps {
   executeConversationTool?: ConversationToolExecutor | undefined;
   serverTools?: ServerTools | undefined;
   /** Provider origin overrides, for tests. */
-  providerBaseUrls?: Partial<Record<'anthropic' | 'openrouter', string>> | undefined;
+  providerBaseUrls?: Partial<Record<'anthropic' | 'openrouter' | 'openai', string>> | undefined;
   fetch?: typeof fetch | undefined;
   /** How often idle accounts are looked for; default the smaller of a minute and half the idle time. */
   reapIntervalMs?: number | undefined;
@@ -66,7 +66,7 @@ export class Manager {
               apiKey,
               home,
               notify,
-              baseUrl: deps.providerBaseUrls?.[provider as 'anthropic' | 'openrouter'],
+              baseUrl: deps.providerBaseUrls?.[provider as 'anthropic' | 'openrouter' | 'openai'],
               fetch: deps.fetch,
             }),
           );

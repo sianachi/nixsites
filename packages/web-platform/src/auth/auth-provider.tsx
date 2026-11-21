@@ -38,6 +38,8 @@ import {
 import {
   BACK_ONLINE_EVENT,
   discardNativeMirror,
+  expireNativeMirror,
+  UNSENT_KEPT,
   getNativeMirror,
   nativeBootSession,
 } from '../offline/native-mirror';
@@ -94,7 +96,7 @@ export interface AuthContextValue {
   /** Returns a current short-lived Core access token without exposing the session cookie. */
   readonly getAccessToken: (forceRefresh?: boolean) => Promise<string | null>;
   /** Closes local account access after an authoritative global session refusal. */
-  readonly handleSessionRefusal: (subject: string) => void;
+  readonly handleSessionRefusal: (subject: string, accountClosed?: boolean) => void;
   /** Whether Core has the interactive provider and its signing key configured. */
   readonly isConfigured: boolean;
   /**
@@ -277,17 +279,22 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
   const sessionRetryRequested = useSessionStore((state) => state.sessionRetryRequested);
   const restoreAttempt = useSessionStore((state) => state.restoreAttempt);
   const closeSession = useCallback(
-    (subject: string, reason: string): void => {
+    (subject: string, reason: string, wipe = false): void => {
       if (useSessionStore.getState().profile?.subject !== subject) return;
       invalidateSessionRequests();
       accessTokenRef.current = null;
       void sealAccountBodies(subject).catch(() => undefined);
-      // iOS shell: admission to the offline copy closes before the session does, then it is wiped.
-      const wiping = discardNativeMirror();
+      // Native shell: admission to the offline copy closes before the session does. Another
+      // account's arrival or a closed account wipes it; an ended session keeps it locked if it
+      // holds unsent changes.
+      const closing = wipe
+        ? discardNativeMirror().then((wiped) => (wiped ? 'wiped' : 'failed'))
+        : expireNativeMirror();
       setOfflineState({ bootOffline: false, networkDown: false, syncProblem: null });
       signedOut(reason);
-      void wiping.then((wiped) => {
-        if (!wiped) signInFailed(OFFLINE_COPY_NOT_REMOVED);
+      void closing.then((outcome) => {
+        if (outcome === 'failed') signInFailed(OFFLINE_COPY_NOT_REMOVED);
+        else if (outcome === 'kept') signedOut(`${reason} ${UNSENT_KEPT}`);
       });
     },
     [invalidateSessionRequests, signInFailed, signedOut],
@@ -356,10 +363,15 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           throw new CoreUnreachable('server');
         }
         if (!response.ok) {
-          // A definitive refusal: admission to the offline copy closes and it is wiped first.
-          const wiped = await discardNativeMirror();
+          // A definitive refusal: admission to the offline copy closes first. It is wiped unless
+          // it holds unsent changes, which stay locked until the same account signs in again.
+          const outcome = await expireNativeMirror();
           throw new Error(
-            wiped ? 'Core could not restore the browser session.' : OFFLINE_COPY_NOT_REMOVED,
+            outcome === 'failed'
+              ? OFFLINE_COPY_NOT_REMOVED
+              : outcome === 'kept'
+                ? `Your session ended. ${UNSENT_KEPT}`
+                : 'Core could not restore the browser session.',
           );
         }
 
@@ -402,10 +414,10 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         }
 
         accessTokenRef.current = null;
-        const wiped = await discardNativeMirror();
+        const outcome = await expireNativeMirror();
         if (isAborted()) return;
-        signedOut();
-        if (!wiped) signInFailed(OFFLINE_COPY_NOT_REMOVED);
+        signedOut(outcome === 'kept' ? `Your session ended. ${UNSENT_KEPT}` : undefined);
+        if (outcome === 'failed') signInFailed(OFFLINE_COPY_NOT_REMOVED);
       })
       .catch((error: unknown) => {
         if (isAborted()) {
@@ -501,7 +513,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
           return;
         }
         if (session.data.profile.subject !== subject) {
-          closeSession(subject, 'The account changed. Sign in again to continue.');
+          closeSession(subject, 'The account changed. Sign in again to continue.', true);
           return;
         }
         accessTokenRef.current = {
@@ -678,8 +690,13 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         }
       },
 
-      handleSessionRefusal: (subject) => {
-        closeSession(subject, 'Your session is no longer valid. Sign in again to continue.');
+      handleSessionRefusal: (subject, accountClosed = false) => {
+        // A closed account cannot sign in again to send anything, so its copy is wiped, not kept.
+        closeSession(
+          subject,
+          'Your session is no longer valid. Sign in again to continue.',
+          accountClosed,
+        );
       },
 
       getAccessToken: async (forceRefresh = false) => {
@@ -763,6 +780,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
               closeSession(
                 subject,
                 'The account changed in another tab. Sign in again to continue.',
+                true,
               );
               return null;
             }

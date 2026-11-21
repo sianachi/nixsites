@@ -65,12 +65,15 @@ test('loginUrl encodes the return path and drops an unsafe one', () => {
   assert.equal(loginUrl('https://a', 'c', '//evil'), 'https://a/auth/login?native=c&returnTo=%2F');
 });
 
-test('handoffCode takes exactly the callback shape, from the issuer the sign-in started on', () => {
+test('handoffCode takes the callback shape (code and iss once each), from the issuer the sign-in started on', () => {
   const issuer = 'https://a.example';
   const iss = encodeURIComponent(issuer);
   assert.equal(handoffCode(`app.nix.shell://auth?code=abc&iss=${iss}`, issuer), 'abc');
   assert.equal(handoffCode(`APP.NIX.SHELL://auth?iss=${iss}&code=abc`, issuer), 'abc');
   assert.equal(handoffCode(`app.nix.shell://auth?code=abc&iss=${iss}%2F`, issuer), 'abc');
+  // A parameter this build does not know is ignored, as on iOS.
+  assert.equal(handoffCode(`app.nix.shell://auth?code=abc&iss=${iss}&more=1`, issuer), 'abc');
+  assert.equal(handoffCode(`app.nix.shell://auth?x=1&code=abc&y=2&iss=${iss}`, issuer), 'abc');
   for (const bad of [
     // Another server's code: the mix-up this check exists for.
     `app.nix.shell://auth?code=abc&iss=${encodeURIComponent('https://b.example')}`,
@@ -82,8 +85,10 @@ test('handoffCode takes exactly the callback shape, from the issuer the sign-in 
     `app.nix.shell://auth?iss=${iss}`,
     `app.nix.shell://other?code=abc&iss=${iss}`,
     `app.nix.shell://auth/extra?code=abc&iss=${iss}`,
-    `app.nix.shell://auth?code=abc&iss=${iss}&more=1`,
     `app.nix.shell://auth?code=abc&code=def&iss=${iss}`,
+    `app.nix.shell://auth?code=abc&iss=${iss}&iss=${encodeURIComponent('https://b.example')}`,
+    `app.nix.shell://auth?more=1&iss=${iss}`,
+    `app.nix.shell://auth?code=abc&iss=${encodeURIComponent('https://b.example')}&more=${iss}`,
     `https://auth?code=abc&iss=${iss}`,
     'not a url',
   ])

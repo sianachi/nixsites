@@ -76,7 +76,10 @@ class SqlStore {
     try {
       // Another origin's database is a file next to this one.
       db.limits.attach = 0;
-      db.setAuthorizer((action, first) => {
+      db.setAuthorizer((action, first, second) => {
+        // With a bound argument it returns, or registers and later calls, a raw native pointer.
+        if (action === constants.SQLITE_FUNCTION && second?.toLowerCase() === 'fts3_tokenizer')
+          return constants.SQLITE_DENY;
         // Checked while stepping too: VACUUM INTO attaches its target then, outside the prepare
         // gate, and `SELECT * FROM pragma_database_list` compiles its pragma then, showing the path.
         if (action === constants.SQLITE_ATTACH || action === constants.SQLITE_DETACH)

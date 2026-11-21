@@ -42,3 +42,21 @@ export const deliverCallback = (app, url) =>
   app.evaluate(({ app: electronApp }, callback) => {
     electronApp.emit('open-url', { preventDefault() {} }, callback);
   }, url);
+
+/**
+ * Bundles a TypeScript entry for the page. esbuild is not a dependency of this package: it comes
+ * with the vite that apps/web builds with, so it is found from there.
+ */
+export async function bundleForPage(entry) {
+  const web = createRequire(join(appDir, '../web/package.json'));
+  const esbuild = createRequire(web.resolve('vite'))('esbuild');
+  const { outputFiles } = await esbuild.build({
+    entryPoints: [entry],
+    bundle: true,
+    write: false,
+    format: 'iife',
+    platform: 'browser',
+    logLevel: 'error',
+  });
+  return outputFiles[0].text;
+}

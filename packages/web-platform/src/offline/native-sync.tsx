@@ -27,6 +27,9 @@ import { createSyncScheduler, describeSyncProblem, runFullSync, type SyncReport 
  * shell. Mounted under the API client, so every call here goes through the same session.
  */
 
+/** Dispatched on window by the native shell when the system grants it background time. */
+export const BACKGROUND_SYNC_EVENT = 'nix:background-sync';
+
 /** The small boot reads (preferences, settings) are kept by the shell's fetch as they pass by. */
 async function warmRemembered(getToken: () => Promise<string | null>): Promise<void> {
   const shellFetch = getShellFetch();
@@ -73,6 +76,10 @@ export function NativeSync(): ReactNode {
       let store = mirror.current();
       if (!bootOffline) {
         const me = await client.query(principal.currentPrincipal(), { forceRefresh: true });
+        // The session may have ended while that was in flight: a late answer must not reopen a
+        // copy that was just locked or wiped.
+        if (controller.signal.aborted || useSessionStore.getState().status !== 'authenticated')
+          return;
         store = await mirror.open({ tenantId: me.tenantId, principalId: me.id });
         await mirror.saveSession({
           profile: { subject: profile.subject, name: profile.name, email: profile.email },
@@ -166,7 +173,13 @@ export function NativeSync(): ReactNode {
         wasDown = down;
         resyncAt = resyncRequestedAt;
       });
+      // The shell was woken in the background by the system (iOS background refresh): one pass.
+      const background = (): void => {
+        void scheduler.trigger(true);
+      };
+      window.addEventListener(BACKGROUND_SYNC_EVENT, background);
       stop = () => {
+        window.removeEventListener(BACKGROUND_SYNC_EVENT, background);
         unsubscribe();
         stopScheduler();
       };

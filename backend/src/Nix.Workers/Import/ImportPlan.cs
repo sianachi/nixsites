@@ -1,4 +1,5 @@
-#pragma warning disable CA2227 // Justification: plan DTOs are the wire shape the handlers read and tests edit in place, as the Go structs were.
+#pragma warning disable CA2227 // Justification: plan DTOs are the wire shape the handlers read and tests edit in place.
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Nix.Workers.Archive;
 
@@ -67,14 +68,17 @@ public sealed class ImportPlan
 
     public string SourceSha256 { get; set; } = string.Empty;
 
-    public IList<ImportItem> Items { get; set; } = [];
+    [AllowNull]
+    public IList<ImportItem> Items { get; set => field = value ?? []; } = [];
 
     /// <summary>Present for a .nix v2 archive only.</summary>
     public IList<FileVersionEntry>? FileVersions { get; set; }
 
-    public IList<string> Loss { get; set; } = [];
+    [AllowNull]
+    public IList<string> Loss { get; set => field = value ?? []; } = [];
 
-    public IList<string> Omissions { get; set; } = [];
+    [AllowNull]
+    public IList<string> Omissions { get; set => field = value ?? []; } = [];
 }
 
 public sealed class ImportItem
@@ -140,213 +144,116 @@ public sealed class ImportFile
     public int? PixelHeight { get; set; }
 }
 
-/// <summary>Writes and reads the plan JSON exactly as the Go worker did (see <see cref="GoJsonWriter"/>).</summary>
+/// <summary>Writes and reads the plan JSON. A retry must write the same bytes, so the order here is fixed.</summary>
 internal static class PlanJson
 {
-    public static byte[] Write(ImportPlan plan)
+    public static byte[] Write(ImportPlan plan) => WorkerJson.Write(writer =>
     {
-        var writer = new GoJsonWriter();
-        writer.Begin()
-            .Name("version").Number(plan.Version)
-            .Name("format").String(plan.Format)
-            .Name("title").String(plan.Title)
-            .Name("sourceSha256").String(plan.SourceSha256)
-            .Name("items").BeginArray();
+        writer.WriteStartObject();
+        writer.WriteNumber("version", plan.Version);
+        writer.WriteString("format", plan.Format);
+        writer.WriteString("title", plan.Title);
+        writer.WriteString("sourceSha256", plan.SourceSha256);
+        writer.WriteStartArray("items");
         foreach (var item in plan.Items)
         {
             WriteItem(writer, item);
         }
-        writer.EndArray();
+        writer.WriteEndArray();
         if (plan.FileVersions is { Count: > 0 })
         {
-            writer.Name("fileVersions");
-            WriteFileVersions(writer, plan.FileVersions);
+            WriteFileVersions(writer, "fileVersions", plan.FileVersions);
         }
-        writer.Name("loss").Strings(plan.Loss).Name("omissions").Strings(plan.Omissions).End();
-        return writer.ToUtf8();
-    }
+        WorkerJson.WriteStrings(writer, "loss", plan.Loss);
+        WorkerJson.WriteStrings(writer, "omissions", plan.Omissions);
+        writer.WriteEndObject();
+    });
 
-    public static void WriteFileVersions(GoJsonWriter writer, IList<FileVersionEntry> files)
+    public static void WriteFileVersions(Utf8JsonWriter writer, string name, IList<FileVersionEntry> files)
     {
-        writer.BeginArray();
+        writer.WriteStartArray(name);
         foreach (var file in files)
         {
-            writer.Begin()
-                .Name("itemId").String(file.ItemId)
-                .Name("version").Number(file.Version)
-                .Name("current").Bool(file.Current)
-                .Name("fileName").String(file.FileName)
-                .Name("mediaType").String(file.MediaType)
-                .Name("byteLength").Number(file.ByteLength)
-                .Name("sha256").String(file.Sha256)
-                .Name("previewable").Bool(file.Previewable)
-                .Name("pixelWidth");
-            if (file.PixelWidth is { } width)
-            {
-                writer.Number(width);
-            }
-            else
-            {
-                writer.Null();
-            }
-            writer.Name("pixelHeight");
-            if (file.PixelHeight is { } height)
-            {
-                writer.Number(height);
-            }
-            else
-            {
-                writer.Null();
-            }
-            writer.End();
+            writer.WriteStartObject();
+            writer.WriteString("itemId", file.ItemId);
+            writer.WriteNumber("version", file.Version);
+            writer.WriteBoolean("current", file.Current);
+            writer.WriteString("fileName", file.FileName);
+            writer.WriteString("mediaType", file.MediaType);
+            writer.WriteNumber("byteLength", file.ByteLength);
+            writer.WriteString("sha256", file.Sha256);
+            writer.WriteBoolean("previewable", file.Previewable);
+            WriteNullableNumber(writer, "pixelWidth", file.PixelWidth);
+            WriteNullableNumber(writer, "pixelHeight", file.PixelHeight);
+            writer.WriteEndObject();
         }
-        writer.EndArray();
+        writer.WriteEndArray();
     }
 
-    private static void WriteItem(GoJsonWriter writer, ImportItem item)
+    private static void WriteNullableNumber(Utf8JsonWriter writer, string name, int? value)
     {
-        writer.Begin()
-            .Name("sourceId").String(item.SourceId)
-            .Name("parentSourceId").String(item.ParentSourceId)
-            .Name("order").Number(item.Order)
-            .Name("title").String(item.Title)
-            .Name("itemType").String(item.ItemType);
-        OptionalRaw(writer, "properties", item.Properties);
-        OptionalRaw(writer, "recurrence", item.Recurrence);
-        OptionalRaw(writer, "schema", item.Schema);
-        OptionalRaw(writer, "views", item.Views);
-        writer.Name("finalLifecycleState").String(item.FinalLifecycleState);
+        if (value is { } number)
+        {
+            writer.WriteNumber(name, number);
+        }
+        else
+        {
+            writer.WriteNull(name);
+        }
+    }
+
+    private static void WriteItem(Utf8JsonWriter writer, ImportItem item)
+    {
+        writer.WriteStartObject();
+        writer.WriteString("sourceId", item.SourceId);
+        writer.WriteString("parentSourceId", item.ParentSourceId);
+        writer.WriteNumber("order", item.Order);
+        writer.WriteString("title", item.Title);
+        writer.WriteString("itemType", item.ItemType);
+        WorkerJson.WriteOptionalRaw(writer, "properties", item.Properties);
+        WorkerJson.WriteOptionalRaw(writer, "recurrence", item.Recurrence);
+        WorkerJson.WriteOptionalRaw(writer, "schema", item.Schema);
+        WorkerJson.WriteOptionalRaw(writer, "views", item.Views);
+        writer.WriteString("finalLifecycleState", item.FinalLifecycleState);
         if (item.Body is { } body)
         {
-            writer.Name("body").Begin().Name("encoding").String(body.Encoding);
+            writer.WriteStartObject("body");
+            writer.WriteString("encoding", body.Encoding);
             if (!string.IsNullOrEmpty(body.Text))
             {
-                writer.Name("text").String(body.Text);
+                writer.WriteString("text", body.Text);
             }
-            OptionalRaw(writer, "render", body.Render);
-            OptionalRaw(writer, "archive", body.Archive);
-            writer.End();
+            WorkerJson.WriteOptionalRaw(writer, "render", body.Render);
+            WorkerJson.WriteOptionalRaw(writer, "archive", body.Archive);
+            writer.WriteEndObject();
         }
         if (item.File is { } file)
         {
-            writer.Name("file").Begin().Name("sourceKind").String(file.SourceKind);
+            writer.WriteStartObject("file");
+            writer.WriteString("sourceKind", file.SourceKind);
             if (file.AssetPath is not null)
             {
-                writer.Name("assetPath").String(file.AssetPath);
+                writer.WriteString("assetPath", file.AssetPath);
             }
-            writer.Name("fileName").String(file.FileName)
-                .Name("mediaType").String(file.MediaType)
-                .Name("byteLength").Number(file.ByteLength)
-                .Name("sha256").String(file.Sha256)
-                .Name("previewable").Bool(file.Previewable);
+            writer.WriteString("fileName", file.FileName);
+            writer.WriteString("mediaType", file.MediaType);
+            writer.WriteNumber("byteLength", file.ByteLength);
+            writer.WriteString("sha256", file.Sha256);
+            writer.WriteBoolean("previewable", file.Previewable);
             if (file.PixelWidth is { } width)
             {
-                writer.Name("pixelWidth").Number(width);
+                writer.WriteNumber("pixelWidth", width);
             }
             if (file.PixelHeight is { } height)
             {
-                writer.Name("pixelHeight").Number(height);
+                writer.WriteNumber("pixelHeight", height);
             }
-            writer.End();
+            writer.WriteEndObject();
         }
-        OptionalRaw(writer, "comments", item.Comments);
-        writer.End();
+        WorkerJson.WriteOptionalRaw(writer, "comments", item.Comments);
+        writer.WriteEndObject();
     }
 
-    /// <summary>Go's omitempty on a RawMessage: omitted only when absent.</summary>
-    public static void OptionalRaw(GoJsonWriter writer, string name, JsonElement? value)
-    {
-        if (value is not null)
-        {
-            writer.Name(name).Raw(value);
-        }
-    }
-
-    public static ImportPlan Read(JsonElement root)
-    {
-        var fields = GoFields.Require(root, true, "version", "format", "title", "sourceSha256", "items", "fileVersions", "loss", "omissions");
-        return new ImportPlan
-        {
-            Version = fields.Int("version"),
-            Format = fields.String("format"),
-            Title = fields.String("title"),
-            SourceSha256 = fields.String("sourceSha256"),
-            Items = fields.List("items", ReadItem) ?? [],
-            FileVersions = fields.List("fileVersions", ReadFileVersion),
-            Loss = fields.List("loss", GoFields.StringValue) ?? [],
-            Omissions = fields.List("omissions", GoFields.StringValue) ?? [],
-        };
-    }
-
-    private static ImportItem ReadItem(JsonElement element)
-    {
-        var fields = GoFields.Require(element, true, "sourceId", "parentSourceId", "order", "title", "itemType", "properties", "recurrence", "schema", "views", "finalLifecycleState", "body", "file", "comments");
-        var item = new ImportItem
-        {
-            SourceId = fields.String("sourceId"),
-            ParentSourceId = fields.OptionalString("parentSourceId"),
-            Order = fields.Int("order"),
-            Title = fields.String("title"),
-            ItemType = fields.String("itemType"),
-            Properties = fields.Raw("properties"),
-            Recurrence = fields.Raw("recurrence"),
-            Schema = fields.Raw("schema"),
-            Views = fields.Raw("views"),
-            FinalLifecycleState = fields.String("finalLifecycleState"),
-            Comments = fields.Raw("comments"),
-        };
-        if (fields.TryGet("body", out var bodyElement))
-        {
-            var body = GoFields.Require(bodyElement, true, "encoding", "text", "render", "archive");
-            item.Body = new ImportBody { Encoding = body.String("encoding"), Text = body.OptionalString("text"), Render = body.Raw("render"), Archive = body.Raw("archive") };
-        }
-        if (fields.TryGet("file", out var fileElement))
-        {
-            var file = GoFields.Require(fileElement, true, "sourceKind", "assetPath", "fileName", "mediaType", "byteLength", "sha256", "previewable", "pixelWidth", "pixelHeight");
-            item.File = new ImportFile
-            {
-                SourceKind = file.String("sourceKind"),
-                AssetPath = file.OptionalString("assetPath"),
-                FileName = file.String("fileName"),
-                MediaType = file.String("mediaType"),
-                ByteLength = file.Long("byteLength"),
-                Sha256 = file.String("sha256"),
-                Previewable = file.Bool("previewable"),
-                PixelWidth = file.OptionalInt("pixelWidth"),
-                PixelHeight = file.OptionalInt("pixelHeight"),
-            };
-        }
-        return item;
-    }
-
-    private static readonly string[] FileVersionFields = ["itemId", "version", "current", "fileName", "mediaType", "byteLength", "sha256", "previewable", "pixelWidth", "pixelHeight"];
-
-    /// <summary>nixarchive.FileVersionEntry's strict decode: no unknown member, every member present.</summary>
-    public static FileVersionEntry ReadFileVersion(JsonElement element)
-    {
-        if (element.ValueKind != JsonValueKind.Object)
-        {
-            throw new JsonException("file-version metadata is not an object");
-        }
-        var fields = GoFields.Require(element, true, FileVersionFields);
-        foreach (var name in FileVersionFields)
-        {
-            // Go checked the exact member names with a map decode.
-            if (!element.TryGetProperty(name, out _))
-            {
-                throw new JsonException("file-version metadata is missing " + name);
-            }
-        }
-        return new FileVersionEntry(
-            fields.String("itemId"),
-            fields.Int("version"),
-            fields.Bool("current"),
-            fields.String("fileName"),
-            fields.String("mediaType"),
-            fields.Long("byteLength"),
-            fields.String("sha256"),
-            fields.Bool("previewable"),
-            fields.OptionalInt("pixelWidth"),
-            fields.OptionalInt("pixelHeight"));
-    }
+    public static ImportPlan Read(JsonElement root) =>
+        WorkerJson.Read(root, ImportJsonContext.Default.ImportPlan) ?? new ImportPlan();
 }

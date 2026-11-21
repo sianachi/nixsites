@@ -9,6 +9,7 @@
   "scripts": {
     "start": "electron .",
     "test": "ELECTRON_RUN_AS_NODE=1 electron --test",
+    "test:mirror": "ELECTRON_RUN_AS_NODE=1 electron ../../packages/sync-sqlite/node_modules/vitest/vitest.mjs run --config vitest.mirror.config.ts",
     "test:e2e": "node e2e/boundary.mjs",
     "test:full-sync": "node e2e/full-sync.mjs",
     "package": "electron-builder --dir",

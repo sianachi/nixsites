@@ -24,6 +24,8 @@ import { inNativeShell } from '../pwa/install-nix';
 export const BACK_ONLINE_EVENT = 'nix:back-online';
 
 const POINTER_KEY = 'nix.offline.account';
+/** Set while a copy is kept closed after its session ended; sign-out clears the whole prefix. */
+const LOCKED_KEY = 'nix.offline.locked';
 const SESSION_KEY = 'offline.session';
 const FILES_KEY = 'offline.files';
 
@@ -57,11 +59,16 @@ export interface NativeMirrorDeps {
 export class NativeMirror {
   private store: SqliteMirrorStore | null = null;
   private account: MirrorAccount | null = null;
-  /** False from the moment a wipe starts until it has succeeded: nothing is read meanwhile. */
-  private admitted = true;
+  /** False from the moment a wipe or lock starts until it is over: nothing is read meanwhile. */
+  private admitted: boolean;
+  /** A wipe was asked for and has not finished: the next open completes it first. */
+  private wipeOwed = false;
   private pending: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly deps: NativeMirrorDeps) {}
+  constructor(private readonly deps: NativeMirrorDeps) {
+    // A copy locked by an earlier page stays closed in this one until a sign-in reopens it.
+    this.admitted = !this.locked();
+  }
 
   /** The open mirror, or null while admission is closed. */
   /** The principal the open mirror belongs to, or null. */
@@ -73,48 +80,71 @@ export class NativeMirror {
     return this.admitted ? this.store : null;
   }
 
-  /** Opens this account's mirror; a copy that belongs to another account is wiped first. */
+  private locked(): boolean {
+    try {
+      return this.deps.storage?.getItem(LOCKED_KEY) === '1';
+    } catch {
+      // Storage that cannot be read cannot say the copy is open.
+      return true;
+    }
+  }
+
+  /**
+   * Opens this account's mirror; a copy that belongs to another account is wiped first. Signing in
+   * is what reopens a locked copy: the same account gets it back, anyone else's sign-in wipes it.
+   */
   open(account: MirrorAccount): Promise<SqliteMirrorStore> {
     return this.serial(async () => {
-      if (!this.admitted && !(await this.wipeNow()))
+      if (this.wipeOwed && !(await this.wipeNow()))
         throw new Error('The previous offline copy could not be removed.');
-      if (
-        this.store !== null &&
-        this.account?.tenantId === account.tenantId &&
-        this.account.principalId === account.principalId
-      )
-        return this.store;
-      await this.store?.close();
-      this.store = null;
-      const scope = { serverOrigin: this.deps.origin, ...account };
-      const driver = createWebkitSqliteDriver(this.deps.post);
-      let store: SqliteMirrorStore;
-      try {
-        store = await openSqliteMirror({ driver, scope });
-      } catch (error) {
-        if (!(error instanceof Error) || !error.message.includes('another account')) throw error;
-        // Account switch: the earlier person's copy goes before this one is admitted.
-        await this.deps.post({ op: 'wipe' });
-        store = await openSqliteMirror({ driver, scope });
-      }
-      this.store = store;
-      this.account = account;
-      this.deps.storage?.setItem(
-        POINTER_KEY,
-        JSON.stringify({ origin: this.deps.origin, ...account }),
-      );
+      const store = await this.openNow(account);
+      this.deps.storage?.removeItem(LOCKED_KEY);
+      this.admitted = true;
       return store;
     });
   }
 
-  /** Reopens the mirror last used on this device, for a launch with no network. */
+  private async openNow(account: MirrorAccount): Promise<SqliteMirrorStore> {
+    if (
+      this.store !== null &&
+      this.account?.tenantId === account.tenantId &&
+      this.account.principalId === account.principalId
+    )
+      return this.store;
+    await this.store?.close();
+    this.store = null;
+    const scope = { serverOrigin: this.deps.origin, ...account };
+    const driver = createWebkitSqliteDriver(this.deps.post);
+    let store: SqliteMirrorStore;
+    try {
+      store = await openSqliteMirror({ driver, scope });
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('another account')) throw error;
+      // Account switch: the earlier person's copy goes before this one is admitted.
+      await this.deps.post({ op: 'wipe' });
+      store = await openSqliteMirror({ driver, scope });
+    }
+    this.store = store;
+    this.account = account;
+    this.deps.storage?.setItem(
+      POINTER_KEY,
+      JSON.stringify({ origin: this.deps.origin, ...account }),
+    );
+    return store;
+  }
+
+  private pointer(): MirrorAccount | null {
+    const raw = this.deps.storage?.getItem(POINTER_KEY);
+    if (raw === null || raw === undefined) return null;
+    const pointer = pointerSchema.safeParse(JSON.parse(raw));
+    return pointer.success && pointer.data.origin === this.deps.origin ? pointer.data : null;
+  }
+
+  /** Reopens the mirror last used on this device, for a launch with no network. Never a locked one. */
   async openStored(): Promise<SqliteMirrorStore | null> {
     try {
-      const raw = this.deps.storage?.getItem(POINTER_KEY);
-      if (raw === null || raw === undefined) return null;
-      const pointer = pointerSchema.safeParse(JSON.parse(raw));
-      if (!pointer.success || pointer.data.origin !== this.deps.origin) return null;
-      return await this.open(pointer.data);
+      const pointer = this.locked() ? null : this.pointer();
+      return pointer === null ? null : await this.open(pointer);
     } catch {
       return null;
     }
@@ -143,18 +173,48 @@ export class NativeMirror {
   wipe(): Promise<boolean> {
     // Closed before queueing, so a read in flight behind another operation is already refused.
     this.admitted = false;
+    this.wipeOwed = true;
     return this.serial(() => this.wipeNow());
+  }
+
+  /**
+   * The session ended without a sign-out (it expired, or the server refused it at launch). A copy
+   * with nothing unsent is wiped. One that holds changes the server has not taken is kept, closed
+   * to every read, until the same account signs in again and they can be sent. 'failed' when a
+   * wipe was owed and did not finish.
+   */
+  expire(): Promise<'kept' | 'wiped' | 'failed'> {
+    this.admitted = false;
+    return this.serial(async () => {
+      try {
+        const account = this.store === null ? this.pointer() : null;
+        const store = this.store ?? (account === null ? null : await this.openNow(account));
+        // Without storage the lock would not outlive this page, so the copy is wiped instead.
+        if (store !== null && this.deps.storage !== null && (await store.countUnsent()) > 0) {
+          this.deps.storage.setItem(LOCKED_KEY, '1');
+          // Again here: a sign-in already queued ahead of this may have reopened admission.
+          this.admitted = false;
+          return 'kept';
+        }
+      } catch {
+        /* A copy that cannot be opened or counted is wiped, as before. */
+      }
+      return (await this.wipeNow()) ? 'wiped' : 'failed';
+    });
   }
 
   private async wipeNow(): Promise<boolean> {
     this.admitted = false;
+    this.wipeOwed = true;
     try {
       this.deps.storage?.removeItem(POINTER_KEY);
+      this.deps.storage?.removeItem(LOCKED_KEY);
       if (this.store !== null) await this.store.wipe();
       else await wipe(this.deps.post);
       this.store = null;
       this.account = null;
       this.admitted = true;
+      this.wipeOwed = false;
       return true;
     } catch {
       return false;
@@ -264,9 +324,18 @@ export async function nativeBootSession(): Promise<StoredSession | null> {
   return mirror === null || (await mirror.openStored()) === null ? null : mirror.session();
 }
 
+/** Added to the sign-in notice when an ended session left unsent changes on the device. */
+export const UNSENT_KEPT =
+  'Changes you made on this device are kept and will be sent when you sign in again.';
+
+/** A session that ended without a sign-out: see `NativeMirror.expire`. 'wiped' outside the shell. */
+export async function expireNativeMirror(): Promise<'kept' | 'wiped' | 'failed'> {
+  return (await getNativeMirror()?.expire()) ?? 'wiped';
+}
+
 /**
- * Sign-out, account switch or a definitive refusal: closes admission and wipes. True when there
- * was nothing to wipe (not the shell) or the wipe finished.
+ * Sign-out or an account switch: closes admission and wipes. True when there was nothing to wipe
+ * (not the shell) or the wipe finished.
  */
 export async function discardNativeMirror(): Promise<boolean> {
   return (await getNativeMirror()?.wipe()) ?? true;

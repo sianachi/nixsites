@@ -1,24 +1,40 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Xml;
 using Nix.Workers.Archive;
 using Nix.Workers.Render;
 
 namespace Nix.Workers.Export;
 
 /// <summary>
-/// Writes a DOCX by hand, as the Go worker did: WordprocessingML parts in a zip, one Title
-/// paragraph per note, lists as flat numbered paragraphs, images as inline drawings. The XML is
-/// byte-identical to the Go output so the parity goldens compare entry by entry.
+/// Writes a DOCX: WordprocessingML parts in a zip, one Title paragraph per note, lists as flat
+/// numbered paragraphs, images as inline drawings. Every part that carries content is written with
+/// <see cref="XmlWriter"/>, which does the escaping and keeps the namespaces straight.
 /// </summary>
 public static class DocxWriter
 {
+    private const string W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    private const string R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    private const string Wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+    private const string A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private const string Pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
+    private const string PackageRelationships = "http://schemas.openxmlformats.org/package/2006/relationships";
+
+    // The three parts with no content of their own are fixed documents.
     private const string ContentTypes = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Default Extension=\"png\" ContentType=\"image/png\"/><Default Extension=\"jpeg\" ContentType=\"image/jpeg\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/><Override PartName=\"/word/numbering.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/></Types>";
     private const string RootRelationships = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>";
-    private const string DocumentRelationships = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering\" Target=\"numbering.xml\"/></Relationships>";
     private const string Styles = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\"><w:name w:val=\"Normal\"/></w:style><w:style w:type=\"paragraph\" w:styleId=\"Title\"><w:name w:val=\"Title\"/><w:basedOn w:val=\"Normal\"/><w:rPr><w:b/><w:sz w:val=\"44\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\"heading 1\"/><w:basedOn w:val=\"Normal\"/><w:rPr><w:b/><w:sz w:val=\"32\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading2\"><w:name w:val=\"heading 2\"/><w:basedOn w:val=\"Normal\"/><w:rPr><w:b/><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading3\"><w:name w:val=\"heading 3\"/><w:basedOn w:val=\"Normal\"/><w:rPr><w:b/><w:sz w:val=\"24\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Quote\"><w:name w:val=\"Quote\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:ind w:left=\"360\"/></w:pPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Code\"><w:name w:val=\"Code\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:ind w:left=\"360\"/></w:pPr></w:style></w:styles>";
-    private const string DocumentOpen = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><w:body>";
     private static readonly DateTimeOffset FixedEntryTime = new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    // Line breaks are written as they are, so a parsed document holds the text it was given.
+    private static readonly XmlWriterSettings XmlSettings = new()
+    {
+        Async = true,
+        Encoding = new UTF8Encoding(false),
+        NewLineHandling = NewLineHandling.None,
+        CloseOutput = false,
+    };
 
     private sealed record Paragraph(string Style = "", int Numbering = 0, int Level = 0, bool PageBreakBefore = false);
 
@@ -29,6 +45,17 @@ public static class DocxWriter
         public bool Any => Bold || Italic || Strike || Code || Underline || Highlight;
     }
 
+    /// <summary>What one export accumulates across records: the image counter and the image relationships.</summary>
+    private sealed class Images
+    {
+        public int Count { get; set; }
+
+        public List<(string Id, string Target)> Relationships { get; } = [];
+
+        /// <summary>The current record's image files, added to the archive once its XML is flushed.</summary>
+        public List<(string Name, byte[] Data)> Pending { get; } = [];
+    }
+
     public static async Task WriteAsync(Stream output, IAsyncEnumerable<ExportRecord> records, StreamLimits limits, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(output);
@@ -36,7 +63,7 @@ public static class DocxWriter
         ArgumentNullException.ThrowIfNull(limits);
         using var limited = new LimitedStream(output, limits.MaxBytes);
         using var archive = new ZipArchive(limited, ZipArchiveMode.Create, leaveOpen: true);
-        foreach (var (name, body) in new[] { ("[Content_Types].xml", ContentTypes), ("_rels/.rels", RootRelationships), ("word/styles.xml", Styles), ("word/numbering.xml", NumberingXml()) })
+        foreach (var (name, body) in new[] { ("[Content_Types].xml", Encoding.UTF8.GetBytes(ContentTypes)), ("_rels/.rels", Encoding.UTF8.GetBytes(RootRelationships)), ("word/styles.xml", Encoding.UTF8.GetBytes(Styles)), ("word/numbering.xml", Part(WriteNumbering)) })
         {
             await Entry(archive, name, body, limits, cancellationToken).ConfigureAwait(false);
         }
@@ -44,12 +71,12 @@ public static class DocxWriter
         var document = new FileStream(documentPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None, 64 * 1024, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
         await using (document.ConfigureAwait(false))
         {
-            var writer = new StreamWriter(document, new UTF8Encoding(false), 64 * 1024, leaveOpen: true);
-            await using (writer.ConfigureAwait(false))
+            var images = new Images();
+            var xml = XmlWriter.Create(document, XmlSettings);
+            await using (xml.ConfigureAwait(false))
             {
-                var state = new RelationshipState();
                 var count = 0;
-                await writer.WriteAsync(DocumentOpen).ConfigureAwait(false);
+                OpenDocument(xml);
                 await foreach (var record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
                 {
                     if (string.IsNullOrEmpty(record.Title))
@@ -61,8 +88,13 @@ public static class DocxWriter
                     {
                         throw new StreamLimitException();
                     }
-                    await WriteRecordAsync(writer, archive, record, count, state, cancellationToken).ConfigureAwait(false);
-                    await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    WriteRecord(xml, record, count, images);
+                    await xml.FlushAsync().ConfigureAwait(false);
+                    foreach (var (name, data) in images.Pending)
+                    {
+                        await AddEntryAsync(archive, "word/" + name, new MemoryStream(data, writable: false), cancellationToken).ConfigureAwait(false);
+                    }
+                    images.Pending.Clear();
                     if (document.Length > limits.MaxBytes)
                     {
                         throw new StreamLimitException();
@@ -72,40 +104,47 @@ public static class DocxWriter
                 {
                     throw new ArchiveFormatException("cannot export an empty DOCX");
                 }
-                await writer.WriteAsync("<w:sectPr/></w:body></w:document>").ConfigureAwait(false);
-                await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
-                document.Position = 0;
-                await AddEntryAsync(archive, "word/document.xml", document, cancellationToken).ConfigureAwait(false);
-                await Entry(archive, "word/_rels/document.xml.rels", state.Relationships.Append("</Relationships>").ToString(), limits, cancellationToken).ConfigureAwait(false);
+                CloseDocument(xml);
+                await xml.FlushAsync().ConfigureAwait(false);
             }
+            document.Position = 0;
+            await AddEntryAsync(archive, "word/document.xml", document, cancellationToken).ConfigureAwait(false);
+            await Entry(archive, "word/_rels/document.xml.rels", Part(part => WriteRelationships(part, images.Relationships)), limits, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private sealed class RelationshipState
+    // The XML is written into the writer's buffer and flushed to the spool file once per record.
+    private static void OpenDocument(XmlWriter xml)
     {
-        public int ImageId { get; set; }
-
-        public StringBuilder Relationships { get; } = new(DocumentRelationships[..^"</Relationships>".Length]);
+        xml.WriteStartDocument(standalone: true);
+        xml.WriteStartElement("w", "document", W);
+        xml.WriteAttributeString("xmlns", "w", null, W);
+        xml.WriteAttributeString("xmlns", "r", null, R);
+        xml.WriteAttributeString("xmlns", "wp", null, Wp);
+        xml.WriteAttributeString("xmlns", "a", null, A);
+        xml.WriteAttributeString("xmlns", "pic", null, Pic);
+        xml.WriteStartElement("w", "body", W);
     }
 
-    private static async Task WriteRecordAsync(StreamWriter writer, ZipArchive archive, ExportRecord record, int count, RelationshipState state, CancellationToken cancellationToken)
+    private static void CloseDocument(XmlWriter xml)
     {
-        var media = new List<(string Name, byte[] Data)>();
+        Empty(xml, "sectPr");
+        xml.WriteEndDocument();
+    }
+
+    private static void WriteRecord(XmlWriter xml, ExportRecord record, int count, Images images)
+    {
         var (title, _) = TextRules.ProjectTitle(record.Title);
-        await WriteParagraphAsync(writer, [new Run { Text = title }], new Paragraph("Title", PageBreakBefore: count > 1)).ConfigureAwait(false);
-        await WriteBlocksAsync(writer, record, record.Blocks, new Paragraph(), async (raster, alt) =>
+        WriteParagraph(xml, [new Run { Text = title }], new Paragraph("Title", PageBreakBefore: count > 1));
+        WriteBlocks(xml, record, record.Blocks, new Paragraph(), (raster, alt) =>
         {
-            state.ImageId++;
-            var name = $"media/image{Invariant(state.ImageId)}.{raster.Format}";
-            var rel = $"rImage{Invariant(state.ImageId)}";
-            state.Relationships.Append("<Relationship Id=\"").Append(rel).Append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"").Append(name).Append("\"/>");
-            media.Add((name, raster.Data));
-            await WriteImageAsync(writer, raster, alt, rel, state.ImageId).ConfigureAwait(false);
-        }).ConfigureAwait(false);
-        foreach (var (name, data) in media)
-        {
-            await AddEntryAsync(archive, "word/" + name, new MemoryStream(data, writable: false), cancellationToken).ConfigureAwait(false);
-        }
+            images.Count++;
+            var name = $"media/image{Invariant(images.Count)}.{raster.Format}";
+            var relationship = $"rImage{Invariant(images.Count)}";
+            images.Relationships.Add((relationship, name));
+            images.Pending.Add((name, raster.Data));
+            WriteImage(xml, raster, alt, relationship, images.Count);
+        });
     }
 
     // Own method per zip entry: CA2000's disposal dataflow is quadratic in the size of the method it analyses.
@@ -120,9 +159,8 @@ public static class DocxWriter
         }
     }
 
-    private static async Task Entry(ZipArchive archive, string name, string text, StreamLimits limits, CancellationToken cancellationToken)
+    private static async Task Entry(ZipArchive archive, string name, byte[] body, StreamLimits limits, CancellationToken cancellationToken)
     {
-        var body = Encoding.UTF8.GetBytes(text);
         if (body.Length > limits.MaxLine)
         {
             throw new StreamLimitException();
@@ -130,210 +168,330 @@ public static class DocxWriter
         await ArchiveWriter.WriteEntryAsync(archive, name, body, cancellationToken).ConfigureAwait(false);
     }
 
-    public static string NumberingXml()
+    /// <summary>A small part written whole into memory.</summary>
+    private static byte[] Part(Action<XmlWriter> write)
     {
-        var output = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:numbering xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">");
-        for (var abstractId = 1; abstractId <= 2; abstractId++)
+        using var buffer = new MemoryStream();
+        using (var xml = XmlWriter.Create(buffer, new XmlWriterSettings { Encoding = new UTF8Encoding(false), NewLineHandling = NewLineHandling.None }))
         {
-            output.Append("<w:abstractNum w:abstractNumId=\"").Append(Invariant(abstractId)).Append("\"><w:multiLevelType w:val=\"multilevel\"/>");
-            for (var level = 0; level <= 8; level++)
-            {
-                var format = abstractId == 2 ? "decimal" : "bullet";
-                var marker = abstractId == 2 ? "%" + Invariant(level + 1) + "." : "-";
-                output.Append("<w:lvl w:ilvl=\"").Append(Invariant(level)).Append("\"><w:start w:val=\"1\"/><w:numFmt w:val=\"").Append(format).Append("\"/><w:lvlText w:val=\"").Append(marker).Append("\"/><w:pPr><w:ind w:left=\"").Append(Invariant((level + 1) * 360)).Append("\" w:hanging=\"260\"/></w:pPr></w:lvl>");
-            }
-            output.Append("</w:abstractNum>");
+            xml.WriteStartDocument(standalone: true);
+            write(xml);
+            xml.WriteEndDocument();
         }
-        output.Append("<w:num w:numId=\"1\"><w:abstractNumId w:val=\"1\"/></w:num><w:num w:numId=\"2\"><w:abstractNumId w:val=\"2\"/></w:num></w:numbering>");
-        return output.ToString();
+        return buffer.ToArray();
     }
 
-    private static async Task WriteParagraphAsync(TextWriter output, IList<Run> runs, Paragraph options)
+    private static void WriteRelationships(XmlWriter xml, List<(string Id, string Target)> images)
     {
-        await output.WriteAsync("<w:p>").ConfigureAwait(false);
+        xml.WriteStartElement("Relationships", PackageRelationships);
+        foreach (var (id, kind, target) in (IEnumerable<(string, string, string)>)[("rId1", "styles", "styles.xml"), ("rId2", "numbering", "numbering.xml"), .. images.Select(image => (image.Id, "image", image.Target))])
+        {
+            xml.WriteStartElement("Relationship", PackageRelationships);
+            xml.WriteAttributeString("Id", id);
+            xml.WriteAttributeString("Type", R + "/" + kind);
+            xml.WriteAttributeString("Target", target);
+            xml.WriteEndElement();
+        }
+        xml.WriteEndElement();
+    }
+
+    private static void WriteNumbering(XmlWriter xml)
+    {
+        xml.WriteStartElement("w", "numbering", W);
+        for (var abstractId = 1; abstractId <= 2; abstractId++)
+        {
+            xml.WriteStartElement("w", "abstractNum", W);
+            xml.WriteAttributeString("w", "abstractNumId", W, Invariant(abstractId));
+            Value(xml, "multiLevelType", "multilevel");
+            for (var level = 0; level <= 8; level++)
+            {
+                xml.WriteStartElement("w", "lvl", W);
+                xml.WriteAttributeString("w", "ilvl", W, Invariant(level));
+                Value(xml, "start", "1");
+                Value(xml, "numFmt", abstractId == 2 ? "decimal" : "bullet");
+                Value(xml, "lvlText", abstractId == 2 ? "%" + Invariant(level + 1) + "." : "-");
+                xml.WriteStartElement("w", "pPr", W);
+                xml.WriteStartElement("w", "ind", W);
+                xml.WriteAttributeString("w", "left", W, Invariant((level + 1) * 360));
+                xml.WriteAttributeString("w", "hanging", W, "260");
+                xml.WriteEndElement();
+                xml.WriteEndElement();
+                xml.WriteEndElement();
+            }
+            xml.WriteEndElement();
+        }
+        for (var id = 1; id <= 2; id++)
+        {
+            xml.WriteStartElement("w", "num", W);
+            xml.WriteAttributeString("w", "numId", W, Invariant(id));
+            Value(xml, "abstractNumId", Invariant(id));
+            xml.WriteEndElement();
+        }
+        xml.WriteEndElement();
+    }
+
+    /// <summary>An empty WordprocessingML element.</summary>
+    private static void Empty(XmlWriter xml, string name)
+    {
+        xml.WriteStartElement("w", name, W);
+        xml.WriteEndElement();
+    }
+
+    /// <summary>A WordprocessingML element whose one attribute is <c>w:val</c>.</summary>
+    private static void Value(XmlWriter xml, string name, string value)
+    {
+        xml.WriteStartElement("w", name, W);
+        xml.WriteAttributeString("w", "val", W, value);
+        xml.WriteEndElement();
+    }
+
+    private static void WriteParagraph(XmlWriter xml, IList<Run> runs, Paragraph options)
+    {
+        xml.WriteStartElement("w", "p", W);
         if (options.Style.Length > 0 || options.Numbering != 0 || options.PageBreakBefore)
         {
-            await output.WriteAsync("<w:pPr>").ConfigureAwait(false);
+            xml.WriteStartElement("w", "pPr", W);
             if (options.Style.Length > 0)
             {
-                await output.WriteAsync("<w:pStyle w:val=\"" + TextRules.EscapeXml(options.Style) + "\"/>").ConfigureAwait(false);
+                Value(xml, "pStyle", options.Style);
             }
             if (options.Numbering != 0)
             {
-                var level = Math.Min(Math.Max(options.Level, 0), 8);
-                await output.WriteAsync("<w:numPr><w:ilvl w:val=\"" + Invariant(level) + "\"/><w:numId w:val=\"" + Invariant(options.Numbering) + "\"/></w:numPr>").ConfigureAwait(false);
+                xml.WriteStartElement("w", "numPr", W);
+                Value(xml, "ilvl", Invariant(Math.Min(Math.Max(options.Level, 0), 8)));
+                Value(xml, "numId", Invariant(options.Numbering));
+                xml.WriteEndElement();
             }
             if (options.PageBreakBefore)
             {
-                await output.WriteAsync("<w:pageBreakBefore/>").ConfigureAwait(false);
+                Empty(xml, "pageBreakBefore");
             }
-            await output.WriteAsync("</w:pPr>").ConfigureAwait(false);
+            xml.WriteEndElement();
         }
-        await WriteRunsAsync(output, runs).ConfigureAwait(false);
-        await output.WriteAsync("</w:p>").ConfigureAwait(false);
+        WriteRuns(xml, runs);
+        xml.WriteEndElement();
     }
 
-    private static async Task WriteRunAsync(TextWriter output, string value, InlineStyle style)
+    private static void WriteRun(XmlWriter xml, string value, InlineStyle style)
     {
         value = TextRules.Sanitize(value);
         if (value.Length == 0)
         {
             return;
         }
-        await output.WriteAsync("<w:r>").ConfigureAwait(false);
+        xml.WriteStartElement("w", "r", W);
         if (style.Any)
         {
-            var properties = new StringBuilder("<w:rPr>");
+            xml.WriteStartElement("w", "rPr", W);
             if (style.Bold)
             {
-                properties.Append("<w:b/>");
+                Empty(xml, "b");
             }
             if (style.Italic)
             {
-                properties.Append("<w:i/>");
+                Empty(xml, "i");
             }
             if (style.Strike)
             {
-                properties.Append("<w:strike/>");
+                Empty(xml, "strike");
             }
             if (style.Underline)
             {
-                properties.Append("<w:u w:val=\"single\"/>");
+                Value(xml, "u", "single");
             }
             if (style.Highlight)
             {
-                properties.Append("<w:highlight w:val=\"yellow\"/>");
+                Value(xml, "highlight", "yellow");
             }
             if (style.Code)
             {
-                properties.Append("<w:shd w:val=\"clear\" w:fill=\"EDEDED\"/>");
+                xml.WriteStartElement("w", "shd", W);
+                xml.WriteAttributeString("w", "val", W, "clear");
+                xml.WriteAttributeString("w", "fill", W, "EDEDED");
+                xml.WriteEndElement();
             }
-            await output.WriteAsync(properties.Append("</w:rPr>").ToString()).ConfigureAwait(false);
+            xml.WriteEndElement();
         }
-        await output.WriteAsync("<w:t xml:space=\"preserve\">" + TextRules.EscapeXml(value) + "</w:t></w:r>").ConfigureAwait(false);
+        xml.WriteStartElement("w", "t", W);
+        xml.WriteAttributeString("xml", "space", null, "preserve");
+        xml.WriteString(value);
+        xml.WriteEndElement();
+        xml.WriteEndElement();
     }
 
-    private static async Task WriteLinkAsync(TextWriter output, string label, string target, InlineStyle style)
+    private static void WriteLink(XmlWriter xml, string label, string target, InlineStyle style)
     {
         if (!TextRules.SafeDocumentLink(target))
         {
-            await WriteRunAsync(output, label, style).ConfigureAwait(false);
+            WriteRun(xml, label, style);
             return;
         }
-        var instruction = TextRules.EscapeXml(" HYPERLINK \"" + target + "\" ");
-        await output.WriteAsync("<w:fldSimple w:instr=\"" + instruction + "\">").ConfigureAwait(false);
-        await WriteRunAsync(output, label, style).ConfigureAwait(false);
-        await output.WriteAsync("</w:fldSimple>").ConfigureAwait(false);
+        xml.WriteStartElement("w", "fldSimple", W);
+        xml.WriteAttributeString("w", "instr", W, TextRules.Sanitize(" HYPERLINK \"" + target + "\" "));
+        WriteRun(xml, label, style);
+        xml.WriteEndElement();
     }
 
-    private static async Task WriteImageAsync(TextWriter output, ExportImage raster, string alt, string rel, int id)
+    private static void WriteImage(XmlWriter xml, ExportImage raster, string alt, string relationship, int id)
     {
         var (width, height) = ImageFiles.Size(raster, 468, 648);
-        var cx = (long)(width * 12700);
-        var cy = (long)(height * 12700);
+        var cx = Invariant((long)(width * 12700));
+        var cy = Invariant((long)(height * 12700));
         var n = Invariant(id);
-        await output.WriteAsync(
-            "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"" + Invariant(cx) + "\" cy=\"" + Invariant(cy) + "\"/><wp:docPr id=\"" + n + "\" name=\"Image " + n + "\" descr=\"" + TextRules.EscapeXml(alt) + "\"/><a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic><pic:nvPicPr><pic:cNvPr id=\"" + n + "\" name=\"Image " + n + "\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"" + rel + "\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"" + Invariant(cx) + "\" cy=\"" + Invariant(cy) + "\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>").ConfigureAwait(false);
+        xml.WriteStartElement("w", "p", W);
+        xml.WriteStartElement("w", "r", W);
+        xml.WriteStartElement("w", "drawing", W);
+        xml.WriteStartElement("wp", "inline", Wp);
+        xml.WriteStartElement("wp", "extent", Wp);
+        xml.WriteAttributeString("cx", cx);
+        xml.WriteAttributeString("cy", cy);
+        xml.WriteEndElement();
+        xml.WriteStartElement("wp", "docPr", Wp);
+        xml.WriteAttributeString("id", n);
+        xml.WriteAttributeString("name", "Image " + n);
+        xml.WriteAttributeString("descr", TextRules.Sanitize(alt));
+        xml.WriteEndElement();
+        xml.WriteStartElement("a", "graphic", A);
+        xml.WriteStartElement("a", "graphicData", A);
+        xml.WriteAttributeString("uri", Pic);
+        xml.WriteStartElement("pic", "pic", Pic);
+        xml.WriteStartElement("pic", "nvPicPr", Pic);
+        xml.WriteStartElement("pic", "cNvPr", Pic);
+        xml.WriteAttributeString("id", n);
+        xml.WriteAttributeString("name", "Image " + n);
+        xml.WriteEndElement();
+        xml.WriteStartElement("pic", "cNvPicPr", Pic);
+        xml.WriteEndElement();
+        xml.WriteEndElement();
+        xml.WriteStartElement("pic", "blipFill", Pic);
+        xml.WriteStartElement("a", "blip", A);
+        xml.WriteAttributeString("r", "embed", R, relationship);
+        xml.WriteEndElement();
+        xml.WriteStartElement("a", "stretch", A);
+        xml.WriteStartElement("a", "fillRect", A);
+        xml.WriteEndElement();
+        xml.WriteEndElement();
+        xml.WriteEndElement();
+        xml.WriteStartElement("pic", "spPr", Pic);
+        xml.WriteStartElement("a", "xfrm", A);
+        xml.WriteStartElement("a", "off", A);
+        xml.WriteAttributeString("x", "0");
+        xml.WriteAttributeString("y", "0");
+        xml.WriteEndElement();
+        xml.WriteStartElement("a", "ext", A);
+        xml.WriteAttributeString("cx", cx);
+        xml.WriteAttributeString("cy", cy);
+        xml.WriteEndElement();
+        xml.WriteEndElement();
+        xml.WriteStartElement("a", "prstGeom", A);
+        xml.WriteAttributeString("prst", "rect");
+        xml.WriteStartElement("a", "avLst", A);
+        xml.WriteEndElement();
+        xml.WriteEndElement();
+        xml.WriteEndElement();
+        xml.WriteEndElement(); // pic:pic
+        xml.WriteEndElement(); // a:graphicData
+        xml.WriteEndElement(); // a:graphic
+        xml.WriteEndElement(); // wp:inline
+        xml.WriteEndElement(); // w:drawing
+        xml.WriteEndElement(); // w:r
+        xml.WriteEndElement(); // w:p
     }
 
-    private static async Task WriteRunsAsync(TextWriter output, IList<Run> runs)
+    private static void WriteRuns(XmlWriter xml, IList<Run> runs)
     {
         foreach (var run in runs)
         {
             if (run.Text == "\n")
             {
-                await output.WriteAsync("<w:r><w:br/></w:r>").ConfigureAwait(false);
+                xml.WriteStartElement("w", "r", W);
+                Empty(xml, "br");
+                xml.WriteEndElement();
                 continue;
             }
             if (!string.IsNullOrEmpty(run.Href))
             {
-                await WriteLinkAsync(output, run.Text, run.Href, InlineStyle.Of(run)).ConfigureAwait(false);
+                WriteLink(xml, run.Text, run.Href, InlineStyle.Of(run));
                 continue;
             }
-            await WriteRunAsync(output, run.Text, InlineStyle.Of(run)).ConfigureAwait(false);
+            WriteRun(xml, run.Text, InlineStyle.Of(run));
         }
     }
 
     // Walks a render tree. `inherited` carries list numbering and depth into nested blocks: OOXML
     // lists are flat paragraphs with a level, so the nesting is a number here rather than a structure.
-    // One small method per kind: CA2000's flow analysis blows up on a single big async switch.
-    private static async Task WriteBlocksAsync(TextWriter output, ExportRecord record, IList<Block> blocks, Paragraph inherited, Func<ExportImage, string, Task> embed)
+    private static void WriteBlocks(XmlWriter xml, ExportRecord record, IList<Block> blocks, Paragraph inherited, Action<ExportImage, string> embed)
     {
         foreach (var block in blocks)
         {
-            await WriteBlockAsync(output, record, block, inherited, embed).ConfigureAwait(false);
+            WriteBlock(xml, record, block, inherited, embed);
         }
     }
 
-    private static async Task WriteBlockAsync(TextWriter output, ExportRecord record, Block block, Paragraph inherited, Func<ExportImage, string, Task> embed)
+    private static void WriteBlock(XmlWriter xml, ExportRecord record, Block block, Paragraph inherited, Action<ExportImage, string> embed)
     {
         switch (block.Kind)
         {
             case "heading":
-                await WriteParagraphAsync(output, block.RunsOrEmpty, inherited with { Style = "Heading" + Invariant(Math.Min(Math.Max(block.Level, 1), 3)) }).ConfigureAwait(false);
+                WriteParagraph(xml, block.RunsOrEmpty, inherited with { Style = "Heading" + Invariant(Math.Min(Math.Max(block.Level, 1), 3)) });
                 break;
             case "quote":
             case "callout":
-                await WriteQuoteAsync(output, record, block, inherited, embed).ConfigureAwait(false);
+                var quote = inherited with { Style = "Quote" };
+                if (block.Kind == "callout" && !string.IsNullOrEmpty(block.Tone))
+                {
+                    WriteParagraph(xml, [new Run { Text = block.Tone, Styles = ["bold"] }], quote);
+                }
+                WriteBlocks(xml, record, block.BlocksOrEmpty, quote, embed);
                 break;
             case "code":
-                await WriteCodeAsync(output, record, block, inherited, embed).ConfigureAwait(false);
+                if (record.Image(block.Src) is { } diagram)
+                {
+                    embed(diagram, "Diagram");
+                    break;
+                }
+                foreach (var line in (block.Text ?? string.Empty).Split('\n'))
+                {
+                    WriteParagraph(xml, [new Run { Text = line }], inherited with { Style = "Code" });
+                }
                 break;
             case "rule":
-                await WriteParagraphAsync(output, [], new Paragraph()).ConfigureAwait(false);
+                WriteParagraph(xml, [], new Paragraph());
                 break;
             case "pageBreak":
-                await output.WriteAsync("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>").ConfigureAwait(false);
+                xml.WriteStartElement("w", "p", W);
+                xml.WriteStartElement("w", "r", W);
+                xml.WriteStartElement("w", "br", W);
+                xml.WriteAttributeString("w", "type", W, "page");
+                xml.WriteEndElement();
+                xml.WriteEndElement();
+                xml.WriteEndElement();
                 break;
             case "image":
                 if (record.Image(block.Src) is { } raster)
                 {
-                    await embed(raster, block.Alt ?? string.Empty).ConfigureAwait(false);
+                    embed(raster, block.Alt ?? string.Empty);
                     break;
                 }
-                await WriteParagraphAsync(output, [new Run { Text = "Image: " + (block.Alt ?? string.Empty), Href = block.Src }], inherited).ConfigureAwait(false);
+                WriteParagraph(xml, [new Run { Text = "Image: " + (block.Alt ?? string.Empty), Href = block.Src }], inherited);
                 break;
             case "list":
-                await WriteListAsync(output, record, block, inherited, embed).ConfigureAwait(false);
+                WriteList(xml, record, block, inherited, embed);
                 break;
             case "table":
-                await WriteTableAsync(output, block.RowsOrEmpty).ConfigureAwait(false);
+                WriteTable(xml, block.RowsOrEmpty);
                 break;
             case "details":
-                await WriteParagraphAsync(output, block.SummaryOrEmpty, new Paragraph("Heading3")).ConfigureAwait(false);
-                await WriteBlocksAsync(output, record, block.BlocksOrEmpty, inherited, embed).ConfigureAwait(false);
+                WriteParagraph(xml, block.SummaryOrEmpty, new Paragraph("Heading3"));
+                WriteBlocks(xml, record, block.BlocksOrEmpty, inherited, embed);
                 break;
             default: // paragraph, and any kind this build does not know but whose runs it can keep.
-                await WriteParagraphAsync(output, block.RunsOrEmpty, inherited).ConfigureAwait(false);
+                WriteParagraph(xml, block.RunsOrEmpty, inherited);
                 break;
         }
     }
 
-    private static async Task WriteQuoteAsync(TextWriter output, ExportRecord record, Block block, Paragraph inherited, Func<ExportImage, string, Task> embed)
-    {
-        var paragraph = inherited with { Style = "Quote" };
-        if (block.Kind == "callout" && !string.IsNullOrEmpty(block.Tone))
-        {
-            await WriteParagraphAsync(output, [new Run { Text = block.Tone, Styles = ["bold"] }], paragraph).ConfigureAwait(false);
-        }
-        await WriteBlocksAsync(output, record, block.BlocksOrEmpty, paragraph, embed).ConfigureAwait(false);
-    }
-
-    private static async Task WriteCodeAsync(TextWriter output, ExportRecord record, Block block, Paragraph inherited, Func<ExportImage, string, Task> embed)
-    {
-        if (record.Image(block.Src) is { } diagram)
-        {
-            await embed(diagram, "Diagram").ConfigureAwait(false);
-            return;
-        }
-        var paragraph = inherited with { Style = "Code" };
-        foreach (var line in (block.Text ?? string.Empty).Split('\n'))
-        {
-            await WriteParagraphAsync(output, [new Run { Text = line }], paragraph).ConfigureAwait(false);
-        }
-    }
-
-    private static async Task WriteListAsync(TextWriter output, ExportRecord record, Block block, Paragraph inherited, Func<ExportImage, string, Task> embed)
+    private static void WriteList(XmlWriter xml, ExportRecord record, Block block, Paragraph inherited, Action<ExportImage, string> embed)
     {
         var numbering = block.Ordered ? 2 : 1;
         var level = inherited.Numbering != 0 ? inherited.Level + 1 : 0;
@@ -346,28 +504,34 @@ public static class DocxWriter
                 var marked = new Block { Kind = first.Kind, Level = first.Level, Align = first.Align, Runs = [new Run { Text = check ? "☑ " : "☐ " }, .. first.RunsOrEmpty] };
                 itemBlocks = [marked, .. itemBlocks.Skip(1)];
             }
-            await WriteBlocksAsync(output, record, itemBlocks, new Paragraph(Numbering: numbering, Level: level), embed).ConfigureAwait(false);
+            WriteBlocks(xml, record, itemBlocks, new Paragraph(Numbering: numbering, Level: level), embed);
         }
     }
 
-    private static async Task WriteTableAsync(TextWriter output, IList<Row> rows)
+    private static void WriteTable(XmlWriter xml, IList<Row> rows)
     {
-        await output.WriteAsync("<w:tbl><w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/></w:tblPr>").ConfigureAwait(false);
+        xml.WriteStartElement("w", "tbl", W);
+        xml.WriteStartElement("w", "tblPr", W);
+        xml.WriteStartElement("w", "tblW", W);
+        xml.WriteAttributeString("w", "w", W, "0");
+        xml.WriteAttributeString("w", "type", W, "auto");
+        xml.WriteEndElement();
+        xml.WriteEndElement();
         foreach (var row in rows)
         {
-            await output.WriteAsync("<w:tr>").ConfigureAwait(false);
+            xml.WriteStartElement("w", "tr", W);
             foreach (var cell in row.Cells)
             {
-                await output.WriteAsync("<w:tc>").ConfigureAwait(false);
+                xml.WriteStartElement("w", "tc", W);
                 IList<Run> runs = row.Header
                     ? [.. cell.Select(run => new Run { Text = run.Text, Href = run.Href, Styles = [.. run.Styles ?? [], "bold"] })]
                     : cell;
-                await WriteParagraphAsync(output, runs, new Paragraph()).ConfigureAwait(false);
-                await output.WriteAsync("</w:tc>").ConfigureAwait(false);
+                WriteParagraph(xml, runs, new Paragraph());
+                xml.WriteEndElement();
             }
-            await output.WriteAsync("</w:tr>").ConfigureAwait(false);
+            xml.WriteEndElement();
         }
-        await output.WriteAsync("</w:tbl>").ConfigureAwait(false);
+        xml.WriteEndElement();
     }
 
     private static string Invariant(long value) => value.ToString(CultureInfo.InvariantCulture);

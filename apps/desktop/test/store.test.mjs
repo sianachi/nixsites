@@ -100,6 +100,8 @@ for (const [name, text] of [
   ['SAVEPOINT', 'SAVEPOINT x'],
   ['a pragma outside the list', 'PRAGMA writable_schema=ON'],
   ['PRAGMA database_list', 'PRAGMA database_list'],
+  ['fts3_tokenizer', "SELECT fts3_tokenizer('simple')"],
+  ['a quoted fts3_tokenizer', `SELECT "FTS3_tokenizer"('simple')`],
 ]) {
   test(`the page cannot run ${name}`, async () => {
     const stores = open();
