@@ -29,7 +29,7 @@ export function registerStructureCommands(program: Command, act: Act): void {
     .description('Print the generated structure catalog.')
     .option('--text', 'print the rendered catalog text the pet reads', false)
     .action((options: { text: boolean }, command: Command) =>
-      act(command, (profile, output) => blueprintCatalog(options.text, output)),
+      act(command, (_profile, output) => blueprintCatalog(options.text, output)),
     );
   blueprint
     .command('validate <file>')

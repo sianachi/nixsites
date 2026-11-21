@@ -76,10 +76,6 @@ const TOOL_ARG_SPECS: Readonly<Record<string, Readonly<Record<string, ArgMapping
   },
 };
 
-export const TOOL_ARG_OPERATIONS: readonly string[] = Object.keys(TOOL_ARG_SPECS);
-export const toolArgParams = (operation: string): string[] =>
-  Object.keys(TOOL_ARG_SPECS[operation] ?? {});
-
 const FLAT_STRING_FIELDS = [
   'itemId',
   'parentId',

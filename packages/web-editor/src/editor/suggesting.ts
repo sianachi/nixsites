@@ -70,10 +70,6 @@ export function setSuggesting(
   editor.storage.suggesting.authorId = state.authorId;
 }
 
-export function isSuggesting(editor: Editor): boolean {
-  return editor.storage.suggesting.enabled;
-}
-
 const OWN = new PluginKey('suggesting');
 const SUGGESTION_MARKS = new Set(['suggestionInsert', 'suggestionDelete', 'suggestionFormat']);
 const BLOCKS = new Set(SUGGESTIBLE_BLOCKS);

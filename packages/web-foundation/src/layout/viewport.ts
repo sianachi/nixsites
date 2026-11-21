@@ -169,11 +169,3 @@ export function useOverlayDetails(): boolean {
 export function useCoarsePointer(): boolean {
   return useMediaQuery('(pointer: coarse)');
 }
-
-/**
- * Whether the primary pointer can hover. False on a touch screen, where a control revealed only on
- * hover is a control that does not exist.
- */
-export function useCanHover(): boolean {
-  return useMediaQuery('(hover: hover)');
-}

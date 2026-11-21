@@ -11,23 +11,6 @@ export type Confirmation =
   | { readonly kind: 'archive' }
   | null;
 
-export function invitationReason(reason: string | null): string {
-  switch (reason) {
-    case 'self':
-      return 'You';
-    case 'already_has_access':
-      return 'Already has access';
-    case 'invitation_pending':
-      return 'Invitation pending';
-    case 'email_missing':
-      return 'No email address';
-    case 'email_unverified':
-      return 'Email not verified';
-    default:
-      return 'Cannot invite';
-  }
-}
-
 export function formatBytes(value: number | string): string {
   const bytes = Number(value);
   if (!Number.isFinite(bytes) || bytes < 1024) return `${String(value)} bytes`;

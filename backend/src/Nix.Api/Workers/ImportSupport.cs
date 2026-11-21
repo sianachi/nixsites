@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Nix.Workers.Transfer;
 
 namespace Nix.Workers;
@@ -107,15 +106,5 @@ internal static class ImportSupport
             total += read;
         }
         return total;
-    }
-
-    /// <summary>The lower-case hex SHA-256 of a file on disk.</summary>
-    public static async Task<string> HashFileAsync(string path, CancellationToken cancellationToken)
-    {
-        var file = File.OpenRead(path);
-        await using (file.ConfigureAwait(false))
-        {
-            return Convert.ToHexStringLower(await SHA256.HashDataAsync(file, cancellationToken).ConfigureAwait(false));
-        }
     }
 }

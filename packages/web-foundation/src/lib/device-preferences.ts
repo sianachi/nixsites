@@ -12,8 +12,6 @@ function readLocal(key: string): string | null {
   }
 }
 
-export type PetPlacement = 'left' | 'right';
-
 /** Where the chat opens: a floating panel, a right drawer, or its own page. A device preference because
  * the right answer depends on the screen in front of the owner, not on the pet. */
 export type PetSurface = 'floating' | 'drawer' | 'page-on-phones' | 'page' | 'both';
