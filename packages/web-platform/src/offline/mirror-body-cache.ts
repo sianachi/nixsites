@@ -1,4 +1,10 @@
 import type { BodyCacheRecord, BodyCacheStore } from '@nix/web-foundation/lib/body-cache';
+import {
+  acknowledgeDrafts,
+  listDraftScopes,
+  readDrafts,
+  type DraftRecord,
+} from '@nix/web-foundation/lib/draft-journal';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 import * as Y from 'yjs';
 import { z } from 'zod';
@@ -120,4 +126,52 @@ export function createMirrorPendingSink(
     }, delayMs);
     return true;
   };
+}
+
+/** Whether applying `draft` on top of `confirmed` changes nothing: the server already has every edit in it. */
+function covered(confirmed: Uint8Array, draft: Uint8Array): boolean {
+  const doc = new Y.Doc();
+  Y.applyUpdate(doc, confirmed);
+  const before = Y.encodeStateAsUpdate(doc);
+  Y.applyUpdate(doc, draft);
+  // An edit that waits on missing history is held aside by Yjs and does not show in the state.
+  if (doc.store.pendingStructs !== null || doc.store.pendingDs !== null) return false;
+  const after = Y.encodeStateAsUpdate(doc);
+  return before.length === after.length && before.every((byte, index) => byte === after[index]);
+}
+
+export interface DraftJournalAccess {
+  scopes: (subject: string) => Promise<string[]>;
+  read: (scope: string) => Promise<DraftRecord[]>;
+  acknowledge: (records: readonly DraftRecord[]) => Promise<void>;
+}
+
+/**
+ * Clears the draft-journal entries a sync pass has since confirmed on the server. The journal keeps
+ * every offline keystroke so a reopened note can replay it; once the mirror's confirmed state holds
+ * an entry's edits, replaying it again is only a duplicate. An entry with anything newer stays, and
+ * the journal's own revision check keeps a later edit from another tab.
+ */
+export async function acknowledgeMirroredDrafts(
+  store: Pick<SqliteMirrorStore, 'readBody'>,
+  subject: string,
+  journal: DraftJournalAccess = {
+    scopes: listDraftScopes,
+    read: readDrafts,
+    acknowledge: (records) => acknowledgeDrafts(records),
+  },
+): Promise<void> {
+  for (const scope of await journal.scopes(subject)) {
+    const parsed = scopeSchema.safeParse(JSON.parse(scope));
+    if (!parsed.success || parsed.data[3] !== 'note') continue;
+    const body = await store.readBody(parsed.data[1], parsed.data[2]);
+    const confirmed = body?.confirmedUpdate;
+    if (body === null || body.item.locked || body.docId === null || !confirmed) continue;
+    const done = (await journal.read(scope)).filter(
+      (record) =>
+        (record.docId === undefined || record.docId === body.docId) &&
+        covered(confirmed, record.update),
+    );
+    if (done.length > 0) await journal.acknowledge(done);
+  }
 }

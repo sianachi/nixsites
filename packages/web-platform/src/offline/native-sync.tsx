@@ -10,7 +10,11 @@ import { useEffect, type ReactNode } from 'react';
 
 import { useApiClient } from '../api/api-client-provider';
 import { useAuth } from '../auth/auth-provider';
-import { createMirrorBodyCache, createMirrorPendingSink } from './mirror-body-cache';
+import {
+  acknowledgeMirroredDrafts,
+  createMirrorBodyCache,
+  createMirrorPendingSink,
+} from './mirror-body-cache';
 import { REMEMBERED, rememberKey } from './mirror-fetch';
 import { discardNativeMirror, getNativeMirror, type NativeMirror } from './native-mirror';
 import {
@@ -136,6 +140,8 @@ export function NativeSync(): ReactNode {
             await discardNativeMirror();
             return false;
           }
+          // Drafts the pass has confirmed no longer need replaying when their note is reopened.
+          await acknowledgeMirroredDrafts(store, profile.subject).catch(() => undefined);
           setOfflineState({ lastSyncedAt: Date.now(), onlineOnlyFiles: outcome.onlineOnlyFiles });
           reportSyncProblem(mirror, outcome);
           await warmRemembered(() => getAccessToken());

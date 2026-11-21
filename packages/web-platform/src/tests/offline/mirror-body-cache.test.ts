@@ -2,7 +2,7 @@ import type { BodyCacheRecord, BodyCacheStore } from '@nix/web-foundation/lib/bo
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
-import { createMirrorBodyCache } from '../../offline/mirror-body-cache';
+import { acknowledgeMirroredDrafts, createMirrorBodyCache } from '../../offline/mirror-body-cache';
 
 const scope = (kind: string) => JSON.stringify(['me', 'ws', 'item', kind]);
 const update = (text: string): Uint8Array => {
@@ -59,5 +59,49 @@ describe('mirror body cache', () => {
     Y.applyUpdate(doc, merged?.update ?? new Uint8Array());
     expect(doc.getText('t').toJSON()).toHaveLength(2);
     expect(await cache(null, local).read(scope('note'))).toBe(local);
+  });
+});
+
+describe('acknowledgeMirroredDrafts', () => {
+  const draft = (id: string, docId: string | undefined, bytes: Uint8Array) =>
+    ({ id, scope: scope('note'), revision: 1, docId, update: bytes }) as never;
+  const run = async (confirmed: Uint8Array | null, records: unknown[]) => {
+    const acknowledge = vi.fn(() => Promise.resolve());
+    await acknowledgeMirroredDrafts(
+      {
+        readBody: () =>
+          Promise.resolve(confirmed === null ? null : body({ confirmedUpdate: confirmed })),
+      } as never,
+      'me',
+      {
+        scopes: () => Promise.resolve([scope('note'), scope('file')]),
+        read: () => Promise.resolve(records as never),
+        acknowledge,
+      },
+    );
+    return acknowledge;
+  };
+
+  it('clears entries the confirmed state already holds and keeps newer ones', async () => {
+    const doc = new Y.Doc();
+    doc.getText('t').insert(0, 'ab');
+    const first = Y.encodeStateAsUpdate(doc);
+    doc.getText('t').insert(2, 'c');
+    const newer = Y.encodeStateAsUpdate(doc);
+    const old = draft('old', 'doc', first);
+    const acknowledge = await run(first, [old, draft('new', 'doc', newer)]);
+    expect(acknowledge).toHaveBeenCalledExactlyOnceWith([old]);
+  });
+
+  it('keeps an entry that waits on missing history, one for another document and a missing body', async () => {
+    const doc = new Y.Doc();
+    doc.getText('t').insert(0, 'ab');
+    const base = Y.encodeStateAsUpdate(doc);
+    const sv = Y.encodeStateVector(doc);
+    doc.getText('t').insert(2, 'c');
+    const onlyC = Y.encodeStateAsUpdate(doc, sv);
+    expect(await run(update('zz'), [draft('x', 'doc', onlyC)])).not.toHaveBeenCalled();
+    expect(await run(base, [draft('y', 'other', base)])).not.toHaveBeenCalled();
+    expect(await run(null, [draft('z', 'doc', base)])).not.toHaveBeenCalled();
   });
 });

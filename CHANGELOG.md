@@ -112,6 +112,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- A note edited offline in the native apps no longer replays the same edits when reopened after they have synced: the
+  device clears its draft journal entries once the server has them.
 - The one-line install works again when the latest release is older than the installer on `main`:
   it stopped at "set NIX_OIDC_ISSUER" on a new machine. A release is now installed by the copy of
   the installer that shipped in it.
