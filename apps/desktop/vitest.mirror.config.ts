@@ -9,7 +9,7 @@ export default {
     alias: [
       {
         find: /^\.\/testing\/node-driver\.js$/,
-        replacement: fileURLToPath(new URL('./test/mirror/desktop-driver.ts', import.meta.url)),
+        replacement: fileURLToPath(new URL('./mirror/desktop-driver.ts', import.meta.url)),
       },
     ],
   },

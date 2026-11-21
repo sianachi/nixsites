@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 import { dirname } from 'node:path';
-import { createWebkitSqliteDriver } from '../../../../packages/sync-sqlite/src/webkit-driver.js';
-import type { SqliteDriver } from '../../../../packages/sync-sqlite/src/driver.js';
+import { createWebkitSqliteDriver } from '../../../packages/sync-sqlite/src/webkit-driver.js';
+import type { SqliteDriver } from '../../../packages/sync-sqlite/src/driver.js';
 // @ts-expect-error plain .mjs without types
-import { SqlStores } from '../../src/sql-store.mjs';
+import { SqlStores } from '../src/sql-store.mjs';
 
 /**
  * Stands in for `createNodeSqliteDriver` when the sync-sqlite suites run through the desktop store:
