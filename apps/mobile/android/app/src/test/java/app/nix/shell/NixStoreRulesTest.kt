@@ -164,6 +164,49 @@ class NixStoreRulesTest {
             refused(sql)
     }
 
+    @Test fun pragmasTakeOnlyTheValuesTheMirrorSends() {
+        // Exactly what mirror.ts sends, in any case and with quoted values, with or without a trailing semicolon.
+        for (sql in listOf(
+            "PRAGMA foreign_keys=ON", "PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", "PRAGMA secure_delete=ON",
+            "pragma Journal_Mode = wal", "PRAGMA journal_mode = 'WAL'", "PRAGMA journal_mode=\"wal\"", "PRAGMA journal_mode = `wal`",
+            "PRAGMA synchronous=normal", "PRAGMA synchronous='Full'", "PRAGMA synchronous=2", "PRAGMA synchronous=1",
+            "PRAGMA secure_delete=1", "PRAGMA secure_delete='on'", "PRAGMA foreign_keys=off", "PRAGMA foreign_keys=0", "PRAGMA foreign_keys=1",
+            "PRAGMA journal_mode=WAL;", "PRAGMA journal_mode", "PRAGMA synchronous", "PRAGMA secure_delete;", "PRAGMA foreign_keys",
+        )) NixStoreRules.check(sql)
+        for (sql in listOf(
+            "PRAGMA journal_mode=OFF", "PRAGMA journal_mode=MEMORY", "PRAGMA journal_mode=DELETE", "PRAGMA journal_mode=TRUNCATE",
+            "PRAGMA journal_mode=PERSIST", "PRAGMA journal_mode='off'", "PRAGMA journal_mode=\"Memory\"", "PRAGMA JOURNAL_MODE = Off",
+            "PRAGMA journal_mode=`delete`", "PRAGMA journal_mode=",
+            "PRAGMA synchronous=OFF", "PRAGMA synchronous=0", "PRAGMA synchronous='off'", "PRAGMA synchronous=3", "PRAGMA synchronous=EXTRA",
+            "PRAGMA secure_delete=OFF", "PRAGMA secure_delete=0", "PRAGMA secure_delete=FAST", "PRAGMA secure_delete='fast'", "PRAGMA secure_delete=10",
+            "PRAGMA foreign_keys=2", "PRAGMA foreign_keys=maybe",
+            // The parenthesised form, a schema prefix, and anything after the value.
+            "PRAGMA journal_mode(WAL)", "PRAGMA journal_mode(OFF)", "PRAGMA foreign_keys(ON)",
+            "PRAGMA main.journal_mode=WAL", "PRAGMA temp.synchronous=FULL", "PRAGMA 'main'.journal_mode=WAL",
+            "PRAGMA journal_mode=WAL WAL", "PRAGMA journal_mode=WAL, OFF", "PRAGMA journal_mode=WAL; PRAGMA journal_mode=OFF",
+            "PRAGMA journal_mode=WAL -- x\n;PRAGMA journal_mode=OFF", "PRAGMA journal_mode=-1", "PRAGMA journal_mode==WAL",
+            "PRAGMA \"journal_mode\"=WAL", "PRAGMA journal_mode WAL",
+        )) refused(sql)
+    }
+
+    @Test fun shadowRuleFalsePositivesThatLoosenNothing() {
+        // An FTS5 option, not a table.
+        NixStoreRules.check("CREATE VIRTUAL TABLE t USING fts5(a, content='src', content_rowid='id')")
+        // A schema-qualified self-name: the declared part is the name after the schema.
+        NixStoreRules.check("CREATE INDEX IF NOT EXISTS main.mirror_item_parent ON mirror_item (parent_id)")
+        // The SQL function, not REPLACE INTO.
+        NixStoreRules.check("INSERT INTO t(a) SELECT replace(a, 'x', 'y') FROM u")
+        NixStoreRules.check("UPDATE t SET a = replace(a, 'x', 'y')")
+        NixStoreRules.check("SELECT replace(a_data, 'x', 'y') FROM t")
+        // Nothing is loosened: a shadow table is still refused in each of those positions.
+        refused("CREATE INDEX main.i ON mirror_search_data (a)")
+        refused("CREATE INDEX main.i ON main.mirror_search_data (a)")
+        refused("REPLACE INTO mirror_search_data VALUES (1)")
+        refused("INSERT OR REPLACE INTO 'mirror_search_idx' VALUES (1)")
+        refused("INSERT INTO ft_data SELECT replace(a, 'x', 'y') FROM u")
+        refused("CREATE VIRTUAL TABLE t_data USING fts5(a, content_rowid='id')")
+    }
+
     @Test fun allowsTheMirrorsOwnStatements() {
         for (sql in listOf(
             "CREATE VIRTUAL TABLE IF NOT EXISTS mirror_search USING fts5(item_id UNINDEXED, title, body_text)",

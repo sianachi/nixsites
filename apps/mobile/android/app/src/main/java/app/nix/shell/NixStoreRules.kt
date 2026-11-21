@@ -13,8 +13,19 @@ class StoreError(message: String) : Exception(message)
  * classes are checked on the text, before SQLite sees it.
  */
 object NixStoreRules {
-    /** Pragmas the page's SQL may run (packages/sync-sqlite opens with these); every other pragma is refused. */
-    private val pagePragmas = setOf("foreign_keys", "journal_mode", "synchronous", "secure_delete")
+    /**
+     * The pragmas the page may run, with the only values it may set (packages/sync-sqlite sends exactly
+     * `foreign_keys=ON`, `journal_mode=WAL`, `synchronous=FULL`, `secure_delete=ON`). A pragma with no value
+     * is a read. Anything else is refused: `journal_mode=OFF` or `MEMORY` would let a rollback leave pages
+     * the page wrote behind, which defeats the shadow-table rule.
+     */
+    private val pragmaValues = mapOf(
+        "journal_mode" to setOf("wal"),
+        "synchronous" to setOf("full", "normal", "2", "1"),
+        "secure_delete" to setOf("on", "1"),
+        "foreign_keys" to setOf("on", "off", "1", "0"),
+    )
+    private val pagePragmas = pragmaValues.keys
 
     /**
      * Statement classes the page may run. Everything else is refused: ATTACH/DETACH (another origin's
@@ -78,7 +89,7 @@ object NixStoreRules {
         val t = tokens(sql)
         val first = t.firstOrNull() ?: throw StoreError("Empty statement.")
         if (first !in allowed) throw StoreError("Statement not allowed.")
-        if (first == "pragma" && t.getOrNull(1) !in pagePragmas) throw StoreError("Pragma not allowed.")
+        if (first == "pragma") checkPragma(t)
         // Function names are words or quoted names; a string is never one, but it can name a table.
         val names = t.map { if (it.startsWith("\"") || it.startsWith("'")) it.drop(1) else it }
         val isString = t.map { it.startsWith("'") }
@@ -89,9 +100,14 @@ object NixStoreRules {
         // The tables behind a virtual table are SQLite's own; writing or creating one corrupts the index.
         // The name an index or trigger declares for itself is not a table (the mirror has `..._parent`).
         val declared = t.take(5).indexOfFirst { it == "index" || it == "trigger" }.let { p ->
-            if (p < 0) -1 else (p + 1..p + 4).firstOrNull { it < t.size && t[it] !in setOf("if", "not", "exists") } ?: -1
+            val name = if (p < 0) -1 else (p + 1..p + 4).firstOrNull { it < t.size && t[it] !in setOf("if", "not", "exists") } ?: -1
+            // `main.name`: the declared name is the part after the schema.
+            if (name >= 0 && t.getOrNull(name + 1) == ".") name + 2 else name
         }
-        if (t.any { it in writes } && names.indices.any { it != declared && shadow.containsMatchIn(names[it]) })
+        // `replace(...)` is the SQL function, not REPLACE INTO. A name followed by `=` is an option such as
+        // FTS5's `content_rowid='id'`; no table is ever named there.
+        val writing = t.indices.any { t[it] in writes && !(t[it] == "replace" && t.getOrNull(it + 1) == "(") }
+        if (writing && names.indices.any { it != declared && t.getOrNull(it + 1) != "=" && shadow.containsMatchIn(names[it]) })
             throw StoreError("Table not allowed.")
         // A trigger body holds its own semicolons and ends at the END that closes it (CASE ... END nests).
         val trigger = first == "create" && t.take(4).contains("trigger")
@@ -107,6 +123,15 @@ object NixStoreRules {
             }
         }
         return t.count { it == "?" }
+    }
+
+    /** `pragma <name>` or `pragma <name> = <value>`, with a name and value from `pragmaValues`, and nothing after. */
+    private fun checkPragma(t: List<String>) {
+        val body = if (t.last() == ";") t.dropLast(1) else t
+        val values = pragmaValues[body.getOrNull(1)] ?: throw StoreError("Pragma not allowed.")
+        if (body.size == 2) return
+        val value = body.getOrNull(3)?.let { if (it.startsWith("\"") || it.startsWith("'")) it.drop(1) else it }
+        if (body.size != 4 || body[2] != "=" || value !in values) throw StoreError("Pragma value not allowed.")
     }
 
     /** null, number, string, or a blob as `{ "$b64": "..." }`; a boolean is 0 or 1. Yields null, Long, Double, String or ByteArray. */

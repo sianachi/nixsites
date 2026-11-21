@@ -123,6 +123,19 @@ class NixStoreInstrumentedTest {
         assertEquals(0, rows(sql(a, "SELECT item_id FROM mirror_search WHERE mirror_search MATCH 'body'")).length())
     }
 
+    @Test fun theJournalModeStaysWalAndCannotBeTurnedOff() {
+        for (pragma in listOf("PRAGMA foreign_keys=ON", "PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", "PRAGMA secure_delete=ON")) sql(a, pragma)
+        fun mode() = rows(sql(a, "PRAGMA journal_mode")).getJSONObject(0).getString("journal_mode")
+        assertEquals("wal", mode())
+        for (value in listOf("OFF", "MEMORY", "DELETE", "TRUNCATE", "PERSIST", "'off'"))
+            refused(a, "PRAGMA journal_mode=$value")
+        refused(a, "PRAGMA journal_mode(OFF)")
+        refused(a, "PRAGMA main.journal_mode=OFF")
+        assertEquals("wal", mode())
+        refused(a, "PRAGMA synchronous=OFF")
+        refused(a, "PRAGMA secure_delete=OFF")
+    }
+
     @Test fun shadowTablesAndPragmaFunctionsAreRefusedAgainstTheRealIndex() {
         sql(a, "CREATE VIRTUAL TABLE ft USING fts5(a)")
         for (text in listOf(
