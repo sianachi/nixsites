@@ -74,9 +74,11 @@ export const loginUrl = (origin, challenge, returnTo) =>
   `${origin}/auth/login?native=${challenge}&returnTo=${encodeURIComponent(safeReturnTo(returnTo))}`;
 
 /**
- * The code from `app.nix.shell://auth?code=...&iss=...`, only for exactly that shape and only from
- * the server the sign-in started on (RFC 9207). Without this a malicious saved server could redirect
- * the browser to another server's login and be handed the code and the verifier for it.
+ * The code from `app.nix.shell://auth?code=...&iss=...`, only from the server the sign-in started on
+ * (RFC 9207). Without this a malicious saved server could redirect the browser to another server's
+ * login and be handed the code and the verifier for it. `code` and `iss` must each appear once; a
+ * parameter this build does not know is ignored, so a newer server that adds one does not lock
+ * installed apps out of sign-in (same rule as the iOS shell).
  */
 export function handoffCode(input, issuer) {
   let url;
@@ -86,11 +88,13 @@ export function handoffCode(input, issuer) {
     return null;
   }
   const params = Object.fromEntries(url.searchParams);
+  const once = (name) => url.searchParams.getAll(name).length === 1;
   if (
     url.protocol !== `${CALLBACK_SCHEME}:` ||
     url.hostname !== 'auth' ||
     (url.pathname !== '' && url.pathname !== '/') ||
-    [...url.searchParams].length !== 2 ||
+    !once('code') ||
+    !once('iss') ||
     !params.code ||
     !params.iss
   )
