@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import {
+  androidChannelPost,
   createWebkitSqliteDriver,
   fileDelete,
   fileDownload,
@@ -150,5 +151,37 @@ describe('webkit nixStore driver', () => {
     expect(await usage(post)).toEqual({ databaseBytes: 1, fileBytes: 2 });
     await fileDelete('k', post);
     await wipe(post);
+  });
+
+  it('talks to the Android shell through one channel, matching replies by id', async () => {
+    const sent: { id: number; op: string }[] = [];
+    const channel = {
+      onmessage: null as ((event: { data: string }) => void) | null,
+      postMessage(message: string) {
+        const request = JSON.parse(message) as { id: number; op: string };
+        sent.push(request);
+        // Answer out of order: the second request first.
+        if (sent.length === 2) {
+          const reply = (id: number | undefined, body: object) =>
+            channel.onmessage?.({ data: JSON.stringify({ id, ...body }) });
+          reply(sent[1]?.id, { error: 'origin not allowed' });
+          reply(sent[0]?.id, { result: { tx: 'tx1' } });
+        }
+      },
+    };
+    (globalThis as { nixStoreAndroid?: unknown }).nixStoreAndroid = channel;
+    try {
+      const post = windowNixStorePost();
+      const begin = post({ op: 'begin' });
+      const usageReply = post({ op: 'usage' });
+      await expect(begin).resolves.toEqual({ tx: 'tx1' });
+      await expect(usageReply).rejects.toThrow('origin not allowed');
+      expect(sent.map((request) => request.op)).toEqual(['begin', 'usage']);
+      // The same channel object keeps one handler.
+      expect(androidChannelPost('nixStoreAndroid')).toBe(androidChannelPost('nixStoreAndroid'));
+    } finally {
+      delete (globalThis as { nixStoreAndroid?: unknown }).nixStoreAndroid;
+    }
+    expect(androidChannelPost('nixStoreAndroid')).toBeUndefined();
   });
 });

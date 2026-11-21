@@ -33,6 +33,26 @@ describe('native sign-in', () => {
     expect(init.body).toBe(JSON.stringify({ code: 'c', verifier: 'v' }));
   });
 
+  it('signs in through the Android shell channel, and a cancel is the bare string', async () => {
+    const answers = [{ result: { code: 'c', verifier: 'v' } }, { error: 'cancelled' }];
+    const channel = {
+      onmessage: null as ((event: { data: string }) => void) | null,
+      postMessage(message: string) {
+        const { id } = JSON.parse(message) as { id: number };
+        channel.onmessage?.({ data: JSON.stringify({ id, ...answers.shift() }) });
+      },
+    };
+    (globalThis as { nixSignInAndroid?: unknown }).nixSignInAndroid = channel;
+    try {
+      expect(canSignInNatively()).toBe(true);
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+      await expect(nativeSignIn('/a')).resolves.toBe('signed-in');
+      await expect(nativeSignIn('/a')).resolves.toBe('cancelled');
+    } finally {
+      delete (globalThis as { nixSignInAndroid?: unknown }).nixSignInAndroid;
+    }
+  });
+
   it('stays quiet when the person cancels', async () => {
     setShell(vi.fn().mockRejectedValue('cancelled'));
     const fetchMock = vi.fn();

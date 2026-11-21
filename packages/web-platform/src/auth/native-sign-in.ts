@@ -1,12 +1,18 @@
+import { androidChannelPost } from '@nix/sync-sqlite';
+
 interface SignInHandler {
   postMessage(message: unknown): Promise<unknown>;
 }
 
-const handler = (): SignInHandler | undefined =>
-  (globalThis as { webkit?: { messageHandlers?: { nixSignIn?: SignInHandler } } }).webkit
-    ?.messageHandlers?.nixSignIn;
+const handler = (): SignInHandler | undefined => {
+  const ios = (globalThis as { webkit?: { messageHandlers?: { nixSignIn?: SignInHandler } } })
+    .webkit?.messageHandlers?.nixSignIn;
+  if (ios) return ios;
+  const post = androidChannelPost('nixSignInAndroid');
+  return post && { postMessage: post };
+};
 
-/** True in the iOS shell, whose sign-in runs in the system's web authentication session. */
+/** True in the iOS shell (a web authentication session) or the Android shell (a Custom Tab). */
 export const canSignInNatively = (): boolean => typeof handler()?.postMessage === 'function';
 
 /** `returnTo` when it stays on this origin; anything else (for example `//evil.example/`) becomes `/`. */

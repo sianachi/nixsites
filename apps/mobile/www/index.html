@@ -190,10 +190,8 @@
 
       try {
         ({ servers, boundDomains: bound = [] } = await picker({ op: 'getServers' }));
-        if (android)
-          document.getElementById('mode').textContent =
-            'Online only: the Android app does not keep an offline copy yet.';
-        else if (bound.length === 0)
+        // App-bound domains are WebKit's; the Android shell keeps its offline copy without them.
+        if (!android && bound.length === 0)
           document.getElementById('mode').textContent =
             'Online only: this build lists no app-bound domains, so servers cannot open offline.';
         // Open the last server once per launch; after that (Switch server, or a page that failed
