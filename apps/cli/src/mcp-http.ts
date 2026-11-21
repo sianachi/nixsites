@@ -44,8 +44,8 @@ export interface McpHttpOptions {
 }
 
 /** How long a token's organisation MCP switch is remembered. */
-export const MCP_SWITCH_TTL_MS = 30_000;
-export const MCP_OFF_MESSAGE = 'MCP is turned off for this organisation by an administrator.';
+const MCP_SWITCH_TTL_MS = 30_000;
+const MCP_OFF_MESSAGE = 'MCP is turned off for this organisation by an administrator.';
 
 const BEARER = /^Bearer\s+(nixpat_[A-Za-z0-9._~+/=-]+)$/i;
 

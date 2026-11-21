@@ -29,7 +29,7 @@ import { resolveSession, type Act, type SessionDeps } from './shared.ts';
 import { parseAssignments } from './structure.ts';
 
 /** Opens the session, runs `body`, prints what it returns. */
-export async function withSession(
+async function withSession(
   profile: string | undefined,
   output: OutputOptions,
   deps: SessionDeps,
@@ -55,7 +55,7 @@ export function parseFilter(text: string): { property: string; operator: string;
   return { property, operator: text.slice(first + 1, second), value: text.slice(second + 1) };
 }
 
-export async function runBatch(
+async function runBatch(
   profile: string | undefined,
   options: { workspace: string; file: string; strict?: boolean | undefined },
   output: OutputOptions,

@@ -131,7 +131,7 @@ export function describeBatchFailures(result: agentRecords.BatchResult): string 
   return `${String(result.failed)} of ${String(result.rows.length)} rows failed: ${failed.join('; ')}. The other rows were written; retry the same request to fix only the failed ones.`;
 }
 
-export const newKey = (prefix: string): string => `${prefix}:${randomUUID()}`;
+const newKey = (prefix: string): string => `${prefix}:${randomUUID()}`;
 
 /** Begins an upload and returns the presigned PUT the caller uses itself; no bytes pass through here. */
 export async function beginUploadValue(

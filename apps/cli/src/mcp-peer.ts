@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { FetchImpl } from './session.ts';
 
-export const peerUuid = z.uuid();
+const peerUuid = z.uuid();
 const credential = /^nixpeer_[A-Za-z0-9_-]{16,2040}$/;
 export const peerBearer = new RegExp(`^Bearer (${credential.source.slice(1, -1)})$`, 'i');
 export const peerMode = z.object({ kind: z.enum(['client', 'claude', 'codex', 'execution']) });
