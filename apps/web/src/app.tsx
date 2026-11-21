@@ -11,7 +11,6 @@ import { NewChatNote } from '@nix/web-pets/pets/chat/new-chat-note';
 import { BookmarksPage } from './pages/bookmarks-page';
 import { CalendarPage } from './pages/calendar-page';
 import { EditorPage } from './pages/editor-page';
-import { GraphPage } from './pages/graph-page';
 import { PetPage } from './pages/pet-page';
 import { PetActivityPage } from './pages/pet-activity-page';
 import { OAuthAuthorizePage } from './pages/oauth-authorize-page';
@@ -21,7 +20,6 @@ import { PublicLinkPage } from './pages/public-link-page';
 import { SettingsPage } from './pages/settings-page';
 import { TemplateLibraryPage } from '@nix/web-templates/templates/library/template-library-page';
 import { TemplateImportPage } from '@nix/web-templates/templates/import/template-import-page';
-import { TemplateStudioPage } from './pages/template-studio-page';
 import { TrashPage } from './pages/trash-page';
 import { AttachmentsPage } from './pages/attachments-page';
 import { WorkspacesPage } from './pages/workspaces-page';
@@ -66,6 +64,32 @@ const TokensPage = lazy(async () => {
   const module = await import('./pages/tokens-page');
   return { default: module.TokensPage };
 });
+
+// Secondary routes loaded on first visit: the graph and the template studio each bring a large
+// dependency tree that no launch to the editor needs. Every chunk is still precached with the
+// other build assets (the service worker's ASSETS list), so they open offline once installed.
+const GraphPage = lazy(async () => {
+  const module = await import('./pages/graph-page');
+  return { default: module.GraphPage };
+});
+const TemplateStudioPage = lazy(async () => {
+  const module = await import('./pages/template-studio-page');
+  return { default: module.TemplateStudioPage };
+});
+
+function RouteLoading({ what, children }: { what: string; children: ReactElement }): ReactElement {
+  return (
+    <Suspense
+      fallback={
+        <Text variant="note" as="div" tone="muted" className="p-8">
+          {`Loading ${what}…`}
+        </Text>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
 
 /**
  * The server-free demo (lib/web-config.ts), which main.tsx mounts as its own root outside <App />.
@@ -131,6 +155,11 @@ export function AppRoutes(): ReactElement {
   // renders at the work's address and the dialog at its own (see `shell/route-dialog.tsx`).
   // Always passed, so the tree keeps one shape and nothing remounts when a dialog opens.
   const { mainLocation, dialog, closeSettings } = useRouteDialogRouting();
+  const studio = (
+    <RouteLoading what="the template studio">
+      <TemplateStudioPage />
+    </RouteLoading>
+  );
   return (
     <UndoProvider>
       <RouteDialogContext.Provider value={dialog}>
@@ -182,7 +211,14 @@ export function AppRoutes(): ReactElement {
                 <Route path="calendar" element={<CalendarPage />} />
                 <Route path="daily" element={<DailyNotePage />} />
                 <Route path="daily/:date" element={<DailyNotePage />} />
-                <Route path="graph" element={<GraphPage />} />
+                <Route
+                  path="graph"
+                  element={
+                    <RouteLoading what="the graph">
+                      <GraphPage />
+                    </RouteLoading>
+                  }
+                />
                 <Route path="pet" element={<PetPage />} />
                 <Route path="pet/activity" element={<PetActivityPage />} />
                 <Route path="bookmarks" element={<BookmarksPage />} />
@@ -190,14 +226,11 @@ export function AppRoutes(): ReactElement {
                 <Route path="attachments" element={<AttachmentsPage />} />
                 <Route path="workspaces" element={<WorkspacesPage />} />
                 <Route path="templates" element={<TemplateLibraryPage />} />
-                <Route path="templates/new" element={<TemplateStudioPage />} />
+                <Route path="templates/new" element={studio} />
                 <Route path="templates/import" element={<TemplateImportPage />} />
-                <Route path="templates/:templateId/create" element={<TemplateStudioPage />} />
-                <Route path="templates/:templateId/edit" element={<TemplateStudioPage />} />
-                <Route
-                  path="items/:itemId/templates/apply/:templateId"
-                  element={<TemplateStudioPage />}
-                />
+                <Route path="templates/:templateId/create" element={studio} />
+                <Route path="templates/:templateId/edit" element={studio} />
+                <Route path="items/:itemId/templates/apply/:templateId" element={studio} />
 
                 {/* Reached from both the persistent rail and the profile menu: the rail makes
             workspace administration findable, while the profile menu keeps personal
