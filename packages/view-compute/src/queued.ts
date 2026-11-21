@@ -132,6 +132,7 @@ export function withQueuedRequests(
           items.filter((item) => item.parentId === parentId),
           ops,
         );
+        // The first child's index is also its place among the rest: nothing before it is a child.
         const at = items.findIndex((item) => item.parentId === parentId);
         const rest = items.filter((item) => item.parentId !== parentId);
         items = [

@@ -20,6 +20,12 @@ public interface INativeReplayStore
     /// <summary>Locks the target row before comparing its persistent revision.</summary>
     public ValueTask<long?> LockItemRevisionAsync(WorkspaceId workspaceId, ItemId itemId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Whether the item exists in this workspace, without locking it. Used by "request" replays, whose
+    /// commands take their own locks in the order the direct routes do.
+    /// </summary>
+    public ValueTask<bool> ItemExistsAsync(WorkspaceId workspaceId, ItemId itemId, CancellationToken cancellationToken);
+
     /// <summary>Records the response in the same transaction as the accepted mutation.</summary>
     public ValueTask SaveAsync(Guid operationId, WorkspaceId workspaceId, string fingerprint, string response, CancellationToken cancellationToken);
 

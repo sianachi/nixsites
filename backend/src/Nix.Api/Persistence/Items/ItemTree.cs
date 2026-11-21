@@ -445,6 +445,32 @@ public sealed partial class ItemTree(
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async ValueTask<bool> TryUpdateSchemaAsync(
+        ItemId id,
+        WorkspaceId workspaceId,
+        string? expectedSchema,
+        string? schema,
+        PrincipalId actor,
+        DateTimeOffset at,
+        CancellationToken cancellationToken)
+    {
+        var tenant = Tenant;
+        var changed = await _dbContext.Items
+            .Where(item => item.TenantId == tenant && item.Id == id
+                && item.WorkspaceId == workspaceId && item.LifecycleState == ItemLifecycleState.Active
+                && item.Schema == expectedSchema)
+            .TagWith("ItemTree.TryUpdateSchemaAsync")
+            .ExecuteUpdateAsync(
+                update => update
+                    .SetProperty(item => item.Schema, schema)
+                    .SetProperty(item => item.LastModifiedBy, actor)
+                    .SetProperty(item => item.LastModifiedAt, at),
+                cancellationToken)
+            .ConfigureAwait(false);
+        return changed == 1;
+    }
+
+    /// <inheritdoc />
     public async ValueTask<bool> TryUpdateViewsAsync(
         ItemId id,
         WorkspaceId workspaceId,

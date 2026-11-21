@@ -155,7 +155,10 @@ public sealed class WorkspaceSyncStore(
             var lifecycle = reader.GetString(8);
             var properties = JsonObject.Parse(reader.GetString(9))!.AsObject();
             var schema = Object(reader, 10);
+            var locked = reader.GetBoolean(19);
             var views = Object(reader, 11);
+            // What a device sends back as the version it edited from; withheld with the views while locked.
+            var viewsVersion = locked ? null : Domain.Views.ViewConfigurationVersion.FromStored(Text(reader, 11));
             var recurrence = Object(reader, 12);
             var noDelete = reader.GetBoolean(13);
             var noChildren = reader.GetBoolean(14);
@@ -163,7 +166,6 @@ public sealed class WorkspaceSyncStore(
             var createdAt = reader.GetFieldValue<DateTimeOffset>(16);
             var updatedAt = Nullable<DateTimeOffset>(reader, 17);
             var canWrite = reader.GetBoolean(18);
-            var locked = reader.GetBoolean(19);
             var metadataExpiresAt = Nullable<DateTimeOffset>(reader, 20);
             var bodyDocId = Nullable<Guid>(reader, 21);
             var bodySeq = Nullable<long>(reader, 22);
@@ -176,7 +178,7 @@ public sealed class WorkspaceSyncStore(
             return new SnapshotRow(seq, new NativeItemSnapshot(id, workspaceId, revision, parentId, type, title, siblingSeq,
                 lifecycle, properties, schema, views, recurrence, noDelete, noChildren, managedBy, createdAt, updatedAt,
                 canWrite, locked, !locked, metadataExpiresAt, bodyDocId, bodySeq is { } head ? Decimal(head) : null, file,
-                reader.IsDBNull(29) ? null : Domain.Items.ItemSettings.Read(reader.GetString(29))));
+                reader.IsDBNull(29) ? null : Domain.Items.ItemSettings.Read(reader.GetString(29)), viewsVersion));
         }
 
         private static T? Nullable<T>(NpgsqlDataReader reader, int ordinal) where T : struct =>

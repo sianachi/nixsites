@@ -72,6 +72,13 @@ public static class PropertyErrors
     /// <summary>A field or view identifier was claimed after a wizard draft was opened.</summary>
     public static NixError SetupCollision(string detail) => new(SetupCollisionCode, detail);
 
+    /// <summary>Stable code for replacing a schema that is no longer the one the caller edited from.</summary>
+    public const string SchemaBaseChangedCode = "items.schema_base_changed";
+
+    /// <summary>The schema changed after the caller read it.</summary>
+    public static NixError SchemaBaseChanged() =>
+        new(SchemaBaseChangedCode, "The schema changed since you last saw it. Read it again before saving.");
+
     /// <summary>The view configuration changed after the caller read it.</summary>
     public static NixError ViewVersionConflict() =>
         new(ViewVersionConflictCode, "The view configuration changed. Read it again before saving.");

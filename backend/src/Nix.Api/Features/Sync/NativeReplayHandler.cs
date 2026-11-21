@@ -39,6 +39,7 @@ public sealed class NativeReplayHandler(
             return Result.Failure<NativeReplayResponse>(new NixError(InvalidCode, "The replay operation is invalid."));
         }
         if (request.Kind == "move" && !tokenScope.MayAdminister
+            || payload.Request is { HumanOnly: true } && tokenScope.IsPetTurn
             || !await permissions.CanWriteWorkspaceAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Success(Refused(request));
@@ -68,22 +69,37 @@ public sealed class NativeReplayHandler(
             return Result.Success(saved);
         }
 
-        // Existing commands take topology before item locks, then their mutation trigger takes the sync counter.
-        await topology.AcquireWorkspaceTopologyAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false);
-        if (request.Kind is not ("create" or "daily-note"))
+        if (request.Kind == "request")
         {
-            var actual = await receipts.LockItemRevisionAsync(command.WorkspaceId, ItemId.From(request.ItemId), cancellationToken).ConfigureAwait(false);
-            var current = await CurrentAsync(command.WorkspaceId, request.ItemId, cancellationToken).ConfigureAwait(false);
-            if (actual is null || current is null
+            // The commands behind a request take their own locks (a habit's advisory lock first, then
+            // topology and the row), so taking topology and the row here first could deadlock with the
+            // direct routes. Only existence in this workspace and read access are checked here.
+            if (!await receipts.ItemExistsAsync(command.WorkspaceId, ItemId.From(request.ItemId), cancellationToken).ConfigureAwait(false)
+                || await CurrentAsync(command.WorkspaceId, request.ItemId, cancellationToken).ConfigureAwait(false) is null
                 || !await locks.MayReadBodyAsync(ItemId.From(request.ItemId), cancellationToken).ConfigureAwait(false))
             {
                 return await RememberAsync(command, fingerprint, Refused(request), cancellationToken).ConfigureAwait(false);
             }
-            if (request.Kind != "request" && actual != expected)
+        }
+        else
+        {
+            // Existing commands take topology before item locks, then their mutation trigger takes the sync counter.
+            await topology.AcquireWorkspaceTopologyAsync(command.WorkspaceId, cancellationToken).ConfigureAwait(false);
+            if (request.Kind is not ("create" or "daily-note"))
             {
-                return await RememberAsync(command, fingerprint,
-                    new NativeReplayResponse(request.OperationId, "conflict", request.ItemId, current.Revision, current, ConflictCode),
-                    cancellationToken).ConfigureAwait(false);
+                var actual = await receipts.LockItemRevisionAsync(command.WorkspaceId, ItemId.From(request.ItemId), cancellationToken).ConfigureAwait(false);
+                var current = await CurrentAsync(command.WorkspaceId, request.ItemId, cancellationToken).ConfigureAwait(false);
+                if (actual is null || current is null
+                    || !await locks.MayReadBodyAsync(ItemId.From(request.ItemId), cancellationToken).ConfigureAwait(false))
+                {
+                    return await RememberAsync(command, fingerprint, Refused(request), cancellationToken).ConfigureAwait(false);
+                }
+                if (actual != expected)
+                {
+                    return await RememberAsync(command, fingerprint,
+                        new NativeReplayResponse(request.OperationId, "conflict", request.ItemId, current.Revision, current, ConflictCode),
+                        cancellationToken).ConfigureAwait(false);
+                }
             }
         }
         if (payload.ParentId is { } parent)
@@ -110,7 +126,8 @@ public sealed class NativeReplayHandler(
         if (result.IsFailure)
         {
             var conflict = result.Error.Code is "items.move_would_create_cycle" or "items.lifecycle_conflict"
-                or "items.idempotency_conflict" or "items.schema_violation";
+                or "items.idempotency_conflict" or "items.schema_violation"
+                or "views.version_conflict" or "items.schema_base_changed" or "items.protection_base_changed";
             var current = conflict ? await CurrentAsync(command.WorkspaceId, request.ItemId, cancellationToken).ConfigureAwait(false) : null;
             response = new NativeReplayResponse(request.OperationId, conflict ? "conflict" : "refused",
                 request.ItemId, current?.Revision, current,
@@ -157,7 +174,7 @@ public sealed class NativeReplayHandler(
         }
         if (command.Request.Kind == "request")
         {
-            return await payload.Request!(dispatcher, cancellationToken).ConfigureAwait(false);
+            return await payload.Request!.Apply(dispatcher, cancellationToken).ConfigureAwait(false);
         }
         if (command.Request.Kind == "archive")
         {
@@ -182,7 +199,7 @@ public sealed class NativeReplayHandler(
         new(request.OperationId, "refused", request.ItemId, null, null, code);
 
     private sealed record Payload(string? Type, string? Title, Guid? ParentId, Guid? AfterId, JsonObject? Properties, string? Date,
-        NativeReplayRequests.Apply? Request = null);
+        NativeReplayRequests.Route? Request = null);
 
     private static bool TryParse(NativeReplayRequest request, out Payload payload, out long expected)
     {

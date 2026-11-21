@@ -17,6 +17,11 @@ internal static class NativeReplaySql
         FOR UPDATE;
         """;
 
+    internal const string ItemExists = """
+        SELECT id FROM item
+        WHERE tenant_id = @tenant_id AND workspace_id = @workspace_id AND id = @item_id;
+        """;
+
     internal const string ItemRevision = """
         SELECT COALESCE((SELECT seq FROM workspace_sync_item_revision
             WHERE tenant_id = @tenant_id AND workspace_id = @workspace_id AND item_id = @item_id), 0);

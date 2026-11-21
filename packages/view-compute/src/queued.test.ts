@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   fixtureId,
+  fixtureItems,
   fixtureRequest,
   fixtureSource,
   idsToKeys,
@@ -105,5 +106,44 @@ describe('queued recurrence completions', () => {
     };
     expect(await answerWith(fixture, without, [queued])).toEqual(fixture.expected);
     expect(await answerWith(fixture, without, [])).not.toEqual(fixture.expected);
+  });
+});
+
+describe('queued rows keep their place in the workspace list', () => {
+  it("puts a new check-in after the habit's other rows and before the items that follow", async () => {
+    const fixture = find('habit', 'habit: daily quantity target');
+    const items = fixtureItems(fixture);
+    const habit = items.find((item) => item.id === fixtureId('habit'));
+    if (habit === undefined) throw new Error('no habit');
+    const later = { ...habit, id: fixtureId('later'), parentId: null, title: 'Later' };
+    const before = { ...habit, id: fixtureId('before'), parentId: null, title: 'Before' };
+    const all = [before, ...items, later];
+    const source = withQueuedRequests(
+      {
+        item: () => Promise.resolve(undefined),
+        workspaceItems: () => Promise.resolve(all),
+        now: () => new Date(),
+      },
+      () =>
+        Promise.resolve([
+          {
+            operationId: fixtureId('new'),
+            itemId: habit.id,
+            method: 'PUT',
+            path: `/api/v1/items/${habit.id}/habit/check-ins/2026-03-04`,
+            body: { completed: true, quantity: null },
+          },
+        ]),
+    );
+    const listed = (await source.workspaceItems(habit.workspaceId)).map((item) => item.id);
+    expect(listed).toEqual([
+      fixtureId('before'),
+      fixtureId('habit'),
+      fixtureId('c1'),
+      fixtureId('c2'),
+      fixtureId('c3'),
+      fixtureId('new'),
+      fixtureId('later'),
+    ]);
   });
 });
