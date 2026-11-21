@@ -144,7 +144,8 @@ async function fetchFile(
     ),
     signal,
   );
-  if (sha256(bytes) !== file.sha256) {
+  const digest = sha256(bytes);
+  if (digest !== file.sha256) {
     throw new JobError('site_image_corrupt', 'A file did not match its recorded digest.');
   }
   try {
@@ -152,7 +153,7 @@ async function fetchFile(
       ? {
           ...none,
           name: file.fileName,
-          download: prepareDownload(bytes, file.mediaType, file.fileName ?? 'download'),
+          download: prepareDownload(bytes, file.mediaType, file.fileName ?? 'download', digest),
         }
       : { ...none, name: file.fileName, image: stripImageMetadata(bytes, file.mediaType) };
   } catch (error) {
@@ -299,7 +300,7 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
         `The renderer produced a file type Core does not accept (${extension}).`,
       );
     }
-    const digest = sha256(file.bytes);
+    const digest = file.sha256 ?? sha256(file.bytes);
     return file.kind === 'asset'
       ? {
           path: `${digest}.${extension}`,
@@ -331,6 +332,7 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
         (targets[offset] as { uploadUrl: string }).uploadUrl,
         file.bytes,
         signal,
+        file.sha256,
       ),
     );
   }

@@ -63,10 +63,15 @@ export function safeFileName(name: string, ext: string): string {
   return `${base.length === 0 ? 'download' : base}.${ext}`;
 }
 
+/**
+ * `verifiedSha256` is the hex digest the caller already computed over exactly these `bytes`; it is
+ * carried instead of hashing again. Pass it only for the same bytes, never for transformed ones.
+ */
 export function prepareDownload(
   bytes: Uint8Array,
   mediaType: string,
   fileName: string,
+  verifiedSha256?: string,
 ): PublishedDownload {
   const type = downloadType(mediaType);
   if (type === null) {
@@ -105,7 +110,7 @@ export function prepareDownload(
   const ext = EXTENSIONS[type];
   return {
     bytes,
-    sha256: createHash('sha256').update(bytes).digest('hex'),
+    sha256: verifiedSha256 ?? createHash('sha256').update(bytes).digest('hex'),
     ext,
     mediaType: type,
     isVideo,

@@ -12,6 +12,14 @@ import { downloadHeaders } from './serve.js';
 const bytes = (text: string) => new TextEncoder().encode(text);
 
 describe('prepareDownload', () => {
+  it('carries a verified digest for the same bytes and hashes changed bytes afresh', () => {
+    const original = bytes('%PDF-1.4\noriginal');
+    const carried = prepareDownload(original, 'application/pdf', 'a.pdf').sha256;
+    expect(prepareDownload(original, 'application/pdf', 'a.pdf', carried).sha256).toBe(carried);
+    const changed = prepareDownload(bytes('%PDF-1.4\nchanged'), 'application/pdf', 'a.pdf');
+    expect(changed.sha256).not.toBe(carried);
+  });
+
   it('publishes a PDF, a text file and a CSV under fixed types and safe names', () => {
     const pdf = prepareDownload(bytes('%PDF-1.4\n'), 'application/pdf', 'Annual Report (2026).pdf');
     expect(pdf).toMatchObject({

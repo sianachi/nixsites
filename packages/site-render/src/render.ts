@@ -76,6 +76,8 @@ export interface RenderedFile {
   readonly mediaType: string;
   readonly bytes: Uint8Array;
   readonly kind: 'build' | 'asset';
+  /** Hex digest of `bytes`, when already known (a download carries its verified digest). */
+  readonly sha256?: string;
 }
 
 export interface RenderedSite {
@@ -371,8 +373,10 @@ export function renderSite(input: RenderSiteInput): RenderedSite {
     mediaType: string,
     content: string | Uint8Array,
     kind: RenderedFile['kind'] = 'build',
+    knownSha256?: string,
   ) => {
     files.push({
+      ...(knownSha256 === undefined ? {} : { sha256: knownSha256 }),
       path,
       mediaType,
       bytes: typeof content === 'string' ? encoder.encode(content) : content,
@@ -475,7 +479,7 @@ export function renderSite(input: RenderSiteInput): RenderedSite {
   for (const path of [...usedDownloads].sort()) {
     const file = byPath.get(path.split('/')[2] ?? '');
     if (file !== undefined) {
-      add(path, file.mediaType, file.bytes, 'asset');
+      add(path, file.mediaType, file.bytes, 'asset', file.sha256);
     }
   }
 
@@ -483,7 +487,7 @@ export function renderSite(input: RenderSiteInput): RenderedSite {
   const index = files.map((file) => ({
     path: file.path,
     kind: file.kind,
-    sha256: sha256(file.bytes),
+    sha256: file.sha256 ?? sha256(file.bytes),
     bytes: file.bytes.length,
   }));
   add(
