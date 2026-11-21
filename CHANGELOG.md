@@ -110,6 +110,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- The desktop app signs in when the server adds a parameter to the sign-in callback, as the iOS app
+  already did. The callback still has to name the server you signed in on, and carry one code.
 - The one-line install works again when the latest release is older than the installer on `main`:
   it stopped at "set NIX_OIDC_ISSUER" on a new machine. A release is now installed by the copy of
   the installer that shipped in it.

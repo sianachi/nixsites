@@ -4,15 +4,98 @@ import { createServer } from 'node:http';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 
-import { deliverCallback, external, launch, newProfile, sql, store } from './harness.mjs';
+import {
+  bundleForPage,
+  deliverCallback,
+  external,
+  launch,
+  newProfile,
+  sql,
+  store,
+} from './harness.mjs';
 
 // The real app against a fake server: what the unit tests' injected fetch and direct calls cannot
 // show (contextBridge, real frames, Electron's own fetch and navigation events). No sign-in needed.
 
 const profile = newProfile();
 const seen = [];
+// What the fake Core answers the sync routes with; the page changes it through /__mode/<name>.
+let coreMode = 'ok';
+const syncWorkspace = '00000000-0000-4000-8000-000000000001';
+const syncItem = {
+  id: '00000000-0000-4000-8000-000000000002',
+  workspaceId: syncWorkspace,
+  parentId: null,
+  type: 'prose',
+  title: 'Original',
+  seq: 1,
+  revision: '1',
+  lifecycleState: 'active',
+  properties: {},
+  schema: null,
+  views: null,
+  recurrence: null,
+  noDelete: false,
+  noChildren: false,
+  managedBy: null,
+  createdAt: '2026-10-13T12:00:00Z',
+  updatedAt: null,
+  canWrite: true,
+  locked: false,
+  canPersistBody: false,
+  metadataExpiresAt: null,
+  bodyDocId: null,
+  bodyHeadSeq: null,
+  file: null,
+};
+const serverTime = '2026-10-13T12:00:00Z';
+const json = (res, status, body, type = 'application/json') => {
+  res.statusCode = status;
+  res.setHeader('content-type', type);
+  res.end(typeof body === 'string' ? body : JSON.stringify(body));
+};
+const coreAnswer = (req, res) => {
+  const route = req.url.split('?')[0];
+  if (route.startsWith('/__mode/')) {
+    coreMode = route.slice('/__mode/'.length);
+    return json(res, 200, {});
+  }
+  const sync = route.match(/^\/api\/v1\/workspaces\/[^/]+\/sync\/(\w+)$/)?.[1];
+  if (sync === undefined) return false;
+  // A proxy's refusal is plain text; Core's own is a problem document with a `code`.
+  if (coreMode === 'proxy403' && sync === 'changes') return json(res, 403, 'blocked', 'text/plain');
+  if (coreMode === 'core403' && sync === 'changes')
+    return json(res, 403, { code: 'forbidden' }, 'application/problem+json');
+  if (sync === 'snapshot')
+    return json(res, 200, {
+      boundary: '1',
+      nextCursor: null,
+      complete: true,
+      resync: false,
+      items: [syncItem],
+      serverTime,
+    });
+  if (sync === 'changes')
+    return json(res, 200, { cursor: '1', hasMore: false, resync: false, items: [], serverTime });
+  if (sync === 'reconcile') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      const ids = JSON.parse(body).itemIds;
+      json(res, 200, {
+        items: ids.includes(syncItem.id) ? [syncItem] : [],
+        removed: [],
+        serverTime,
+      });
+    });
+    return true;
+  }
+  if (sync === 'replay' && coreMode === 'replay422') return json(res, 422, { code: 'invalid' });
+  return json(res, 404, {});
+};
 const server = createServer((req, res) => {
   seen.push({ url: req.url, cookie: req.headers.cookie ?? null });
+  if (coreAnswer(req, res) !== false) return;
   if (req.url === '/auth/session') {
     res.setHeader('content-type', 'application/json');
     return res.end('{"configured":true}');
@@ -380,6 +463,49 @@ await check('the picker cannot open an unsaved origin', async () => {
     window.nixPicker({ op: 'open', origin: 'https://evil.example' }).catch((e) => e),
   );
   assert.equal(r, 'Unknown server.');
+});
+// The sync logic is the web app's own (the server serves it); what is desktop's is the store under
+// it and the shell around it. So the real engine and mirror are bundled into the page and run over
+// the real `nixStore` bridge against a fake Core: the 16 November sync rules must hold there too.
+await check(
+  "sync: the real engine runs over the desktop store, and a refusal that is not Core's keeps the copy",
+  async () => {
+    await page.evaluate(() => document.querySelector('li .open').click());
+    await page.waitForURL(`${origin}/`);
+    await page.addScriptTag({
+      content: await bundleForPage(join(import.meta.dirname, 'sync-page.ts')),
+    });
+    const run = (scenario) => page.evaluate((s) => globalThis.__sync(s), scenario);
+    const ok = await run('refused');
+    assert.equal(ok.queued.items, 1);
+    assert.deepEqual(ok.first.failedWorkspaces, []);
+    assert.deepEqual(ok.second.failedWorkspaces, ['Work']);
+    assert.equal(ok.after.items, 1, 'a proxy 403 must not wipe the copy');
+  },
+);
+await check("sync: Core's own refusal still removes the workspace copy", async () => {
+  const r = await page.evaluate(() => globalThis.__sync('core-refused'));
+  assert.equal(r.queued.items, 1);
+  assert.equal(r.after.items, 0);
+});
+await check('sync: a queued operation Core will never take becomes a conflict', async () => {
+  const r = await page.evaluate(() => globalThis.__sync('queue'));
+  assert.equal(r.queued.outbox, 1);
+  assert.deepEqual(r.after, { items: 1, outbox: 0, conflicts: 1 });
+});
+await check('sync: a pass cut short by a timed-out transaction is run again', async () => {
+  const r = await page.evaluate(() => globalThis.__sync('interrupted'));
+  assert.equal(r.first.more, true);
+  assert.deepEqual(r.first.failedWorkspaces, []);
+  assert.equal(r.second.more, false);
+  assert.deepEqual(r.second.failedWorkspaces, []);
+  assert.equal(r.after.items, 1);
+  // Back to the picker, where the next check expects to start.
+  await page.evaluate(() => {
+    void window.Capacitor.nativePromise('NixShell', 'showPicker');
+  });
+  await page.waitForURL(/picker\/index\.html/);
+  await page.waitForSelector('li .open');
 });
 await check('a server that stops answering lands on the picker with a reason', async () => {
   await page.evaluate(() => document.querySelector('li .open').click());
