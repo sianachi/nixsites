@@ -320,6 +320,7 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `items.body_too_large`
 - `items.invalid_idempotency_key`
 - `items.read_only`
+- `items.schema_base_changed`
 - `items.sibling_not_in_destination`
 - `linear.invalid_status`
 - `locks.busy`

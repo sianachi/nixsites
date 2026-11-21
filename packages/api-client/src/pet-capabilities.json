@@ -695,12 +695,12 @@
     "path": "/api/v1/workspaces/{workspaceId}/pet-protection"
   },
   "GetWorkspaceSyncChanges": {
-    "mode": "internal",
+    "mode": "human",
     "method": "GET",
     "path": "/api/v1/workspaces/{workspaceId}/sync/changes"
   },
   "GetWorkspaceSyncSnapshot": {
-    "mode": "internal",
+    "mode": "human",
     "method": "GET",
     "path": "/api/v1/workspaces/{workspaceId}/sync/snapshot"
   },
@@ -1233,7 +1233,7 @@
     "path": "/api/v1/workspaces/{workspaceId}"
   },
   "ReconcileWorkspaceSync": {
-    "mode": "internal",
+    "mode": "human",
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/sync/reconcile"
   },
@@ -1349,7 +1349,7 @@
     "path": "/api/v1/items/{itemId}/view-setups/{viewId}"
   },
   "ReplayNativeOperation": {
-    "mode": "internal",
+    "mode": "human",
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/sync/replay"
   },
