@@ -702,16 +702,27 @@ public sealed class NativeReplayHttpTests(NixPostgresFixture fixture) : IAsyncLi
     }
 
     [Fact]
-    public async Task A_pet_turn_cannot_change_protection_through_replay_though_it_can_replay_a_check_in()
+    public async Task A_pet_turn_token_is_refused_on_every_sync_route()
     {
         var humanBearer = await AccessTokenAsync();
         var habit = await CreateHabitAsync(humanBearer);
         var pet = _factory.Services.GetRequiredService<SelfIssuedTokenService>()
             .MintPetTurn(PrincipalId.From(M0SchemaSeed.Alpha.PrincipalId), TenantId.From(M0SchemaSeed.Alpha.TenantId), Guid.NewGuid(), PetTurnMode.Write);
-        using var refused = await SendAsync(HttpMethod.Post, ReplayPath, pet, RequestOperation(habit, "PUT", $"/api/v1/items/{habit:D}/protection",
-            new { noDelete = true, @base = new { noDelete = false, noChildren = false } }));
-        Assert.Equal(HttpStatusCode.OK, refused.StatusCode);
-        AssertRefused(await ReadAsync(refused), "sync.refused");
+        var root = $"/api/v1/workspaces/{M0SchemaSeed.Alpha.WorkspaceId:D}/sync";
+        foreach (var (method, path, body) in new (HttpMethod, string, object?)[]
+        {
+            (HttpMethod.Get, $"{root}/snapshot?limit=10", null),
+            (HttpMethod.Get, $"{root}/changes?after=0&limit=10", null),
+            (HttpMethod.Post, $"{root}/reconcile", new { itemIds = new[] { habit } }),
+            (HttpMethod.Post, $"{root}/replay", RequestOperation(habit, "PUT", CheckInPath(habit), new { completed = true, quantity = (int?)null })),
+            (HttpMethod.Post, $"{root}/replay", RequestOperation(habit, "PUT", $"/api/v1/items/{habit:D}/protection",
+                new { noDelete = true, @base = new { noDelete = false, noChildren = false } })),
+        })
+        {
+            using var response = await SendAsync(method, path, pet, body);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        Assert.Equal(0L, await CheckInCountAsync(habit));
         Assert.False((await ItemAsync(habit, humanBearer))["noDelete"]!.GetValue<bool>());
     }
 
@@ -808,6 +819,134 @@ public sealed class NativeReplayHttpTests(NixPostgresFixture fixture) : IAsyncLi
         // Refused like any violation; the device records every refusal as a change that could not be applied.
         Assert.Equal("refused", response["status"]!.GetValue<string>());
         Assert.Equal("properties.invalid", response["code"]!.GetValue<string>());
+    }
+
+    private static JsonObject WithBody(JsonObject operation, string json)
+    {
+        operation["payload"]!["body"] = JsonNode.Parse(json);
+        return operation;
+    }
+
+    [Theory]
+    [InlineData("views", "{\"views\":[{\"id\":\"v\",\"name\":\"V\",\"kind\":\"list\",\"sortDescending\":false,\"extra\":1}],\"default\":\"v\",\"expectedVersion\":\"x\"}")]
+    [InlineData("views", "{\"views\":[{\"id\":\"v\",\"Name\":\"V\",\"kind\":\"list\",\"sortDescending\":false}],\"default\":\"v\",\"expectedVersion\":\"x\"}")]
+    [InlineData("schema", "{\"properties\":[{\"key\":\"a\",\"label\":\"A\",\"type\":\"text\",\"required\":false,\"extra\":1}],\"inherit\":true,\"base\":{\"properties\":[],\"inherit\":true}}")]
+    [InlineData("schema", "{\"properties\":[],\"inherit\":true,\"base\":{\"properties\":[{\"key\":\"a\",\"label\":\"A\",\"type\":\"text\",\"required\":false,\"extra\":1}],\"inherit\":true}}")]
+    [InlineData("schema", "{\"properties\":[{\"key\":\"a\",\"Label\":\"A\",\"type\":\"text\",\"required\":false}],\"inherit\":true,\"base\":{\"properties\":[],\"inherit\":true}}")]
+    public async Task Nested_unknown_or_miscased_members_are_refused_on_replay(string part, string json)
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Tasks", null);
+        var path = $"/api/v1/items/{itemId:D}/{part}";
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer, WithBody(RequestOperation(itemId, "PUT", path, null), json));
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        Assert.Equal("sync.invalid_replay", (await ReadAsync(replay))["code"]!.GetValue<string>());
+    }
+
+    [Theory]
+    [InlineData("schema", "{\"properties\":[null],\"inherit\":true}")]
+    [InlineData("schema", "{\"properties\":[{\"key\":\"a\",\"type\":\"text\",\"required\":false}],\"inherit\":true}")]
+    [InlineData("schema", "{\"properties\":null,\"inherit\":true}")]
+    [InlineData("views", "{\"views\":[null],\"default\":\"document\"}")]
+    public async Task A_null_entry_or_a_missing_label_is_refused_directly_and_on_replay_without_a_server_error(string part, string json)
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Tasks", null);
+        var path = $"/api/v1/items/{itemId:D}/{part}";
+        using var direct = await SendAsync(HttpMethod.Put, path, bearer, JsonNode.Parse(json));
+        Assert.True((int)direct.StatusCode is >= 400 and < 500, $"direct answered {(int)direct.StatusCode}");
+
+        var replayed = part == "schema"
+            ? $"{{\"properties\":{JsonNode.Parse(json)!["properties"]?.ToJsonString() ?? "null"},\"inherit\":true,\"base\":{{\"properties\":[null],\"inherit\":true}}}}"
+            : $"{{\"views\":[null],\"default\":\"document\",\"expectedVersion\":\"x\"}}";
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer, WithBody(RequestOperation(itemId, "PUT", path, null), replayed));
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        // The same shapes, null entry in the base only, and a missing label there.
+        if (part == "schema")
+        {
+            using var inBase = await SendAsync(HttpMethod.Post, ReplayPath, bearer, WithBody(RequestOperation(itemId, "PUT", path, null),
+                "{\"properties\":[],\"inherit\":true,\"base\":{\"properties\":[{\"key\":\"a\",\"type\":\"text\",\"required\":false}],\"inherit\":true}}"));
+            Assert.Equal(HttpStatusCode.BadRequest, inBase.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task The_snapshot_views_version_matches_the_direct_read_and_is_withheld_while_locked()
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Board", null);
+        var path = $"/api/v1/items/{itemId:D}/views";
+        using var set = await SendAsync(HttpMethod.Put, path, bearer,
+            new { views = new[] { new { id = "list", name = "All", kind = "list", sortDescending = false } }, @default = "list" });
+        Assert.Equal(HttpStatusCode.OK, set.StatusCode);
+        using var read = await SendAsync(HttpMethod.Get, path, bearer);
+        var version = (await ReadAsync(read))["version"]!.GetValue<string>();
+        Assert.Equal(version, (await SnapshotAsync(itemId)).ViewsVersion);
+
+        var parent = await CreateAsync(bearer, "Locked parent", null);
+        var child = await CreateAsync(bearer, "Child", parent);
+        using var lockedSelf = await SendAsync(HttpMethod.Put, $"/api/v1/items/{itemId:D}/lock", bearer, new { password = "native-replay-password" });
+        Assert.Equal(HttpStatusCode.NoContent, lockedSelf.StatusCode);
+        using var lockedParent = await SendAsync(HttpMethod.Put, $"/api/v1/items/{parent:D}/lock", bearer, new { password = "native-replay-password" });
+        Assert.Equal(HttpStatusCode.NoContent, lockedParent.StatusCode);
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var listed = await work.Resolve<IWorkspaceSync>().ReconcileAsync(
+            WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId), [itemId, child], Cancellation);
+        // Whatever a locked item or one under a locked ancestor still returns carries no version.
+        Assert.All(listed.Items, snapshot => Assert.Null(snapshot.ViewsVersion));
+    }
+
+    [Theory]
+    [InlineData("protection")]
+    [InlineData("views")]
+    [InlineData("schema")]
+    public async Task A_locked_item_is_refused_for_protection_views_and_schema_replays(string part)
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Locked", null);
+        using var locked = await SendAsync(HttpMethod.Put, $"/api/v1/items/{itemId:D}/lock", bearer, new { password = "native-replay-password" });
+        Assert.Equal(HttpStatusCode.NoContent, locked.StatusCode);
+        var body = part switch
+        {
+            "protection" => "{\"noDelete\":true,\"base\":{\"noDelete\":false,\"noChildren\":false}}",
+            "views" => "{\"views\":[],\"default\":\"document\",\"expectedVersion\":\"x\"}",
+            _ => "{\"properties\":[],\"inherit\":true,\"base\":{\"properties\":[],\"inherit\":true}}",
+        };
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            WithBody(RequestOperation(itemId, "PUT", $"/api/v1/items/{itemId:D}/{part}", null), body));
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        AssertRefused(await ReadAsync(replay), "sync.refused");
+    }
+
+    [Fact]
+    public async Task A_stored_schema_with_every_kind_of_property_is_a_valid_base_without_a_spurious_conflict()
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Rich", null);
+        var path = $"/api/v1/items/{itemId:D}/schema";
+        var rich = JsonNode.Parse("""
+            {"inherit":false,"properties":[
+              {"key":"name","label":"Name","type":"text","required":true,"unique":true},
+              {"key":"status","label":"Status","type":"select","options":["open","done"],"required":false},
+              {"key":"who","label":"Who","type":"select","required":false,"choiceSource":{"field":"name"}},
+              {"key":"amount","label":"Amount","type":"number","required":false},
+              {"key":"triple","label":"Triple","type":"formula","expression":"[amount] * 3","required":false},
+              {"key":"total","label":"Total","type":"rollup","aggregate":"sum","source":"amount","required":false}
+            ]}
+            """)!;
+        using var set = await SendAsync(HttpMethod.Put, path, bearer, rich);
+        Assert.Equal(HttpStatusCode.OK, set.StatusCode);
+
+        // What a device holds is the stored document from the snapshot, sent back as the base unchanged.
+        var stored = (await SnapshotAsync(itemId)).Schema!;
+        var next = JsonNode.Parse(rich.ToJsonString())!.AsObject();
+        next["properties"]!.AsArray().Add(JsonNode.Parse("{\"key\":\"extra\",\"label\":\"Extra\",\"type\":\"text\",\"required\":false}"));
+        next["base"] = JsonNode.Parse(stored.ToJsonString());
+        var operation = RequestOperation(itemId, "PUT", path, null);
+        operation["payload"]!["body"] = next;
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer, operation);
+        var response = await ReadAsync(replay);
+        Assert.True(response["status"]!.GetValue<string>() == "applied", response.ToJsonString());
     }
 
     private async Task<Guid> CreateHabitAsync(string bearer, Guid? parent = null)
