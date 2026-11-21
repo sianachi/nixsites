@@ -38,7 +38,7 @@ public sealed class ExpirySource(
     IItemTree tree,
     IPermissionResolver permissions,
     IWorkspaceMembershipIgnoringLock membership,
-    IMutedContainerChecker mutedContainers,
+    MutedContainerChecker mutedContainers,
     IPrincipalStatusChecker principalStatus,
     INotificationWriter notifications,
     IItemLocks locks,

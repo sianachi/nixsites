@@ -26,7 +26,7 @@ public sealed class HabitReminderSource(
     IReminderCandidateFinder candidates,
     IItemTree tree,
     IWorkspaceMembershipIgnoringLock membership,
-    IMutedContainerChecker mutedContainers,
+    MutedContainerChecker mutedContainers,
     IPrincipalStatusChecker principalStatus,
     INotificationWriter notifications,
     IItemLocks locks,
