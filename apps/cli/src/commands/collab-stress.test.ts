@@ -10,21 +10,13 @@ import {
   encodeNotice,
   encodePersisted as serverEncodePersisted,
 } from '../../../collab/src/ws/protocol.ts';
-import {
-  checkMarkers,
-  connect,
-  decodePersisted,
-  encodePersisted,
-  guardTarget,
-} from './collab-stress.ts';
+import { checkMarkers, connect, encodePersisted, guardTarget } from './collab-stress.ts';
 
 const endpoints = (apiUrl: string, collabUrl: string) => ({ apiUrl, collabUrl, mediaUrl: apiUrl });
 
 describe('collab-edit framing', () => {
-  it('encodes the persisted barrier exactly as the collab service does, and decodes it back', () => {
+  it('encodes the persisted barrier exactly as the collab service does', () => {
     expect(encodePersisted('nxabc-c0-e1')).toEqual(serverEncodePersisted('nxabc-c0-e1'));
-    expect(decodePersisted(encodePersisted('nxabc-c0-e1'))).toBe('nxabc-c0-e1');
-    expect(decodePersisted(new Uint8Array([0, 1, 0]))).toBeNull();
   });
 });
 

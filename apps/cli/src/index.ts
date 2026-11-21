@@ -92,7 +92,7 @@ export function buildProgram(): Command {
     .description('Check public Core HTTP liveness and service identity without signing in.')
     .requiredOption('--api-url <url>', "Core's origin, e.g. http://localhost:5014")
     .action((options: { apiUrl: string }, command: Command) =>
-      act(command, (profile, output) => readHealth(options.apiUrl, output)),
+      act(command, (_profile, output) => readHealth(options.apiUrl, output)),
     );
 
   registerConversationCommands(program, act);

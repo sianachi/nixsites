@@ -46,18 +46,6 @@ export function encodePersisted(barrierId: string): Uint8Array {
   return encoding.toUint8Array(encoder);
 }
 
-/** The barrier id of a `MESSAGE_PERSISTED` frame, or null for any other frame. */
-export function decodePersisted(frame: Uint8Array): string | null {
-  try {
-    const decoder = decoding.createDecoder(frame);
-    return decoding.readVarUint(decoder) === MESSAGE_PERSISTED
-      ? decoding.readVarString(decoder)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 function isLoopback(url: string): boolean {
   const host = new URL(url).hostname;
   return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
