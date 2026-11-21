@@ -36,6 +36,8 @@ public static class PetTurnPolicy
         (Rule(@"/approval/(approve|reject)$"), true),
         (Rule(@"^/api/v1/workspaces/[^/]+/agent-policy$"), true),
         (Rule(@"^/api/v1/workspaces/[^/]+/(password|unlock|join)(/|$)"), true),
+        // A device's offline copy holds what a pet may not see; replay would skip the per-item checks.
+        (Rule(@"^/api/v1/workspaces/[^/]+/sync(/|$)"), true),
         // An item lock password is typed by a person too; a leaked write token must not lock owners out.
         (Rule(@"^/api/v1/items/[^/]+/(lock|unlock|protection|pet-protection)(/|$)"), true),
     ];
