@@ -1,7 +1,9 @@
-#pragma warning disable CA2227 // Justification: template plan DTOs are the wire shape the handlers read and tests edit in place, as the Go structs were.
+#pragma warning disable CA2227 // Justification: template plan DTOs are the wire shape the handlers read and tests edit in place.
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Nix.Workers.Archive;
 
@@ -10,18 +12,25 @@ namespace Nix.Workers.Import;
 /// <summary>The additive profile carried by a reusable .nix archive.</summary>
 public sealed class TemplateProfile
 {
+    [JsonRequired]
     public string Kind { get; set; } = string.Empty;
 
+    [JsonRequired]
     public int Version { get; set; }
 
+    [JsonRequired]
     public string Key { get; set; } = string.Empty;
 
+    [JsonRequired]
     public string Name { get; set; } = string.Empty;
 
+    [JsonRequired]
     public string Description { get; set; } = string.Empty;
 
+    [JsonRequired]
     public bool IncludeBody { get; set; }
 
+    [JsonRequired]
     public bool IncludeChildren { get; set; }
 
     public TemplateInitialization? Initialization { get; set; }
@@ -40,12 +49,16 @@ public sealed class TemplateInitialization
 
 public sealed class TemplateInitializationInput
 {
+    [JsonRequired]
     public string Key { get; set; } = string.Empty;
 
+    [JsonRequired]
     public string Label { get; set; } = string.Empty;
 
+    [JsonRequired]
     public string Type { get; set; } = string.Empty;
 
+    [JsonRequired]
     public bool Required { get; set; }
 
     public string? DefaultValue { get; set; }
@@ -99,7 +112,8 @@ public sealed class TemplatePlan
 
     public int ViewCount { get; set; }
 
-    public IList<TemplateItem> Items { get; set; } = [];
+    [AllowNull]
+    public IList<TemplateItem> Items { get; set => field = value ?? []; } = [];
 
     public IList<FileVersionEntry>? Files { get; set; }
 }
@@ -160,7 +174,7 @@ public static partial class TemplatePlanner
         {
             throw new ImportPlanException("a template archive cannot contain omissions or loss");
         }
-        if (GoJson.IsNull(manifest.Profile))
+        if (WorkerJson.IsNull(manifest.Profile))
         {
             throw new ImportPlanException("the Nix archive does not contain a template profile");
         }
@@ -203,9 +217,9 @@ public static partial class TemplatePlanner
         foreach (var (entry, bundle) in parsed.Items)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var views = GoJson.Nullable(bundle.Views);
+            var views = WorkerJson.Nullable(bundle.Views);
             plan.ViewCount += CountViews(views) ?? throw new ImportPlanException($"Nix item {entry.Id}: template item views are invalid");
-            var body = GoJson.Nullable(bundle.Body);
+            var body = WorkerJson.Nullable(bundle.Body);
             if (body is not null)
             {
                 plan.BodyCount++;
@@ -230,7 +244,7 @@ public static partial class TemplatePlanner
                 Schema = NixImport.ImportSchema(entry.Id == manifest.Root, manifest.RootEffectiveSchema, bundle.Schema),
                 Views = views,
                 Body = body,
-                Recurrence = GoJson.Nullable(bundle.Recurrence),
+                Recurrence = WorkerJson.Nullable(bundle.Recurrence),
             });
         }
         if (ValidatePlan(plan, limits) is { } planError)
@@ -272,14 +286,14 @@ public static partial class TemplatePlanner
         {
             throw new ImportPlanException(PlanInvalid, "template plan checksum does not match the preview");
         }
-        if (!GoJson.DepthWithin(body, limits.MaxDepth + 8, out var depthError))
+        if (!WorkerJson.DepthWithin(body, limits.MaxDepth + 8))
         {
-            throw new ImportPlanException(PlanInvalid, "template plan JSON: " + depthError);
+            throw new ImportPlanException(PlanInvalid, "template plan JSON is malformed or exceeds the configured depth limit");
         }
         TemplatePlan plan;
         try
         {
-            plan = TemplateJson.ReadPlan(GoJson.Parse(body));
+            plan = TemplateJson.ReadPlan(WorkerJson.Parse(body));
         }
         catch (JsonException exception)
         {
@@ -297,7 +311,7 @@ public static partial class TemplatePlanner
     {
         try
         {
-            return TemplateJson.ReadInitialization(GoJson.Parse(body));
+            return TemplateJson.ReadInitialization(WorkerJson.Parse(body));
         }
         catch (JsonException exception)
         {
@@ -358,7 +372,7 @@ public static partial class TemplatePlanner
             {
                 return "template initialization rules contain duplicate targets";
             }
-            var hasValue = !GoJson.IsNull(rule.Value);
+            var hasValue = !WorkerJson.IsNull(rule.Value);
             var hasInput = rule.InputKey is not null;
             var hasOffset = rule.OffsetDays is not null;
             var hasTime = rule.TimeOfDay is not null;
@@ -476,7 +490,7 @@ public static partial class TemplatePlanner
         var rootHasBody = false;
         foreach (var item in plan.Items)
         {
-            if (!NixArchive.SafeId(item.SourceId) || !NixImport.ValidIntegerString(item.Seq) || !BoundedText(item.Title, 500, true) || !BoundedText(item.ItemType, 64, false) || !GoJson.IsObject(item.Properties))
+            if (!NixArchive.SafeId(item.SourceId) || !NixImport.ValidIntegerString(item.Seq) || !BoundedText(item.Title, 500, true) || !BoundedText(item.ItemType, 64, false) || !WorkerJson.IsObject(item.Properties))
             {
                 return "template plan contains an invalid item envelope";
             }
@@ -489,7 +503,7 @@ public static partial class TemplatePlanner
             {
                 rootCount++;
                 rootType = item.ItemType;
-                rootHasBody = !GoJson.IsNull(item.Body);
+                rootHasBody = !WorkerJson.IsNull(item.Body);
             }
             else
             {
@@ -512,23 +526,23 @@ public static partial class TemplatePlanner
             {
                 foreach (var (name, value) in (ReadOnlySpan<(string, JsonElement?)>)[("properties", item.Properties), ("schema", item.Schema), ("views", item.Views), ("body", item.Body), ("recurrence", item.Recurrence)])
                 {
-                    if (!GoJson.DepthWithin(value, limits.MaxDepth, out var depthError))
+                    if (!WorkerJson.DepthWithin(value, limits.MaxDepth))
                     {
-                        return $"template plan item {item.SourceId} {name}: {depthError}";
+                        return $"template plan item {item.SourceId} {name}: JSON nesting exceeds the configured depth limit";
                     }
                 }
             }
-            if (!GoJson.IsNull(item.Schema) && !GoJson.IsObject(item.Schema))
+            if (!WorkerJson.IsNull(item.Schema) && !WorkerJson.IsObject(item.Schema))
             {
                 return "template plan contains an invalid property schema";
             }
-            if (!GoJson.IsNull(item.Views) && !GoJson.IsObject(item.Views))
+            if (!WorkerJson.IsNull(item.Views) && !WorkerJson.IsObject(item.Views))
             {
                 return "template plan contains invalid views";
             }
-            if (!GoJson.IsNull(item.Body))
+            if (!WorkerJson.IsNull(item.Body))
             {
-                if (!GoJson.IsObject(item.Body) || (limits is not null && GoJson.RawLength(item.Body) > limits.MaxBodyBytes))
+                if (!WorkerJson.IsObject(item.Body) || (limits is not null && WorkerJson.RawLength(item.Body) > limits.MaxBodyBytes))
                 {
                     return "template plan contains an invalid or oversized body";
                 }
@@ -558,15 +572,13 @@ public static partial class TemplatePlanner
     /// <summary>The number of views in a snapshot, or null when it is malformed.</summary>
     private static int? CountViews(JsonElement? value)
     {
-        if (GoJson.IsNull(value))
+        if (WorkerJson.IsNull(value))
         {
             return 0;
         }
         try
         {
-            var snapshot = GoFields.Require(value!.Value, true, "views", "default");
-            snapshot.String("default");
-            return snapshot.List("views", element => element)?.Count;
+            return WorkerJson.Read(value!.Value, ImportJsonContext.Default.NixViewsSnapshot)?.Views?.Count;
         }
         catch (JsonException)
         {

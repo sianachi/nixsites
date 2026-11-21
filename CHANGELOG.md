@@ -20,6 +20,8 @@ follows semantic versioning (`0.x` pre-1.0).
   those three requests, never an arbitrary one, and applies them as the signed-in person.
 - The offline copy in the native apps keeps files up to 100 MB. A larger file stays online-only: it opens
   with a connection, and Settings > About counts how many are left out instead of reporting them as failed.
+- The iPhone and iPad app syncs in the background. When iOS gives the app time while it is off
+  screen and still open, it sends waiting changes and fetches new ones.
 - Shared links to the public pages show a preview card. The web app document carries Open Graph and
   Twitter card tags for the title, description, image, URL and site name, using
   `apps/web/public/nix-og.png` (1200 by 630).
@@ -80,9 +82,38 @@ follows semantic versioning (`0.x` pre-1.0).
 - The phone and desktop apps show how many offline changes are still waiting to sync, say in plain
   words why a change was not applied, and Settings > About shows when the offline copy last synced
   with a Sync now button.
+- A pet can use an OpenAI API key (Settings > Pets > OpenAI (API key)), separate from the ChatGPT
+  sign-in. The model list comes from the key, and messages are billed to it. Migration
+  `PetProviderOpenAi` allows the new provider in the stored-keys check.
 
 ### Changed
 
+- When a session ends on its own in the iOS or desktop app, changes that were not sent yet are no
+  longer deleted. The offline copy stays on the device, closed, and the changes are sent when the
+  same account signs in again. Signing out, signing in with another account, or the account being
+  closed still removes it.
+- The iOS and Android apps use the Nix icon and launch screen.
+- A note opened from a board opens on its conversation, and notes under an item with a board view
+  have comments on unless someone has switched them off. Existing board cards are switched on once
+  when upgrading. A card with comments off offers a "Turn on comments" button in its Comments tab.
+- The explorer shows progress while a dropped folder is read and while its files upload. Uploads
+  start as files are found, not after the whole folder has been read.
+- Attachments bulk actions and undo send a bounded number of requests at a time, and a slow answer
+  for an earlier filter no longer replaces the current list.
+- Saving an item as a template with its examples captures from the preview without reading
+  every child first, so large trees save faster.
+- The note footer, status bar and outline share one scan of the note per edit.
+- Opening a deep link in the explorer loads the ancestor levels up to four at a time.
+- Revisiting an EPUB chapter, or reusing its images and stylesheets, no longer rescans the book.
+- Pet chat no longer reparses earlier replies for generated UI on every streaming update.
+- The graph and template studio screens load on first visit, which shrinks the initial download.
+- Site builds hash an unchanged published download once, and read each page's export bundle as
+  a stream, which lowers peak memory on large sites.
+- Companion history listing reads archives asynchronously, so a large history no longer blocks
+  the Node host.
+- The Node host stops every started role within 10 seconds after a partial startup or a failed
+  stop, and serves role-aware `/readyz` and `/healthz` on port 8099 (`NIX_NODE_HOST_PORT`). The
+  Kubernetes readiness probe uses it.
 - The landing page's macOS, Windows and Linux buttons read "Early build, from source". iOS and
   Android still read "Coming soon".
 - New installs no longer include Zitadel and need one hostname instead of two. `NIX_AUTH_MODE`
@@ -125,6 +156,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - A note edited offline in the native apps no longer replays the same edits when reopened after they have synced: the
   device clears its draft journal entries once the server has them.
+- The desktop app signs in when the server adds a parameter to the sign-in callback, as the iOS app
+  already did. The callback still has to name the server you signed in on, and carry one code.
 - The one-line install works again when the latest release is older than the installer on `main`:
   it stopped at "set NIX_OIDC_ISSUER" on a new machine. A release is now installed by the copy of
   the installer that shipped in it.
@@ -193,6 +226,11 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Security
 
+- The iOS and desktop apps refuse a database function that a server's page could use to read or
+  call raw memory addresses in the app.
+- The iOS app refuses database settings that switch off its journal. With the journal off, a
+  server's page could write its own bytes into the search index's internal storage.
+- Updated hono and @hono/node-server in the CLI's MCP dependency tree to patched releases.
 - Pet search keeps excerpts from marked or locked notes out of workspace and folder results.
 - Pet job briefs and observations are screened for recognizable credentials before they reach
   the planning model.

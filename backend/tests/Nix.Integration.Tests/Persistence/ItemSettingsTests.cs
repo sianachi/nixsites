@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Nix.Abstractions;
+using Nix.Domain.Identity;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
@@ -244,8 +245,72 @@ public sealed class ItemSettingsTests(NixPostgresFixture fixture) : IAsyncLifeti
         }
     }
 
-    private async Task<Item> CreateNoteAsync(Guid who) =>
-        (await SendAsync<CreateItem, Item>(who, new CreateItem(Workspace, "note", "Plan", null, null))).Value;
+    [Fact]
+    public async Task Notes_under_a_board_get_comments_on_unless_someone_has_set_them()
+    {
+        const string Board = """{"views":[{"id":"b","name":"Board","kind":"board"}],"default":"b"}""";
+        var owner = M0SchemaSeed.Alpha.PrincipalId;
+        var parent = await CreateNoteAsync(owner);
+        var plain = await CreateNoteAsync(owner, parent.Id);
+        var switchedOff = await CreateNoteAsync(owner, parent.Id);
+        Assert.False(ItemSettings.Read(plain.Settings).Comments);
+        Assert.True((await SetAsync(owner, switchedOff.Id, comments: false)).IsSuccess);
+
+        // Gaining a board view turns the untouched child on and leaves the explicit off alone.
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(As(owner), Cancellation))
+        {
+            await work.Resolve<IItemTree>().UpdateViewsAsync(
+                parent.Id, Board, PrincipalId.From(owner), DateTimeOffset.UtcNow, Cancellation);
+            Assert.True(ItemSettings.Read((await work.Resolve<IItemTree>().FindAsync(plain.Id, Cancellation))!.Settings).Comments);
+            Assert.False(ItemSettings.Read((await work.Resolve<IItemTree>().FindAsync(switchedOff.Id, Cancellation))!.Settings).Comments);
+            await work.CommitAsync(Cancellation);
+        }
+
+        // A card created on the board starts on, and says so in the create answer.
+        var card = await CreateNoteAsync(owner, parent.Id);
+        Assert.True(ItemSettings.Read(card.Settings).Comments);
+        Assert.True((await CommentAsync(owner, card.Id, "First")).IsSuccess);
+
+        // A workspace default that says off wins over the board.
+        await SetDefaultsAsync(owner, ItemSettings.Patch(false, null, null, null));
+        Assert.False(ItemSettings.Read((await CreateNoteAsync(owner, parent.Id)).Settings).Comments);
+    }
+
+    [Fact]
+    public async Task The_upgrade_switches_comments_on_for_existing_board_cards_nobody_has_set()
+    {
+        var options = new DbContextOptionsBuilder<NixDbContext>().UseNpgsql(fixture.MigratorConnectionString).Options;
+        await using var context = new NixDbContext(options);
+        var migrator = context.GetService<IMigrator>();
+        await migrator.MigrateAsync("20261119100000_PetDecisionNotices", Cancellation);
+        try
+        {
+            var ids = new[] { M0SchemaSeed.Alpha.ItemId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+            await context.Database.ExecuteSqlRawAsync(
+                "UPDATE item SET views = '{{\"views\":[{{\"id\":\"b\",\"kind\":\"board\"}}],\"default\":\"b\"}}'::jsonb WHERE id = {0}; "
+                + "INSERT INTO item (id, tenant_id, workspace_id, parent_id, type, seq, lifecycle_state, settings, created_by, last_modified_by, created_at, last_modified_at) "
+                + "SELECT v.id, i.tenant_id, i.workspace_id, i.id, v.type, v.seq, 'active', v.settings::jsonb, i.created_by, i.last_modified_by, now(), now() "
+                + "FROM item i, (VALUES ({1}, 'note', 2000, NULL), ({2}, 'note', 2001, '{{\"comments\":false}}'), ({3}, 'file', 2002, NULL)) "
+                + "AS v(id, type, seq, settings) WHERE i.id = {0}",
+                [ids[0], ids[1], ids[2], ids[3]], Cancellation);
+
+            await migrator.MigrateAsync(targetMigration: null, cancellationToken: Cancellation);
+
+            async Task<string> SettingsAsync(Guid id) => await context.Database
+                .SqlQueryRaw<string>("SELECT COALESCE(settings::text, '') AS \"Value\" FROM item WHERE id = {0}", id)
+                .SingleAsync(Cancellation);
+            Assert.True(ItemSettings.Read(await SettingsAsync(ids[1])).Comments);
+            Assert.False(ItemSettings.Read(await SettingsAsync(ids[2])).Comments);
+            Assert.Equal(string.Empty, await SettingsAsync(ids[3]));
+        }
+        finally
+        {
+            await migrator.MigrateAsync(targetMigration: null, cancellationToken: Cancellation);
+        }
+    }
+
+    private async Task<Item> CreateNoteAsync(Guid who, ItemId? parent = null) =>
+        (await SendAsync<CreateItem, Item>(who, new CreateItem(Workspace, "note", "Plan", parent, null))).Value;
 
     private Task<Result<Item>> SetAsync(
         Guid who, ItemId item, bool? comments = null, bool? fullWidth = null) =>

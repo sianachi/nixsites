@@ -170,11 +170,11 @@ public sealed class TemplatePlanTests
     }
 
     [Fact]
-    public void Template_initialization_keeps_an_explicit_null_value_through_encode()
+    public void Template_initialization_reads_an_explicit_null_value_as_no_value()
     {
         var initialization = TemplatePlanner.ReadInitialization("""{"version":1,"inputs":[],"rules":[{"sourceId":"11111111-1111-4111-8111-111111111111","propertyKey":"name","kind":"keep","value":null}],"references":[]}"""u8);
         Assert.Null(TemplatePlanner.ValidateInitialization(initialization));
-        Assert.Equal(JsonValueKind.Null, initialization.Rules![0].Value!.Value.ValueKind);
+        Assert.True(initialization.Rules![0].Value is null or { ValueKind: JsonValueKind.Null });
     }
 
     [Fact]

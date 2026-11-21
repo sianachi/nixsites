@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 using System.Xml;
 using Nix.Workers.Files;
 using Nix.Workers.Render;
@@ -8,9 +9,9 @@ using Nix.Workers.Render;
 namespace Nix.Workers.Import;
 
 /// <summary>
-/// Reads a DOCX into a nix-render tree plus its embedded images as child files. XML is read the
-/// way Go's encoding/xml read it: no namespace resolution (an undeclared prefix is not an error),
-/// names matched by their local part, and any DTD or entity declaration refused outright.
+/// Reads a DOCX into a nix-render tree plus its embedded images as child files. XML is read
+/// through <see cref="SafeXml"/>: names matched by their local part, and any document type refused
+/// outright, so no entity can expand.
 /// </summary>
 internal static class DocxImport
 {
@@ -22,7 +23,7 @@ internal static class DocxImport
         using var archive = ImportArchive.Open(source.Path, limits, allowNixFileVersions: false);
         var document = ImportArchive.ReadEntry(archive, "word/document.xml", limits.MaxBodyBytes);
         var maxDepth = Math.Max(limits.MaxDepth, 32);
-        if (GoXml.Validate(document, maxDepth, MaxXmlTokens) is { } documentError)
+        if (SafeXml.Validate(document, maxDepth, MaxXmlTokens) is { } documentError)
         {
             throw new ImportPlanException("DOCX document.xml: " + documentError);
         }
@@ -61,7 +62,7 @@ internal static class DocxImport
         }
         var items = new List<ImportItem>
         {
-            ImportPlanner.NoteItem("root", null, 0, source.Title, new ImportBody { Encoding = "nix-render", Render = GoJson.Parse(RenderJson.Write(parser.Blocks)) }),
+            ImportPlanner.NoteItem("root", null, 0, source.Title, new ImportBody { Encoding = "nix-render", Render = WorkerJson.Parse(RenderJson.Write(parser.Blocks)) }),
             ImportPlanner.OriginalItem(source, MediaType, 0),
         };
         for (var index = 0; index < parser.UsedAssets.Count; index++)
@@ -134,16 +135,16 @@ internal static class DocxImport
             return (links, images);
         }
         var body = ImportArchive.ReadEntry(archive, name, Math.Min(limits.MaxEntryBytes, 2 << 20));
-        if (GoXml.Validate(body, maxDepth, MaxXmlTokens) is { } error)
+        if (SafeXml.Validate(body, maxDepth, MaxXmlTokens) is { } error)
         {
             throw new ImportPlanException("DOCX relationships: " + error);
         }
-        foreach (var relation in GoXml.Tree(body).Children("Relationship"))
+        foreach (var relation in SafeXml.Root(body).Children("Relationship"))
         {
-            var id = relation.Attribute("Id");
-            var type = relation.Attribute("Type");
-            var target = relation.Attribute("Target");
-            var mode = relation.Attribute("TargetMode");
+            var id = relation.AttributeValue("Id");
+            var type = relation.AttributeValue("Type");
+            var target = relation.AttributeValue("Target");
+            var mode = relation.AttributeValue("TargetMode");
             if (type.EndsWith("/hyperlink", StringComparison.Ordinal) && string.Equals(mode, "External", StringComparison.OrdinalIgnoreCase))
             {
                 if (ExternalLink(target) is { } link)
@@ -237,18 +238,18 @@ internal static class DocxImport
             return result;
         }
         var body = ImportArchive.ReadEntry(archive, name, Math.Min(limits.MaxEntryBytes, 2 << 20));
-        if (GoXml.Validate(body, maxDepth, MaxXmlTokens) is { } error)
+        if (SafeXml.Validate(body, maxDepth, MaxXmlTokens) is { } error)
         {
             throw new ImportPlanException("DOCX numbering: " + error);
         }
-        var document = GoXml.Tree(body);
+        var document = SafeXml.Root(body);
         var abstracts = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var value in document.Children("abstractNum"))
         {
             var format = "bullet";
             foreach (var level in value.Children("lvl"))
             {
-                var levelNumber = XmlInt(level.Attribute("ilvl"));
+                var levelNumber = XmlInt(level.AttributeValue("ilvl"));
                 var levelFormat = string.Empty;
                 foreach (var numberFormat in level.Children("numFmt"))
                 {
@@ -260,7 +261,7 @@ internal static class DocxImport
                     break;
                 }
             }
-            abstracts[value.Attribute("abstractNumId")] = format;
+            abstracts[value.AttributeValue("abstractNumId")] = format;
         }
         foreach (var value in document.Children("num"))
         {
@@ -269,7 +270,7 @@ internal static class DocxImport
             {
                 abstractId = reference.FindAttribute("val") ?? abstractId;
             }
-            result[value.Attribute("numId")] = abstracts.GetValueOrDefault(abstractId) ?? string.Empty;
+            result[value.AttributeValue("numId")] = abstracts.GetValueOrDefault(abstractId) ?? string.Empty;
         }
         return result;
     }
@@ -352,18 +353,26 @@ internal static class DocxImport
         {
             try
             {
-                foreach (var token in GoXml.Tokens(document))
+                using var reader = SafeXml.Open(document);
+                while (reader.Read())
                 {
-                    switch (token.Kind)
+                    switch (reader.NodeType)
                     {
-                        case GoXml.TokenKind.Start:
-                            Start(token);
+                        case XmlNodeType.Element:
+                            var name = reader.LocalName;
+                            var empty = reader.IsEmptyElement;
+                            Start(name, reader);
+                            if (empty)
+                            {
+                                End(name);
+                            }
                             break;
-                        case GoXml.TokenKind.End:
-                            End(token.Name);
+                        case XmlNodeType.EndElement:
+                            End(reader.LocalName);
                             break;
-                        case GoXml.TokenKind.Text when _inText && _paragraph is not null:
-                            AppendText(token.Text);
+                        case XmlNodeType.Text or XmlNodeType.CDATA or XmlNodeType.Whitespace or XmlNodeType.SignificantWhitespace
+                            when _inText && _paragraph is not null:
+                            AppendText(reader.Value);
                             break;
                     }
                 }
@@ -374,9 +383,9 @@ internal static class DocxImport
             }
         }
 
-        private void Start(GoXml.Token token)
+        private void Start(string name, XmlReader element)
         {
-            switch (token.Name)
+            switch (name)
             {
                 case "tbl":
                     _tableDepth++;
@@ -417,29 +426,29 @@ internal static class DocxImport
                 case "b" or "i" or "u" or "strike" or "dstrike":
                     if (_inRunProps)
                     {
-                        _runMarks.Add(token.Name switch { "b" => "bold", "i" => "italic", "u" => "underline", _ => "strike" });
+                        _runMarks.Add(name switch { "b" => "bold", "i" => "italic", "u" => "underline", _ => "strike" });
                     }
                     break;
                 case "pStyle":
                     if (_inParaProps && _paragraph is not null)
                     {
-                        _paragraph.Style = token.Attribute("val");
+                        _paragraph.Style = element.AttributeValue("val");
                     }
                     break;
                 case "numId":
                     if (_inParaProps && _paragraph is not null)
                     {
-                        _paragraph.NumId = token.Attribute("val");
+                        _paragraph.NumId = element.AttributeValue("val");
                     }
                     break;
                 case "ilvl":
                     if (_inParaProps && _paragraph is not null)
                     {
-                        _paragraph.Level = Atoi(token.Attribute("val"));
+                        _paragraph.Level = Atoi(element.AttributeValue("val"));
                     }
                     break;
                 case "hyperlink":
-                    _hyperlink = links.GetValueOrDefault(token.Attribute("id")) ?? string.Empty;
+                    _hyperlink = links.GetValueOrDefault(element.AttributeValue("id")) ?? string.Empty;
                     break;
                 case "t":
                     _inText = true;
@@ -451,7 +460,7 @@ internal static class DocxImport
                     _paragraph?.Runs.Add(new Run { Text = "\n" });
                     break;
                 case "blip":
-                    _paragraph?.Images.Add(token.Attribute("embed"));
+                    _paragraph?.Images.Add(element.AttributeValue("embed"));
                     break;
                 case "gridSpan" or "vMerge":
                     Lose("Merged DOCX table cells are flattened into ordinary cells.");
@@ -655,32 +664,36 @@ internal static class DocxImport
     }
 }
 
-/// <summary>Writes a render tree as Go's render.Document.Encode did, omitempty and all.</summary>
+/// <summary>Writes a render tree, leaving out every member that holds nothing.</summary>
 internal static class RenderJson
 {
-    public static byte[] Write(IList<Block> blocks)
+    public static byte[] Write(IList<Block> blocks) => WorkerJson.Write(writer =>
     {
-        var writer = new GoJsonWriter();
-        writer.Begin().Name("format").String(RenderTree.Format).Name("version").Number(RenderTree.Version).Name("blocks");
+        writer.WriteStartObject();
+        writer.WriteString("format", RenderTree.Format);
+        writer.WriteNumber("version", RenderTree.Version);
+        writer.WritePropertyName("blocks");
         Blocks(writer, blocks);
-        writer.Name("losses").BeginArray().EndArray().End();
-        return writer.ToUtf8();
-    }
+        writer.WriteStartArray("losses");
+        writer.WriteEndArray();
+        writer.WriteEndObject();
+    });
 
-    private static void Blocks(GoJsonWriter writer, IList<Block>? blocks)
+    private static void Blocks(Utf8JsonWriter writer, IList<Block>? blocks)
     {
         if (blocks is null)
         {
-            writer.Null();
+            writer.WriteNullValue();
             return;
         }
-        writer.BeginArray();
+        writer.WriteStartArray();
         foreach (var block in blocks)
         {
-            writer.Begin().Name("kind").String(block.Kind);
+            writer.WriteStartObject();
+            writer.WriteString("kind", block.Kind);
             if (block.Runs is { Count: > 0 })
             {
-                writer.Name("runs");
+                writer.WritePropertyName("runs");
                 Runs(writer, block.Runs);
             }
             OptionalNumber(writer, "level", block.Level);
@@ -688,7 +701,7 @@ internal static class RenderJson
             OptionalString(writer, "tone", block.Tone);
             if (block.Language is not null)
             {
-                writer.Name("language").String(block.Language);
+                writer.WriteString("language", block.Language);
             }
             OptionalString(writer, "text", block.Text);
             OptionalString(writer, "renderFile", block.RenderFile);
@@ -698,97 +711,100 @@ internal static class RenderJson
             OptionalNumber(writer, "width", block.Width);
             if (block.Ordered)
             {
-                writer.Name("ordered").Bool(true);
+                writer.WriteBoolean("ordered", true);
             }
             OptionalNumber(writer, "start", block.Start);
             if (block.Items is { Count: > 0 })
             {
-                writer.Name("items").BeginArray();
+                writer.WriteStartArray("items");
                 foreach (var item in block.Items)
                 {
-                    writer.Begin();
+                    writer.WriteStartObject();
                     if (item.Checked is { } isChecked)
                     {
-                        writer.Name("checked").Bool(isChecked);
+                        writer.WriteBoolean("checked", isChecked);
                     }
-                    writer.Name("blocks");
+                    writer.WritePropertyName("blocks");
                     Blocks(writer, item.Blocks);
-                    writer.End();
+                    writer.WriteEndObject();
                 }
-                writer.EndArray();
+                writer.WriteEndArray();
             }
             if (block.Rows is { Count: > 0 })
             {
-                writer.Name("rows").BeginArray();
+                writer.WriteStartArray("rows");
                 foreach (var row in block.Rows)
                 {
-                    writer.Begin().Name("header").Bool(row.Header).Name("cells");
+                    writer.WriteStartObject();
+                    writer.WriteBoolean("header", row.Header);
+                    writer.WritePropertyName("cells");
                     if (row.Cells is null)
                     {
-                        writer.Null();
+                        writer.WriteNullValue();
                     }
                     else
                     {
-                        writer.BeginArray();
+                        writer.WriteStartArray();
                         foreach (var cell in row.Cells)
                         {
                             Runs(writer, cell);
                         }
-                        writer.EndArray();
+                        writer.WriteEndArray();
                     }
-                    writer.End();
+                    writer.WriteEndObject();
                 }
-                writer.EndArray();
+                writer.WriteEndArray();
             }
             if (block.Summary is { Count: > 0 })
             {
-                writer.Name("summary");
+                writer.WritePropertyName("summary");
                 Runs(writer, block.Summary);
             }
             if (block.Blocks is { Count: > 0 })
             {
-                writer.Name("blocks");
+                writer.WritePropertyName("blocks");
                 Blocks(writer, block.Blocks);
             }
-            writer.End();
+            writer.WriteEndObject();
         }
-        writer.EndArray();
+        writer.WriteEndArray();
     }
 
-    private static void Runs(GoJsonWriter writer, IList<Run>? runs)
+    private static void Runs(Utf8JsonWriter writer, IList<Run>? runs)
     {
         if (runs is null)
         {
-            writer.Null();
+            writer.WriteNullValue();
             return;
         }
-        writer.BeginArray();
+        writer.WriteStartArray();
         foreach (var run in runs)
         {
-            writer.Begin().Name("text").String(run.Text);
+            writer.WriteStartObject();
+            writer.WriteString("text", run.Text);
             if (run.Styles is { Count: > 0 })
             {
-                writer.Name("styles").Strings(run.Styles);
+                WorkerJson.WriteStrings(writer, "styles", run.Styles);
             }
             OptionalString(writer, "href", run.Href);
-            writer.End();
+            writer.WriteEndObject();
         }
-        writer.EndArray();
+        writer.WriteEndArray();
     }
 
-    private static void OptionalString(GoJsonWriter writer, string name, string? value)
+    private static void OptionalString(Utf8JsonWriter writer, string name, string? value)
     {
         if (!string.IsNullOrEmpty(value))
         {
-            writer.Name(name).String(value);
+            writer.WriteString(name, value);
         }
     }
 
-    private static void OptionalNumber(GoJsonWriter writer, string name, int value)
+    private static void OptionalNumber(Utf8JsonWriter writer, string name, int value)
     {
         if (value != 0)
         {
-            writer.Name(name).Number(value);
+            writer.WriteNumber(name, value);
         }
     }
 }

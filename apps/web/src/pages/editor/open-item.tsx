@@ -56,7 +56,7 @@ import { ItemDialogs, type ItemDialogName } from './item-dialogs';
 import { ItemHeader } from './item-header';
 import { ItemPanels } from './item-panels';
 import { InlineCommentCard } from '../../panel/inline-comment-card';
-import { CommentsPane } from '../../panel/comments-pane';
+import { CommentsOff, CommentsPane } from '../../panel/comments-pane';
 import type { ItemProperties } from '@nix/web-collections/properties/use-item-properties';
 import { bodyNoun, clockTime } from './lock-copy';
 import { useItemViewActions } from './use-item-view-actions';
@@ -158,7 +158,8 @@ export function OpenItem({
   const details = useItemProperties(itemId);
   // Off until the note's settings switch comments on; Core refuses new ones and the threads stay hidden.
   const commentsOn = details.item?.settings?.comments === true;
-  const boardComments = bodyKind === 'note' && defaultToComments && commentsOn;
+  // A board card opens on its conversation even while comments are off; the tab then offers to turn them on.
+  const boardComments = bodyKind === 'note' && defaultToComments;
   const previewTab = contextView
     ? { id: CONTEXT_VIEW, label: contextView.label, icon: PanelTop }
     : boardComments
@@ -768,7 +769,17 @@ export function OpenItem({
             (showingComments ? (
               <section aria-label="Comments" className={paneScroller}>
                 <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-8">
-                  <CommentsPane key={itemId} itemId={itemId} conversation />
+                  {commentsOn ? (
+                    <CommentsPane key={itemId} itemId={itemId} conversation />
+                  ) : details.item === null ? null : (
+                    <CommentsOff
+                      onTurnOn={async () => {
+                        const refused = await details.setSettings({ comments: true });
+                        if (refused === null) readComments(itemId).refresh();
+                        return refused;
+                      }}
+                    />
+                  )}
                 </div>
               </section>
             ) : undefined)

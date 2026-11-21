@@ -185,6 +185,72 @@ it('opens a board note on Comments inside the item dialog and can switch to Docu
   expect(screen.getByRole('region', { name: 'Container' })).toBeVisible();
 });
 
+it('opens a board note on Comments while comments are off and turns them on there', async () => {
+  const board = item({
+    id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+    title: 'Project',
+    hasChildren: true,
+  });
+  const card = item({
+    id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
+    title: 'Plan',
+    parentId: board.id,
+    properties: { stage: 'Doing' },
+  });
+  const stage = {
+    key: 'stage',
+    label: 'Stage',
+    type: 'select',
+    options: ['Doing'],
+    required: false,
+  };
+  stubCoreApi({
+    items: [board, card],
+    views: {
+      [board.id]: {
+        views: [aView({ name: 'Board', kind: 'board', groupBy: stage.key })],
+        default: 'view-1',
+      },
+    },
+    schemas: { [board.id]: { properties: [stage], declared: [stage], inherit: true } },
+  });
+  const fetch = globalThis.fetch;
+  let on = false;
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (url.endsWith(`/items/${card.id}/settings`) && init?.method === 'PUT') {
+      expect(init.body).toContain('"comments":true');
+      on = true;
+      return Promise.resolve(
+        Response.json({
+          ...card,
+          settings: {
+            comments: true,
+            suggesting: false,
+            reviewStates: false,
+            fullWidth: false,
+            withholdFromPets: false,
+          },
+        }),
+      );
+    }
+    if (on && url.endsWith(`/items/${card.id}/comments`))
+      return Promise.resolve(Response.json({ revision: 1, threads: [], canComment: true }));
+    return fetch(input, init);
+  });
+  const user = userEvent.setup();
+  renderAt(<App />, `/?item=${board.id}&view=view-1`);
+  await user.click(
+    await within(await screen.findByRole('region', { name: 'Container' })).findByRole('button', {
+      name: 'Plan',
+    }),
+  );
+  const dialog = within(await screen.findByRole('dialog', { name: 'Plan' }));
+  await user.click(await dialog.findByRole('button', { name: 'Turn on comments' }));
+  expect(dialog.getByRole('button', { name: 'Comments' })).toHaveAttribute('aria-current', 'page');
+  expect(await dialog.findByRole('textbox', { name: 'Write a comment' })).toBeVisible();
+});
+
 it('closes an item dialog when focusing the graph at the same address', async () => {
   const note = item({ id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', title: 'Plan' });
   stubCoreApi({ items: [note] });

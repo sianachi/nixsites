@@ -4,22 +4,34 @@ import SQLite3
 
 private let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-/// Pragmas the page's SQL may run (packages/sync-sqlite opens with these); every other pragma is
-/// refused, as are ATTACH/DETACH (another origin's database is a file next to this one) and raw
-/// transaction statements (the store's begin/commit gate owns transactions).
-private let pagePragmas: Set<String> = ["foreign_keys", "journal_mode", "synchronous", "secure_delete"]
+/// Pragmas the page's SQL may read, and the values it may set them to (packages/sync-sqlite opens
+/// with these); every other pragma or value is refused, as are ATTACH/DETACH (another origin's
+/// database is a file next to this one) and raw transaction statements (the store's begin/commit
+/// gate owns transactions). The values matter: with the journal off, a rollback cannot undo pages
+/// already written, which lets a page put its own bytes into the search index's internal tables.
+private let pagePragmas: [String: Set<String>] = [
+    "foreign_keys": ["on", "off", "1", "0"],
+    "journal_mode": ["wal"],
+    "synchronous": ["full", "normal", "2", "1"],
+    "secure_delete": ["on", "1"],
+]
 
 /// Set while the page's SQL is being prepared; the store's own statements run with it unset.
 final class PageGate { var active = false }
 
 private let authorize: @convention(c) (UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?, UnsafePointer<CChar>?,
-                                       UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Int32 = { context, action, first, _, _, _ in
+                                       UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Int32 = { context, action, first, second, _, _ in
     guard let context, Unmanaged<PageGate>.fromOpaque(context).takeUnretainedValue().active else { return SQLITE_OK }
     switch action {
     case SQLITE_ATTACH, SQLITE_DETACH, SQLITE_TRANSACTION, SQLITE_SAVEPOINT:
         return SQLITE_DENY
     case SQLITE_PRAGMA:
-        return pagePragmas.contains(first.map { String(cString: $0).lowercased() } ?? "") ? SQLITE_OK : SQLITE_DENY
+        guard let values = pagePragmas[first.map { String(cString: $0).lowercased() } ?? ""] else { return SQLITE_DENY }
+        guard let value = second.map({ String(cString: $0).lowercased() }) else { return SQLITE_OK }
+        return values.contains(value) ? SQLITE_OK : SQLITE_DENY
+    case SQLITE_FUNCTION:
+        // With a bound argument it returns, or registers and later calls, a raw native pointer.
+        return second.map { String(cString: $0).lowercased() } == "fts3_tokenizer" ? SQLITE_DENY : SQLITE_OK
     default:
         return SQLITE_OK
     }

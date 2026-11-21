@@ -28,7 +28,7 @@ const petProfileFields = z.object({
   /** Default for the conversation's "Apply without asking" switch; stored pets without it read as off. */
   applyWithoutAsking: z.boolean().default(false),
   /** Which model provider this pet speaks to; stored pets without it read as ChatGPT. */
-  provider: z.enum(['chatgpt', 'anthropic', 'openrouter']).default('chatgpt'),
+  provider: z.enum(['chatgpt', 'anthropic', 'openrouter', 'openai']).default('chatgpt'),
 });
 
 const petProfileSchema = z.preprocess((value) => {
@@ -53,7 +53,7 @@ export const petProviderSchema = petProfileFields.shape.provider;
 
 /** One stored provider key as the owner may see it: never the key, only its last characters. */
 export const petProviderKeySchema = z.object({
-  provider: z.enum(['anthropic', 'openrouter']),
+  provider: z.enum(['anthropic', 'openrouter', 'openai']),
   keyHint: z.string().max(8),
   savedAt: z.iso.datetime({ offset: true }),
 });
@@ -102,7 +102,7 @@ export const petMessageSchema = z.object({
 });
 
 export const petConnectionSchema = z.object({
-  provider: z.enum(['chatgpt', 'anthropic', 'openrouter']).default('chatgpt'),
+  provider: z.enum(['chatgpt', 'anthropic', 'openrouter', 'openai']).default('chatgpt'),
   status: z.enum(['unavailable', 'disconnected', 'connecting', 'connected', 'error']),
   reason: z.string(),
   canConnect: z.boolean(),

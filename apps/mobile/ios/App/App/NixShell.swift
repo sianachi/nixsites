@@ -11,6 +11,7 @@ class ShellViewController: CAPBridgeViewController {
         let controller = bridge?.webView?.configuration.userContentController
         controller?.addScriptMessageHandler(NixStoreHandler(), contentWorld: .page, name: NixStoreHandler.name)
         if let webView = bridge?.webView {
+            BackgroundSync.webView = webView
             controller?.addScriptMessageHandler(NixSignInHandler(webView: webView), contentWorld: .page, name: NixSignInHandler.name)
         }
         if let localURL = bridge?.config.localURL {
