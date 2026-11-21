@@ -673,3 +673,105 @@ describe('a workspace a password has closed', () => {
     ).toBe(404);
   });
 });
+
+describe('habit and recurrence writes offline', () => {
+  const HABIT = '0199a000-0000-7000-8000-0000000000a1';
+  const TASK = '0199a000-0000-7000-8000-0000000000a2';
+  const send = (method: string, body?: unknown): RequestInit => ({
+    method,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const withItems = async (run: (outbox: OutboxOperation[]) => Promise<void>) => {
+    const added = [
+      item(HABIT, {
+        type: 'page',
+        revision: '5',
+        properties: {
+          $habit_frequency: 'daily',
+          $habit_weekdays: [],
+          $habit_timezone: 'UTC',
+          $habit_start_date: '2020-01-01',
+          $habit_target: 8,
+          $habit_unit: 'glasses',
+          $habit_reminder_time: null,
+        },
+      }),
+      item(TASK, { revision: '6', recurrence: { freq: 'daily', interval: 1 } }),
+    ];
+    items.push(...added);
+    try {
+      await run([]);
+    } finally {
+      for (const entry of added) items.splice(items.indexOf(entry), 1);
+    }
+  };
+
+  it('queues a check-in as a request and shows it in the habit view at once', async () => {
+    await withItems(async (outbox) => {
+      const { get } = setup({ store: fakeStore({}, { outbox }) });
+      const day = '/api/v1/items/' + HABIT + '/habit/check-ins/2026-03-01';
+      const put = await get(day, send('PUT', { completed: true, quantity: null }));
+      expect(put.status).toBe(200);
+      expect(outbox).toEqual([
+        expect.objectContaining({
+          kind: 'request',
+          itemId: HABIT,
+          expectedRevision: null,
+          payload: { method: 'PUT', path: day, body: { completed: true, quantity: null } },
+        }),
+      ]);
+      const read = async () =>
+        (await (
+          await get(`/api/v1/items/${HABIT}/habit?from=2026-03-01&to=2026-03-01`)
+        ).json()) as {
+          checkIns: { occurredOn: string; completed: boolean }[];
+        };
+      expect((await read()).checkIns).toEqual([
+        expect.objectContaining({ occurredOn: '2026-03-01', completed: true }),
+      ]);
+      expect((await get(day, send('DELETE'))).status).toBe(204);
+      expect((await read()).checkIns).toEqual([]);
+    });
+  });
+
+  it('queues a completion and still refuses the habit settings and the rule itself', async () => {
+    await withItems(async (outbox) => {
+      const { get } = setup({ store: fakeStore({}, { outbox }) });
+      const done = await get(
+        `/api/v1/items/${TASK}/recurrence/completions`,
+        send('POST', { occurredOn: '2026-03-02' }),
+      );
+      expect(((await done.json()) as { occurredOn: string }).occurredOn).toBe('2026-03-02');
+      expect(outbox).toEqual([expect.objectContaining({ kind: 'request', itemId: TASK })]);
+      for (const refused of [
+        get(`/api/v1/items/${HABIT}/habit`, send('PUT', { frequency: 'daily' })),
+        get(`/api/v1/items/${TASK}/recurrence`, send('PUT', { freq: 'daily', interval: 1 })),
+      ])
+        expect(((await (await refused).json()) as { code: string }).code).toBe('offline.read_only');
+      expect(outbox).toHaveLength(1);
+    });
+  });
+
+  it('says plainly that protection, schema, view and restore changes need a connection', async () => {
+    await withItems(async (outbox) => {
+      const { get } = setup({ store: fakeStore({}, { outbox }) });
+      const refused: [string, string][] = [
+        ['PUT', `/api/v1/items/${TASK}/protection`],
+        ['PUT', `/api/v1/items/${TASK}/schema`],
+        ['PUT', `/api/v1/items/${TASK}/views`],
+        ['POST', `/api/v1/items/${TASK}/view-setups`],
+        ['POST', `/api/v1/items/${TASK}/restore`],
+        ['POST', `/api/v1/workspaces/${WS}/structured-items`],
+      ];
+      for (const [method, path] of refused) {
+        const response = await get(path, send(method, {}));
+        expect(response.status).toBe(503);
+        const problem = (await response.json()) as { code: string; detail: string };
+        expect(problem.code).toBe('offline.read_only');
+        expect(problem.detail).toMatch(/needs a connection/);
+      }
+      expect(outbox).toEqual([]);
+    });
+  });
+});

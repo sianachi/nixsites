@@ -7,6 +7,11 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Habit check-ins, undoing a check-in, and completing an occurrence of a repeating item can be done
+  offline in the native apps. They are kept in the queue and sent when the connection returns, the
+  habit and calendar views show them at once, and one Core refuses (a paused habit, a day that is not
+  scheduled) appears in the list of changes that could not be applied. Core takes these only as
+  those three requests, never an arbitrary one, and applies them as the signed-in person.
 - The offline copy in the native apps keeps files up to 100 MB. A larger file stays online-only: it opens
   with a connection, and Settings > About counts how many are left out instead of reporting them as failed.
 - Shared links to the public pages show a preview card. The web app document carries Open Graph and

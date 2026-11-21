@@ -79,7 +79,7 @@ public sealed class NativeReplayHandler(
             {
                 return await RememberAsync(command, fingerprint, Refused(request), cancellationToken).ConfigureAwait(false);
             }
-            if (actual != expected)
+            if (request.Kind != "request" && actual != expected)
             {
                 return await RememberAsync(command, fingerprint,
                     new NativeReplayResponse(request.OperationId, "conflict", request.ItemId, current.Revision, current, ConflictCode),
@@ -155,6 +155,10 @@ public sealed class NativeReplayHandler(
                 new OpenDailyNote(command.WorkspaceId, payload.Date!), cancellationToken).ConfigureAwait(false);
             return opened.IsSuccess ? Result.Success(ItemId.From(opened.Value.ItemId)) : Result.Failure<ItemId>(opened.Error);
         }
+        if (command.Request.Kind == "request")
+        {
+            return await payload.Request!(dispatcher, cancellationToken).ConfigureAwait(false);
+        }
         if (command.Request.Kind == "archive")
         {
             return await dispatcher.SendAsync<DeleteItem, ItemId>(new DeleteItem(itemId), cancellationToken).ConfigureAwait(false);
@@ -177,19 +181,20 @@ public sealed class NativeReplayHandler(
     private static NativeReplayResponse Refused(NativeReplayRequest request, string code = RefusedCode) =>
         new(request.OperationId, "refused", request.ItemId, null, null, code);
 
-    private sealed record Payload(string? Type, string? Title, Guid? ParentId, Guid? AfterId, JsonObject? Properties, string? Date);
+    private sealed record Payload(string? Type, string? Title, Guid? ParentId, Guid? AfterId, JsonObject? Properties, string? Date,
+        NativeReplayRequests.Apply? Request = null);
 
     private static bool TryParse(NativeReplayRequest request, out Payload payload, out long expected)
     {
         payload = new Payload(null, null, null, null, null, null);
         expected = 0;
         if (request.OperationId == Guid.Empty || request.ItemId == Guid.Empty || request.Payload.ValueKind != JsonValueKind.Object
-            || request.Kind is not ("create" or "daily-note" or "rename" or "move" or "archive" or "properties")
+            || request.Kind is not ("create" or "daily-note" or "rename" or "move" or "archive" or "properties" or "request")
             || !UniqueProperties(request.Payload))
         {
             return false;
         }
-        if (request.Kind is "create" or "daily-note" ? request.ExpectedRevision is not null
+        if (request.Kind is "create" or "daily-note" or "request" ? request.ExpectedRevision is not null
             : !long.TryParse(request.ExpectedRevision, NumberStyles.None, CultureInfo.InvariantCulture, out expected)
                 || expected.ToString(CultureInfo.InvariantCulture) != request.ExpectedRevision)
         {
@@ -202,6 +207,7 @@ public sealed class NativeReplayHandler(
             "rename" => ["title"],
             "move" => ["parentId", "afterId"],
             "properties" => ["changes"],
+            "request" => ["method", "path", "body"],
             _ => [],
         };
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -215,6 +221,17 @@ public sealed class NativeReplayHandler(
         if (request.Kind == "move" && !seen.Contains("parentId"))
         {
             return false;
+        }
+        if (request.Kind == "request")
+        {
+            JsonElement? body = request.Payload.TryGetProperty("body", out var sent) ? sent : null;
+            if (!Text(request.Payload, "method", 8, out var method) || !Text(request.Payload, "path", 200, out var path)
+                || NativeReplayRequests.Match(request.ItemId, method!, path!, body) is not { } apply)
+            {
+                return false;
+            }
+            payload = new Payload(null, null, null, null, null, null, apply);
+            return true;
         }
         string? type = null;
         string? title = null;

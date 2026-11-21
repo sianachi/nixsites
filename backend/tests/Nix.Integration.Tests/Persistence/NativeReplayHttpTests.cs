@@ -416,6 +416,134 @@ public sealed class NativeReplayHttpTests(NixPostgresFixture fixture) : IAsyncLi
         Assert.Null((await ItemAsync(M0SchemaSeed.Alpha.ItemId, bearer))["parentId"]);
     }
 
+    [Fact]
+    public async Task A_queued_habit_check_in_replays_once_and_a_lost_acknowledgement_does_not_add_a_second()
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        var path = $"/api/v1/items/{habit:D}/habit/check-ins/2026-09-10";
+        var request = Operation("request", habit, null,
+            new { method = "PUT", path, body = new { completed = false, quantity = 2 } });
+
+        using var first = await SendAsync(HttpMethod.Post, ReplayPath, bearer, request);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        var applied = await ReadAsync(first);
+        Assert.Equal("applied", applied["status"]!.GetValue<string>());
+        Assert.Equal(habit, applied["itemId"]!.GetValue<Guid>());
+        using var retry = await SendAsync(HttpMethod.Post, ReplayPath, bearer, request);
+        Assert.Equal("applied", (await ReadAsync(retry))["status"]!.GetValue<string>());
+
+        Assert.Equal(1L, await CheckInCountAsync(habit));
+        using var undo = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            Operation("request", habit, null, new { method = "DELETE", path }));
+        Assert.Equal("applied", (await ReadAsync(undo))["status"]!.GetValue<string>());
+        Assert.Equal(0L, await CheckInCountAsync(habit));
+    }
+
+    [Fact]
+    public async Task A_queued_completion_marks_the_occurrence_and_a_refusal_comes_back_as_refused()
+    {
+        var bearer = await AccessTokenAsync();
+        var itemId = await CreateAsync(bearer, "Not repeating", null);
+        using var refused = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            Operation("request", itemId, null,
+                new { method = "POST", path = $"/api/v1/items/{itemId:D}/recurrence/completions", body = new { occurredOn = "2026-09-10" } }));
+        Assert.Equal(HttpStatusCode.OK, refused.StatusCode);
+        var response = await ReadAsync(refused);
+        Assert.Equal("refused", response["status"]!.GetValue<string>());
+        Assert.Equal("recurrence.not_recurring", response["code"]!.GetValue<string>());
+    }
+
+    [Theory]
+    [InlineData("PUT", "/api/v1/items/{0}/habit")]
+    [InlineData("PUT", "/api/v1/items/{0}/habit/status")]
+    [InlineData("DELETE", "/api/v1/items/{0}")]
+    [InlineData("PATCH", "/api/v1/items/{0}")]
+    [InlineData("POST", "/api/v1/items/{0}/habit/check-ins/2026-09-10")]
+    [InlineData("PUT", "/api/v1/items/{0}/habit/check-ins/2026-09-10/extra")]
+    [InlineData("PUT", "/api/v1/items/{0}/habit/check-ins/2026-9-10")]
+    [InlineData("PUT", "/api/v1/items/{0}/recurrence")]
+    [InlineData("GET", "/api/v1/items/{0}/habit")]
+    [InlineData("POST", "/api/v1/workspaces/{0}/sync/replay")]
+    [InlineData("PUT", "https://elsewhere.test/api/v1/items/{0}/habit/check-ins/2026-09-10")]
+    public async Task A_request_outside_the_allowlist_is_invalid_and_nothing_is_applied(string method, string template)
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            Operation("request", habit, null,
+                new { method, path = string.Format(System.Globalization.CultureInfo.InvariantCulture, template, habit), body = new { completed = true, quantity = (int?)null } }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        Assert.Equal("sync.invalid_replay", (await ReadAsync(replay))["code"]!.GetValue<string>());
+        Assert.Equal(0L, await CheckInCountAsync(habit));
+    }
+
+    [Fact]
+    public async Task A_request_naming_another_item_than_the_operations_own_is_invalid()
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        var other = await CreateHabitAsync(bearer);
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            Operation("request", habit, null,
+                new { method = "PUT", path = $"/api/v1/items/{other:D}/habit/check-ins/2026-09-10", body = new { completed = true, quantity = (int?)null } }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        Assert.Equal(0L, await CheckInCountAsync(other));
+    }
+
+    [Fact]
+    public async Task A_request_carries_no_expected_revision_and_takes_only_the_three_fields()
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        var path = $"/api/v1/items/{habit:D}/habit/check-ins/2026-09-10";
+        using var withRevision = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            Operation("request", habit, (await SnapshotAsync(habit)).Revision,
+                new { method = "PUT", path, body = new { completed = true, quantity = (int?)null } }));
+        Assert.Equal(HttpStatusCode.BadRequest, withRevision.StatusCode);
+        using var extra = await SendAsync(HttpMethod.Post, ReplayPath, bearer,
+            Operation("request", habit, null,
+                new { method = "PUT", path, body = new { completed = true, quantity = (int?)null }, headers = "x" }));
+        Assert.Equal(HttpStatusCode.BadRequest, extra.StatusCode);
+        Assert.Equal(0L, await CheckInCountAsync(habit));
+    }
+
+    [Fact]
+    public async Task A_viewer_cannot_replay_a_request()
+    {
+        var bearer = await AccessTokenAsync();
+        var habit = await CreateHabitAsync(bearer);
+        await SeedViewerAsync();
+        var viewer = await AccessTokenAsync(Viewer, [AccessTokenScopes.Read, AccessTokenScopes.Write]);
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, viewer,
+            Operation("request", habit, null,
+                new { method = "PUT", path = $"/api/v1/items/{habit:D}/habit/check-ins/2026-09-10", body = new { completed = true, quantity = (int?)null } }));
+
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        AssertRefused(await ReadAsync(replay), "sync.refused");
+        Assert.Equal(0L, await CheckInCountAsync(habit));
+    }
+
+    private async Task<Guid> CreateHabitAsync(string bearer)
+    {
+        var habit = await CreateAsync(bearer, "Water", null);
+        using var configured = await SendAsync(HttpMethod.Put, $"/api/v1/items/{habit:D}/habit", bearer,
+            new { frequency = "daily", weekdays = Array.Empty<int>(), timezone = "UTC", startDate = "2026-01-01", target = 2, unit = "reps" });
+        Assert.Equal(HttpStatusCode.OK, configured.StatusCode);
+        return habit;
+    }
+
+    private async Task<long> CheckInCountAsync(Guid habit)
+    {
+        await using var connection = await fixture.OpenMigratorConnectionAsync();
+        await using var count = new NpgsqlCommand(
+            "SELECT count(*) FROM item WHERE parent_id = @parent AND properties ? '$habit_check_in_date' AND lifecycle_state = 'active'", connection);
+        count.Parameters.AddWithValue("parent", habit);
+        return (long)(await count.ExecuteScalarAsync(Cancellation))!;
+    }
+
     private static JsonObject Operation(string kind, Guid itemId, string? revision, object payload) => new()
     {
         ["operationId"] = Guid.NewGuid(),

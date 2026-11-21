@@ -24,6 +24,7 @@ const WHAT: Record<string, string> = {
   archive: 'Move to trash',
   properties: 'Edit properties',
   'daily-note': 'Open daily note',
+  request: 'Habit check-in or repeat completion',
 };
 
 export const describeConflict = (conflict: MirrorConflict): string =>

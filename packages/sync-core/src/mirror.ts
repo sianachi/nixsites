@@ -119,6 +119,18 @@ export const outboxOperationSchema = z.discriminatedUnion('kind', [
     payload: z.object({ parentId: z.uuid().nullable(), afterId: z.uuid().nullable().optional() }),
   }),
   z.object({ ...writeEnvelope, kind: z.literal('archive'), payload: z.strictObject({}) }),
+  // An ordinary request (a habit check-in, a recurrence completion) replayed as the signed-in
+  // user. Core accepts only a short list of method and path pairs, so this is not a proxy.
+  z.object({
+    ...operationEnvelope,
+    kind: z.literal('request'),
+    expectedRevision: z.null(),
+    payload: z.object({
+      method: z.enum(['PUT', 'POST', 'DELETE']),
+      path: z.string().max(200),
+      body: z.unknown().optional(),
+    }),
+  }),
   z.object({
     ...writeEnvelope,
     kind: z.literal('properties'),

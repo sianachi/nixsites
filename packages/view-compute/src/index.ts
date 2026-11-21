@@ -1,6 +1,7 @@
 import { routes } from './routes';
 import type { ViewAnswer, ViewRequest, ViewSource } from './types';
 
+export { withQueuedRequests, type QueuedRequest } from './queued';
 export type { ViewAnswer, ViewCompute, ViewRequest, ViewRoute, ViewSource } from './types';
 
 /** Whether the request is one of Core's computed reads, so a caller can skip preparing a source for the rest. */

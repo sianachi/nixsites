@@ -138,7 +138,8 @@ class FakeApi implements MirrorApi {
           code: 'inaccessible',
         } satisfies NativeReplayResult);
       }
-      if (operation.expectedRevision !== value.revision) {
+      // A request is not compared with the item's revision: its routes are idempotent.
+      if (operation.kind !== 'request' && operation.expectedRevision !== value.revision) {
         return Promise.resolve({
           operationId: operation.operationId,
           status: 'conflict',
@@ -676,6 +677,48 @@ describe('resumable sync engine with real SQLite', () => {
     api.replay = () => Promise.reject(new MirrorHttpError(500, '/sync/replay'));
     await expect(sync(store, api)).rejects.toBeInstanceOf(MirrorHttpError);
     expect(await store.peekOutbox(workspaceId)).not.toBeNull();
+  });
+
+  it('replays a queued request once, keeps the queue behind it, and records a refused one as a conflict', async () => {
+    const { store, api } = await setup(new FakeApi([item()]));
+    await sync(store, api);
+    const path = `/api/v1/items/${id(10)}/habit/check-ins/2026-03-01`;
+    const request = (operationId: string) =>
+      ({
+        kind: 'request',
+        operationId,
+        itemId: id(10),
+        expectedRevision: null,
+        payload: { method: 'PUT', path, body: { completed: true, quantity: null } },
+      }) as const;
+    await store.enqueue(workspaceId, request(id(100)));
+    await store.enqueue(workspaceId, request(id(101)));
+    // The same queued write is told apart from a different one by its id, and kept as written.
+    await expect(
+      store.enqueue(workspaceId, {
+        ...request(id(100)),
+        payload: { method: 'PUT', path, body: { completed: false, quantity: null } },
+      }),
+    ).rejects.toThrow('reused');
+    const realReplay = api.replay.bind(api);
+    api.replay = (input) =>
+      input.operation.operationId === id(101)
+        ? Promise.resolve({
+            operationId: id(101),
+            status: 'refused',
+            itemId: id(10),
+            revision: null,
+            item: null,
+            code: 'habits.not_scheduled',
+          })
+        : realReplay(input);
+    expect(await sync(store, api)).toMatchObject({ replayedOperations: 1, conflicts: 1 });
+    expect(await store.peekOutbox(workspaceId)).toBeNull();
+    const [conflict] = await store.listConflicts(workspaceId);
+    expect(conflict).toMatchObject({
+      code: 'habits.not_scheduled',
+      operation: { kind: 'request' },
+    });
   });
 
   it('replays FIFO edits with the revision returned by the previous operation', async () => {

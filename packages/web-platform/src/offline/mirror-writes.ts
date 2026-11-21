@@ -1,3 +1,5 @@
+import type { MirrorReader } from './mirror-fetch';
+
 /**
  * Which of Core's write routes the replay endpoint can carry (create, rename, move, trash,
  * property edits), read off a request. Anything else is not here and stays "needs a connection".
@@ -20,6 +22,17 @@ export type PlannedWrite =
       readonly afterId: string | null;
     }
   | { readonly kind: 'archive'; readonly itemId: string }
+  | {
+      /** A habit or recurrence write replayed as the request itself (see `view-writes/`). */
+      readonly kind: 'request';
+      readonly operationId: string;
+      readonly itemId: string;
+      readonly method: 'PUT' | 'POST' | 'DELETE';
+      readonly path: string;
+      readonly body?: unknown;
+      /** What Core would have answered, so the screen carries on as if it had. */
+      readonly answer: { readonly status: number; readonly body: unknown };
+    }
   | {
       readonly kind: 'properties';
       readonly itemId: string;
@@ -83,3 +96,13 @@ export function planWrite(method: string, path: string, body: unknown): PlannedW
   }
   return null;
 }
+
+/** Plans one write made from a computed view; null when it needs a connection. */
+export type PlanViewWrite = (
+  store: MirrorReader,
+  method: string,
+  path: string,
+  body: unknown,
+  /** A computed read of the synced copy, as the JSON Core would answer, or null when it cannot. */
+  read: (path: string) => Promise<unknown>,
+) => Promise<PlannedWrite | null>;

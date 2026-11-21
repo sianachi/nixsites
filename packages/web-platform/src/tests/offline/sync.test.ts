@@ -76,7 +76,7 @@ describe('file sync', () => {
         byteLength: 101 * 1024 * 1024,
         sha256: 'h',
       },
-    } as Partial<MirrorItem>);
+    });
     const { deps, mirror, stored } = setup([big, fileItem('a', 'v1')], { big: 'v1' });
     expect(await syncFiles(deps, ['ws'])).toEqual({ failed: 0, onlineOnly: 1 });
     expect(mirror.fileDelete).toHaveBeenCalledWith('big', 'v1');

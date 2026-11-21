@@ -170,6 +170,7 @@ async function projectItems(
       switch (operation.kind) {
         case 'daily-note':
         case 'create':
+        case 'request':
           break;
         case 'rename':
           current = { ...current, title: operation.payload.title };
@@ -378,6 +379,7 @@ function remapOperation(
   const itemId = operation.itemId === localId ? serverId : operation.itemId;
   switch (operation.kind) {
     case 'daily-note':
+    case 'request':
       return { ...operation, itemId };
     case 'create':
       return {
