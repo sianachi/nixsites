@@ -92,6 +92,35 @@ describe('a session that ended without a sign-out', () => {
     expect(await mirror.session()).toBeNull();
   });
 
+  it('stays closed in a later page, files included, until a sign-in', async () => {
+    const { kept, account } = ended(2);
+    kept.set('nix.offline.locked', '1');
+    const post = vi.fn(() => Promise.resolve({}));
+    const later = new NativeMirror({
+      origin: 'https://nix.example',
+      post,
+      storage: {
+        getItem: (key: string) => kept.get(key) ?? null,
+        setItem: (key: string, value: string) => void kept.set(key, value),
+        removeItem: (key: string) => void kept.delete(key),
+      },
+    });
+    Object.assign(later as unknown as Record<string, unknown>, { store: {}, account });
+    expect(later.current()).toBeNull();
+    expect(await later.fileGet('i', 'v')).toBeNull();
+    expect(await later.openStored()).toBeNull();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('stays closed when a sign-in was queued ahead of the lock', async () => {
+    const { mirror, account } = ended(2);
+    const opening = mirror.open(account);
+    const expiring = mirror.expire();
+    await opening;
+    expect(await expiring).toBe('kept');
+    expect(mirror.current()).toBeNull();
+  });
+
   it('gives the copy back when the same account signs in again', async () => {
     const { mirror, store, account, kept } = ended(2);
     await mirror.expire();

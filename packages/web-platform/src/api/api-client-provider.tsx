@@ -82,7 +82,7 @@ export function ApiClientProvider({ children }: { readonly children: ReactNode }
               !isBootOffline() &&
               (event.status === 401 || event.code === 'auth.principal_inactive')
             )
-              handleSessionRefusal(subject);
+              handleSessionRefusal(subject, event.code === 'auth.principal_inactive');
           },
         },
       }),

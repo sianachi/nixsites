@@ -113,7 +113,8 @@ final class NixStoreHandler: NSObject, WKScriptMessageHandlerWithReply {
             return task.setTaskCompleted(success: false)
         }
         current = task
-        task.expirationHandler = { MainActor.assumeIsolated { finish(false) } }
+        // iOS does not say which queue it calls this on.
+        task.expirationHandler = { DispatchQueue.main.async { finish(false) } }
         webView.evaluateJavaScript("window.dispatchEvent(new Event('nix:background-sync'))") { _, _ in
             // A page with nothing to do (signed out, offline) never starts a pass: stop waiting.
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {

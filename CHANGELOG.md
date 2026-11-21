@@ -74,7 +74,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - When a session ends on its own in the iOS or desktop app, changes that were not sent yet are no
   longer deleted. The offline copy stays on the device, closed, and the changes are sent when the
-  same account signs in again. Signing out, or signing in with another account, still removes it.
+  same account signs in again. Signing out, signing in with another account, or the account being
+  closed still removes it.
 - The iOS and Android apps use the Nix icon and launch screen.
 - The explorer shows progress while a dropped folder is read and while its files upload. Uploads
   start as files are found, not after the whole folder has been read.

@@ -76,6 +76,10 @@ export function NativeSync(): ReactNode {
       let store = mirror.current();
       if (!bootOffline) {
         const me = await client.query(principal.currentPrincipal(), { forceRefresh: true });
+        // The session may have ended while that was in flight: a late answer must not reopen a
+        // copy that was just locked or wiped.
+        if (controller.signal.aborted || useSessionStore.getState().status !== 'authenticated')
+          return;
         store = await mirror.open({ tenantId: me.tenantId, principalId: me.id });
         await mirror.saveSession({
           profile: { subject: profile.subject, name: profile.name, email: profile.email },

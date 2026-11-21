@@ -96,7 +96,7 @@ export interface AuthContextValue {
   /** Returns a current short-lived Core access token without exposing the session cookie. */
   readonly getAccessToken: (forceRefresh?: boolean) => Promise<string | null>;
   /** Closes local account access after an authoritative global session refusal. */
-  readonly handleSessionRefusal: (subject: string) => void;
+  readonly handleSessionRefusal: (subject: string, accountClosed?: boolean) => void;
   /** Whether Core has the interactive provider and its signing key configured. */
   readonly isConfigured: boolean;
   /**
@@ -279,14 +279,15 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
   const sessionRetryRequested = useSessionStore((state) => state.sessionRetryRequested);
   const restoreAttempt = useSessionStore((state) => state.restoreAttempt);
   const closeSession = useCallback(
-    (subject: string, reason: string, accountChanged = false): void => {
+    (subject: string, reason: string, wipe = false): void => {
       if (useSessionStore.getState().profile?.subject !== subject) return;
       invalidateSessionRequests();
       accessTokenRef.current = null;
       void sealAccountBodies(subject).catch(() => undefined);
       // Native shell: admission to the offline copy closes before the session does. Another
-      // account's arrival wipes it; an ended session keeps it locked if it holds unsent changes.
-      const closing = accountChanged
+      // account's arrival or a closed account wipes it; an ended session keeps it locked if it
+      // holds unsent changes.
+      const closing = wipe
         ? discardNativeMirror().then((wiped) => (wiped ? 'wiped' : 'failed'))
         : expireNativeMirror();
       setOfflineState({ bootOffline: false, networkDown: false, syncProblem: null });
@@ -689,8 +690,13 @@ export function AuthProvider({ children }: AuthProviderProps): ReactNode {
         }
       },
 
-      handleSessionRefusal: (subject) => {
-        closeSession(subject, 'Your session is no longer valid. Sign in again to continue.');
+      handleSessionRefusal: (subject, accountClosed = false) => {
+        // A closed account cannot sign in again to send anything, so its copy is wiped, not kept.
+        closeSession(
+          subject,
+          'Your session is no longer valid. Sign in again to continue.',
+          accountClosed,
+        );
       },
 
       getAccessToken: async (forceRefresh = false) => {

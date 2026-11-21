@@ -59,11 +59,16 @@ export interface NativeMirrorDeps {
 export class NativeMirror {
   private store: SqliteMirrorStore | null = null;
   private account: MirrorAccount | null = null;
-  /** False from the moment a wipe starts until it has succeeded: nothing is read meanwhile. */
-  private admitted = true;
+  /** False from the moment a wipe or lock starts until it is over: nothing is read meanwhile. */
+  private admitted: boolean;
+  /** A wipe was asked for and has not finished: the next open completes it first. */
+  private wipeOwed = false;
   private pending: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly deps: NativeMirrorDeps) {}
+  constructor(private readonly deps: NativeMirrorDeps) {
+    // A copy locked by an earlier page stays closed in this one until a sign-in reopens it.
+    this.admitted = !this.locked();
+  }
 
   /** The open mirror, or null while admission is closed. */
   /** The principal the open mirror belongs to, or null. */
@@ -79,7 +84,8 @@ export class NativeMirror {
     try {
       return this.deps.storage?.getItem(LOCKED_KEY) === '1';
     } catch {
-      return false;
+      // Storage that cannot be read cannot say the copy is open.
+      return true;
     }
   }
 
@@ -89,7 +95,7 @@ export class NativeMirror {
    */
   open(account: MirrorAccount): Promise<SqliteMirrorStore> {
     return this.serial(async () => {
-      if (!this.admitted && !this.locked() && !(await this.wipeNow()))
+      if (this.wipeOwed && !(await this.wipeNow()))
         throw new Error('The previous offline copy could not be removed.');
       const store = await this.openNow(account);
       this.deps.storage?.removeItem(LOCKED_KEY);
@@ -167,6 +173,7 @@ export class NativeMirror {
   wipe(): Promise<boolean> {
     // Closed before queueing, so a read in flight behind another operation is already refused.
     this.admitted = false;
+    this.wipeOwed = true;
     return this.serial(() => this.wipeNow());
   }
 
@@ -185,6 +192,8 @@ export class NativeMirror {
         // Without storage the lock would not outlive this page, so the copy is wiped instead.
         if (store !== null && this.deps.storage !== null && (await store.countUnsent()) > 0) {
           this.deps.storage.setItem(LOCKED_KEY, '1');
+          // Again here: a sign-in already queued ahead of this may have reopened admission.
+          this.admitted = false;
           return 'kept';
         }
       } catch {
@@ -196,6 +205,7 @@ export class NativeMirror {
 
   private async wipeNow(): Promise<boolean> {
     this.admitted = false;
+    this.wipeOwed = true;
     try {
       this.deps.storage?.removeItem(POINTER_KEY);
       this.deps.storage?.removeItem(LOCKED_KEY);
@@ -204,6 +214,7 @@ export class NativeMirror {
       this.store = null;
       this.account = null;
       this.admitted = true;
+      this.wipeOwed = false;
       return true;
     } catch {
       return false;

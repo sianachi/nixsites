@@ -11,7 +11,7 @@ import { json } from '@nix/web-foundation/testing/json-response';
 
 const auth = vi.hoisted(() => ({
   getAccessToken: vi.fn<(forceRefresh?: boolean) => Promise<string | null>>(),
-  handleSessionRefusal: vi.fn<(subject: string) => void>(),
+  handleSessionRefusal: vi.fn<(subject: string, accountClosed?: boolean) => void>(),
 }));
 
 vi.mock('../../auth/auth-provider', () => ({
@@ -160,7 +160,7 @@ describe('API client browser session admission', () => {
 
     expect(authorization).toEqual(['Bearer expired-token', 'Bearer refreshed-token']);
     expect(auth.getAccessToken).toHaveBeenCalledWith(true);
-    expect(auth.handleSessionRefusal).toHaveBeenCalledExactlyOnceWith(SUBJECT);
+    expect(auth.handleSessionRefusal).toHaveBeenCalledExactlyOnceWith(SUBJECT, false);
   });
 
   it('never closes the session over a 401 earned with the offline placeholder token', async () => {
@@ -273,7 +273,7 @@ describe('API client browser session admission', () => {
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(auth.getAccessToken).toHaveBeenCalledWith(true);
-    expect(auth.handleSessionRefusal).toHaveBeenCalledExactlyOnceWith(SUBJECT);
+    expect(auth.handleSessionRefusal).toHaveBeenCalledExactlyOnceWith(SUBJECT, false);
   });
 
   it.each(['unknown', 'authenticating'] as const)(
@@ -329,7 +329,7 @@ describe('API client browser session admission', () => {
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(auth.getAccessToken).not.toHaveBeenCalledWith(true);
-    expect(auth.handleSessionRefusal).toHaveBeenCalledExactlyOnceWith(SUBJECT);
+    expect(auth.handleSessionRefusal).toHaveBeenCalledExactlyOnceWith(SUBJECT, true);
   });
 
   it('preserves unsigned requests when there is no stored account subject', async () => {
