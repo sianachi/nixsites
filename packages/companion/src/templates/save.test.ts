@@ -244,6 +244,30 @@ describe('save_as_template', () => {
     });
   });
 
+  it('captures a plain include-samples save from the preview without walking children', async () => {
+    const fake = setup();
+    const result = await saveAsTemplate(
+      fake.ports,
+      workspace,
+      {
+        itemId: rootId,
+        title: 'Captured plan',
+        spec: saveSpecSchema.parse({ includeSamples: true }),
+      },
+      {
+        toolId: 'tool-1',
+        claimId: 'claim-1',
+        approvedFingerprint: fullFingerprint,
+        captureFingerprint: fullFingerprint,
+      },
+      fake.signal,
+    );
+    expect(fake.paginate).not.toHaveBeenCalled();
+    expect(fake.calls).not.toContain(`items.delete:${sampleId}`);
+    expect(fake.getCaptureBody()).toMatchObject({ expectedFingerprint: fullFingerprint });
+    expect(result).toMatchObject({ templateId, includedSamples: true, savedWithInputs: false });
+  });
+
   it('refuses a changed Sample descendant before trash or capture', async () => {
     const fake = setup((endpoint) => ({
       ...capturePreview(endpoint),

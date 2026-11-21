@@ -106,9 +106,21 @@ export async function saveAsTemplate(
   if (!claim.approvedFingerprint || !claim.captureFingerprint)
     throw new WorkspaceToolRefusal('Review the current source before saving it as a template.');
   const requestOptions = { signal, forceRefresh: true };
-  const source = await readSourceTree(ports, workspaceId, input.itemId, signal);
-  const excludedIds = input.spec.includeSamples ? new Set<string>() : sampleSubtreeIds(source);
-  const excludedNodes = flatten(source).filter((node) => excludedIds.has(node.item.id));
+  const hasInitialization = Boolean(input.spec.inputs?.length ?? input.spec.rules?.length);
+  // A plain capture with samples included needs no sample selection or source-to-template
+  // mapping, so Core's preview count and fingerprint stand in for the per-item child walk.
+  const source =
+    input.spec.includeSamples && !hasInitialization
+      ? undefined
+      : await readSourceTree(ports, workspaceId, input.itemId, signal);
+  if (source === undefined) await checkItem(ports, workspaceId, input.itemId, signal);
+  const excludedIds =
+    source === undefined || input.spec.includeSamples
+      ? new Set<string>()
+      : sampleSubtreeIds(source);
+  const excludedNodes = source
+    ? flatten(source).filter((node) => excludedIds.has(node.item.id))
+    : [];
   const attemptedTrash: string[] = [];
   let captured: TemplateCaptureResult | undefined;
   let detail: TemplateDetail | undefined;
@@ -140,6 +152,10 @@ export async function saveAsTemplate(
       throw new WorkspaceToolRefusal(
         'The source changed since you approved this. Review it again before saving.',
       );
+    if (source === undefined && current.itemCount > MAX_SOURCE_ITEMS)
+      throw new WorkspaceToolRefusal(
+        'This item tree is larger than 200 items. No template was saved.',
+      );
     for (const node of excludedNodes.slice().sort((left, right) => right.depth - left.depth)) {
       attemptedTrash.push(node.item.id);
       await ports.core.execute(items.deleteItem(workspaceId, node.item.id), requestOptions);
@@ -168,8 +184,7 @@ export async function saveAsTemplate(
     );
     detail = await ports.core.query(templates.templateById(captured.templateId), requestOptions);
 
-    const hasInitialization = Boolean(input.spec.inputs?.length ?? input.spec.rules?.length);
-    if (hasInitialization) {
+    if (hasInitialization && source) {
       const draft = await ports.collab.execute(
         templates.beginTemplateDraft(captured.templateId, idempotencyKey),
         requestOptions,
