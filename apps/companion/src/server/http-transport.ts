@@ -21,7 +21,7 @@ import {
 
 /**
  * Serves the Codex app-server vocabulary the account already speaks over a provider's HTTPS API:
- * Anthropic's Messages API or OpenRouter's chat completions. The API key lives in memory for the
+ * Anthropic's Messages API or the chat completions of OpenRouter or OpenAI. The API key lives in memory for the
  * account's life and is never written to disk or logs. Thread history is kept per thread under
  * the account home so a resumed thread survives a restart; it is bounded like the conversation.
  */
@@ -121,7 +121,7 @@ export class HttpTransport implements Transport {
     const wire =
       options.kind === 'anthropic'
         ? anthropicWire
-        : options.kind === 'openrouter'
+        : options.kind === 'openrouter' || options.kind === 'openai'
           ? openrouterWire
           : undefined;
     if (wire === undefined) throw new Error(`unknown provider "${options.kind}"`);
@@ -150,6 +150,7 @@ export class HttpTransport implements Transport {
 
   private context(signal: AbortSignal | undefined): WireContext {
     return {
+      kind: this.kind,
       fetch: this.doFetch,
       base: this.baseUrl,
       apiKey: this.apiKey,
@@ -480,12 +481,12 @@ export class HttpTransport implements Transport {
   }
 
   /**
-   * Whether `model` takes image input. Every Claude model does. For OpenRouter the model list
+   * Whether `model` takes image input. Every Claude model does. For the chat-completions providers the model list
    * says, read once if no list has been read yet; a model the list does not name, or a list that
    * cannot be read, counts as no.
    */
   private async acceptsImages(signal: AbortSignal, model: string): Promise<boolean> {
-    if (this.kind !== 'openrouter') return true;
+    if (this.kind === 'anthropic') return true;
     if (this.seesImages === undefined) {
       try {
         await this.listModels(signal);

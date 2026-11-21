@@ -76,7 +76,7 @@ const anthropicTool = (id: string, name: string, args: string, text = ''): objec
 ];
 
 function keyAccount(
-  kind: 'anthropic' | 'openrouter',
+  kind: 'anthropic' | 'openrouter' | 'openai',
   server: FakeServer,
   home = tempDir(),
   apiKey = 'sk-test',
@@ -794,6 +794,80 @@ describe('OpenRouter', () => {
       if (tools !== 'anthropic/claude-x')
         expect(JSON.stringify(second.messages)).toContain('cannot see images');
     }
+  });
+});
+
+describe('OpenAI', () => {
+  const models = {
+    data: [
+      { id: 'text-embedding-3-small', created: 9 },
+      { id: 'gpt-4o', created: 3 },
+      { id: 'gpt-5-codex', created: 8 },
+      { id: 'o3-pro', created: 7 },
+      { id: 'gpt-4o-audio-preview', created: 6 },
+      { id: 'whisper-1', created: 5 },
+      { id: 'gpt-5', created: 4 },
+      { id: 'o4-mini', created: 2 },
+    ],
+  };
+  const chunk = (delta: object, finish?: string): string =>
+    JSON.stringify({ choices: [{ delta, finish_reason: finish ?? null }] });
+
+  it('lists only chat models, newest first, and bills the pasted key', async () => {
+    const server = await track(
+      startServer((_seen, res) => {
+        jsonResponse(res, 200, models);
+      }),
+    );
+    const k = keyAccount('openai', server);
+    const listed = await k.account.handle(k.signal, request({ operation: 'models' }));
+    expect(listed.models).toEqual([
+      { id: 'gpt-5', name: 'gpt-5', default: true, supportsTools: true },
+      { id: 'gpt-4o', name: 'gpt-4o', default: false, supportsTools: true },
+      { id: 'o4-mini', name: 'o4-mini', default: false, supportsTools: true },
+    ]);
+    expect(server.seen[0]?.headers.authorization).toBe('Bearer sk-test');
+    expect(server.seen[0]?.headers['x-title']).toBeUndefined();
+  });
+
+  it('streams a reply through chat completions', async () => {
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url === '/models') return jsonResponse(res, 200, models);
+        sse(res, [chunk({ content: 'Hello.' }), chunk({}, 'stop'), '[DONE]']);
+      }),
+    );
+    const k = keyAccount('openai', server);
+    await k.send();
+    await eventually(() => k.events.some((e) => e.method === 'turn/completed'));
+    expect(server.seen.some((s) => s.url === '/chat/completions')).toBe(true);
+    expect(failure(k.events)).toBe('');
+  });
+
+  it('names OpenAI in failures and tells an exhausted quota from a rate limit', async () => {
+    const fake = (status: number, body: unknown): Response =>
+      new Response(JSON.stringify(body), { status });
+    expect((await providerResponseError('openai', fake(401, {}), true)).token()).toBe(
+      'openai.authentication.401',
+    );
+    expect((await providerResponseError('openai', fake(429, {}), false)).token()).toBe(
+      'openai.rate_limited.429',
+    );
+    expect(
+      (
+        await providerResponseError(
+          'openai',
+          fake(429, { error: { code: 'insufficient_quota' } }),
+          false,
+        )
+      ).token(),
+    ).toBe('openai.credit_balance.429');
+    expect(providerFailureMessage('openai', 'openai.authentication.401')).toContain(
+      'OpenAI rejected the API key',
+    );
+    expect(providerFailureMessage('openai', 'openai.credit_balance.429')).toContain(
+      'insufficient credit',
+    );
   });
 });
 

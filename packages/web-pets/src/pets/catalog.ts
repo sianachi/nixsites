@@ -4,6 +4,7 @@ export const petProviderLabels: Record<PetProfile['provider'], string> = {
   chatgpt: 'ChatGPT',
   anthropic: 'Claude',
   openrouter: 'OpenRouter',
+  openai: 'OpenAI',
 };
 
 export const petCatalog = [

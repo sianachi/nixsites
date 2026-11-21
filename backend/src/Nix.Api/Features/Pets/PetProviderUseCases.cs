@@ -17,14 +17,17 @@ public static class PetProviders
     /// <summary>OpenRouter's OpenAI-compatible API with the owner's key.</summary>
     public const string OpenRouter = "openrouter";
 
+    /// <summary>OpenAI's API with the owner's key (not the ChatGPT sign-in).</summary>
+    public const string OpenAi = "openai";
+
     /// <summary>The providers that take an API key.</summary>
-    public static readonly IReadOnlyList<string> Keyed = [Anthropic, OpenRouter];
+    public static readonly IReadOnlyList<string> Keyed = [Anthropic, OpenRouter, OpenAi];
 
     /// <summary>Whether a provider name is one this build knows.</summary>
-    public static bool IsValid(string? provider) => provider is ChatGpt or Anthropic or OpenRouter;
+    public static bool IsValid(string? provider) => provider is ChatGpt or Anthropic or OpenRouter or OpenAi;
 
     /// <summary>Whether a provider needs a stored key.</summary>
-    public static bool NeedsKey(string? provider) => provider is Anthropic or OpenRouter;
+    public static bool NeedsKey(string? provider) => provider is Anthropic or OpenRouter or OpenAi;
 
     /// <summary>A plausible key shape: printable, bounded, no whitespace. Core never calls the provider itself.</summary>
     public static bool IsPlausibleKey(string? key) =>
@@ -72,7 +75,7 @@ public sealed class SavePetProviderKeyHandler(IPetProviderCredentialStore store,
         ArgumentNullException.ThrowIfNull(command);
         if (!PetProviders.NeedsKey(command.Provider))
         {
-            return Result.Failure<PetProviderKeyResponse>(new NixError("pets.unknown_provider", "Choose Anthropic or OpenRouter."));
+            return Result.Failure<PetProviderKeyResponse>(new NixError("pets.unknown_provider", "Choose Anthropic, OpenRouter or OpenAI."));
         }
 
         var key = command.Key.Trim();
@@ -106,7 +109,7 @@ public sealed class RemovePetProviderKeyHandler(IPetProviderCredentialStore stor
         ArgumentNullException.ThrowIfNull(command);
         if (!PetProviders.NeedsKey(command.Provider))
         {
-            return Result.Failure<bool>(new NixError("pets.unknown_provider", "Choose Anthropic or OpenRouter."));
+            return Result.Failure<bool>(new NixError("pets.unknown_provider", "Choose Anthropic, OpenRouter or OpenAI."));
         }
 
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");

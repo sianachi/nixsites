@@ -69,6 +69,9 @@ follows semantic versioning (`0.x` pre-1.0).
 - The phone and desktop apps show how many offline changes are still waiting to sync, say in plain
   words why a change was not applied, and Settings > About shows when the offline copy last synced
   with a Sync now button.
+- A pet can use an OpenAI API key (Settings > Pets > OpenAI (API key)), separate from the ChatGPT
+  sign-in. The model list comes from the key, and messages are billed to it. Migration
+  `PetProviderOpenAi` allows the new provider in the stored-keys check.
 
 ### Changed
 

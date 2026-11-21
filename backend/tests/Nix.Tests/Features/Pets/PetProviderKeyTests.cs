@@ -18,6 +18,8 @@ public sealed class PetProviderKeyTests
         Assert.True(PetProviders.IsValid("chatgpt"));
         Assert.True(PetProviders.NeedsKey("anthropic"));
         Assert.True(PetProviders.NeedsKey("openrouter"));
+        Assert.True(PetProviders.NeedsKey("openai"));
+        Assert.True(PetProviders.IsValid("openai"));
         Assert.False(PetProviders.NeedsKey("chatgpt"));
         Assert.False(PetProviders.IsValid("gemini"));
         Assert.True(PetProviders.IsPlausibleKey("sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789"));

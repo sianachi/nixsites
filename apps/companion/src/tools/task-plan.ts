@@ -64,7 +64,7 @@ function screenPlannerText(text: string, apiKey: string): string {
 export function taskPlanInput(request: Request): string | undefined {
   if (
     ![request.workspaceId, request.petId, request.requestId].every((id) => UUID.test(id)) ||
-    !['', 'chatgpt', 'anthropic', 'openrouter'].includes(request.provider) ||
+    !['', 'chatgpt', 'anthropic', 'openrouter', 'openai'].includes(request.provider) ||
     byteLen(request.model) > 160 ||
     request.text.trim() === '' ||
     byteLen(request.text) > 8_000 ||

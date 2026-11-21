@@ -36,12 +36,17 @@ export function providerFailureToken(error: unknown): string {
 
 /** Only fixed messages cross the provider boundary; error text is used for classification only. */
 export function providerFailureMessage(provider: string, token: string): string {
-  if ((provider !== 'anthropic' && provider !== 'openrouter') || !token.startsWith(`${provider}.`))
+  if (
+    !['anthropic', 'openrouter', 'openai'].includes(provider) ||
+    !token.startsWith(`${provider}.`)
+  )
     return '';
-  const name = provider === 'anthropic' ? 'Claude' : 'OpenRouter';
+  const name =
+    provider === 'anthropic' ? 'Claude' : provider === 'openai' ? 'OpenAI' : 'OpenRouter';
   switch (token.slice(provider.length + 1)) {
     case 'credit_balance.400':
     case 'credit_balance.402':
+    case 'credit_balance.429':
       if (provider !== 'anthropic' && token.endsWith('.400')) return '';
       return `${name} reports that this API key has insufficient credit. Check API billing for the key, then try again.`;
     case 'authentication.401':
@@ -96,6 +101,16 @@ export async function providerResponseError(
       break;
     case 429:
       code = 'rate_limited';
+      // OpenAI answers an exhausted quota with the same status as a rate limit.
+      if (provider === 'openai') {
+        try {
+          const envelope: unknown = JSON.parse(await readBounded(response, 4 << 10));
+          const error = isRecord(envelope) ? envelope.error : undefined;
+          if (isRecord(error) && error.code === 'insufficient_quota') code = 'credit_balance';
+        } catch {
+          // an unreadable body stays a rate limit
+        }
+      }
       break;
     case 400:
       if (provider === 'anthropic') {
