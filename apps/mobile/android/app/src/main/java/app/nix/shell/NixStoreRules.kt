@@ -27,11 +27,17 @@ object NixStoreRules {
      * Functions that hand the page a pointer or run native code: `fts3_tokenizer` returns a module's
      * address and, with a blob, registers an arbitrary one that a later FTS3 table calls.
      */
-    private val bannedNames = setOf("fts3_tokenizer", "load_extension", "readfile", "writefile", "edit")
-    private val writes = setOf("insert", "replace", "update", "delete", "drop", "alter")
-    private val shadow = Regex("_(data|idx|content|docsize|config|segments|segdir|stat)$")
+    private val bannedNames = setOf("fts3_tokenizer", "load_extension", "readfile", "writefile", "edit", "rtreenode", "rtreedepth", "rtreecheck")
+    private val writes = setOf("insert", "replace", "update", "delete", "drop", "alter", "create")
 
-    /** Words (lowercase) and punctuation of `sql`; a string is a lone "'", a quoted name its lowercase text after a `"`, a comment nothing. */
+    /** The tables SQLite keeps behind an FTS3/4/5 or R-tree virtual table. */
+    private val shadow = Regex("_(data|idx|content|docsize|config|segments|segdir|stat|node|parent|rowid)$")
+
+    /**
+     * Words (lowercase) and punctuation of `sql`, a comment nothing. A quoted name keeps its lowercase
+     * text behind a `"`, a string behind a `'` (SQLite accepts a string where a table name goes), so
+     * neither is ever a keyword, `;` or `?`.
+     */
     internal fun tokens(sql: String): List<String> {
         val out = ArrayList<String>()
         var i = 0
@@ -54,8 +60,7 @@ object NixStoreRules {
                         i++
                     }
                     i++
-                    // A string stays opaque; a quoted name keeps its text behind a quote, so it is never a keyword.
-                    out.add(if (c == '\'') "'" else "\"" + text.toString().lowercase())
+                    out.add((if (c == '\'') "'" else "\"") + text.toString().lowercase())
                 }
                 c.isLetter() || c == '_' -> {
                     val start = i
@@ -74,11 +79,20 @@ object NixStoreRules {
         val first = t.firstOrNull() ?: throw StoreError("Empty statement.")
         if (first !in allowed) throw StoreError("Statement not allowed.")
         if (first == "pragma" && t.getOrNull(1) !in pagePragmas) throw StoreError("Pragma not allowed.")
-        val names = t.map { it.removePrefix("\"") }
-        if (names.any { it in bannedNames || (it.startsWith("pragma_") && it.removePrefix("pragma_") !in pagePragmas) })
-            throw StoreError("Function not allowed.")
-        // The tables behind a virtual table are SQLite's own; writing them corrupts the index.
-        if (t.any { it in writes } && names.any { shadow.containsMatchIn(it) }) throw StoreError("Table not allowed.")
+        // Function names are words or quoted names; a string is never one, but it can name a table.
+        val names = t.map { if (it.startsWith("\"") || it.startsWith("'")) it.drop(1) else it }
+        val isString = t.map { it.startsWith("'") }
+        if (names.indices.any { i ->
+                val n = names[i]
+                (!isString[i] && n in bannedNames) || (n.startsWith("pragma_") && n.removePrefix("pragma_") !in pagePragmas)
+            }) throw StoreError("Function not allowed.")
+        // The tables behind a virtual table are SQLite's own; writing or creating one corrupts the index.
+        // The name an index or trigger declares for itself is not a table (the mirror has `..._parent`).
+        val declared = t.take(5).indexOfFirst { it == "index" || it == "trigger" }.let { p ->
+            if (p < 0) -1 else (p + 1..p + 4).firstOrNull { it < t.size && t[it] !in setOf("if", "not", "exists") } ?: -1
+        }
+        if (t.any { it in writes } && names.indices.any { it != declared && shadow.containsMatchIn(names[it]) })
+            throw StoreError("Table not allowed.")
         // A trigger body holds its own semicolons and ends at the END that closes it (CASE ... END nests).
         val trigger = first == "create" && t.take(4).contains("trigger")
         var cases = 0

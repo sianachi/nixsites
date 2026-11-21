@@ -77,6 +77,66 @@ class NixStoreInstrumentedTest {
         assertEquals(1, deleted.length())
     }
 
+    // The statements packages/sync-sqlite/src/mirror.ts issues, copied from it: nothing legitimate may be refused.
+    private val mirrorSchema = listOf(
+        "CREATE TABLE IF NOT EXISTS mirror_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS mirror_workspace (id TEXT PRIMARY KEY, name TEXT NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS mirror_checkpoint (workspace_id TEXT PRIMARY KEY, cursor TEXT, boundary TEXT, next_cursor TEXT, sealed INTEGER NOT NULL DEFAULT 0)",
+        "CREATE TABLE IF NOT EXISTS mirror_lease (workspace_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at REAL NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS mirror_item (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, parent_id TEXT, title TEXT NOT NULL, snapshot TEXT NOT NULL, expires_at REAL, local INTEGER NOT NULL DEFAULT 0)",
+        "CREATE INDEX IF NOT EXISTS mirror_item_workspace ON mirror_item (workspace_id, id)",
+        "CREATE INDEX IF NOT EXISTS mirror_item_parent ON mirror_item (parent_id)",
+        "CREATE INDEX IF NOT EXISTS mirror_item_expiry ON mirror_item (expires_at)",
+        "CREATE TABLE IF NOT EXISTS mirror_stage (workspace_id TEXT NOT NULL, id TEXT NOT NULL, snapshot TEXT NOT NULL, PRIMARY KEY(workspace_id, id))",
+        "CREATE TABLE IF NOT EXISTS mirror_body (item_id TEXT PRIMARY KEY REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE, doc_id TEXT NOT NULL, confirmed_update BLOB NOT NULL, state_vector BLOB NOT NULL, head_seq TEXT, schema_version INTEGER NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS mirror_body_request (item_id TEXT PRIMARY KEY REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE)",
+        "CREATE TABLE IF NOT EXISTS mirror_pending (seq INTEGER PRIMARY KEY AUTOINCREMENT, item_id TEXT NOT NULL REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE, doc_id TEXT, client_id TEXT NOT NULL UNIQUE, update_blob BLOB NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS mirror_pending_item ON mirror_pending (item_id, seq)",
+        "CREATE TABLE IF NOT EXISTS mirror_outbox (seq INTEGER PRIMARY KEY AUTOINCREMENT, operation_id TEXT NOT NULL UNIQUE, workspace_id TEXT NOT NULL, item_id TEXT NOT NULL REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE, operation_json TEXT NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS mirror_outbox_item ON mirror_outbox (workspace_id,item_id)",
+        "CREATE TABLE IF NOT EXISTS mirror_conflict (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, item_id TEXT NOT NULL REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE, kind TEXT NOT NULL, code TEXT NOT NULL, operation_json TEXT, created_at TEXT NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS mirror_conflict_recovery (conflict_id TEXT PRIMARY KEY REFERENCES mirror_conflict(id) ON DELETE CASCADE, update_blob BLOB NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS mirror_alias (local_id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, server_id TEXT NOT NULL REFERENCES mirror_item(id) ON DELETE CASCADE ON UPDATE CASCADE)",
+        "CREATE TABLE IF NOT EXISTS mirror_setting (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+        "CREATE VIRTUAL TABLE IF NOT EXISTS mirror_search USING fts5(item_id UNINDEXED, title, body_text)",
+        "CREATE TRIGGER IF NOT EXISTS mirror_item_deleted AFTER DELETE ON mirror_item BEGIN DELETE FROM mirror_search WHERE item_id=old.id; END",
+    )
+
+    @Test fun theMirrorsOwnSchemaAndWritesAreNotRefused() {
+        for (pragma in listOf("PRAGMA foreign_keys=ON", "PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", "PRAGMA secure_delete=ON")) sql(a, pragma)
+        val tx = call(a, JSONObject().put("op", "begin")).getString("tx")
+        for (statement in mirrorSchema) sql(a, statement, tx = tx)
+        sql(a, "INSERT INTO mirror_search(mirror_search,rank) VALUES('secure-delete',1)", tx = tx)
+        sql(a, "INSERT INTO mirror_meta(key,value) VALUES('account',?) ON CONFLICT(key) DO NOTHING", "acct", tx = tx)
+        sql(a, "INSERT INTO mirror_meta(key,value) VALUES('schema','1') ON CONFLICT(key) DO NOTHING", tx = tx)
+        sql(a, "INSERT INTO mirror_item(id, workspace_id, parent_id, title, snapshot, expires_at, local) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET workspace_id=excluded.workspace_id, parent_id=excluded.parent_id, title=excluded.title, snapshot=excluded.snapshot, expires_at=excluded.expires_at, local=excluded.local", "i1", "w", JSONObject.NULL, "Hello", "{\"canPersistBody\":1}", JSONObject.NULL, 0, tx = tx)
+        sql(a, "INSERT INTO mirror_search(item_id,title,body_text) VALUES(?,?,?)", "i1", "Hello", "world of notes", tx = tx)
+        sql(a, "UPDATE mirror_search SET body_text=? WHERE item_id=?", "new body text", "i1", tx = tx)
+        sql(a, "INSERT INTO mirror_conflict(id,workspace_id,item_id,kind,code,operation_json,created_at) VALUES(?,?,?,'body','document_changed',NULL,?) ON CONFLICT(id) DO UPDATE SET code=excluded.code", "c1", "w", "i1", "now", tx = tx)
+        sql(a, "INSERT INTO mirror_stage(workspace_id,id,snapshot) SELECT ?, json_extract(value,'\$[0]'), json_extract(value,'\$[1]') FROM json_each(?) WHERE true ON CONFLICT(workspace_id,id) DO UPDATE SET snapshot=excluded.snapshot", "w", "[[\"a\",\"b\"]]", tx = tx)
+        sql(a, "INSERT INTO mirror_checkpoint(workspace_id,cursor,boundary,next_cursor) VALUES(?,?,NULL,NULL) ON CONFLICT(workspace_id) DO UPDATE SET cursor=excluded.cursor,boundary=NULL,next_cursor=NULL", "w", "c", tx = tx)
+        sql(a, "WITH RECURSIVE expired(id) AS (SELECT id FROM mirror_item WHERE expires_at<=? UNION SELECT item.id FROM mirror_item item JOIN expired ON item.parent_id=expired.id) DELETE FROM mirror_item WHERE id IN (SELECT id FROM expired) RETURNING id", 1, tx = tx)
+        call(a, JSONObject().put("op", "commit").put("tx", tx))
+        assertEquals("i1", rows(sql(a, "SELECT item_id FROM mirror_search WHERE mirror_search MATCH 'body'")).getJSONObject(0).getString("item_id"))
+        assertEquals(1, rows(sql(a, "SELECT t FROM (SELECT body_text AS t FROM mirror_search WHERE item_id=?)", "i1")).length())
+        sql(a, "DELETE FROM mirror_item WHERE id=?", "i1")
+        assertEquals(0, rows(sql(a, "SELECT item_id FROM mirror_search WHERE mirror_search MATCH 'body'")).length())
+    }
+
+    @Test fun shadowTablesAndPragmaFunctionsAreRefusedAgainstTheRealIndex() {
+        sql(a, "CREATE VIRTUAL TABLE ft USING fts5(a)")
+        for (text in listOf(
+            "INSERT INTO 'ft_data' VALUES(99, x'00')",
+            "DELETE FROM 'ft_config'",
+            "DROP TABLE 'ft_data'",
+            "CREATE TABLE x_data AS SELECT 1 AS id, x'ffff' AS block",
+            "SELECT * FROM 'pragma_database_list'",
+            "SELECT * FROM 'pragma_function_list'",
+        )) refused(a, text)
+        sql(a, "INSERT INTO ft(a) VALUES ('ok')")
+        assertEquals(1, rows(sql(a, "SELECT a FROM ft WHERE ft MATCH 'ok'")).length())
+    }
+
     @Test fun theBundledSqliteIsNewEnoughForTheKnownMemorySafetyFixes() {
         // CVE-2025-6965 is fixed in 3.50.2; a downgrade of androidx.sqlite must fail here.
         val version = rows(sql(a, "SELECT sqlite_version() AS v")).getJSONObject(0).getString("v")

@@ -98,8 +98,45 @@ class NixStoreRulesTest {
         assertEquals(0, NixStoreRules.check("SELECT * FROM pragma_foreign_keys"))
     }
 
+    @Test fun refusesTheRtreeFunctionsAndPragmaFunctionsNamedAsStrings() {
+        for (fn in listOf("rtreenode", "rtreedepth", "rtreecheck", "RTREENODE", "\"rtreecheck\""))
+            refused("SELECT $fn(2, ?)")
+        for (name in listOf("pragma_database_list", "pragma_table_info", "pragma_function_list", "PRAGMA_Database_List"))
+            for (quoted in listOf("'$name'", "\"$name\"", "`$name`", "[$name]"))
+                refused("SELECT * FROM $quoted")
+        refused("SELECT * FROM 'pragma_table_info'('t')")
+        NixStoreRules.check("SELECT * FROM 'pragma_foreign_keys'")
+    }
+
+    @Test fun anIndexOrTriggerMayDeclareANameThatEndsLikeAShadowTable() {
+        // The mirror's own index.
+        assertEquals(0, NixStoreRules.check("CREATE INDEX IF NOT EXISTS mirror_item_parent ON mirror_item (parent_id)"))
+        NixStoreRules.check("CREATE UNIQUE INDEX x_data ON t(a)")
+        NixStoreRules.check("CREATE TRIGGER IF NOT EXISTS t_config AFTER DELETE ON m BEGIN DELETE FROM s WHERE rowid=old.id; END")
+        // But it cannot index or write a shadow table.
+        refused("CREATE INDEX i ON mirror_search_data (a)")
+        refused("CREATE INDEX i ON 'mirror_search_idx' (a)")
+    }
+
+    @Test fun theDownloadCeilingCannotBeRaisedByThePage() {
+        assertEquals(NixDownload.MAX_FILE_BYTES, NixDownload.limit(0))
+        assertEquals(NixDownload.MAX_FILE_BYTES, NixDownload.limit(-5))
+        assertEquals(NixDownload.MAX_FILE_BYTES, NixDownload.limit(Long.MAX_VALUE))
+        assertEquals(NixDownload.MAX_FILE_BYTES, NixDownload.limit(NixDownload.MAX_FILE_BYTES + 1))
+        assertEquals(1234L, NixDownload.limit(1234))
+    }
+
     @Test fun refusesWritesToFullTextShadowTables() {
-        for (suffix in listOf("data", "idx", "content", "docsize", "config", "segments", "segdir", "stat")) {
+        for (suffix in listOf("data", "idx", "content", "docsize", "config", "segments", "segdir", "stat", "node", "parent", "rowid")) {
+            // A string literal is accepted by SQLite as a table name.
+            refused("INSERT INTO 'mirror_search_$suffix' VALUES (99, x'00')")
+            refused("DELETE FROM 'mirror_search_$suffix'")
+            refused("UPDATE 'MIRROR_SEARCH_${suffix.uppercase()}' SET v=99")
+            refused("DROP TABLE 'mirror_search_$suffix'")
+            refused("CREATE TABLE mirror_search_$suffix AS SELECT 1 AS id, x'ffff' AS block")
+            refused("CREATE TABLE 'mirror_search_$suffix'(a)")
+            refused("CREATE TRIGGER t AFTER INSERT ON a BEGIN UPDATE 'x_$suffix' SET v=99; END")
+            refused("CREATE TRIGGER t AFTER INSERT ON a BEGIN DELETE FROM [x_$suffix]; END")
             refused("INSERT INTO mirror_search_$suffix VALUES (1)")
             refused("UPDATE mirror_search_$suffix SET a=1")
             refused("DELETE FROM \"mirror_search_$suffix\"")
