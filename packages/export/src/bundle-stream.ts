@@ -21,17 +21,22 @@ export interface BundleStream {
   readonly bundles: readonly ItemBundle[];
 }
 
-export function readBundleStream(lines: Iterable<string>): BundleStream {
-  let manifest: ArchiveManifest | null = null;
-  const bundles: ItemBundle[] = [];
-  let ended = false;
+/** Line-by-line state shared by the sync and async readers; one place holds every check. */
+class BundleStreamParser {
+  private manifest: ArchiveManifest | null = null;
+  private count = 0;
+  private ended = false;
 
-  for (const raw of lines) {
+  constructor(private readonly keep: (bundle: ItemBundle) => boolean) {}
+
+  readonly bundles: ItemBundle[] = [];
+
+  push(raw: string): void {
     const line = raw.trim();
     if (line.length === 0) {
-      continue;
+      return;
     }
-    if (ended) {
+    if (this.ended) {
       throw new BundleStreamError('The bundle stream continues after its end marker.');
     }
 
@@ -46,35 +51,64 @@ export function readBundleStream(lines: Iterable<string>): BundleStream {
     }
     const record = value as Record<string, unknown>;
 
-    if (manifest === null) {
+    if (this.manifest === null) {
       if (record.format !== ARCHIVE_FORMAT || !Array.isArray(record.items)) {
         throw new BundleStreamError('The bundle stream does not start with an archive manifest.');
       }
-      manifest = record as unknown as ArchiveManifest;
-      continue;
+      this.manifest = record as unknown as ArchiveManifest;
+      return;
     }
 
     if (record.end === true) {
-      if (record.items !== bundles.length) {
+      if (record.items !== this.count) {
         throw new BundleStreamError(
-          `The bundle stream says it holds ${String(record.items)} bundles but carried ${String(bundles.length)}.`,
+          `The bundle stream says it holds ${String(record.items)} bundles but carried ${String(this.count)}.`,
         );
       }
-      ended = true;
-      continue;
+      this.ended = true;
+      return;
     }
 
     if (typeof record.id !== 'string') {
       throw new BundleStreamError('The bundle stream holds a bundle without an id.');
     }
-    bundles.push(record as unknown as ItemBundle);
+    this.count += 1;
+    const bundle = record as unknown as ItemBundle;
+    if (this.keep(bundle)) {
+      this.bundles.push(bundle);
+    }
   }
 
-  if (manifest === null) {
-    throw new BundleStreamError('The bundle stream is empty.');
+  finish(): BundleStream {
+    if (this.manifest === null) {
+      throw new BundleStreamError('The bundle stream is empty.');
+    }
+    if (!this.ended) {
+      throw new BundleStreamError('The bundle stream ended before its end marker.');
+    }
+    return { manifest: this.manifest, bundles: this.bundles };
   }
-  if (!ended) {
-    throw new BundleStreamError('The bundle stream ended before its end marker.');
+}
+
+export function readBundleStream(lines: Iterable<string>): BundleStream {
+  const parser = new BundleStreamParser(() => true);
+  for (const raw of lines) {
+    parser.push(raw);
   }
-  return { manifest, bundles };
+  return parser.finish();
+}
+
+/**
+ * The same checks over an async line source. Only bundles `keep` accepts are retained, so a caller
+ * that needs one page holds one bundle, while the count check still sees every bundle.
+ */
+export async function readBundleStreamAsync(
+  lines: AsyncIterable<string>,
+  keep: (bundle: ItemBundle) => boolean = () => true,
+): Promise<BundleStream> {
+  const parser = new BundleStreamParser(keep);
+  for await (const raw of lines) {
+    parser.push(raw);
+  }
+  return parser.finish();
 }
