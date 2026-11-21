@@ -94,22 +94,6 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function isAbort(error: unknown): boolean {
-  return error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
-}
-
-/** Rejects when signal aborts; never resolves otherwise. */
-export function abortion(signal: AbortSignal | undefined): Promise<never> {
-  return new Promise((_resolve, reject) => {
-    if (signal === undefined) return;
-    const fail = (): void => {
-      reject(signal.reason instanceof Error ? signal.reason : new Error('aborted'));
-    };
-    if (signal.aborted) fail();
-    else signal.addEventListener('abort', fail, { once: true });
-  });
-}
-
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);

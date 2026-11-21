@@ -2,7 +2,7 @@ import { WORKSPACE_OPERATIONS } from '@nix/structure-spec';
 import { flattenToolExample, TOOL_EXAMPLES } from '@nix/structure-spec/testing';
 import { describe, expect, it } from 'vitest';
 
-import { flattenToolCall, toolArgParams, toolIdentity, validateToolArguments } from './flatten.ts';
+import { flattenToolCall, toolIdentity, validateToolArguments } from './flatten.ts';
 import { IDS } from '../testing/testing.ts';
 import { goJson } from '../shared/util.ts';
 
@@ -46,8 +46,6 @@ describe('flattenToolCall', () => {
 
   it('knows exactly the operations the catalog offers', () => {
     expect([...WORKSPACE_OPERATIONS].sort()).toEqual(Object.keys(TOOL_EXAMPLES).sort());
-    for (const operation of WORKSPACE_OPERATIONS)
-      expect(toolArgParams(operation).length, operation).toBeGreaterThanOrEqual(0);
   });
 
   it('flattens every example into arguments the validator accepts', () => {
