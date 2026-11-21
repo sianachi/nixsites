@@ -77,6 +77,19 @@ class NixStoreInstrumentedTest {
         assertEquals(1, deleted.length())
     }
 
+    @Test fun theBundledSqliteIsNewEnoughForTheKnownMemorySafetyFixes() {
+        // CVE-2025-6965 is fixed in 3.50.2; a downgrade of androidx.sqlite must fail here.
+        val version = rows(sql(a, "SELECT sqlite_version() AS v")).getJSONObject(0).getString("v")
+        val parts = version.split('.').map { it.toInt() }
+        assertTrue("SQLite $version", (parts[0] * 1_000_000 + parts[1] * 1_000 + parts[2]) >= 3_050_002)
+    }
+
+    @Test fun thePageCannotReachTheTokenizerPointerFunction() {
+        for (text in listOf("SELECT fts3_tokenizer(?)", "SELECT \"fts3_tokenizer\"(?)", "SELECT [FTS3_TOKENIZER](?)"))
+            assertNotNull(text, send(a, JSONObject().put("op", "execute").put("sql", text).put("params", JSONArray("[\"simple\"]"))).second)
+        assertNotNull(send(a, JSONObject().put("op", "execute").put("sql", "SELECT * FROM pragma_database_list")).second)
+    }
+
     @Test fun fullTextIndexAndItsTriggerRun() {
         sql(a, "CREATE VIRTUAL TABLE s USING fts5(t)")
         sql(a, "INSERT INTO s(s,rank) VALUES('secure-delete',1)")

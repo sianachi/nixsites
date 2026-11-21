@@ -23,7 +23,15 @@ object NixStoreRules {
      */
     private val allowed = setOf("select", "values", "with", "insert", "replace", "update", "delete", "create", "drop", "alter", "pragma")
 
-    /** Words (lowercase) and punctuation of `sql`; strings, quoted names and comments become a lone "'". */
+    /**
+     * Functions that hand the page a pointer or run native code: `fts3_tokenizer` returns a module's
+     * address and, with a blob, registers an arbitrary one that a later FTS3 table calls.
+     */
+    private val bannedNames = setOf("fts3_tokenizer", "load_extension", "readfile", "writefile", "edit")
+    private val writes = setOf("insert", "replace", "update", "delete", "drop", "alter")
+    private val shadow = Regex("_(data|idx|content|docsize|config|segments|segdir|stat)$")
+
+    /** Words (lowercase) and punctuation of `sql`; a string is a lone "'", a quoted name its lowercase text after a `"`, a comment nothing. */
     internal fun tokens(sql: String): List<String> {
         val out = ArrayList<String>()
         var i = 0
@@ -35,16 +43,19 @@ object NixStoreRules {
                 c == '/' && sql.startsWith("/*", i) -> i = sql.indexOf("*/", i + 2).let { if (it < 0) sql.length else it + 2 }
                 c == '\'' || c == '"' || c == '`' || c == '[' -> {
                     val close = if (c == '[') ']' else c
+                    val text = StringBuilder()
                     i++
                     while (i < sql.length) {
                         if (sql[i] == close) {
-                            if (c != '[' && sql.startsWith("$close$close", i)) { i += 2; continue }
+                            if (c != '[' && sql.startsWith("$close$close", i)) { text.append(close); i += 2; continue }
                             break
                         }
+                        text.append(sql[i])
                         i++
                     }
                     i++
-                    out.add("'")
+                    // A string stays opaque; a quoted name keeps its text behind a quote, so it is never a keyword.
+                    out.add(if (c == '\'') "'" else "\"" + text.toString().lowercase())
                 }
                 c.isLetter() || c == '_' -> {
                     val start = i
@@ -63,6 +74,11 @@ object NixStoreRules {
         val first = t.firstOrNull() ?: throw StoreError("Empty statement.")
         if (first !in allowed) throw StoreError("Statement not allowed.")
         if (first == "pragma" && t.getOrNull(1) !in pagePragmas) throw StoreError("Pragma not allowed.")
+        val names = t.map { it.removePrefix("\"") }
+        if (names.any { it in bannedNames || (it.startsWith("pragma_") && it.removePrefix("pragma_") !in pagePragmas) })
+            throw StoreError("Function not allowed.")
+        // The tables behind a virtual table are SQLite's own; writing them corrupts the index.
+        if (t.any { it in writes } && names.any { shadow.containsMatchIn(it) }) throw StoreError("Table not allowed.")
         // A trigger body holds its own semicolons and ends at the END that closes it (CASE ... END nests).
         val trigger = first == "create" && t.take(4).contains("trigger")
         var cases = 0

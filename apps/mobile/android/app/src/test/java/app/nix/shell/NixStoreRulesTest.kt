@@ -59,6 +59,67 @@ class NixStoreRulesTest {
         assertEquals(2, NixStoreRules.check("INSERT INTO t(a,b) VALUES (?,?)"))
     }
 
+    @Test fun refusesTheTokenizerFunctionInEveryQuoting() {
+        for (sql in listOf(
+            "SELECT fts3_tokenizer(?)",
+            "SELECT FTS3_Tokenizer(?)",
+            "SELECT \"fts3_tokenizer\"(?)",
+            "SELECT `fts3_tokenizer`(?)",
+            "SELECT [fts3_tokenizer](?)",
+            "SELECT \"FTS3_TOKENIZER\" (?)",
+            "SELECT fts3_tokenizer /* x */ (?, ?)",
+            "SELECT fts3_tokenizer\n--c\n(?, ?)",
+            "SELECT \"fts3_tokenizer\"\t(?,?)",
+            "CREATE VIRTUAL TABLE t USING fts3(tokenize=fts3_tokenizer)",
+            "WITH x AS (SELECT fts3_tokenizer(?)) SELECT * FROM x",
+            "INSERT INTO t VALUES (fts3_tokenizer(?))",
+            "SELECT load_extension(?)",
+            "SELECT readfile(?)",
+        )) refused(sql)
+        // A string that only mentions it is data.
+        assertEquals(0, NixStoreRules.check("SELECT 'fts3_tokenizer'"))
+    }
+
+    @Test fun quotedNamesAreNotKeywordsOrParameters() {
+        refused("\"attach\" '/x' AS v")
+        assertEquals(0, NixStoreRules.check("SELECT \"?\" FROM t"))
+        assertEquals(0, NixStoreRules.check("SELECT \"a;b\", [c;d] FROM t"))
+        assertEquals(0, NixStoreRules.check("SELECT \"it\"\"s\" FROM t"))
+    }
+
+    @Test fun refusesPragmaFunctionsOutsideTheAllowList() {
+        for (sql in listOf(
+            "SELECT * FROM pragma_database_list",
+            "SELECT * FROM PRAGMA_DATABASE_LIST()",
+            "SELECT * FROM \"pragma_database_list\"",
+            "SELECT * FROM [pragma_table_info]('t')",
+            "SELECT * FROM pragma_writable_schema",
+        )) refused(sql)
+        assertEquals(0, NixStoreRules.check("SELECT * FROM pragma_foreign_keys"))
+    }
+
+    @Test fun refusesWritesToFullTextShadowTables() {
+        for (suffix in listOf("data", "idx", "content", "docsize", "config", "segments", "segdir", "stat")) {
+            refused("INSERT INTO mirror_search_$suffix VALUES (1)")
+            refused("UPDATE mirror_search_$suffix SET a=1")
+            refused("DELETE FROM \"mirror_search_$suffix\"")
+            refused("DROP TABLE [mirror_search_$suffix]")
+            refused("ALTER TABLE `mirror_search_$suffix` RENAME TO x")
+            refused("REPLACE INTO MIRROR_SEARCH_${suffix.uppercase()} VALUES (1)")
+            refused("WITH c AS (SELECT 1) DELETE FROM mirror_search_$suffix")
+            // Reading is the page's own data.
+            NixStoreRules.check("SELECT * FROM mirror_search_$suffix")
+        }
+        // The mirror's own tables and its writes to the index through the virtual table stay allowed.
+        for (sql in listOf(
+            "INSERT INTO mirror_search(item_id,title,body_text) VALUES(?,?,?)",
+            "UPDATE mirror_search SET body_text='' WHERE item_id=?",
+            "DELETE FROM mirror_search WHERE item_id=?",
+            "INSERT INTO s(s,rank) VALUES('secure-delete',1)",
+            "INSERT INTO mirror_setting(key,value) VALUES(?,?)",
+        )) NixStoreRules.check(sql)
+    }
+
     @Test fun pragmasAreAllowListed() {
         for (sql in listOf("PRAGMA foreign_keys=ON", "PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", "pragma secure_delete = ON", "PRAGMA journal_mode"))
             NixStoreRules.check(sql)
