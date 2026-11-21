@@ -310,7 +310,7 @@ class NixStore(
                 val connection = AtomicReference<HttpURLConnection?>(null)
                 Download(net.submit(Callable {
                     try {
-                        download(target, dest, if (expected > 0) expected else NixDownload.MAX_FILE_BYTES, started) { connection.set(it) }
+                        download(target, dest, NixDownload.limit(expected), started) { connection.set(it) }
                     } finally {
                         synchronized(downloads) { downloads.remove(dest.name) }
                     }
@@ -371,7 +371,9 @@ class NixStore(
     fun wipe() {
         wipes++
         val running = synchronized(downloads) { downloads.values.toList() }
-        for (d in running) { d.connection()?.disconnect(); d.future.cancel(true) }
+        // Cut the connection and wait for the download thread to unwind. Cancelling the future would end
+        // the wait at once, with the thread still running; the wipe generation stops what it would store.
+        for (d in running) d.connection()?.disconnect()
         for (d in running) try { d.future.get(10, TimeUnit.SECONDS) } catch (_: Exception) {}
         if (activeTx != null) try { db?.execSQL("ROLLBACK") } catch (_: Exception) {}
         db?.close()

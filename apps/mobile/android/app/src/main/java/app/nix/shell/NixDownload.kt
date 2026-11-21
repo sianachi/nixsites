@@ -30,6 +30,9 @@ object NixDownload {
 
     private val downloading = ThreadLocal<Boolean>()
 
+    /** The page may name a smaller size than the ceiling, never a larger one. */
+    fun limit(expected: Long): Long = if (expected > 0) minOf(expected, MAX_FILE_BYTES) else MAX_FILE_BYTES
+
     fun onDownloadThread(): Boolean = downloading.get() == true
 
     /**
