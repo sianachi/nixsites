@@ -85,7 +85,7 @@ public static class WorkspaceAdministrationSql
                ) AS can_use_daily_notes,
                pending.invitation_id, r.lifecycle_state, r.archived_at,
                r.membership_locked, r.collaboration, r.agents_may_approve, r.agents_may_create_public_links,
-               -- shortcut: sums file_version per listed workspace with no (tenant_id, workspace_id) index; add one, or a maintained counter, when tenants hold many file versions.
+               -- Summed from ix_file_version_workspace_bytes (index-only); a maintained counter is the next step when one workspace holds millions of versions.
                CASE WHEN r.role_rank >= 0 THEN
                    (SELECT COALESCE(sum(fv.byte_length), 0)::bigint FROM file_version fv
                     WHERE fv.tenant_id = @tenant_id AND fv.workspace_id = r.workspace_id)
