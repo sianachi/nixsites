@@ -1,6 +1,7 @@
 import { Button, Text } from '@nix/ui';
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { MAX_OFFLINE_FILE_BYTES } from './mirror-fetch';
 import { getNativeMirror } from './native-mirror';
 import { setOfflineState, useOfflineState } from './offline-state';
 
@@ -14,7 +15,7 @@ const megabytes = (bytes: number): string =>
 export function OfflineCopyUsage(): ReactNode {
   const mirror = getNativeMirror();
   const [text, setText] = useState<string | null>(null);
-  const { lastSyncedAt, bootOffline } = useOfflineState();
+  const { lastSyncedAt, bootOffline, onlineOnlyFiles } = useOfflineState();
 
   useEffect(() => {
     if (mirror === null) return;
@@ -44,7 +45,11 @@ export function OfflineCopyUsage(): ReactNode {
   return (
     <div className="flex flex-col items-start gap-2">
       <Text variant="note" as="p" tone="muted">
-        {text}. {synced}
+        {text}
+        {onlineOnlyFiles > 0
+          ? `, ${String(onlineOnlyFiles)} larger than ${String(MAX_OFFLINE_FILE_BYTES / (1024 * 1024))} MB stay online-only`
+          : ''}
+        . {synced}
       </Text>
       <Button
         variant="secondary"

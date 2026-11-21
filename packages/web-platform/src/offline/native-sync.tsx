@@ -136,7 +136,7 @@ export function NativeSync(): ReactNode {
             await discardNativeMirror();
             return false;
           }
-          setOfflineState({ lastSyncedAt: Date.now() });
+          setOfflineState({ lastSyncedAt: Date.now(), onlineOnlyFiles: outcome.onlineOnlyFiles });
           reportSyncProblem(mirror, outcome);
           await warmRemembered(() => getAccessToken());
           return outcome.more;

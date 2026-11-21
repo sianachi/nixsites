@@ -84,6 +84,8 @@ export const PROTECTED_SETTING = 'offline.protected-workspaces';
 export const rememberKey = (path: string): string => `offline.cache:${path}`;
 const MAX_REMEMBERED_BYTES = 256 * 1024;
 const MAX_OFFLINE_OPEN_BYTES = 150 * 1024 * 1024;
+/** Files above this size are not downloaded for offline use; they stay online-only. */
+export const MAX_OFFLINE_FILE_BYTES = 100 * 1024 * 1024;
 
 /** Core's inline rule: only these are ever served as themselves (never html, svg or script types). */
 const INLINE_TYPES =
@@ -581,6 +583,12 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         503,
         'offline.unavailable',
         'This file is too large to open offline. Connect to open it.',
+      );
+    if (file.byteLength > MAX_OFFLINE_FILE_BYTES)
+      return problem(
+        503,
+        'offline.unavailable',
+        'This file is too large to keep offline. Connect to open it.',
       );
     const bytes = await deps.readFile(item.id, file.versionId);
     if (bytes === null)

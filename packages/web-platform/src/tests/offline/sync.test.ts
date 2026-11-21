@@ -67,6 +67,23 @@ describe('file sync', () => {
     expect(stored).toEqual({ a: 'v2', b: 'v1' });
   });
 
+  it('leaves a file above the size cap online-only and counts it, not as a failure', async () => {
+    const big = fileItem('big', 'v1', {
+      file: {
+        versionId: 'v1',
+        fileName: 'f',
+        mediaType: 'video/mp4',
+        byteLength: 101 * 1024 * 1024,
+        sha256: 'h',
+      },
+    } as Partial<MirrorItem>);
+    const { deps, mirror, stored } = setup([big, fileItem('a', 'v1')], { big: 'v1' });
+    expect(await syncFiles(deps, ['ws'])).toEqual({ failed: 0, onlineOnly: 1 });
+    expect(mirror.fileDelete).toHaveBeenCalledWith('big', 'v1');
+    expect(mirror.fileDownload).toHaveBeenCalledTimes(1);
+    expect(stored).toEqual({ a: 'v1' });
+  });
+
   it('neither fetches nor removes the files of a workspace whose pass did not finish', async () => {
     const { deps, mirror, stored } = setup([fileItem('a', 'v1'), fileItem('b', 'v2')], {
       a: 'v1',
@@ -114,12 +131,12 @@ describe('file sync', () => {
     failing.mirror.fileDownload
       .mockRejectedValueOnce(new Error('Download failed.'))
       .mockResolvedValueOnce({ bytes: 3, sha256: 'evil' });
-    expect(await syncFiles(failing.deps, ['ws'])).toBe(2);
+    expect((await syncFiles(failing.deps, ['ws'])).failed).toBe(2);
     expect(failing.stored).toEqual({ c: 'v1' });
 
     const changed = setup([fileItem('a', 'v1')], {});
     changed.capability.mockResolvedValueOnce({ url: 'https://f/a', byteLength: 3, sha256: 'new' });
-    expect(await syncFiles(changed.deps, ['ws'])).toBe(0);
+    expect((await syncFiles(changed.deps, ['ws'])).failed).toBe(0);
   });
 
   it('only fetches from plain https or local urls', () => {
@@ -204,6 +221,7 @@ describe('full sync report', () => {
     expect(report).toEqual({
       failedWorkspaces: ['Work'],
       failedFiles: 0,
+      onlineOnlyFiles: 0,
       unreachable: true,
       more: false,
     });
@@ -233,6 +251,7 @@ describe('full sync report', () => {
     expect(report).toEqual({
       failedWorkspaces: [],
       failedFiles: 0,
+      onlineOnlyFiles: 0,
       unreachable: false,
       more: true,
     });
@@ -297,6 +316,7 @@ describe('full sync report', () => {
       describeSyncProblem({
         failedWorkspaces: [],
         failedFiles: 0,
+        onlineOnlyFiles: 0,
         unreachable: false,
         more: false,
       }),
@@ -305,6 +325,7 @@ describe('full sync report', () => {
       describeSyncProblem({
         failedWorkspaces: ['Work'],
         failedFiles: 2,
+        onlineOnlyFiles: 0,
         unreachable: false,
         more: false,
       }),

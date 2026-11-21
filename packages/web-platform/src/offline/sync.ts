@@ -3,7 +3,7 @@ import { MirrorHttpError, MirrorUnreachableError } from '@nix/sync-core/fetch-ap
 import type { MirrorApi } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 
-import { PROTECTED_SETTING, WORKSPACES_SETTING } from './mirror-fetch';
+import { MAX_OFFLINE_FILE_BYTES, PROTECTED_SETTING, WORKSPACES_SETTING } from './mirror-fetch';
 import type { NativeMirror } from './native-mirror';
 import { closedByPassword } from './workspace-closed';
 
@@ -43,6 +43,8 @@ export interface SyncReport {
   /** Names of workspaces whose pass failed. */
   readonly failedWorkspaces: readonly string[];
   readonly failedFiles: number;
+  /** Files above the size cap: kept online-only, not a failure. */
+  readonly onlineOnlyFiles: number;
   /** A pass got no answer from the network: the failures say nothing about the sync itself. */
   readonly unreachable: boolean;
   /** A pass stopped at a batch limit with changes still queued: another pass should follow now. */
@@ -68,7 +70,8 @@ export function downloadable(url: string): boolean {
 }
 
 /**
- * Resolves with how many files could not be stored this time; each is retried on the next pass.
+ * Resolves with how many files could not be stored this time (each is retried on the next pass)
+ * and how many are above the size cap and so stay online-only.
  * `unsettled` are workspaces whose pass did not finish this time (no answer, a failure, a rebuild
  * cut short): their files are neither fetched nor removed, since what they should hold is unknown
  * and removing them would mean downloading all of them again.
@@ -77,12 +80,15 @@ export async function syncFiles(
   deps: SyncDeps,
   workspaceIds: readonly string[],
   unsettled: readonly string[] = [],
-): Promise<number> {
+): Promise<{ failed: number; onlineOnly: number }> {
   const wanted = new Map<string, { versionId: string; byteLength: number; sha256: string }>();
+  let onlineOnly = 0;
   for (const workspaceId of workspaceIds)
     for (const item of await deps.store.listFileItems(workspaceId))
-      if (item.file !== null && !item.locked && item.lifecycleState === 'active')
-        wanted.set(item.id, item.file);
+      if (item.file !== null && !item.locked && item.lifecycleState === 'active') {
+        if (item.file.byteLength > MAX_OFFLINE_FILE_BYTES) onlineOnly++;
+        else wanted.set(item.id, item.file);
+      }
   const kept = new Set<string>();
   for (const workspaceId of unsettled)
     for (const item of await deps.store.listFileItems(workspaceId).catch(() => []))
@@ -133,7 +139,7 @@ export async function syncFiles(
     }
   };
   await Promise.all(Array.from({ length: deps.concurrency ?? 2 }, worker));
-  return failed;
+  return { failed, onlineOnly };
 }
 
 export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
@@ -161,7 +167,7 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
   const unsettled: string[] = [];
   for (const workspace of workspaces) {
     if (deps.signal?.aborted === true)
-      return { failedWorkspaces, failedFiles: 0, unreachable, more: false };
+      return { failedWorkspaces, failedFiles: 0, onlineOnlyFiles: 0, unreachable, more: false };
     // Closed, not revoked: no pass, so nothing is wiped. The next pass after an unlock picks it up.
     if (closedByPassword(workspace)) continue;
     // One workspace failing (a lost connection, a bad page) must not hold up the others.
@@ -203,8 +209,12 @@ export async function runFullSync(deps: SyncDeps): Promise<SyncOutcome> {
   }
   // Downloaded copies of a closed workspace's files go until it is unlocked: they are bytes of a
   // workspace this session may not read. Queued edits live in the outbox and are not touched.
-  const failedFiles = await syncFiles(deps, settled, unsettled);
-  return { failedWorkspaces, failedFiles, unreachable, more };
+  const { failed: failedFiles, onlineOnly: onlineOnlyFiles } = await syncFiles(
+    deps,
+    settled,
+    unsettled,
+  );
+  return { failedWorkspaces, failedFiles, onlineOnlyFiles, unreachable, more };
 }
 
 /** One line for the person, or null when the report has nothing to say. */

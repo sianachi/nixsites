@@ -7,6 +7,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- The offline copy in the native apps keeps files up to 100 MB. A larger file stays online-only: it opens
+  with a connection, and Settings > About counts how many are left out instead of reporting them as failed.
 - Shared links to the public pages show a preview card. The web app document carries Open Graph and
   Twitter card tags for the title, description, image, URL and site name, using
   `apps/web/public/nix-og.png` (1200 by 630).

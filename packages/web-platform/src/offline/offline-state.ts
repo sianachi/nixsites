@@ -14,6 +14,8 @@ export interface OfflineState {
   readonly resyncRequestedAt: number | null;
   /** What the last sync that reached the server could not do; null when it did everything. */
   readonly syncProblem: string | null;
+  /** Files above the size cap that the copy leaves online-only. */
+  readonly onlineOnlyFiles: number;
 }
 
 let state: OfflineState = {
@@ -22,6 +24,7 @@ let state: OfflineState = {
   lastSyncedAt: null,
   resyncRequestedAt: null,
   syncProblem: null,
+  onlineOnlyFiles: 0,
 };
 const listeners = new Set<() => void>();
 
@@ -36,7 +39,8 @@ export function setOfflineState(patch: Partial<OfflineState>): void {
     next.networkDown === state.networkDown &&
     next.lastSyncedAt === state.lastSyncedAt &&
     next.resyncRequestedAt === state.resyncRequestedAt &&
-    next.syncProblem === state.syncProblem
+    next.syncProblem === state.syncProblem &&
+    next.onlineOnlyFiles === state.onlineOnlyFiles
   )
     return;
   state = next;
