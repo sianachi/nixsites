@@ -552,7 +552,7 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         unrenderable: [],
         default: mainView?.id ?? 'document',
         hideDocument,
-        version: null,
+        version: item.viewsVersion ?? null,
       });
     }
 
@@ -713,6 +713,13 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
             ...(plan.body === undefined ? {} : { body: plan.body }),
           },
         });
+        if ('reread' in plan.answer) {
+          indexes.clear();
+          return (
+            (await answer(store, new URL(plan.answer.reread, globalThis.location.origin))) ??
+            problem(404, 'item.not_found', 'This item is not in the synced copy.')
+          );
+        }
         return plan.answer.status === 204
           ? new Response(null, { status: 204 })
           : json(plan.answer.body);

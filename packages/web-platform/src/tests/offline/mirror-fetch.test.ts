@@ -753,19 +753,42 @@ describe('habit and recurrence writes offline', () => {
     });
   });
 
-  it('says plainly that protection, schema, view and restore changes need a connection', async () => {
+  it('queues a protection change with what the device saw, and answers with the item', async () => {
+    await withItems(async (outbox) => {
+      const { get } = setup({ store: fakeStore({}, { outbox }) });
+      const response = await get(
+        `/api/v1/items/${TASK}/protection`,
+        send('PUT', { noDelete: true }),
+      );
+      expect(response.status).toBe(200);
+      expect(outbox).toEqual([
+        expect.objectContaining({
+          kind: 'request',
+          itemId: TASK,
+          expectedRevision: null,
+          payload: expect.objectContaining({
+            method: 'PUT',
+            body: { noDelete: true, base: { noDelete: false, noChildren: false } },
+          }),
+        }),
+      ]);
+    });
+  });
+
+  it('says plainly that pet protection, view setups, structured create and restore need a connection', async () => {
     await withItems(async (outbox) => {
       const { get } = setup({ store: fakeStore({}, { outbox }) });
       const refused: [string, string][] = [
-        ['PUT', `/api/v1/items/${TASK}/protection`],
-        ['PUT', `/api/v1/items/${TASK}/schema`],
-        ['PUT', `/api/v1/items/${TASK}/views`],
+        ['PUT', `/api/v1/items/${TASK}/pet-protection`],
         ['POST', `/api/v1/items/${TASK}/view-setups`],
+        ['PUT', `/api/v1/items/${TASK}/view-setups/v1`],
         ['POST', `/api/v1/items/${TASK}/restore`],
         ['POST', `/api/v1/workspaces/${WS}/structured-items`],
+        // A views write without the version the person saw is not queued either.
+        ['PUT', `/api/v1/items/${TASK}/views`],
       ];
       for (const [method, path] of refused) {
-        const response = await get(path, send(method, {}));
+        const response = await get(path, send(method, { views: [] }));
         expect(response.status).toBe(503);
         const problem = (await response.json()) as { code: string; detail: string };
         expect(problem.code).toBe('offline.read_only');

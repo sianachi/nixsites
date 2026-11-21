@@ -31,7 +31,8 @@ export type PlannedWrite =
       readonly path: string;
       readonly body?: unknown;
       /** What Core would have answered, so the screen carries on as if it had. */
-      readonly answer: { readonly status: number; readonly body: unknown };
+      readonly answer:
+        { readonly status: number; readonly body: unknown } | { readonly reread: string };
     }
   | {
       readonly kind: 'properties';

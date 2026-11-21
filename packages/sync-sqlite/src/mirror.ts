@@ -145,6 +145,38 @@ async function projectedTitle(tx: SqliteTransaction, item: MirrorItem): Promise<
   return operation?.kind === 'rename' ? operation.payload.title : item.title;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** A queued protection, views or schema write, shown on the item as Core will once it replays. */
+function projectRequest(
+  item: MirrorItem,
+  operation: Extract<OutboxOperation, { kind: 'request' }>,
+): MirrorItem {
+  const { method, path, body } = operation.payload;
+  const part = /\/(protection|views|schema)$/.exec(path)?.[1];
+  if (method !== 'PUT' || part === undefined || !isRecord(body)) return item;
+  if (part === 'protection')
+    return {
+      ...item,
+      noDelete: typeof body.noDelete === 'boolean' ? body.noDelete : item.noDelete,
+      noChildren: typeof body.noChildren === 'boolean' ? body.noChildren : item.noChildren,
+    };
+  if (part === 'views')
+    return {
+      ...item,
+      // The version is Core's to compute, so a further edit waits for the sync.
+      viewsVersion: null,
+      views: {
+        ...(item.views ?? {}),
+        views: body.views,
+        default: body.default,
+        ...(typeof body.hideDocument === 'boolean' ? { hideDocument: body.hideDocument } : {}),
+      },
+    };
+  return { ...item, schema: { properties: body.properties, inherit: body.inherit } };
+}
+
 async function projectItems(
   tx: SqliteTransaction,
   workspaceId: string,
@@ -170,7 +202,9 @@ async function projectItems(
       switch (operation.kind) {
         case 'daily-note':
         case 'create':
+          break;
         case 'request':
+          current = projectRequest(current, operation);
           break;
         case 'rename':
           current = { ...current, title: operation.payload.title };

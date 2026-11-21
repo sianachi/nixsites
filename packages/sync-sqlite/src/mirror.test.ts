@@ -167,6 +167,40 @@ describe('SQLite mirror with real SQLite', () => {
     expect((await store.listItems(workspace))[0]?.settings).toEqual(settings);
   });
 
+  it('shows a queued protection, views or schema request on the item until it replays', async () => {
+    const { store } = await setup();
+    await snapshot(store, [
+      item({ viewsVersion: 'v1', views: { views: [], default: 'document' } }),
+    ]);
+    const base = item();
+    const queue = (operationId: string, part: string, body: unknown) =>
+      store.enqueue(workspace, {
+        kind: 'request',
+        operationId,
+        itemId: base.id,
+        expectedRevision: null,
+        payload: { method: 'PUT', path: `/api/v1/items/${base.id}/${part}`, body },
+      });
+    await queue('0192f6e0-0000-7000-8000-0000000000a1', 'protection', { noDelete: true });
+    await queue('0192f6e0-0000-7000-8000-0000000000a2', 'views', {
+      views: [{ id: 'v', name: 'List', kind: 'list' }],
+      default: 'v',
+      expectedVersion: 'v1',
+    });
+    await queue('0192f6e0-0000-7000-8000-0000000000a3', 'schema', {
+      properties: [{ key: 'a', label: 'A', type: 'text', required: false }],
+      inherit: false,
+    });
+    const [shown] = await store.listItems(workspace);
+    expect(shown).toMatchObject({
+      noDelete: true,
+      noChildren: base.noChildren,
+      viewsVersion: null,
+      views: { default: 'v', views: [expect.objectContaining({ id: 'v' })] },
+      schema: { inherit: false, properties: [expect.objectContaining({ key: 'a' })] },
+    });
+  });
+
   it('rolls back both item changes and cursor advancement on a real SQLite trigger failure', async () => {
     const { store, driver } = await setup();
     await snapshot(store, [item()]);

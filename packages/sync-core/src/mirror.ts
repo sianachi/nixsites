@@ -38,6 +38,8 @@ export const nativeItemSnapshotSchema = z.object({
     })
     .nullable()
     .optional(),
+  /** Core's version of the stored views, sent back when they are edited; null while locked or unknown. */
+  viewsVersion: z.string().nullable().optional(),
   managedBy: z.string().nullable(),
   createdAt: timestamp,
   updatedAt: timestamp.nullable(),
