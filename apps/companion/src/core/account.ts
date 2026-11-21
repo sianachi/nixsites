@@ -17,6 +17,7 @@ import {
   statSync,
   writeSync,
 } from 'node:fs';
+import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import {
@@ -86,6 +87,7 @@ export const MAX_CONCURRENT_WATCHERS = 4;
 export const MIN_WATCH_DWELL_MS = 120;
 export const MAX_CONVERSATIONS_PER_ACCOUNT = 128;
 export const MAX_HISTORY_ENTRIES = 32;
+const HISTORY_READ_CONCURRENCY = 8;
 export const STUCK_TURN_MS = 15 * 60 * 1000;
 const MAX_EARLIER_RUNES = 8000;
 const MAX_FILE_BYTES = 4 << 20;
@@ -641,7 +643,7 @@ export class Account {
       op === 'delete_history' ||
       (op === 'rename' && r.historyId !== '')
     ) {
-      return this.history(key, r);
+      return await this.history(key, r);
     }
     this.load(key);
     const c = this.conversations.get(key);
@@ -1780,7 +1782,7 @@ export class Account {
     this.save(key);
   }
 
-  private history(key: string, r: Request): Response {
+  private async history(key: string, r: Request): Promise<Response> {
     const dir = this.historyDir(key);
     const result = this.snapshot('');
     if (r.operation === 'rename') {
@@ -1807,15 +1809,26 @@ export class Account {
     }
     let entries: string[];
     try {
-      entries = readdirSync(dir);
+      entries = await readdir(dir);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return result;
       throw error;
     }
-    for (const name of entries) {
-      const id = name.replace(/\.json$/, '');
-      if (!UUID.test(id)) continue;
-      const value = readArchive(join(dir, name));
+    // Reads are async and bounded so a populated history does not stall the shared event loop.
+    // Results keep directory order, and one corrupt entry still fails the whole listing.
+    const names = entries.filter((name) => UUID.test(name.replace(/\.json$/, '')));
+    const archives: HistoryArchive[] = new Array<HistoryArchive>(names.length);
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      while (next < names.length) {
+        const i = next++;
+        archives[i] = await readArchiveAsync(join(dir, names[i] ?? ''));
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(HISTORY_READ_CONCURRENCY, names.length) }, worker),
+    );
+    for (const value of archives) {
       result.history.push({ id: value.id, title: value.title, createdAt: value.createdAt });
     }
     result.history.sort((a, b) =>
@@ -1890,6 +1903,23 @@ function readArchive(path: string): HistoryArchive {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
     throw new Error('history could not be loaded');
   }
+  return parseArchive(raw);
+}
+
+async function readArchiveAsync(path: string): Promise<HistoryArchive> {
+  let raw: unknown;
+  try {
+    const bytes = await readFile(path);
+    if (bytes.length > MAX_FILE_BYTES) throw new Error('too large');
+    raw = JSON.parse(bytes.toString('utf8')) as unknown;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
+    throw new Error('history could not be loaded');
+  }
+  return parseArchive(raw);
+}
+
+function parseArchive(raw: unknown): HistoryArchive {
   if (!isRecord(raw)) throw new Error('history could not be loaded');
   return {
     id: str(raw.id),
