@@ -140,6 +140,11 @@ final class NixStoreTests: XCTestCase {
             "PRAGMA writable_schema = ON",
             "BEGIN",
             "SAVEPOINT s",
+            "PRAGMA journal_mode = OFF",
+            "PRAGMA journal_mode = 'memory'",
+            "PRAGMA main.journal_mode = DELETE",
+            "PRAGMA synchronous = OFF",
+            "PRAGMA secure_delete = 0",
             "SELECT fts3_tokenizer('simple')",
             "SELECT \"FTS3_tokenizer\"('simple')",
         ]
@@ -150,6 +155,12 @@ final class NixStoreTests: XCTestCase {
             } catch {}
         }
         XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appendingPathComponent("copy.sqlite").path))
+        // What the mirror opens with still passes, and the journal stays on.
+        for sql in ["PRAGMA foreign_keys=ON", "PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", "PRAGMA secure_delete=ON"] {
+            _ = try await call(stores, "https://a.example", ["op": "execute", "sql": sql])
+        }
+        let mode = try await call(stores, "https://a.example", ["op": "execute", "sql": "PRAGMA journal_mode"])["rows"] as! [Any]
+        XCTAssertTrue(String(describing: mode).contains("wal"), String(describing: mode))
         for sql in ["PRAGMA foreign_keys=ON", "PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", "PRAGMA secure_delete=ON"] {
             _ = try await call(stores, "https://a.example", ["op": "execute", "sql": sql])
         }

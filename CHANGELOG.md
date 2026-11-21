@@ -208,6 +208,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - The iOS and desktop apps refuse a database function that a server's page could use to read or
   call raw memory addresses in the app.
+- The iOS app refuses database settings that switch off its journal. With the journal off, a
+  server's page could write its own bytes into the search index's internal storage.
 - Updated hono and @hono/node-server in the CLI's MCP dependency tree to patched releases.
 - Pet search keeps excerpts from marked or locked notes out of workspace and folder results.
 - Pet job briefs and observations are screened for recognizable credentials before they reach
