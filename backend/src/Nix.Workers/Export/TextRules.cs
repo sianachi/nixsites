@@ -94,26 +94,6 @@ public static class TextRules
         || (c >= 0xe000 && c <= 0xfffd)
         || (c >= 0x10000 && c <= 0x10ffff);
 
-    /// <summary>Go's <c>html.EscapeString</c>: the five XML specials, apostrophe as <c>&amp;#39;</c> and quote as <c>&amp;#34;</c>.</summary>
-    public static string EscapeXml(string value)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-        var output = new StringBuilder(value.Length);
-        foreach (var c in value)
-        {
-            output.Append(c switch
-            {
-                '&' => "&amp;",
-                '\'' => "&#39;",
-                '<' => "&lt;",
-                '>' => "&gt;",
-                '"' => "&#34;",
-                _ => c.ToString(),
-            });
-        }
-        return output.ToString();
-    }
-
     /// <summary>Whether a link may be written into a document: http, https, mailto or nix, bounded, no userinfo.</summary>
     public static bool SafeDocumentLink(string raw)
     {
