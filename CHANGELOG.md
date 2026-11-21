@@ -7,6 +7,19 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Item protection, a container's views and an item's property schema can be edited offline in the
+  native apps. Each change is sent with what the device saw before the edit (the protection flags,
+  the views version, the schema), and Core refuses it, listing it among the changes that could not be
+  applied, when someone changed that meanwhile, so a late offline edit never undoes another person's.
+  A further views edit on the same item waits for the first to sync. Pet turns cannot change protection
+  this way. Core's sync snapshot gains `viewsVersion` for this.
+- Habit check-ins, undoing a check-in, and completing an occurrence of a repeating item can be done
+  offline in the native apps. They are kept in the queue and sent when the connection returns, the
+  habit and calendar views show them at once, and one Core refuses (a paused habit, a day that is not
+  scheduled) appears in the list of changes that could not be applied. Core takes these only as
+  those three requests, never an arbitrary one, and applies them as the signed-in person.
+- The offline copy in the native apps keeps files up to 100 MB. A larger file stays online-only: it opens
+  with a connection, and Settings > About counts how many are left out instead of reporting them as failed.
 - The Android app keeps an offline copy of each server, as the iOS app does: notes, views and
   files sync to an on-device database that only that server's pages can read, and it is deleted
   when you sign out, are refused by the server, or remove the server.
@@ -151,6 +164,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- A note edited offline in the native apps no longer replays the same edits when reopened after they have synced: the
+  device clears its draft journal entries once the server has them.
 - The desktop app signs in when the server adds a parameter to the sign-in callback, as the iOS app
   already did. The callback still has to name the server you signed in on, and carry one code.
 - The one-line install works again when the latest release is older than the installer on `main`:

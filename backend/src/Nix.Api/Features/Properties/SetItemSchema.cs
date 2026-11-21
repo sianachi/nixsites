@@ -27,7 +27,10 @@ namespace Nix.Features.Properties;
 /// somebody edited a definition - is the worse failure.
 /// </para>
 /// </remarks>
-public sealed record SetItemSchema(ItemId ItemId, PropertySchema? Schema) : ICommand<PropertySchema>;
+public sealed record SetItemSchema(ItemId ItemId, PropertySchema? Schema, SchemaBase? Base = null) : ICommand<PropertySchema>;
+
+/// <summary>The schema a caller edited from. When given, the write happens only if it is still what is stored.</summary>
+public sealed record SchemaBase(PropertySchema Schema);
 
 /// <summary>Handles <see cref="SetItemSchema"/>.</summary>
 public sealed class SetItemSchemaHandler(
@@ -69,6 +72,17 @@ public sealed class SetItemSchemaHandler(
                 ItemErrors.LifecycleConflict("A deleted item's schema cannot be changed."));
         }
 
+        // Compared by meaning (both through the typed form), then written only while the row still holds
+        // exactly the text compared, so a write in between is a conflict instead of being overwritten.
+        if (command.Base is { } seen
+            && !string.Equals(
+                PropertySchemaJson.Write(seen.Schema),
+                PropertySchemaJson.Write(PropertySchemaJson.Read(item.Schema)),
+                StringComparison.Ordinal))
+        {
+            return Result.Failure<PropertySchema>(PropertyErrors.SchemaBaseChanged());
+        }
+
         if (schema is null || schema.IsEmpty)
         {
             if (recordKeys is not null)
@@ -76,9 +90,10 @@ public sealed class SetItemSchemaHandler(
                 _ = await recordKeys.ApplySchemaAsync(item, null, cancellationToken).ConfigureAwait(false);
             }
 
-            await tree
-                .UpdateSchemaAsync(itemId, null, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
-                .ConfigureAwait(false);
+            if (!await WriteAsync(item, null).ConfigureAwait(false))
+            {
+                return Result.Failure<PropertySchema>(PropertyErrors.SchemaBaseChanged());
+            }
 
             return Result.Success(PropertySchema.Empty);
         }
@@ -107,11 +122,27 @@ public sealed class SetItemSchemaHandler(
             return Result.Failure<PropertySchema>(refused);
         }
 
-        await tree
-            .UpdateSchemaAsync(itemId, json, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
-            .ConfigureAwait(false);
+        if (!await WriteAsync(item, json).ConfigureAwait(false))
+        {
+            return Result.Failure<PropertySchema>(PropertyErrors.SchemaBaseChanged());
+        }
 
         return Result.Success(schema);
+
+        async ValueTask<bool> WriteAsync(Item stored, string? next)
+        {
+            if (command.Base is null)
+            {
+                await tree
+                    .UpdateSchemaAsync(itemId, next, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
+                    .ConfigureAwait(false);
+                return true;
+            }
+
+            return await tree
+                .TryUpdateSchemaAsync(itemId, stored.WorkspaceId, stored.Schema, next, context.PrincipalId, clock.GetUtcNow(), cancellationToken)
+                .ConfigureAwait(false);
+        }
     }
 
     /// <summary>

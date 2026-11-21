@@ -17,7 +17,10 @@ namespace Nix.Features.Items;
 /// not against a colleague. The exception is a deletion protection the system holds on an item it
 /// manages, which only the managing feature releases.
 /// </remarks>
-public sealed record SetItemProtection(ItemId ItemId, bool? NoDelete, bool? NoChildren, bool? Collaboration = null) : ICommand<Item>;
+public sealed record SetItemProtection(ItemId ItemId, bool? NoDelete, bool? NoChildren, bool? Collaboration = null, ProtectionBase? Base = null) : ICommand<Item>;
+
+/// <summary>The flags a caller saw before editing them; the write is refused when they differ.</summary>
+public sealed record ProtectionBase(bool NoDelete, bool NoChildren);
 
 /// <summary>Handles <see cref="SetItemProtection"/>.</summary>
 public sealed class SetItemProtectionHandler(
@@ -55,6 +58,13 @@ public sealed class SetItemProtectionHandler(
         {
             return Result.Failure<Item>(
                 ItemErrors.LifecycleConflict("A deleted item's protection cannot be changed."));
+        }
+
+        // Compared after the topology lock, which every protection write takes, so no other write
+        // can land between this check and the one below.
+        if (command.Base is { } seen && (seen.NoDelete != item.NoDelete || seen.NoChildren != item.NoChildren))
+        {
+            return Result.Failure<Item>(ItemErrors.ProtectionBaseChanged());
         }
 
         const string managedRefusal =

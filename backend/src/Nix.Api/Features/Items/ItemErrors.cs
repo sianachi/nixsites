@@ -65,6 +65,10 @@ public static class ItemErrors
     /// <summary>The system manages this protection, so it is not the caller's to change.</summary>
     public static NixError ProtectionManaged(string detail) => new("items.protection_managed", detail);
 
+    /// <summary>The protection flags are no longer what the caller saw before editing them.</summary>
+    public static NixError ProtectionBaseChanged() =>
+        new("items.protection_base_changed", "The item's protection changed since you last saw it.");
+
     /// <summary>The item mirrors something the caller may not edit at its source.</summary>
     public static NixError ReadOnly(string detail) => new("items.read_only", detail);
 

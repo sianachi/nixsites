@@ -5705,6 +5705,7 @@ export interface components {
       bodyHeadSeq: null | string;
       file: null | components['schemas']['NativeFileSnapshot'];
       settings?: null | components['schemas']['ItemSettings'];
+      viewsVersion?: null | string;
     };
     NativeRemovedItem: {
       /** Format: uuid */

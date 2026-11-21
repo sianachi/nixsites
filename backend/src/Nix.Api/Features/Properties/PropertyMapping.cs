@@ -63,6 +63,16 @@ internal static class PropertyMapping
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // The serializer does not enforce non-nullable members, so a null list, entry, key, label or type
+        // from a hand-written client reaches here. It is refused like an unknown type, not dereferenced.
+        if (request.Properties is null
+            || request.Properties.Any(entry => entry is null || entry.Key is null || entry.Label is null || entry.Type is null))
+        {
+            schema = PropertySchema.Empty;
+            unknownType = string.Empty;
+            return false;
+        }
+
         var properties = ImmutableArray.CreateBuilder<PropertyDefinition>(request.Properties.Count);
 
         foreach (var property in request.Properties)

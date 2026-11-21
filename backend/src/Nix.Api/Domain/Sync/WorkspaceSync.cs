@@ -28,7 +28,8 @@ public sealed record NativeItemSnapshot(
     Guid? BodyDocId,
     string? BodyHeadSeq,
     NativeFileSnapshot? File,
-    Nix.Domain.Items.ItemSettings? Settings = null);
+    Nix.Domain.Items.ItemSettings? Settings = null,
+    string? ViewsVersion = null);
 
 /// <summary>The shown version's metadata (latest approved, else current), without an object key or capability.</summary>
 public sealed record NativeFileSnapshot(Guid VersionId, string FileName, string MediaType, long ByteLength, string Sha256, string State = "draft");

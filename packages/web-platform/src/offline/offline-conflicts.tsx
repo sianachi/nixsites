@@ -24,10 +24,26 @@ const WHAT: Record<string, string> = {
   archive: 'Move to trash',
   properties: 'Edit properties',
   'daily-note': 'Open daily note',
+  request: 'Habit check-in or repeat completion',
 };
 
-export const describeConflict = (conflict: MirrorConflict): string =>
-  conflict.kind === 'body' ? 'Note text' : (WHAT[conflict.operation?.kind ?? ''] ?? 'Change');
+const REQUEST_WHAT: [string, string][] = [
+  ['/protection', 'Change protection'],
+  ['/views', 'Change views'],
+  ['/schema', 'Change properties'],
+];
+
+export const describeConflict = (conflict: MirrorConflict): string => {
+  if (conflict.kind === 'body') return 'Note text';
+  const operation = conflict.operation;
+  if (operation?.kind === 'request')
+    return (
+      REQUEST_WHAT.find(([suffix]) => operation.payload.path.endsWith(suffix))?.[1] ??
+      WHAT.request ??
+      'Change'
+    );
+  return WHAT[operation?.kind ?? ''] ?? 'Change';
+};
 
 const WHY: Record<string, string> = {
   'sync.revision_conflict': 'It was changed on the server after you went offline.',
@@ -37,6 +53,11 @@ const WHY: Record<string, string> = {
   'items.locked': 'It is locked.',
   'items.move_would_create_cycle': 'It cannot be moved inside itself.',
   'items.schema_violation': 'A property value is not allowed here.',
+  'properties.invalid': 'A property value is not allowed here.',
+  'items.protection_base_changed':
+    'Its protection was changed on the server after you went offline.',
+  'views.version_conflict': 'Its views were changed on the server after you went offline.',
+  'items.schema_base_changed': 'Its properties were changed on the server after you went offline.',
   document_changed: 'The note was replaced on the server. Copy your text to keep it.',
   document_read_only: 'You can no longer edit this note. Copy your text to keep it.',
   invalid_local_update: 'The edit could not be read. Copy your text to keep it.',

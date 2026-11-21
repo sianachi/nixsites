@@ -64,6 +64,8 @@ export const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   // A workspace password is typed by a person: setting, changing or removing it, unlocking with
   // it and joining by it are never run by an assistant, which must not be handed the password.
   [/^\/api\/v1\/workspaces\/[^/]+\/(password|unlock|join)(\/|$)/, 'any'],
+  // A device's offline copy holds what a pet may not see; replay would skip the per-item checks.
+  [/^\/api\/v1\/workspaces\/[^/]+\/sync(\/|$)/, 'any'],
   // Item lock passwords and protections are set by a person, for the same reason.
   [/^\/api\/v1\/items\/[^/]+\/(lock|unlock|protection|pet-protection)(\/|$)/, 'any'],
 ];

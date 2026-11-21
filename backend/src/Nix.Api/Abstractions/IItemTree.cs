@@ -230,6 +230,24 @@ public interface IItemTree
         DateTimeOffset at,
         CancellationToken cancellationToken);
 
+    /// <summary>Atomically replaces the schema only while the row still holds the schema text that was read.</summary>
+    /// <param name="id">The item.</param>
+    /// <param name="workspaceId">The workspace whose write permission was checked.</param>
+    /// <param name="expectedSchema">The exact previously read JSON, including SQL null.</param>
+    /// <param name="schema">The replacement JSON, or null for none.</param>
+    /// <param name="actor">Who modified it.</param>
+    /// <param name="at">When.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>False when the row changed. Unimplemented stores fail closed.</returns>
+    public ValueTask<bool> TryUpdateSchemaAsync(
+        ItemId id,
+        WorkspaceId workspaceId,
+        string? expectedSchema,
+        string? schema,
+        Nix.Domain.Identity.PrincipalId actor,
+        DateTimeOffset at,
+        CancellationToken cancellationToken) => ValueTask.FromResult(false);
+
     /// <summary>Replaces the views a container offers.</summary>
     /// <param name="id">The container.</param>
     /// <param name="views">The views as JSON, or <see langword="null"/> to offer none.</param>

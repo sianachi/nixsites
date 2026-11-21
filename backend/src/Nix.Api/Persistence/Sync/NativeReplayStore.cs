@@ -48,6 +48,11 @@ public sealed class NativeReplayStore(NixDbContext database, NixSqlExecutor sql,
     }
 
     /// <inheritdoc />
+    public async ValueTask<bool> ItemExistsAsync(WorkspaceId workspaceId, ItemId itemId, CancellationToken cancellationToken) =>
+        await sql.ScalarOrDefaultAsync<Guid>(NativeReplaySql.ItemExists,
+            ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false) != Guid.Empty;
+
+    /// <inheritdoc />
     public async ValueTask SaveAsync(Guid operationId, WorkspaceId workspaceId, string fingerprint, string response, CancellationToken cancellationToken) =>
         _ = await sql.ExecuteAsync(NativeReplaySql.SaveReceipt,
             [.. OperationParameters(operationId), Uuid("workspace_id", workspaceId.Value),

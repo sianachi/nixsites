@@ -1,7 +1,13 @@
 import type { MirrorItem } from '@nix/sync-core/mirror';
 import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 
-import { computeView, isComputedView, type ViewAnswer, type ViewRequest } from '@nix/view-compute';
+import {
+  computeView,
+  isComputedView,
+  withQueuedRequests,
+  type ViewAnswer,
+  type ViewRequest,
+} from '@nix/view-compute';
 
 import { planWrite, type PlannedWrite } from './mirror-writes';
 import { planViewWrite } from './view-writes';
@@ -84,6 +90,8 @@ export const PROTECTED_SETTING = 'offline.protected-workspaces';
 export const rememberKey = (path: string): string => `offline.cache:${path}`;
 const MAX_REMEMBERED_BYTES = 256 * 1024;
 const MAX_OFFLINE_OPEN_BYTES = 150 * 1024 * 1024;
+/** Files above this size are not downloaded for offline use; they stay online-only. */
+export const MAX_OFFLINE_FILE_BYTES = 100 * 1024 * 1024;
 
 /** Core's inline rule: only these are ever served as themselves (never html, svg or script types). */
 const INLINE_TYPES =
@@ -387,27 +395,42 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
     if (!isComputedView(request)) return null;
     const closed = await closedWorkspaceIds(store);
     const answered: ViewAnswer | null = await computeView(
-      {
-        item: async (id) => {
-          const found = (await store.readItems([id]))[0];
-          return found !== undefined && closed.has(found.workspaceId) ? undefined : found;
+      withQueuedRequests(
+        {
+          item: async (id) => {
+            const found = (await store.readItems([id]))[0];
+            return found !== undefined && closed.has(found.workspaceId) ? undefined : found;
+          },
+          workspaceItems: async (workspaceId) =>
+            closed.has(workspaceId)
+              ? []
+              : [...(await workspaceIndex(store, workspaceId)).byParent.values()].flat(),
+          children: async (workspaceId, parentId) =>
+            closed.has(workspaceId)
+              ? []
+              : ((await workspaceIndex(store, workspaceId)).byParent.get(parentId) ?? []),
+          now: () => new Date(),
+          ...withDefined('principalId', deps.principalId?.() ?? undefined),
+          ...withDefined('timeZone', await cachedTimeZone(store)),
+          workspaceIds: async () =>
+            (await store.readWorkspaceList())
+              .map((entry) => entry.id)
+              .filter((id) => !closed.has(id)),
         },
-        workspaceItems: async (workspaceId) =>
-          closed.has(workspaceId)
-            ? []
-            : [...(await workspaceIndex(store, workspaceId)).byParent.values()].flat(),
-        children: async (workspaceId, parentId) =>
-          closed.has(workspaceId)
-            ? []
-            : ((await workspaceIndex(store, workspaceId)).byParent.get(parentId) ?? []),
-        now: () => new Date(),
-        ...withDefined('principalId', deps.principalId?.() ?? undefined),
-        ...withDefined('timeZone', await cachedTimeZone(store)),
-        workspaceIds: async () =>
-          (await store.readWorkspaceList())
-            .map((entry) => entry.id)
-            .filter((id) => !closed.has(id)),
-      },
+        // Habit check-ins and completions still waiting to be sent show as Core will show them.
+        async (workspaceId) =>
+          (await store.listOutbox(workspaceId)).flatMap((operation) =>
+            operation.kind === 'request'
+              ? [
+                  {
+                    operationId: operation.operationId,
+                    itemId: operation.itemId,
+                    ...operation.payload,
+                  },
+                ]
+              : [],
+          ),
+      ),
       request,
     );
     if (answered === null) return null;
@@ -529,7 +552,7 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         unrenderable: [],
         default: mainView?.id ?? 'document',
         hideDocument,
-        version: null,
+        version: item.viewsVersion ?? null,
       });
     }
 
@@ -581,6 +604,12 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
         503,
         'offline.unavailable',
         'This file is too large to open offline. Connect to open it.',
+      );
+    if (file.byteLength > MAX_OFFLINE_FILE_BYTES)
+      return problem(
+        503,
+        'offline.unavailable',
+        'This file is too large to keep offline. Connect to open it.',
       );
     const bytes = await deps.readFile(item.id, file.versionId);
     if (bytes === null)
@@ -672,6 +701,29 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       const item = (await store.readItems([plan.itemId]))[0];
       if (item === undefined)
         return problem(404, 'item.not_found', 'This item is not in the synced copy.');
+      if (plan.kind === 'request') {
+        await store.enqueue(item.workspaceId, {
+          operationId: plan.operationId,
+          itemId: item.id,
+          expectedRevision: null,
+          kind: 'request',
+          payload: {
+            method: plan.method,
+            path: plan.path,
+            ...(plan.body === undefined ? {} : { body: plan.body }),
+          },
+        });
+        if ('reread' in plan.answer) {
+          indexes.clear();
+          return (
+            (await answer(store, new URL(plan.answer.reread, globalThis.location.origin))) ??
+            problem(404, 'item.not_found', 'This item is not in the synced copy.')
+          );
+        }
+        return plan.answer.status === 204
+          ? new Response(null, { status: 204 })
+          : json(plan.answer.body);
+      }
       const base = {
         operationId: crypto.randomUUID(),
         itemId: item.id,
@@ -836,7 +888,14 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
       }
       const plan =
         planWrite(method, url.pathname, body) ??
-        (await planViewWrite(store, method, url.pathname, body).catch(() => null));
+        (await planViewWrite(store, method, url.pathname, body, async (path) => {
+          const read = await computed(store, {
+            method: 'GET',
+            url: new URL(path, url.origin),
+            body: null,
+          });
+          return read?.ok === true ? ((await read.json()) as unknown) : null;
+        }).catch(() => null));
       return plan === null
         ? problem(
             503,
