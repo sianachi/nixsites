@@ -28,6 +28,7 @@ import {
 } from '@nix/api-client';
 import { parseScalar } from '@nix/markdown/front-matter';
 import {
+  assertConfirmed,
   parseTimeOfDay,
   parseTimeZone,
   parseUuid,
@@ -683,7 +684,7 @@ export async function deleteAutomation(
   deps: SessionDeps = {},
 ): Promise<void> {
   parseUuid(ruleId, 'The automation id');
-  if (!confirmed) throw new Error('This destructive operation requires --yes.');
+  assertConfirmed(confirmed);
   const session = await resolveSession(profileName, deps);
   printResult(await executeDeleteAutomation(session, ruleId), output);
 }

@@ -1,15 +1,15 @@
 import { internalCoreOrigin } from '../core/internal-url.ts';
 import { isRecord } from '@nix/editor-schema';
+import {
+  parseBodyAuthorizationItems,
+  uuid,
+  type BodyAuthorizationItem,
+} from '../core/body-authorization.ts';
 
 const AUTHORIZATION_RESPONSE_BYTES = 2 * 1024 * 1024;
 const AUTHORIZATION_ITEM_LIMIT = 10_000;
 
-export interface TemplateImportBodyAuthorizationItem {
-  readonly sourceId: string;
-  readonly targetItemId: string;
-  readonly itemType: string;
-  readonly bodyRequired: boolean;
-}
+export type TemplateImportBodyAuthorizationItem = BodyAuthorizationItem;
 
 export interface TemplateImportBodyAuthorization {
   readonly tenantId: string;
@@ -164,31 +164,7 @@ function parseAuthorization(value: unknown, importId: string): TemplateImportBod
     throw invalidAuthorization();
   }
 
-  const seenSources = new Set<string>();
-  const seenTargets = new Set<string>();
-  const items = value.items.map((candidate): TemplateImportBodyAuthorizationItem => {
-    if (
-      !isRecord(candidate) ||
-      !sourceId(candidate.sourceId) ||
-      !uuid(candidate.targetItemId) ||
-      typeof candidate.itemType !== 'string' ||
-      candidate.itemType.length === 0 ||
-      candidate.itemType.length > 64 ||
-      typeof candidate.bodyRequired !== 'boolean' ||
-      seenSources.has(candidate.sourceId) ||
-      seenTargets.has(candidate.targetItemId)
-    ) {
-      throw invalidAuthorization();
-    }
-    seenSources.add(candidate.sourceId);
-    seenTargets.add(candidate.targetItemId);
-    return {
-      sourceId: candidate.sourceId,
-      targetItemId: candidate.targetItemId,
-      itemType: candidate.itemType,
-      bodyRequired: candidate.bodyRequired,
-    };
-  });
+  const items = parseBodyAuthorizationItems(value.items, invalidAuthorization);
 
   return {
     tenantId: value.tenantId,
@@ -215,19 +191,4 @@ function invalidAuthorization(): CoreTemplateImportError {
     'template.authorization_invalid',
     'Core returned an invalid template import body authorization response.',
   );
-}
-
-function sourceId(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= 160 &&
-    /^[A-Za-z0-9._:/-]+$/.test(value)
-  );
-}
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function uuid(value: unknown): value is string {
-  return typeof value === 'string' && UUID.test(value);
 }

@@ -125,7 +125,7 @@ public static class SearchSql
     /// flickering as somebody types.
     /// </para>
     /// </remarks>
-    public const string MatchingItems = $$"""
+    public static readonly string MatchingItems = $$"""
         WITH {{ItemLockSql.ClosedLockDescendants}},
         matches AS (
             SELECT item.id AS item_id,
@@ -195,24 +195,7 @@ public static class SearchSql
                    AND lock_edge.ancestor_id = ANY(@lock_ids)
              ))
          ))
-         AND NOT EXISTS (
-             SELECT 1
-             FROM item_closure AS visibility_edge
-             LEFT JOIN LATERAL (
-                 SELECT visibility_ancestor.template_id,
-                        visibility_ancestor.lifecycle_state
-                 FROM item AS visibility_ancestor
-                 WHERE visibility_ancestor.tenant_id = @tenant_id
-                   AND visibility_ancestor.id = visibility_edge.ancestor_id
-                 LIMIT 1
-             ) AS stored_ancestor ON TRUE
-             WHERE visibility_edge.tenant_id = @tenant_id
-               AND visibility_edge.descendant_id = item.id
-               AND visibility_edge.depth > 0
-               AND (stored_ancestor.template_id IS NOT NULL
-                    OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-             OFFSET 0
-         )
+         AND {{ItemVisibilitySql.NoHiddenStoredAncestor("item.id")}}
         ORDER BY ranked.title_matched DESC, ranked.rank DESC, item.id
         LIMIT @limit
         """;
@@ -348,7 +331,7 @@ public static class SearchSql
     /// lifecycle columns as filters on the fetched rows.
     /// </para>
     /// </remarks>
-    public const string ReadableItemsById = """
+    public static readonly string ReadableItemsById = $"""
         SELECT item.id,
                item.workspace_id,
                item.type,
@@ -361,24 +344,7 @@ public static class SearchSql
           AND item.workspace_id = ANY(@workspace_ids)
           AND item.lifecycle_state = 'active'
           AND item.template_id IS NULL
-          AND NOT EXISTS (
-              SELECT 1
-              FROM item_closure AS visibility_edge
-              LEFT JOIN LATERAL (
-                  SELECT visibility_ancestor.template_id,
-                         visibility_ancestor.lifecycle_state
-                  FROM item AS visibility_ancestor
-                  WHERE visibility_ancestor.tenant_id = @tenant_id
-                    AND visibility_ancestor.id = visibility_edge.ancestor_id
-                  LIMIT 1
-              ) AS stored_ancestor ON TRUE
-              WHERE visibility_edge.tenant_id = @tenant_id
-                AND visibility_edge.descendant_id = item.id
-                AND visibility_edge.depth > 0
-                AND (stored_ancestor.template_id IS NOT NULL
-                     OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-              OFFSET 0
-          )
+          AND {ItemVisibilitySql.NoHiddenStoredAncestor("item.id")}
         """;
 
     /// <summary>
@@ -406,7 +372,7 @@ public static class SearchSql
     /// <c>item_pkey</c> for each source.
     /// </para>
     /// </remarks>
-    public const string ItemsLinkingTo = """
+    public static readonly string ItemsLinkingTo = $"""
         SELECT source.id,
                source.workspace_id,
                source.type,
@@ -431,24 +397,7 @@ public static class SearchSql
                 AND lock_edge.descendant_id = link.source_item_id
                 AND lock_edge.ancestor_id = ANY(@lock_ids)
              ))
-          AND NOT EXISTS (
-              SELECT 1
-              FROM item_closure AS visibility_edge
-              LEFT JOIN LATERAL (
-                  SELECT visibility_ancestor.template_id,
-                         visibility_ancestor.lifecycle_state
-                  FROM item AS visibility_ancestor
-                  WHERE visibility_ancestor.tenant_id = @tenant_id
-                    AND visibility_ancestor.id = visibility_edge.ancestor_id
-                  LIMIT 1
-              ) AS stored_ancestor ON TRUE
-              WHERE visibility_edge.tenant_id = @tenant_id
-                AND visibility_edge.descendant_id = source.id
-                AND visibility_edge.depth > 0
-                AND (stored_ancestor.template_id IS NOT NULL
-                     OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-              OFFSET 0
-          )
+          AND {ItemVisibilitySql.NoHiddenStoredAncestor("source.id")}
         ORDER BY link.occurrences DESC, title, source.id
         LIMIT @limit
         """;
@@ -528,7 +477,7 @@ public static class SearchSql
     /// identifier because two items may share a title and an unstable order flickers.
     /// </para>
     /// </remarks>
-    public const string CoCitedItems = $$"""
+    public static readonly string CoCitedItems = $$"""
         WITH {{ItemLockSql.ClosedLockDescendants}},
         sources AS (
             SELECT link.source_item_id AS source_id
@@ -550,24 +499,7 @@ public static class SearchSql
                     AND lock_edge.descendant_id = link.source_item_id
                     AND lock_edge.ancestor_id = ANY(@lock_ids)
                  ))
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM item_closure AS visibility_edge
-                  LEFT JOIN LATERAL (
-                      SELECT visibility_ancestor.template_id,
-                             visibility_ancestor.lifecycle_state
-                      FROM item AS visibility_ancestor
-                      WHERE visibility_ancestor.tenant_id = @tenant_id
-                        AND visibility_ancestor.id = visibility_edge.ancestor_id
-                      LIMIT 1
-                  ) AS stored_ancestor ON TRUE
-                  WHERE visibility_edge.tenant_id = @tenant_id
-                    AND visibility_edge.descendant_id = source.id
-                    AND visibility_edge.depth > 0
-                    AND (stored_ancestor.template_id IS NOT NULL
-                         OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-                  OFFSET 0
-              )
+              AND {{ItemVisibilitySql.NoHiddenStoredAncestor("source.id")}}
             ORDER BY link.occurrences DESC, link.source_item_id
             LIMIT @source_limit
         ),
@@ -616,24 +548,7 @@ public static class SearchSql
         JOIN item
           ON item.tenant_id = @tenant_id
          AND item.id = ranked.item_id
-        WHERE NOT EXISTS (
-              SELECT 1
-              FROM item_closure AS visibility_edge
-              LEFT JOIN LATERAL (
-                  SELECT visibility_ancestor.template_id,
-                         visibility_ancestor.lifecycle_state
-                  FROM item AS visibility_ancestor
-                  WHERE visibility_ancestor.tenant_id = @tenant_id
-                    AND visibility_ancestor.id = visibility_edge.ancestor_id
-                  LIMIT 1
-              ) AS stored_ancestor ON TRUE
-              WHERE visibility_edge.tenant_id = @tenant_id
-                AND visibility_edge.descendant_id = item.id
-                AND visibility_edge.depth > 0
-                AND (stored_ancestor.template_id IS NOT NULL
-                     OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-              OFFSET 0
-          )
+        WHERE {{ItemVisibilitySql.NoHiddenStoredAncestor("item.id")}}
         ORDER BY ranked.shared_sources DESC, ranked.title, ranked.item_id
         LIMIT @limit
         """;
@@ -731,7 +646,7 @@ public static class SearchSql
     /// two implementations of <c>lower</c> agree.
     /// </para>
     /// </remarks>
-    public const string ItemsTitledAs = $$"""
+    public static readonly string ItemsTitledAs = $$"""
         WITH {{ItemLockSql.ClosedLockDescendants}},
         matches AS MATERIALIZED (
             SELECT candidate.id,
@@ -784,24 +699,7 @@ public static class SearchSql
         JOIN item
           ON item.tenant_id = @tenant_id
          AND item.id = ordered.id
-        WHERE NOT EXISTS (
-              SELECT 1
-              FROM item_closure AS visibility_edge
-              LEFT JOIN LATERAL (
-                  SELECT visibility_ancestor.template_id,
-                         visibility_ancestor.lifecycle_state
-                  FROM item AS visibility_ancestor
-                  WHERE visibility_ancestor.tenant_id = @tenant_id
-                    AND visibility_ancestor.id = visibility_edge.ancestor_id
-                  LIMIT 1
-              ) AS stored_ancestor ON TRUE
-              WHERE visibility_edge.tenant_id = @tenant_id
-                AND visibility_edge.descendant_id = item.id
-                AND visibility_edge.depth > 0
-                AND (stored_ancestor.template_id IS NOT NULL
-                     OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-              OFFSET 0
-          )
+        WHERE {{ItemVisibilitySql.NoHiddenStoredAncestor("item.id")}}
         ORDER BY ordered.phrase_length DESC, ordered.matched_phrase, ordered.phrase_rank
         LIMIT @limit
         """;

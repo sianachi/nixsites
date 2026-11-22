@@ -301,21 +301,13 @@ export async function buildSite(deps: BuildDeps, context: JobContext): Promise<u
       );
     }
     const digest = file.sha256 ?? sha256(file.bytes);
-    return file.kind === 'asset'
-      ? {
-          path: `${digest}.${extension}`,
-          kind: 'asset',
-          byteLength: file.bytes.length,
-          sha256: digest,
-          mediaType,
-        }
-      : {
-          path: file.path,
-          kind: 'build',
-          byteLength: file.bytes.length,
-          sha256: digest,
-          mediaType,
-        };
+    return {
+      path: file.kind === 'asset' ? `${digest}.${extension}` : file.path,
+      kind: file.kind,
+      byteLength: file.bytes.length,
+      sha256: digest,
+      mediaType,
+    };
   };
   for (let start = 0; start < files.length; start += UPLOAD_BATCH) {
     signal.throwIfAborted();

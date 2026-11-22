@@ -23,9 +23,7 @@ function parseOnOff(value: string | undefined, name: string): boolean | undefine
 }
 
 /** Turns `--mcp` and `--public-links` into the request body; at least one is required. */
-export function parseTenantSettingsFlags(
-  flags: TenantSettingsFlags,
-): tenantSettings.TenantSettingsInput {
+function parseTenantSettingsFlags(flags: TenantSettingsFlags): tenantSettings.TenantSettingsInput {
   const mcpEnabled = parseOnOff(flags.mcp, '--mcp');
   const publicLinksEnabled = parseOnOff(flags.publicLinks, '--public-links');
   if (mcpEnabled === undefined && publicLinksEnabled === undefined) {
@@ -37,13 +35,11 @@ export function parseTenantSettingsFlags(
   };
 }
 
-export async function executeGetTenantSettings(
-  session: Session,
-): Promise<tenantSettings.TenantSettings> {
+async function executeGetTenantSettings(session: Session): Promise<tenantSettings.TenantSettings> {
   return session.client.query(tenantSettings.getTenantSettings());
 }
 
-export async function executeSetTenantSettings(
+async function executeSetTenantSettings(
   session: Session,
   flags: TenantSettingsFlags,
 ): Promise<tenantSettings.TenantSettings> {

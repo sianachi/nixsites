@@ -1,4 +1,5 @@
 import { parseStoredViewsObject, type PropertyDefinition, type ViewsSnapshot } from '@nix/export';
+import { isRecord } from '@nix/editor-schema';
 import {
   templateInitializationSchema,
   type TemplateInitialization as ApiTemplateInitialization,
@@ -847,9 +848,8 @@ function parseNoContent(): undefined {
 }
 
 function requiredRecord(value: unknown): Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value))
-    throw new Error('object');
-  return value as Record<string, unknown>;
+  if (!isRecord(value)) throw new Error('object');
+  return value;
 }
 
 function nullableRecord(value: unknown): Readonly<Record<string, unknown>> | null {
@@ -915,9 +915,7 @@ function parseAt<T>(field: string, parse: () => T): T {
 }
 
 function record(value: unknown): Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return isRecord(value) ? value : {};
 }
 
 function text(value: unknown): string {

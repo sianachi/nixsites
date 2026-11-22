@@ -19,7 +19,7 @@ public sealed class ExplicitReminderSource(
     IReminderCandidateFinder candidates,
     IItemTree tree,
     IWorkspaceMembershipIgnoringLock membership,
-    IMutedContainerChecker mutedContainers,
+    MutedContainerChecker mutedContainers,
     IPrincipalStatusChecker principalStatus,
     INotificationWriter notifications,
     IItemLocks locks) : ITriggerSource

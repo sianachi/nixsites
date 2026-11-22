@@ -5,70 +5,14 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
 import type {
   FormBlock,
-  FormCondition,
-  InteractiveFormDefinition,
   PropertyValue,
   PropertyDefinition,
 } from '@nix/web-collections/core/container-model';
 import { resolveLoadState } from '../core/view-chrome';
 import type { ViewRendererProps } from '../core/view-kinds';
+import { isEmpty, resolveFlow } from './form-flow';
 import { reportFormValidity } from './form-validity';
 import { FormResults } from './form-results';
-
-type FormPage = InteractiveFormDefinition['pages'][number];
-
-function conditionMatches(
-  condition: FormCondition,
-  answers: Record<string, PropertyValue>,
-): boolean {
-  const answer = answers[condition.fieldBlockId];
-  const expected = condition.value ?? '';
-  if (condition.operator === 'checked') return answer === true;
-  if (condition.operator === 'not_checked') return answer !== true;
-  if (condition.operator === 'not_equals') return String(answer ?? '') !== expected;
-  if (condition.operator === 'contains') {
-    return Array.isArray(answer)
-      ? answer.includes(expected)
-      : String(answer ?? '').includes(expected);
-  }
-  return String(answer ?? '') === expected;
-}
-
-function isVisible(
-  conditions: readonly FormCondition[],
-  answers: Record<string, PropertyValue>,
-): boolean {
-  return conditions.every((condition) => conditionMatches(condition, answers));
-}
-
-function isEmpty(value: PropertyValue | undefined): boolean {
-  return (
-    value === undefined ||
-    value === null ||
-    value === '' ||
-    (Array.isArray(value) && value.length === 0)
-  );
-}
-
-function resolveFlow(
-  pages: readonly FormPage[],
-  answers: Readonly<Record<string, PropertyValue>>,
-): { pages: FormPage[]; answers: Record<string, PropertyValue> } {
-  const effective: Record<string, PropertyValue> = {};
-  const shown: FormPage[] = [];
-  for (const page of pages) {
-    if (!isVisible(page.visibleWhen, effective)) continue;
-    const blocks = page.blocks.filter((block) => {
-      if (!isVisible(block.visibleWhen, effective)) return false;
-      if (block.kind === 'field' && answers[block.id] !== undefined) {
-        effective[block.id] = answers[block.id] ?? null;
-      }
-      return true;
-    });
-    shown.push({ ...page, blocks });
-  }
-  return { pages: shown, answers: effective };
-}
 
 function draftKey(viewId: string): string {
   return `nix:interactive-form-draft:${viewId}`;

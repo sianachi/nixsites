@@ -100,6 +100,9 @@ public sealed class ListAttachmentsHandler(
           AND item.lifecycle_state = 'active'
           AND item.template_id IS NULL
           AND (@after::uuid IS NULL OR item.id < @after::uuid)
+          AND (@state::text IS NULL OR EXISTS (
+              SELECT 1 FROM file_version AS wanted
+              WHERE wanted.tenant_id = @tenant_id AND wanted.item_id = item.id AND wanted.state = @state::text))
           AND (@state::text IS NULL OR shown.state = @state::text)
           AND (@include_images OR shown.media_type NOT LIKE 'image/%')
           AND (NOT @expiring OR (COALESCE(item.properties ->> 'expiry', '') <> '' AND item.properties ? '$expiry_set_by'))

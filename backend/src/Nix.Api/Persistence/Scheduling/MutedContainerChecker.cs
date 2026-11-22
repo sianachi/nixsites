@@ -1,16 +1,15 @@
 using Microsoft.EntityFrameworkCore;
-using Nix.Abstractions.Scheduling;
 using Nix.Domain.Items;
 
 namespace Nix.Persistence.Scheduling;
 
 /// <summary>
-/// Backs <see cref="IMutedContainerChecker"/> with an ordinary, RLS-scoped read of
+/// Whether an item sits under one of a principal's muted containers, at fire time: an ordinary, RLS-scoped read of
 /// <c>item_closure</c> - the same table permission resolution joins, asked the same question a
 /// mute list asks: is this item, or any ancestor of it (the zero-depth self edge makes "is this
 /// item itself muted" the same query as "is an ancestor of it muted"), one of the given ids.
 /// </summary>
-public sealed class MutedContainerChecker(NixDbContext database) : IMutedContainerChecker
+public sealed class MutedContainerChecker(NixDbContext database)
 {
     public async Task<bool> IsMutedAsync(
         Guid itemId,

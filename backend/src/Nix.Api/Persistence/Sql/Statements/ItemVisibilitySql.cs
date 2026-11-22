@@ -80,4 +80,32 @@ public static class ItemVisibilitySql
                    OR visibility_ancestor.lifecycle_state <> 'active')
         )
         """;
+
+    /// <summary>
+    /// The same predicate as <see cref="NoHiddenAncestor"/> for a bulk read that needs the
+    /// fail-closed form: a left lateral probe so a missing stored ancestor hides the row, behind an
+    /// <c>OFFSET 0</c> fence that keeps the planner from flattening it. Binds <c>@tenant_id</c>;
+    /// <paramref name="descendant"/> is the SQL expression for the item being checked, and
+    /// <paramref name="includeSelf"/> also tests that item itself (a rollup anchored on a parent).
+    /// </summary>
+    public static string NoHiddenStoredAncestor(string descendant, bool includeSelf = false) => $"""
+        NOT EXISTS (
+            SELECT 1
+            FROM item_closure AS visibility_edge
+            LEFT JOIN LATERAL (
+                SELECT visibility_ancestor.template_id,
+                       visibility_ancestor.lifecycle_state
+                FROM item AS visibility_ancestor
+                WHERE visibility_ancestor.tenant_id = @tenant_id
+                  AND visibility_ancestor.id = visibility_edge.ancestor_id
+                LIMIT 1
+            ) AS stored_ancestor ON TRUE
+            WHERE visibility_edge.tenant_id = @tenant_id
+              AND visibility_edge.descendant_id = {descendant}
+              AND visibility_edge.depth {(includeSelf ? ">= 0" : "> 0")}
+              AND (stored_ancestor.template_id IS NOT NULL
+                   OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
+            OFFSET 0
+        )
+        """;
 }

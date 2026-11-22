@@ -321,7 +321,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddSingleton<Nix.Persistence.Scheduling.ReminderCandidateFinder>();
         services.AddSingleton<Nix.Abstractions.Scheduling.IReminderCandidateFinder>(
             provider => provider.GetRequiredService<Nix.Persistence.Scheduling.ReminderCandidateFinder>());
-        services.AddScoped<Nix.Abstractions.Scheduling.IMutedContainerChecker, Nix.Persistence.Scheduling.MutedContainerChecker>();
+        services.AddScoped<Nix.Persistence.Scheduling.MutedContainerChecker>();
         services.AddScoped<Nix.Abstractions.Scheduling.IPrincipalStatusChecker, Nix.Persistence.Scheduling.PrincipalStatusChecker>();
         services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Persistence.Scheduling.ExplicitReminderSource>();
         services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Persistence.Scheduling.ExpirySource>();

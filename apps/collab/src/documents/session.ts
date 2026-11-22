@@ -1216,18 +1216,7 @@ export class DocumentSession {
     }
 
     this.#state = 'unloaded';
-    if (this.#awarenessTimer !== null) {
-      clearTimeout(this.#awarenessTimer);
-      this.#awarenessTimer = null;
-    }
-    if (this.#flushTimer !== null) {
-      clearTimeout(this.#flushTimer);
-      this.#flushTimer = null;
-    }
-    this.#awareness.destroy();
-    this.#mirror?.destroy();
-    this.#mirror = null;
-    this.#doc.destroy();
+    this.#release();
     return true;
   }
 
@@ -1241,6 +1230,11 @@ export class DocumentSession {
     this.#pending = [];
     this.#pendingBytes = 0;
     this.#flushingBytes = 0;
+    this.#release();
+  }
+
+  /** Stops the timers and frees the Yjs state of a session that is going away. */
+  #release(): void {
     if (this.#awarenessTimer !== null) {
       clearTimeout(this.#awarenessTimer);
       this.#awarenessTimer = null;
@@ -1379,7 +1373,7 @@ export function judgeCandidate(
   // the update. Requiring the resident to be a document of this kind already is what makes this
   // "a valid document fell through its floor" rather than "anything that does not parse".
   let repair = false;
-  if (after === null && strategy.repair !== undefined && parsesAlone(resident, strategy)) {
+  if (after === null && strategy.repair !== undefined && measureCopy(resident, strategy) !== null) {
     try {
       const mended = forkWith(resident, update);
       try {
@@ -1498,19 +1492,10 @@ export function judgeCandidate(
 }
 
 /**
- * Whether the resident document, as it stands and before any candidate update, is one this
- * strategy can already read.
- *
- * Through a copy rather than by measuring the resident, because measuring is not read-only:
- * reading a fragment as prose drops the nodes the schema does not know from the Yjs document
- * itself. Asking the resident directly would mutate live state to answer a question about it,
- * and on exactly the documents where the answer matters most.
+ * The resident's measurement, taken on a copy: measuring is not read-only (reading a fragment as
+ * prose drops nodes the schema does not know), so asking the resident directly would mutate live
+ * state on exactly the documents where the answer matters most. Null when it does not parse.
  */
-function parsesAlone(resident: Y.Doc, strategy: BodyKindStrategy): boolean {
-  return measureCopy(resident, strategy) !== null;
-}
-
-/** The resident's measurement, taken on a copy for the reason {@link parsesAlone} gives. */
 function measureCopy(resident: Y.Doc, strategy: BodyKindStrategy): Measurement | null {
   const copy = new Y.Doc();
   try {

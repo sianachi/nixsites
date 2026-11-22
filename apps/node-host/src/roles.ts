@@ -1,7 +1,7 @@
 export const ROLES = ['collab', 'companion', 'sites-worker'] as const;
 export type Role = (typeof ROLES)[number];
 
-/** `collab,companion`; empty or unset means every role. An unknown or repeated role throws. */
+/** `collab,companion`; empty or unset means every role. An unknown role throws; repeats are dropped. */
 export function parseRoles(value: string | undefined): Role[] {
   const names = (value ?? '')
     .split(',')

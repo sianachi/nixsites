@@ -1,12 +1,12 @@
 import { internalCoreOrigin } from '../core/internal-url.ts';
 import { isRecord } from '@nix/editor-schema';
+import {
+  parseBodyAuthorizationItems,
+  uuid,
+  type BodyAuthorizationItem,
+} from '../core/body-authorization.ts';
 
-export interface ImportBodyAuthorizationItem {
-  readonly sourceId: string;
-  readonly targetItemId: string;
-  readonly itemType: string;
-  readonly bodyRequired: boolean;
-}
+export type ImportBodyAuthorizationItem = BodyAuthorizationItem;
 
 export interface ImportBodyAuthorization {
   readonly tenantId: string;
@@ -111,31 +111,7 @@ function parseAuthorization(value: unknown, importId: string): ImportBodyAuthori
   ) {
     throw invalidAuthorization();
   }
-  const seenSources = new Set<string>();
-  const seenTargets = new Set<string>();
-  const parsed = items.map((item): ImportBodyAuthorizationItem => {
-    if (
-      !isRecord(item) ||
-      !sourceId(item.sourceId) ||
-      !uuid(item.targetItemId) ||
-      typeof item.itemType !== 'string' ||
-      item.itemType.length === 0 ||
-      item.itemType.length > 64 ||
-      typeof item.bodyRequired !== 'boolean' ||
-      seenSources.has(item.sourceId) ||
-      seenTargets.has(item.targetItemId)
-    ) {
-      throw invalidAuthorization();
-    }
-    seenSources.add(item.sourceId);
-    seenTargets.add(item.targetItemId);
-    return {
-      sourceId: item.sourceId,
-      targetItemId: item.targetItemId,
-      itemType: item.itemType,
-      bodyRequired: item.bodyRequired,
-    };
-  });
+  const parsed = parseBodyAuthorizationItems(items, invalidAuthorization);
   return {
     tenantId: value.tenantId,
     principalId: value.principalId,
@@ -152,19 +128,4 @@ function invalidAuthorization(): CoreImportError {
     'import_authorization_invalid',
     'Core returned an invalid import authorization response.',
   );
-}
-
-function sourceId(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= 160 &&
-    /^[A-Za-z0-9._:/-]+$/.test(value)
-  );
-}
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function uuid(value: unknown): value is string {
-  return typeof value === 'string' && UUID.test(value);
 }

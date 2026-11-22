@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ChatCaseResult } from './pet-eval-chat.ts';
 
 /** Per-case pass counts from a recorded chat suite run; the regression gate compares against it. */
-export const chatBaselineSchema = z
+const chatBaselineSchema = z
   .object({
     model: z.string().nullable(),
     runs: z.number().int().min(1),
@@ -29,7 +29,7 @@ export interface BaselineComparison {
 
 /** A model reply varies from run to run, so the shared cases may lose this share of their expected
  * passes (and always at least one case's worth) before the drop counts as a regression. */
-export const RATE_TOLERANCE = 0.05;
+const RATE_TOLERANCE = 0.05;
 
 function passCounts(results: readonly ChatCaseResult[]): Map<string, number> {
   const counts = new Map<string, number>();
