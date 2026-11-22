@@ -7,6 +7,12 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- Each GitHub release carries the build as plain files, for running Nix without containers: the
+  web app (`nix-web-<tag>.tar.gz`), Core and the migrator as self-contained programs for Linux
+  (x64, arm64), macOS (arm64) and Windows (x64) (`nix-core-<tag>-<platform>.tar.gz`), the
+  collaboration, companion and sites services (`nix-node-<tag>.tar.gz`), and the `@nix/sync-core`
+  and `@nix/api-client` packages as npm tarballs. `scripts/release-artifacts.sh` builds the same
+  files locally.
 - Item protection, a container's views and an item's property schema can be edited offline in the
   native apps. Each change is sent with what the device saw before the edit (the protection flags,
   the views version, the schema), and Core refuses it, listing it among the changes that could not be
