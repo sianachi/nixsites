@@ -17,12 +17,9 @@ public sealed class NativeReplayStore(NixDbContext database, NixSqlExecutor sql,
         ?? throw new InvalidOperationException("Native replay requires an authenticated unit of work.");
 
     /// <inheritdoc />
-    public async ValueTask LockOperationAsync(Guid operationId, CancellationToken cancellationToken) =>
-        _ = await sql.ExecuteAsync(NativeReplaySql.LockOperation,
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text)
-            {
-                Value = $"native-replay:{Context.TenantId.Value:D}:{Context.PrincipalId.Value:D}:{operationId:D}",
-            }], cancellationToken).ConfigureAwait(false);
+    public ValueTask LockOperationAsync(Guid operationId, CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockNativeReplayAsync(
+            Context.TenantId.Value, Context.PrincipalId.Value, operationId, cancellationToken);
 
     /// <inheritdoc />
     public async ValueTask<NativeReplayReceipt?> FindAsync(Guid operationId, CancellationToken cancellationToken)

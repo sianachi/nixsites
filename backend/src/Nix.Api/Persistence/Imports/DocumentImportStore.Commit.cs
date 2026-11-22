@@ -99,9 +99,7 @@ public sealed partial class DocumentImportStore
         }
 
         // File publication and workspace transfers share this per-workspace lock.
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({operation.WorkspaceId.Value.ToString()}, 0))",
-            cancellationToken).ConfigureAwait(false);
+        await new AdvisoryLocks(database).LockWorkspaceFilesAsync(operation.WorkspaceId, cancellationToken).ConfigureAwait(false);
 
         var now = clock.GetUtcNow();
         var targetIds = ordered.ToDictionary(item => item.SourceId, _ => ItemId.Create(), StringComparer.Ordinal);

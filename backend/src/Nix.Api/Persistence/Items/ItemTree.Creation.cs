@@ -14,8 +14,9 @@ public sealed partial class ItemTree
     public async ValueTask<ItemCreationReceipt?> GetCreationReceiptAsync(
         Guid key, string request, CancellationToken cancellationToken)
     {
-        var parameters = CreationParameters(key);
-        await _sql.ExecuteAsync(ItemCreationSql.Lock, parameters, cancellationToken).ConfigureAwait(false);
+        var context = _session.Current ?? throw new InvalidOperationException("No item creation session is established.");
+        await new AdvisoryLocks(_dbContext).LockItemCreationAsync(
+            context.TenantId.Value, context.PrincipalId.Value, key, cancellationToken).ConfigureAwait(false);
         await foreach (var receipt in _sql.QueryAsync<ItemCreationReceipt, CreationReceiptMapper>(
             ItemCreationSql.Find, default,
             [.. CreationParameters(key), new NpgsqlParameter("request", NpgsqlDbType.Text) { Value = request }],

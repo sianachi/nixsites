@@ -920,13 +920,6 @@ public static class WorkspaceAdministrationSql
         """;
 
     /// <summary>
-    /// Serializes every daily-note creation in one workspace by taking an advisory lock on the
-    /// workspace's deterministic root identifier, so two concurrent opens cannot race to create the
-    /// root, a folder or the same note.
-    /// </summary>
-    public const string LockDailyNote = "SELECT pg_advisory_xact_lock(hashtextextended(@item_id::text, 0))";
-
-    /// <summary>
     /// Authorises the caller to use daily notes in the workspace, locks the workspace row, and
     /// reports what creation needs to know: the stored settings, whether the workspace is personal,
     /// and the day's note slot with whether a note already occupies it. No row means the caller

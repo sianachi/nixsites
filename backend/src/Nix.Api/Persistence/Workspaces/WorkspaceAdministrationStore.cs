@@ -131,6 +131,7 @@ public enum DailyNoteOutcome
 
 /// <summary>Database operations for workspace administration.</summary>
 public sealed partial class WorkspaceAdministrationStore(
+    NixDbContext database,
     NixSqlExecutor sql,
     INixSessionContextAccessor session,
     CredentialSessionContext credential,
@@ -138,6 +139,7 @@ public sealed partial class WorkspaceAdministrationStore(
 {
     private static readonly string[] PresetKeys = ["seed.kanban", "seed.calendar", "seed.list"];
 
+    private readonly NixDbContext _database = database;
     private readonly NixSqlExecutor _sql = sql;
     private readonly INixSessionContextAccessor _session = session;
     private readonly CredentialSessionContext _credential = credential;
@@ -820,10 +822,7 @@ public sealed partial class WorkspaceAdministrationStore(
     {
         ArgumentNullException.ThrowIfNull(candidateIds);
         var context = Session;
-        await _sql.ExecuteAsync(
-            WorkspaceAdministrationSql.LockDailyNote,
-            [Uuid("item_id", rootId)],
-            cancellationToken).ConfigureAwait(false);
+        await new AdvisoryLocks(_database).LockDailyNoteAsync(rootId, cancellationToken).ConfigureAwait(false);
 
         DailyNoteContextRow? found = null;
         var contextRows = _sql.QueryAsync<DailyNoteContextRow, DailyNoteContextMapper>(

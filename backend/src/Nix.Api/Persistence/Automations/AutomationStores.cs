@@ -52,9 +52,8 @@ public sealed class AutomationRuleStore(NixDbContext database) : IAutomationRule
         // Transaction-scoped: held until the creating transaction commits or rolls back, so a
         // concurrent create for the same owner and workspace counts only after this one's insert
         // is visible.
-        var key = $"nix.automation_rule.quota:{tenantId.Value:D}:{ownerId.Value:D}:{workspaceId.Value:D}";
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({key}, 0))", cancellationToken).ConfigureAwait(false);
+        await new AdvisoryLocks(database).LockAutomationQuotaAsync(
+            tenantId.Value, ownerId.Value, workspaceId.Value, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<AutomationRuleWrite> InsertAsync(AutomationRule rule, CancellationToken cancellationToken)

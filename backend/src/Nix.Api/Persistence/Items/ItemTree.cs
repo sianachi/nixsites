@@ -649,7 +649,7 @@ public sealed partial class ItemTree(
     {
         if (state != ItemLifecycleState.Active)
         {
-            await new StructuralLock(_dbContext).AcquireAsync(id, cancellationToken).ConfigureAwait(false);
+            await new AdvisoryLocks(_dbContext).LockItemStateAsync(id, cancellationToken).ConfigureAwait(false);
             var current = await FindStoredAsync(id, cancellationToken).ConfigureAwait(false);
             var interrupted = ConversationImportProperties.InterruptConfiguration(current?.Properties);
             if (interrupted is not null)

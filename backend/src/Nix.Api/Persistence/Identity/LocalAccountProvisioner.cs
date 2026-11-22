@@ -34,9 +34,6 @@ internal sealed record LocalProvisionResult(LocalProvisionOutcome Outcome, Authe
 /// </summary>
 public sealed class LocalAccountProvisioner(IServiceScopeFactory scopes, SelfIssuedTokenService tokens, TimeProvider clock)
 {
-    // Serializes first-run setups: two at once with different emails must not both become admin.
-    private const long SetupLockKey = 0x4e69_785f_5365_7475; // "Nix_Setu"
-
     /// <summary>Adds a person to a tenant. <paramref name="passwordHash"/> may be null: they set one through a link.</summary>
     internal ValueTask<LocalProvisionResult> CreateAsync(
         TenantId tenantId, string email, string name, string? passwordHash, CancellationToken cancellationToken) =>
@@ -68,10 +65,8 @@ public sealed class LocalAccountProvisioner(IServiceScopeFactory scopes, SelfIss
             {
                 if (firstAdmin)
                 {
-                    _ = await sql.ScalarOrDefaultAsync<int>(
-                        "SELECT 1 FROM (SELECT pg_advisory_xact_lock(@key)) AS locked",
-                        [new NpgsqlParameter("key", NpgsqlDbType.Bigint) { Value = SetupLockKey }],
-                        cancellationToken).ConfigureAwait(false);
+                    // Serializes first-run setups: two at once with different emails must not both become admin.
+                    await new AdvisoryLocks(db).LockSetupAsync(cancellationToken).ConfigureAwait(false);
                     // A second connection sees whatever the previous lock holder committed before releasing.
                     if (await services.GetRequiredService<ILocalAccounts>().AnyAsync(cancellationToken).ConfigureAwait(false))
                     {

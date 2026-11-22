@@ -20,12 +20,8 @@ public sealed partial class ItemTree
     {
         // Share the file publisher's lock. Lock both buckets in a stable order so a replacement
         // upload cannot publish into a file while it changes workspace.
-        foreach (var workspace in new[] { sourceWorkspaceId, destinationWorkspaceId }.OrderBy(value => value.Value))
-        {
-            await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                $"SELECT pg_advisory_xact_lock(hashtextextended({workspace.Value.ToString()}, 0))",
-                cancellationToken).ConfigureAwait(false);
-        }
+        await new AdvisoryLocks(_dbContext).LockWorkspaceTransferAsync(
+            sourceWorkspaceId, destinationWorkspaceId, cancellationToken).ConfigureAwait(false);
         var tenant = Tenant;
         // Archive/delete takes a row lock, independent of the topology advisory lock. Keep
         // containment buckets stable until commit so the active-destination decision cannot race it.

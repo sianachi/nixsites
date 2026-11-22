@@ -317,25 +317,12 @@ public sealed partial class DocumentImportStore(
         return cleanup;
     }
 
-    private Task<int> LockImportAsync(
-        DocumentImportId id,
-        CancellationToken cancellationToken)
-    {
-        var context = Context;
-        return database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({$"document-import:{context.TenantId.Value:N}:{id.Value:N}"}, 0))",
-            cancellationToken);
-    }
+    private ValueTask LockImportAsync(DocumentImportId id, CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockDocumentImportAsync(Context.TenantId.Value, id.Value, cancellationToken);
 
-    private Task<int> LockIdempotencyAsync(
-        string idempotencyKey,
-        CancellationToken cancellationToken)
-    {
-        var context = Context;
-        return database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({$"document-import-key:{context.TenantId.Value:N}:{context.PrincipalId.Value:N}:{idempotencyKey}"}, 0))",
-            cancellationToken);
-    }
+    private ValueTask LockIdempotencyAsync(string idempotencyKey, CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockDocumentImportKeyAsync(
+            Context.TenantId.Value, Context.PrincipalId.Value, idempotencyKey, cancellationToken);
 
     private async ValueTask<bool> ValidParentAsync(
         Nix.Domain.Tenancy.WorkspaceId workspaceId,
