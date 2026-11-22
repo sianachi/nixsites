@@ -6,6 +6,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Sync;
 
@@ -82,8 +83,6 @@ public sealed class NativeReplayStore(NixDbContext database, NixSqlExecutor sql,
 
     private NpgsqlParameter[] ItemParameters(WorkspaceId workspaceId, ItemId itemId) =>
         [Uuid("tenant_id", Context.TenantId.Value), Uuid("workspace_id", workspaceId.Value), Uuid("item_id", itemId.Value)];
-
-    private static NpgsqlParameter Uuid(string name, Guid value) => new(name, NpgsqlDbType.Uuid) { Value = value };
 
     private readonly struct ReceiptMapper : INixRowMapper<NativeReplayReceipt>
     {

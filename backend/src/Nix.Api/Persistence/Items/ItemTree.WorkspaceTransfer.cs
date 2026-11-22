@@ -6,6 +6,7 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Authorization;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Items;
 

@@ -5,6 +5,7 @@ using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Records;
 
@@ -243,10 +244,6 @@ public sealed class RecordKeyStore(
     }
 
     private NpgsqlParameter Tenant_() => Uuid("tenant_id", Tenant.Value);
-
-    private static NpgsqlParameter Uuid(string name, Guid value) => new(name, NpgsqlDbType.Uuid) { Value = value };
-
-    private static NpgsqlParameter Text(string name, string value) => new(name, NpgsqlDbType.Text) { Value = value };
 
     private readonly struct HolderMapper : INixRowMapper<RecordKeyHolder>
     {

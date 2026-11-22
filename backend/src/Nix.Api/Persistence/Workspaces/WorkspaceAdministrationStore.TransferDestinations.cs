@@ -1,6 +1,7 @@
 using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Npgsql;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Workspaces;
 
@@ -43,9 +44,9 @@ public sealed partial class WorkspaceAdministrationStore
         await foreach (var row in _sql.QueryAsync<WorkspaceTransferDestination, TransferDestinationMapper>(
             statement, default,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
-                Uuid("source_workspace_id", source.Value), TimestampOrNull("after_created_at", afterCreatedAt),
-                UuidOrNull("after_id", afterId?.Value), Integer("limit", limit),
-                UuidOrNull("credential_id", _credential.CredentialId), Timestamp("now", DateTimeOffset.UtcNow)], cancellationToken).ConfigureAwait(false))
+                Uuid("source_workspace_id", source.Value), Timestamp("after_created_at", afterCreatedAt),
+                Uuid("after_id", afterId?.Value), Integer("limit", limit),
+                Uuid("credential_id", _credential.CredentialId), Timestamp("now", DateTimeOffset.UtcNow)], cancellationToken).ConfigureAwait(false))
         {
             rows.Add(row);
         }

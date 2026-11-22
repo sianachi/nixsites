@@ -9,6 +9,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Search;
 
@@ -272,9 +273,6 @@ public sealed class ItemSearch(
 
     private ValueTask<NpgsqlParameter> ClosedLocksAsync(CancellationToken cancellationToken) =>
         LockFilterParameters.ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken);
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
 
     private static NpgsqlParameter ItemIdArray(string name, IReadOnlyList<ItemId> values)
     {

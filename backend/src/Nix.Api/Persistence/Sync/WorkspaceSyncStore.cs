@@ -8,6 +8,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Sync;
 
@@ -127,9 +128,6 @@ public sealed class WorkspaceSyncStore(
             .. extras,
         ];
     }
-
-    private static NpgsqlParameter Uuid(string name, Guid? value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value is { } id ? id : DBNull.Value };
 
     private static string Decimal(long value) => value.ToString(CultureInfo.InvariantCulture);
     private sealed record BoundaryRow(long Seq, long RetainedFloor, bool Resync);

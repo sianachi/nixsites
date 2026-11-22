@@ -8,6 +8,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Items;
 
@@ -224,7 +225,7 @@ public sealed partial class ItemTree(
             [
                 Uuid("tenant_id", Tenant.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                NullableUuid("parent_id", parentId?.Value),
+                Uuid("parent_id", parentId?.Value),
             ],
             cancellationToken).ConfigureAwait(false);
 
@@ -250,7 +251,7 @@ public sealed partial class ItemTree(
             [
                 Uuid("tenant_id", Tenant.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                NullableUuid("parent_id", parentId?.Value),
+                Uuid("parent_id", parentId?.Value),
             ],
             cancellationToken).ConfigureAwait(false);
 
@@ -309,7 +310,7 @@ public sealed partial class ItemTree(
                 Uuid("item_id", item.Id.Value),
                 Uuid("tenant_id", item.TenantId.Value),
                 Uuid("workspace_id", item.WorkspaceId.Value),
-                NullableUuid("parent_id", item.ParentId?.Value),
+                Uuid("parent_id", item.ParentId?.Value),
             ],
             cancellationToken).ConfigureAwait(false);
     }
@@ -631,7 +632,7 @@ public sealed partial class ItemTree(
                 Uuid("tenant_id", Tenant.Value),
                 Uuid("workspace_id", workspaceId.Value),
                 Uuid("item_id", itemId.Value),
-                NullableUuid("parent_id", newParentId?.Value),
+                Uuid("parent_id", newParentId?.Value),
                 Uuid("actor", actor.Value),
                 new NpgsqlParameter("at", NpgsqlDbType.TimestampTz) { Value = at },
             ],
@@ -684,7 +685,7 @@ public sealed partial class ItemTree(
                 [
                     Uuid("tenant_id", Tenant.Value),
                     Uuid("workspace_id", workspaceId.Value),
-                    NullableUuid("parent_id", parentId?.Value),
+                    Uuid("parent_id", parentId?.Value),
                     Uuid("item_id", movingId.Value),
                     Uuid("after_id", anchor.Value),
                 ],
@@ -694,19 +695,10 @@ public sealed partial class ItemTree(
                 [
                     Uuid("tenant_id", Tenant.Value),
                     Uuid("workspace_id", workspaceId.Value),
-                    NullableUuid("parent_id", parentId?.Value),
+                    Uuid("parent_id", parentId?.Value),
                     Uuid("item_id", movingId.Value),
                 ],
                 cancellationToken);
-
-    private static NpgsqlParameter UuidArray(string name, Guid[] values) =>
-        new(name, NpgsqlDbType.Uuid | NpgsqlDbType.Array) { Value = values };
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
-
-    private static NpgsqlParameter NullableUuid(string name, Guid? value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value is { } present ? present : DBNull.Value };
 
     /// <summary>Reads a single uuid column.</summary>
     private readonly struct ItemIdMapper : INixRowMapper<Guid>
