@@ -547,9 +547,9 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
 
     private async Task AddChildrenAsync(Guid parent, int count, string properties)
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -562,7 +562,7 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
                       (id, tenant_id, workspace_id, type, parent_id, seq, properties,
                        lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                        last_modified_at)
-                  SELECT gen_random_uuid(), {{tenant}}, {{workspace}}, 'note', {{Literal(parent)}},
+                  SELECT gen_random_uuid(), {{tenant}}, {{workspace}}, 'note', {{RawSql.Literal(parent)}},
                          800000 + n, {{properties}}, 'active', NULL, {{principal}}, {{principal}},
                          now(), now()
                   FROM generate_series(1, {{count}}) AS n;
@@ -571,7 +571,7 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
                   SELECT id, id, tenant_id, workspace_id, 0 FROM item WHERE seq BETWEEN 800001 AND {{800000 + count}};
 
                   INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-                  SELECT id, {{Literal(parent)}}, tenant_id, workspace_id, 1
+                  SELECT id, {{RawSql.Literal(parent)}}, tenant_id, workspace_id, 1
                   FROM item WHERE seq BETWEEN 800001 AND {{800000 + count}};
                   """);
         }
@@ -583,11 +583,11 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
         string lifecycle = "active",
         bool templateOwned = false)
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var template = templateOwned ? Literal(M0SchemaSeed.Alpha.TemplateId) : "NULL";
-        var source = templateOwned ? Literal(VisibleChild) : "NULL";
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var template = templateOwned ? RawSql.Literal(M0SchemaSeed.Alpha.TemplateId) : "NULL";
+        var source = templateOwned ? RawSql.Literal(VisibleChild) : "NULL";
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -601,15 +601,15 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
                        lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                        last_modified_at, template_id, template_source_id)
                   VALUES
-                      ({{Literal(id)}}, {{tenant}}, {{workspace}}, 'note', {{Literal(VisibleContainer)}},
+                      ({{RawSql.Literal(id)}}, {{tenant}}, {{workspace}}, 'note', {{RawSql.Literal(VisibleContainer)}},
                        (SELECT coalesce(max(seq), 0) + 1 FROM item),
                        '{{properties}}'::jsonb, '{{lifecycle}}', NULL, {{principal}}, {{principal}},
                        now(), now(), {{template}}, {{source}});
 
                   INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
                   VALUES
-                      ({{Literal(id)}}, {{Literal(id)}}, {{tenant}}, {{workspace}}, 0),
-                      ({{Literal(id)}}, {{Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 1);
+                      ({{RawSql.Literal(id)}}, {{RawSql.Literal(id)}}, {{tenant}}, {{workspace}}, 0),
+                      ({{RawSql.Literal(id)}}, {{RawSql.Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 1);
                   """);
         }
     }
@@ -622,15 +622,15 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(
                 connection,
                 transaction: null,
-                $"UPDATE item SET properties = '{properties}'::jsonb WHERE id = {Literal(id)};");
+                $"UPDATE item SET properties = '{properties}'::jsonb WHERE id = {RawSql.Literal(id)};");
         }
     }
 
     private async Task AddChildrenWithEstimateAsync(Guid parent, int count)
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -643,7 +643,7 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
                       (id, tenant_id, workspace_id, type, parent_id, seq, properties,
                        lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                        last_modified_at)
-                  SELECT gen_random_uuid(), {{tenant}}, {{workspace}}, 'note', {{Literal(parent)}},
+                  SELECT gen_random_uuid(), {{tenant}}, {{workspace}}, 'note', {{RawSql.Literal(parent)}},
                          900000 + n,
                          jsonb_build_object('title', 'Big ' || n, 'estimate', 1000000000000000::numeric),
                          'active', NULL, {{principal}}, {{principal}}, now(), now()
@@ -653,7 +653,7 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
                   SELECT id, id, tenant_id, workspace_id, 0 FROM item WHERE seq >= 900001;
 
                   INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-                  SELECT id, {{Literal(parent)}}, tenant_id, workspace_id, 1
+                  SELECT id, {{RawSql.Literal(parent)}}, tenant_id, workspace_id, 1
                   FROM item WHERE seq >= 900001;
                   """);
         }
@@ -661,12 +661,12 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
 
     private async Task SeedAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var betaTenant = Literal(M0SchemaSeed.Beta.TenantId);
-        var betaWorkspace = Literal(M0SchemaSeed.Beta.WorkspaceId);
-        var betaPrincipal = Literal(M0SchemaSeed.Beta.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var betaTenant = RawSql.Literal(M0SchemaSeed.Beta.TenantId);
+        var betaWorkspace = RawSql.Literal(M0SchemaSeed.Beta.WorkspaceId);
+        var betaPrincipal = RawSql.Literal(M0SchemaSeed.Beta.PrincipalId);
 
         var sql = $$"""
             INSERT INTO item
@@ -674,46 +674,46 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                  last_modified_at)
             VALUES
-                ({{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000,
+                ({{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000,
                  '{"title":"Deleted ancestor"}'::jsonb, 'deleted', NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 'note',
-                 {{Literal(DeletedAncestor)}}, 2000, '{"title":"Hidden container"}'::jsonb,
+                ({{RawSql.Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 'note',
+                 {{RawSql.Literal(DeletedAncestor)}}, 2000, '{"title":"Hidden container"}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(HiddenChild)}}, {{tenant}}, {{workspace}}, 'note',
-                 {{Literal(HiddenContainer)}}, 3000,
+                ({{RawSql.Literal(HiddenChild)}}, {{tenant}}, {{workspace}}, 'note',
+                 {{RawSql.Literal(HiddenContainer)}}, 3000,
                  '{"title":"Hidden child","estimate":13,"status":"Doing"}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000,
+                ({{RawSql.Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000,
                  '{"title":"Visible container"}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(VisibleChild)}}, {{tenant}}, {{workspace}}, 'note',
-                 {{Literal(VisibleContainer)}}, 5000,
+                ({{RawSql.Literal(VisibleChild)}}, {{tenant}}, {{workspace}}, 'note',
+                 {{RawSql.Literal(VisibleContainer)}}, 5000,
                  '{"title":"Visible child","estimate":7,"status":"Todo"}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(BetaContainer)}}, {{betaTenant}}, {{betaWorkspace}}, 'note', NULL, 6000,
+                ({{RawSql.Literal(BetaContainer)}}, {{betaTenant}}, {{betaWorkspace}}, 'note', NULL, 6000,
                  '{"title":"Other tenant container"}'::jsonb,
                  'active', NULL, {{betaPrincipal}}, {{betaPrincipal}}, now(), now()),
-                ({{Literal(BetaChild)}}, {{betaTenant}}, {{betaWorkspace}}, 'note',
-                 {{Literal(BetaContainer)}}, 7000,
+                ({{RawSql.Literal(BetaChild)}}, {{betaTenant}}, {{betaWorkspace}}, 'note',
+                 {{RawSql.Literal(BetaContainer)}}, 7000,
                  '{"title":"Other tenant child","estimate":99,"status":"Done"}'::jsonb,
                  'active', NULL, {{betaPrincipal}}, {{betaPrincipal}}, now(), now());
 
             INSERT INTO item_closure
                 (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES
-                ({{Literal(DeletedAncestor)}}, {{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(HiddenContainer)}}, {{Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(HiddenContainer)}}, {{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 1),
-                ({{Literal(HiddenChild)}}, {{Literal(HiddenChild)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(HiddenChild)}}, {{Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 1),
-                ({{Literal(HiddenChild)}}, {{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 2),
-                ({{Literal(VisibleContainer)}}, {{Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(VisibleChild)}}, {{Literal(VisibleChild)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(VisibleChild)}}, {{Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 1),
-                ({{Literal(BetaContainer)}}, {{Literal(BetaContainer)}}, {{betaTenant}}, {{betaWorkspace}}, 0),
-                ({{Literal(BetaChild)}}, {{Literal(BetaChild)}}, {{betaTenant}}, {{betaWorkspace}}, 0),
-                ({{Literal(BetaChild)}}, {{Literal(BetaContainer)}}, {{betaTenant}}, {{betaWorkspace}}, 1);
+                ({{RawSql.Literal(DeletedAncestor)}}, {{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(HiddenContainer)}}, {{RawSql.Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(HiddenContainer)}}, {{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 1),
+                ({{RawSql.Literal(HiddenChild)}}, {{RawSql.Literal(HiddenChild)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(HiddenChild)}}, {{RawSql.Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 1),
+                ({{RawSql.Literal(HiddenChild)}}, {{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 2),
+                ({{RawSql.Literal(VisibleContainer)}}, {{RawSql.Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(VisibleChild)}}, {{RawSql.Literal(VisibleChild)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(VisibleChild)}}, {{RawSql.Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 1),
+                ({{RawSql.Literal(BetaContainer)}}, {{RawSql.Literal(BetaContainer)}}, {{betaTenant}}, {{betaWorkspace}}, 0),
+                ({{RawSql.Literal(BetaChild)}}, {{RawSql.Literal(BetaChild)}}, {{betaTenant}}, {{betaWorkspace}}, 0),
+                ({{RawSql.Literal(BetaChild)}}, {{RawSql.Literal(BetaContainer)}}, {{betaTenant}}, {{betaWorkspace}}, 1);
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -725,8 +725,8 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
 
     private async Task SetAncestorBoundaryAsync(string lifecycle, bool templateOwned)
     {
-        var template = templateOwned ? Literal(M0SchemaSeed.Alpha.TemplateId) : "NULL";
-        var source = templateOwned ? Literal(DeletedAncestor) : "NULL";
+        var template = templateOwned ? RawSql.Literal(M0SchemaSeed.Alpha.TemplateId) : "NULL";
+        var source = templateOwned ? RawSql.Literal(DeletedAncestor) : "NULL";
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -739,7 +739,7 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
                      SET lifecycle_state = '{{lifecycle}}',
                          template_id = {{template}},
                          template_source_id = {{source}}
-                   WHERE id = {{Literal(DeletedAncestor)}};
+                   WHERE id = {{RawSql.Literal(DeletedAncestor)}};
                   """);
         }
     }
@@ -753,11 +753,8 @@ public sealed class RollupAuthorizationTests : IAsyncLifetime
                 connection,
                 transaction: null,
                 $$"""
-                  UPDATE item SET lifecycle_state = '{{lifecycle}}' WHERE id = {{Literal(id)}};
+                  UPDATE item SET lifecycle_state = '{{lifecycle}}' WHERE id = {{RawSql.Literal(id)}};
                   """);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

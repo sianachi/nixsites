@@ -259,15 +259,15 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
     [Fact]
     public async Task A_calendar_heavy_workspace_returns_its_own_notes_without_false_truncation()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
         var seed = $$"""
             WITH inserted AS (
                 INSERT INTO item
                     (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state,
                      created_by, last_modified_by, created_at, last_modified_at)
-                SELECT gen_random_uuid(), {{tenant}}, {{workspace}}, 'note', {{Literal(VisibleRoot)}},
+                SELECT gen_random_uuid(), {{tenant}}, {{workspace}}, 'note', {{RawSql.Literal(VisibleRoot)}},
                        10000 + n, jsonb_build_object('title', 'Event ' || n, 'start', '2026-10-08')
                        || CASE WHEN n <= 10000 THEN '{"$cal_source":"google"}'::jsonb ELSE '{}'::jsonb END,
                        'active', {{principal}}, {{principal}}, now(), now()
@@ -277,7 +277,7 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             SELECT id, id, {{tenant}}, {{workspace}}, 0 FROM inserted
             UNION ALL
-            SELECT id, {{Literal(VisibleRoot)}}, {{tenant}}, {{workspace}}, 1 FROM inserted;
+            SELECT id, {{RawSql.Literal(VisibleRoot)}}, {{tenant}}, {{workspace}}, 1 FROM inserted;
             ANALYZE item;
             ANALYZE item_closure;
             """;
@@ -523,8 +523,8 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
         var sql = $"""
             INSERT INTO item_link (tenant_id, source_item_id, target_item_id, occurrences, seq)
             VALUES
-                ({Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(VisibleRoot)}, {Literal(VisibleSource)}, 1, 1),
-                ({Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(VisibleChild)}, {Literal(VisibleSource)}, 1, 1);
+                ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(VisibleRoot)}, {RawSql.Literal(VisibleSource)}, 1, 1),
+                ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(VisibleChild)}, {RawSql.Literal(VisibleSource)}, 1, 1);
             """;
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -536,16 +536,16 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
     /// <summary>Locks <see cref="VisibleRoot"/>, with an open grant for one credential.</summary>
     private async Task LockVisibleRootAsync(Guid grantedTo)
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var root = Literal(VisibleRoot);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var root = RawSql.Literal(VisibleRoot);
         var sql = $"""
             INSERT INTO item_lock (item_id, tenant_id, password_hash, locked_by, locked_at)
             VALUES ({root}, {tenant},
                     'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
                     {principal}, now());
             INSERT INTO item_unlock (item_id, credential_id, tenant_id, principal_id, expires_at)
-            VALUES ({root}, {Literal(grantedTo)}, {tenant}, {principal}, now() + interval '10 minutes');
+            VALUES ({root}, {RawSql.Literal(grantedTo)}, {tenant}, {principal}, now() + interval '10 minutes');
             """;
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -564,21 +564,21 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
     /// </remarks>
     private async Task SeedGraphAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var openWorkspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var closedWorkspace = Literal(PrivateWorkspace);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var openWorkspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var closedWorkspace = RawSql.Literal(PrivateWorkspace);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $$"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
-            VALUES ({{Literal(Member)}}, {{tenant}}, 'alpha-graph-member', 'user', 'Member',
+            VALUES ({{RawSql.Literal(Member)}}, {{tenant}}, 'alpha-graph-member', 'user', 'Member',
                     'graph-member@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({{openWorkspace}}, 'principal', {{Literal(Member)}}, {{tenant}}, 'viewer',
+            VALUES ({{openWorkspace}}, 'principal', {{RawSql.Literal(Member)}}, {{tenant}}, 'viewer',
                     {{principal}}, now());
 
             INSERT INTO workspace
@@ -592,26 +592,26 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state,
                  purge_after, created_by, last_modified_by, created_at, last_modified_at)
             VALUES
-                ({{Literal(VisibleSource)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 2000,
+                ({{RawSql.Literal(VisibleSource)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 2000,
                  '{"title": "Quarterly notes"}'::jsonb, 'active', NULL, {{principal}}, {{principal}},
                  now(), now()),
-                ({{Literal(VisibleRoot)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 5000,
+                ({{RawSql.Literal(VisibleRoot)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 5000,
                  '{"title": "Programme"}'::jsonb, 'active', NULL, {{principal}}, {{principal}},
                  now(), now()),
-                ({{Literal(VisibleChild)}}, {{tenant}}, {{openWorkspace}}, 'note',
-                 {{Literal(VisibleRoot)}}, 3000, '{"title": "Ledger review"}'::jsonb, 'active', NULL,
+                ({{RawSql.Literal(VisibleChild)}}, {{tenant}}, {{openWorkspace}}, 'note',
+                 {{RawSql.Literal(VisibleRoot)}}, 3000, '{"title": "Ledger review"}'::jsonb, 'active', NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(PrivateItem)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 4000,
+                ({{RawSql.Literal(PrivateItem)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 4000,
                  '{"title": "Confidential ledger"}'::jsonb, 'active', NULL, {{principal}},
                  {{principal}}, now(), now());
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES
-                ({{Literal(VisibleSource)}}, {{Literal(VisibleSource)}}, {{tenant}}, {{openWorkspace}}, 0),
-                ({{Literal(VisibleRoot)}}, {{Literal(VisibleRoot)}}, {{tenant}}, {{openWorkspace}}, 0),
-                ({{Literal(VisibleChild)}}, {{Literal(VisibleChild)}}, {{tenant}}, {{openWorkspace}}, 0),
-                ({{Literal(VisibleChild)}}, {{Literal(VisibleRoot)}}, {{tenant}}, {{openWorkspace}}, 1),
-                ({{Literal(PrivateItem)}}, {{Literal(PrivateItem)}}, {{tenant}}, {{closedWorkspace}}, 0);
+                ({{RawSql.Literal(VisibleSource)}}, {{RawSql.Literal(VisibleSource)}}, {{tenant}}, {{openWorkspace}}, 0),
+                ({{RawSql.Literal(VisibleRoot)}}, {{RawSql.Literal(VisibleRoot)}}, {{tenant}}, {{openWorkspace}}, 0),
+                ({{RawSql.Literal(VisibleChild)}}, {{RawSql.Literal(VisibleChild)}}, {{tenant}}, {{openWorkspace}}, 0),
+                ({{RawSql.Literal(VisibleChild)}}, {{RawSql.Literal(VisibleRoot)}}, {{tenant}}, {{openWorkspace}}, 1),
+                ({{RawSql.Literal(PrivateItem)}}, {{RawSql.Literal(PrivateItem)}}, {{tenant}}, {{closedWorkspace}}, 0);
 
             -- The shared seed gives every tenant's item a link to itself, which is a plausible row
             -- for a links table and meaningless as an edge in a drawing. Removed here so the edges
@@ -624,9 +624,9 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
             -- caller may not read.
             INSERT INTO item_link (tenant_id, source_item_id, target_item_id, occurrences, seq)
             VALUES
-                ({{tenant}}, {{Literal(VisibleSource)}}, {{Literal(VisibleChild)}}, 3, 1),
-                ({{tenant}}, {{Literal(VisibleSource)}}, {{Literal(PrivateItem)}}, 1, 1),
-                ({{tenant}}, {{Literal(PrivateItem)}}, {{Literal(VisibleChild)}}, 1, 1);
+                ({{tenant}}, {{RawSql.Literal(VisibleSource)}}, {{RawSql.Literal(VisibleChild)}}, 3, 1),
+                ({{tenant}}, {{RawSql.Literal(VisibleSource)}}, {{RawSql.Literal(PrivateItem)}}, 1, 1),
+                ({{tenant}}, {{RawSql.Literal(PrivateItem)}}, {{RawSql.Literal(VisibleChild)}}, 1, 1);
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -648,16 +648,16 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
                SET properties = properties || '{{properties.ToJsonString()}}'::jsonb,
                    managed_by = {{(managed ? "'calendar_event'" : "NULL")}},
                    no_delete = {{(managed ? "true" : "false")}}
-             WHERE id = {{Literal(VisibleSource)}};
+             WHERE id = {{RawSql.Literal(VisibleSource)}};
             UPDATE item SET managed_by = 'calendar', no_delete = true
-             WHERE id = {{Literal(VisibleRoot)}};
+             WHERE id = {{RawSql.Literal(VisibleRoot)}};
             UPDATE item
                SET properties = properties || '{"start":"2026-10-08T09:00:00Z"}'::jsonb,
                    managed_by = 'calendar_event', no_delete = true
-             WHERE id = {{Literal(VisibleChild)}};
+             WHERE id = {{RawSql.Literal(VisibleChild)}};
             INSERT INTO item_link (tenant_id, source_item_id, target_item_id, occurrences, seq)
-            VALUES ({{Literal(M0SchemaSeed.Alpha.TenantId)}}, {{Literal(VisibleChild)}},
-                    {{Literal(VisibleSource)}}, 1, 1);
+            VALUES ({{RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}}, {{RawSql.Literal(VisibleChild)}},
+                    {{RawSql.Literal(VisibleSource)}}, 1, 1);
             """;
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -674,7 +674,7 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(
                 connection,
                 transaction: null,
-                $"UPDATE item SET lifecycle_state = '{lifecycle}' WHERE id = {Literal(itemId)};");
+                $"UPDATE item SET lifecycle_state = '{lifecycle}' WHERE id = {RawSql.Literal(itemId)};");
         }
     }
 
@@ -686,10 +686,7 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(
                 connection,
                 transaction: null,
-                $"UPDATE item SET seq = {sequence.ToString(CultureInfo.InvariantCulture)} WHERE id = {Literal(itemId)};");
+                $"UPDATE item SET seq = {sequence.ToString(CultureInfo.InvariantCulture)} WHERE id = {RawSql.Literal(itemId)};");
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

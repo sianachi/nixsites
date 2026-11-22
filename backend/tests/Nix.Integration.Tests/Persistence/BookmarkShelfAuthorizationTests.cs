@@ -356,7 +356,7 @@ public sealed class BookmarkShelfAuthorizationTests : IAsyncLifetime
                 $"""
                  UPDATE item
                     SET properties = properties || jsonb_build_object('title', '{title}')
-                  WHERE id = {Literal(itemId)};
+                  WHERE id = {RawSql.Literal(itemId)};
                  """);
         }
     }
@@ -369,7 +369,7 @@ public sealed class BookmarkShelfAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(
                 connection,
                 transaction: null,
-                $"UPDATE item SET lifecycle_state = 'deleted' WHERE id = {Literal(itemId)};");
+                $"UPDATE item SET lifecycle_state = 'deleted' WHERE id = {RawSql.Literal(itemId)};");
         }
     }
 
@@ -383,15 +383,15 @@ public sealed class BookmarkShelfAuthorizationTests : IAsyncLifetime
                 transaction: null,
                 $$"""
                   UPDATE item
-                     SET parent_id = {{Literal(TrashedItem)}}
-                   WHERE id = {{Literal(itemId)}};
+                     SET parent_id = {{RawSql.Literal(TrashedItem)}}
+                   WHERE id = {{RawSql.Literal(itemId)}};
 
                   INSERT INTO item_closure
                       (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
                   VALUES
-                      ({{Literal(itemId)}}, {{Literal(TrashedItem)}},
-                       {{Literal(M0SchemaSeed.Alpha.TenantId)}},
-                       {{Literal(M0SchemaSeed.Alpha.WorkspaceId)}}, 1);
+                      ({{RawSql.Literal(itemId)}}, {{RawSql.Literal(TrashedItem)}},
+                       {{RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}},
+                       {{RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId)}}, 1);
                   """);
         }
     }
@@ -406,8 +406,8 @@ public sealed class BookmarkShelfAuthorizationTests : IAsyncLifetime
                 transaction: null,
                 $"""
                  DELETE FROM workspace_member
-                  WHERE workspace_id = {Literal(workspace)}
-                    AND subject_id = {Literal(principal)};
+                  WHERE workspace_id = {RawSql.Literal(workspace)}
+                    AND subject_id = {RawSql.Literal(principal)};
                  """);
         }
     }
@@ -417,19 +417,19 @@ public sealed class BookmarkShelfAuthorizationTests : IAsyncLifetime
     /// </summary>
     private async Task SeedShelvesAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var shared = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var closed = Literal(PrivateWorkspace);
-        var granter = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var shared = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var closed = RawSql.Literal(PrivateWorkspace);
+        var granter = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $$"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
             VALUES
-                ({{Literal(Keeper)}}, {{tenant}}, 'alpha-keeper', 'user', 'Keeper',
+                ({{RawSql.Literal(Keeper)}}, {{tenant}}, 'alpha-keeper', 'user', 'Keeper',
                  'keeper@example.test', 'active', NULL),
-                ({{Literal(Neighbour)}}, {{tenant}}, 'alpha-neighbour', 'user', 'Neighbour',
+                ({{RawSql.Literal(Neighbour)}}, {{tenant}}, 'alpha-neighbour', 'user', 'Neighbour',
                  'neighbour@example.test', 'active', NULL);
 
             INSERT INTO workspace
@@ -441,33 +441,33 @@ public sealed class BookmarkShelfAuthorizationTests : IAsyncLifetime
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
             VALUES
-                ({{shared}}, 'principal', {{Literal(Keeper)}}, {{tenant}}, 'viewer', {{granter}}, now()),
-                ({{shared}}, 'principal', {{Literal(Neighbour)}}, {{tenant}}, 'viewer', {{granter}}, now()),
-                ({{closed}}, 'principal', {{Literal(Keeper)}}, {{tenant}}, 'viewer', {{granter}}, now());
+                ({{shared}}, 'principal', {{RawSql.Literal(Keeper)}}, {{tenant}}, 'viewer', {{granter}}, now()),
+                ({{shared}}, 'principal', {{RawSql.Literal(Neighbour)}}, {{tenant}}, 'viewer', {{granter}}, now()),
+                ({{closed}}, 'principal', {{RawSql.Literal(Keeper)}}, {{tenant}}, 'viewer', {{granter}}, now());
 
             INSERT INTO item
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state,
                  purge_after, created_by, last_modified_by, created_at, last_modified_at)
             VALUES
-                ({{Literal(SharedItem)}}, {{tenant}}, {{shared}}, 'note', NULL, 1000,
+                ({{RawSql.Literal(SharedItem)}}, {{tenant}}, {{shared}}, 'note', NULL, 1000,
                  '{"title": "Quarterly notes"}'::jsonb, 'active', NULL, {{granter}}, {{granter}},
                  now(), now()),
-                ({{Literal(OtherItem)}}, {{tenant}}, {{shared}}, 'note', NULL, 2000,
+                ({{RawSql.Literal(OtherItem)}}, {{tenant}}, {{shared}}, 'note', NULL, 2000,
                  '{"title": "Ledger review"}'::jsonb, 'active', NULL, {{granter}}, {{granter}},
                  now(), now()),
-                ({{Literal(PrivateItem)}}, {{tenant}}, {{closed}}, 'note', NULL, 3000,
+                ({{RawSql.Literal(PrivateItem)}}, {{tenant}}, {{closed}}, 'note', NULL, 3000,
                  '{"title": "Confidential ledger"}'::jsonb, 'active', NULL, {{granter}}, {{granter}},
                  now(), now()),
-                ({{Literal(TrashedItem)}}, {{tenant}}, {{shared}}, 'note', NULL, 4000,
+                ({{RawSql.Literal(TrashedItem)}}, {{tenant}}, {{shared}}, 'note', NULL, 4000,
                  '{"title": "Old draft"}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}},
                  now(), now());
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES
-                ({{Literal(SharedItem)}}, {{Literal(SharedItem)}}, {{tenant}}, {{shared}}, 0),
-                ({{Literal(OtherItem)}}, {{Literal(OtherItem)}}, {{tenant}}, {{shared}}, 0),
-                ({{Literal(PrivateItem)}}, {{Literal(PrivateItem)}}, {{tenant}}, {{closed}}, 0),
-                ({{Literal(TrashedItem)}}, {{Literal(TrashedItem)}}, {{tenant}}, {{shared}}, 0);
+                ({{RawSql.Literal(SharedItem)}}, {{RawSql.Literal(SharedItem)}}, {{tenant}}, {{shared}}, 0),
+                ({{RawSql.Literal(OtherItem)}}, {{RawSql.Literal(OtherItem)}}, {{tenant}}, {{shared}}, 0),
+                ({{RawSql.Literal(PrivateItem)}}, {{RawSql.Literal(PrivateItem)}}, {{tenant}}, {{closed}}, 0),
+                ({{RawSql.Literal(TrashedItem)}}, {{RawSql.Literal(TrashedItem)}}, {{tenant}}, {{shared}}, 0);
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -476,7 +476,4 @@ public sealed class BookmarkShelfAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

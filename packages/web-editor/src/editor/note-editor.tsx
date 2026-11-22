@@ -414,6 +414,8 @@ const REFUSAL_COPY: Readonly<Record<string, string>> = {
  */
 const RESTORE_ORIGIN = Symbol('nix.editor.restore');
 
+const READ_ONLY_UPLOAD = 'This note is read-only. The file cannot be added.';
+
 /**
  * A completed upload is an item immediately, even before its reference reaches the document. If
  * the editor disappears or cannot accept the node after completion, soft-delete that unattached
@@ -587,25 +589,17 @@ export function NoteEditor({
       description?: string,
       reportError = true,
     ): Promise<boolean> => {
-      if (!view.editable) {
-        if (reportError) setRefusal('This note is read-only. The file cannot be added.');
-        else throw new Error('This note is read-only. The file cannot be added.');
+      const refuse = (message: string): false => {
+        if (!reportError) throw new Error(message);
+        setRefusal(message);
         return false;
-      }
-      if (workspaceId === undefined) {
-        if (reportError) setRefusal('The current workspace is unavailable.');
-        else throw new Error('The current workspace is unavailable.');
-        return false;
-      }
+      };
+      if (!view.editable) return refuse(READ_ONLY_UPLOAD);
+      if (workspaceId === undefined) return refuse('The current workspace is unavailable.');
       if (uploadingFilesRef.current > 0) {
-        if (!reportError)
-          throw new Error(
-            'A file upload is already in progress. Wait for it to finish before adding more.',
-          );
-        setRefusal(
+        return refuse(
           'A file upload is already in progress. Wait for it to finish before adding more.',
         );
-        return false;
       }
       setRefusal(null);
       uploadingFilesRef.current = files.length;
@@ -672,8 +666,7 @@ export function NoteEditor({
           if (target === null) {
             throw new Error('The file could not be placed at that location.');
           }
-          if (!viewAcceptsEdits(view))
-            throw new Error('This note is read-only. The file cannot be added.');
+          if (!viewAcceptsEdits(view)) throw new Error(READ_ONLY_UPLOAD);
           const transaction = view.state.tr.insert(target, node);
           const afterNode = target + node.nodeSize;
           if (transaction.doc.nodeAt(afterNode)?.type.name !== 'paragraph') {

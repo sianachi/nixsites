@@ -2,6 +2,7 @@ using Nix.Abstractions.Scheduling;
 using Nix.Domain.Identity;
 using Nix.Domain.Scheduling;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -18,6 +19,8 @@ namespace Nix.Persistence.Scheduling;
 /// </summary>
 public sealed class ScheduledTriggerLeaseStore(NpgsqlDataSource dataSource) : IScheduledTriggerLeaseStore
 {
+    private readonly PooledSql _db = new(dataSource);
+
     private const string LeaseSql = "SELECT * FROM nix_lease_due_triggers(@limit, @owner, @lease_seconds, @max_attempts, @sources)";
     private const string FinishSql = "SELECT nix_finish_trigger(@tenant_id, @id, @owner, @status, @detail::jsonb)";
 
@@ -43,66 +46,41 @@ public sealed class ScheduledTriggerLeaseStore(NpgsqlDataSource dataSource) : IS
             throw new ArgumentOutOfRangeException(nameof(maxAttempts));
         }
 
-        var results = new List<DueTrigger>(limit);
-        var command = dataSource.CreateCommand(LeaseSql);
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            command.Parameters.Add(new NpgsqlParameter<string>("owner", NpgsqlDbType.Text) { TypedValue = owner });
-            command.Parameters.Add(new NpgsqlParameter<int>("lease_seconds", NpgsqlDbType.Integer) { TypedValue = leaseSeconds });
-            command.Parameters.Add(new NpgsqlParameter<int>("max_attempts", NpgsqlDbType.Integer) { TypedValue = maxAttempts });
-            command.Parameters.Add(new NpgsqlParameter("sources", NpgsqlDbType.Array | NpgsqlDbType.Text)
+        return await _db.RowsAsync(
+            LeaseSql,
+            static reader => new DueTrigger(
+                TenantId.From(reader.GetGuid(0)),
+                reader.GetGuid(1),
+                reader.IsDBNull(2) ? null : WorkspaceId.From(reader.GetGuid(2)),
+                PrincipalId.From(reader.GetGuid(3)),
+                TriggerStorage.KindFromText(reader.GetString(4)),
+                reader.GetString(5),
+                reader.IsDBNull(6) ? null : reader.GetGuid(6),
+                reader.IsDBNull(7) ? null : reader.GetGuid(7),
+                reader.GetFieldValue<DateTimeOffset>(8),
+                reader.GetString(9),
+                reader.GetInt32(10)),
+            cancellationToken,
+            NixParameter.Integer("limit", limit),
+            NixParameter.Text("owner", owner),
+            NixParameter.Integer("lease_seconds", leaseSeconds),
+            NixParameter.Integer("max_attempts", maxAttempts),
+            new NpgsqlParameter("sources", NpgsqlDbType.Array | NpgsqlDbType.Text)
             {
                 Value = sources is null ? DBNull.Value : sources.ToArray(),
-            });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    var workspaceId = await reader.IsDBNullAsync(2, cancellationToken).ConfigureAwait(false)
-                        ? (WorkspaceId?)null
-                        : WorkspaceId.From(reader.GetGuid(2));
-                    var sourceItemId = await reader.IsDBNullAsync(6, cancellationToken).ConfigureAwait(false)
-                        ? (Guid?)null
-                        : reader.GetGuid(6);
-                    var ruleId = await reader.IsDBNullAsync(7, cancellationToken).ConfigureAwait(false)
-                        ? (Guid?)null
-                        : reader.GetGuid(7);
-                    results.Add(new DueTrigger(
-                        TenantId.From(reader.GetGuid(0)),
-                        reader.GetGuid(1),
-                        workspaceId,
-                        PrincipalId.From(reader.GetGuid(3)),
-                        TriggerStorage.KindFromText(reader.GetString(4)),
-                        reader.GetString(5),
-                        sourceItemId,
-                        ruleId,
-                        await reader.GetFieldValueAsync<DateTimeOffset>(8, cancellationToken).ConfigureAwait(false),
-                        reader.GetString(9),
-                        reader.GetInt32(10)));
-                }
-            }
-        }
-        return results;
+            }).ConfigureAwait(false);
     }
 
     public async Task<bool> FinishAsync(TenantId tenantId, Guid id, string owner, TriggerStatus status, string? detailJson, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(owner);
-        var command = dataSource.CreateCommand(FinishSql);
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<Guid>("tenant_id", NpgsqlDbType.Uuid) { TypedValue = tenantId.Value });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("id", NpgsqlDbType.Uuid) { TypedValue = id });
-            command.Parameters.Add(new NpgsqlParameter<string>("owner", NpgsqlDbType.Text) { TypedValue = owner });
-            command.Parameters.Add(new NpgsqlParameter<string>("status", NpgsqlDbType.Text) { TypedValue = TriggerStorage.ToText(status) });
-            command.Parameters.Add(new NpgsqlParameter("detail", NpgsqlDbType.Text)
-            {
-                Value = (object?)detailJson ?? DBNull.Value,
-            });
-            var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            return result is bool value && value;
-        }
+        return await _db.ScalarAsync<bool?>(
+            FinishSql,
+            cancellationToken,
+            NixParameter.Uuid("tenant_id", tenantId.Value),
+            NixParameter.Uuid("id", id),
+            NixParameter.Text("owner", owner),
+            NixParameter.Text("status", TriggerStorage.ToText(status)),
+            NixParameter.Text("detail", detailJson)).ConfigureAwait(false) == true;
     }
 }

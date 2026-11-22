@@ -16,6 +16,9 @@ internal static class RawSql
         new(sql, connection, transaction);
 #pragma warning restore CA2100
 
+    /// <summary>Renders a Guid as a SQL uuid literal, for statements built from fixture ids.</summary>
+    public static string Literal(Guid value) => $"'{value:D}'::uuid";
+
     /// <summary>Executes a statement.</summary>
     /// <param name="connection">An open connection.</param>
     /// <param name="transaction">The enclosing transaction, or <see langword="null"/>.</param>

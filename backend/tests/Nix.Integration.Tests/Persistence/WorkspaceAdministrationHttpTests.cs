@@ -63,28 +63,28 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
         var jwt = await JwtAsync(Owner);
         var cursor = await SendAsync(HttpMethod.Get, "/api/v1/workspaces?cursor=not-base64", jwt);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, cursor.StatusCode);
-        Assert.Equal("paging.invalid_cursor", await ProblemCodeAsync(cursor));
+        Assert.Equal("paging.invalid_cursor", await HttpProblem.CodeAsync(cursor));
 
         var invalidSearch = await SendAsync(HttpMethod.Get,
             $"/api/v1/workspaces/{PersonalWorkspace:D}/invitees?query={new string('a', 129)}", jwt);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, invalidSearch.StatusCode);
-        Assert.Equal("workspaces.invitee_search_invalid", await ProblemCodeAsync(invalidSearch));
+        Assert.Equal("workspaces.invitee_search_invalid", await HttpProblem.CodeAsync(invalidSearch));
 
         var invalidName = await SendAsync(HttpMethod.Post, "/api/v1/workspaces", jwt, new { name = "" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, invalidName.StatusCode);
-        Assert.Equal("workspaces.invalid_name", await ProblemCodeAsync(invalidName));
+        Assert.Equal("workspaces.invalid_name", await HttpProblem.CodeAsync(invalidName));
 
         var unknownRoleInvitation = await SendAsync(HttpMethod.Post,
             $"/api/v1/workspaces/{PersonalWorkspace:D}/invitations", jwt,
             new { principalId = Invitee, role = "admin" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, unknownRoleInvitation.StatusCode);
-        Assert.Equal("workspaces.invalid_invitation", await ProblemCodeAsync(unknownRoleInvitation));
+        Assert.Equal("workspaces.invalid_invitation", await HttpProblem.CodeAsync(unknownRoleInvitation));
 
         var unknownRoleMember = await SendAsync(HttpMethod.Patch,
             $"/api/v1/workspaces/{PersonalWorkspace:D}/members/{Viewer:D}", jwt,
             new { role = "admin" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, unknownRoleMember.StatusCode);
-        Assert.Equal("workspaces.invalid_role", await ProblemCodeAsync(unknownRoleMember));
+        Assert.Equal("workspaces.invalid_role", await HttpProblem.CodeAsync(unknownRoleMember));
     }
 
     [Fact]
@@ -125,8 +125,8 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
             HttpMethod.Get, $"/api/v1/workspaces/{M0SchemaSeed.Alpha.WorkspaceId:D}", viewerJwt);
         Assert.Equal(HttpStatusCode.NotFound, absent.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, inaccessible.StatusCode);
-        Assert.Equal("workspaces.not_found", await ProblemCodeAsync(absent));
-        Assert.Equal("workspaces.not_found", await ProblemCodeAsync(inaccessible));
+        Assert.Equal("workspaces.not_found", await HttpProblem.CodeAsync(absent));
+        Assert.Equal("workspaces.not_found", await HttpProblem.CodeAsync(inaccessible));
     }
 
     [Fact]
@@ -137,14 +137,14 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
             $"/api/v1/workspaces/{PersonalWorkspace:D}/recover", ownerJwt,
             new { newOwnerPrincipalId = Viewer });
         Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
-        Assert.Equal("workspaces.recovery_forbidden", await ProblemCodeAsync(forbidden));
+        Assert.Equal("workspaces.recovery_forbidden", await HttpProblem.CodeAsync(forbidden));
 
         var administratorJwt = await JwtAsync(M0SchemaSeed.Alpha.PrincipalId);
         var conflict = await SendAsync(HttpMethod.Post,
             $"/api/v1/workspaces/{PersonalWorkspace:D}/recover", administratorJwt,
             new { newOwnerPrincipalId = Viewer });
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
-        Assert.Equal("workspaces.recovery_refused", await ProblemCodeAsync(conflict));
+        Assert.Equal("workspaces.recovery_refused", await HttpProblem.CodeAsync(conflict));
     }
 
     [Fact]
@@ -163,13 +163,13 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
         var repeated = await SendAsync(HttpMethod.Delete,
             $"/api/v1/workspaces/{PersonalWorkspace:D}/invitations/{invitationId:D}", ownerJwt);
         Assert.Equal(HttpStatusCode.Conflict, repeated.StatusCode);
-        Assert.Equal("workspaces.invitation_not_pending", await ProblemCodeAsync(repeated));
+        Assert.Equal("workspaces.invitation_not_pending", await HttpProblem.CodeAsync(repeated));
 
         var viewerJwt = await JwtAsync(Viewer);
         var daily = await SendAsync(HttpMethod.Put,
             $"/api/v1/workspaces/{PersonalWorkspace:D}/daily-notes/2026-08-30", viewerJwt);
         Assert.Equal(HttpStatusCode.NotFound, daily.StatusCode);
-        Assert.Equal("workspaces.not_found", await ProblemCodeAsync(daily));
+        Assert.Equal("workspaces.not_found", await HttpProblem.CodeAsync(daily));
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
         await ExecuteAsMigratorAsync($"UPDATE item SET lifecycle_state = 'deleted' WHERE id = '{itemId:D}'");
         var trashed = await SendAsync(HttpMethod.Put, path, ownerJwt);
         Assert.Equal(HttpStatusCode.Conflict, trashed.StatusCode);
-        Assert.Equal("workspaces.daily_note_in_trash", await ProblemCodeAsync(trashed));
+        Assert.Equal("workspaces.daily_note_in_trash", await HttpProblem.CodeAsync(trashed));
 
         await ExecuteAsMigratorAsync($"""
             UPDATE item SET lifecycle_state = 'active' WHERE id = '{itemId:D}';
@@ -198,7 +198,7 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
             """);
         var locked = await SendAsync(HttpMethod.Put, path, ownerJwt);
         Assert.Equal(HttpStatusCode.Locked, locked.StatusCode);
-        Assert.Equal("workspaces.daily_note_locked", await ProblemCodeAsync(locked));
+        Assert.Equal("workspaces.daily_note_locked", await HttpProblem.CodeAsync(locked));
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
 
         var refused = await SendAsync(HttpMethod.Delete, $"/api/v1/workspaces/{PersonalWorkspace:D}", ownerJwt);
         Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
-        Assert.Equal("workspaces.purge_refused", await ProblemCodeAsync(refused));
+        Assert.Equal("workspaces.purge_refused", await HttpProblem.CodeAsync(refused));
 
         var archived = await SendAsync(
             HttpMethod.Post, $"/api/v1/workspaces/{PersonalWorkspace:D}/archive", ownerJwt);
@@ -266,12 +266,6 @@ public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
         }
 
         return await _client.SendAsync(request, Cancellation);
-    }
-
-    private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response)
-    {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
-        return document.RootElement.GetProperty("code").GetString();
     }
 
     private async Task ExecuteAsMigratorAsync(string sql)

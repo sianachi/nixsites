@@ -593,10 +593,10 @@ public sealed class ItemLifecycleTests : IAsyncLifetime
 
     private async Task SeedOtherWorkspaceAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(OtherWorkspace);
-        var item = Literal(OtherWorkspaceItem);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(OtherWorkspace);
+        var item = RawSql.Literal(OtherWorkspaceItem);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $"""
             INSERT INTO workspace
@@ -622,9 +622,6 @@ public sealed class ItemLifecycleTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 
     /// <summary>
     /// The workspace roots in sibling order, minus the row the schema seed placed there.

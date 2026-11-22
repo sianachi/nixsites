@@ -300,8 +300,8 @@ public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
         // that the numeric cast then refused with 22P02, failing every query over the key.
         await ExecuteAsMigratorAsync(
             $$"""
-             UPDATE item SET properties = properties || '{"points": "5\u3000"}'::jsonb WHERE id = {{Literal(Work)}};
-             UPDATE item SET properties = properties || '{"points": "1e5 "}'::jsonb WHERE id = {{Literal(Sub)}};
+             UPDATE item SET properties = properties || '{"points": "5\u3000"}'::jsonb WHERE id = {{RawSql.Literal(Work)}};
+             UPDATE item SET properties = properties || '{"points": "1e5 "}'::jsonb WHERE id = {{RawSql.Literal(Sub)}};
              """);
 
         Assert.Equal(Set(TaskA), await Ids(Rule("points", "greater-than", "3")));
@@ -320,8 +320,8 @@ public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
         // and one past it is left out and counted rather than overflowing the reader.
         await ExecuteAsMigratorAsync(
             $$"""
-             UPDATE item SET properties = properties || '{"points": 999999999999999}'::jsonb WHERE id IN ({{Literal(Work)}}, {{Literal(Sub)}});
-             UPDATE item SET properties = properties || '{"points": 1e16}'::jsonb WHERE id = {{Literal(TaskB)}};
+             UPDATE item SET properties = properties || '{"points": 999999999999999}'::jsonb WHERE id IN ({{RawSql.Literal(Work)}}, {{RawSql.Literal(Sub)}});
+             UPDATE item SET properties = properties || '{"points": 1e16}'::jsonb WHERE id = {{RawSql.Literal(TaskB)}};
              """);
 
         var folded = await Aggregate(Input([]), "sum", "points");
@@ -424,16 +424,16 @@ public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
 
     private async Task SeedAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var beta = Literal(M0SchemaSeed.Beta.TenantId);
-        var open = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var betaWorkspace = Literal(M0SchemaSeed.Beta.WorkspaceId);
-        var closed = Literal(PrivateWorkspace);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var betaPrincipal = Literal(M0SchemaSeed.Beta.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var beta = RawSql.Literal(M0SchemaSeed.Beta.TenantId);
+        var open = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var betaWorkspace = RawSql.Literal(M0SchemaSeed.Beta.WorkspaceId);
+        var closed = RawSql.Literal(PrivateWorkspace);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var betaPrincipal = RawSql.Literal(M0SchemaSeed.Beta.PrincipalId);
 
         string Row(Guid id, string tenantId, string workspace, string type, Guid? parent, int seq, string properties, string created, string modified, string lifecycle = "active", string? views = null, string? actor = null) =>
-            $"({Literal(id)}, {tenantId}, {workspace}, '{type}', {(parent is { } p ? Literal(p) : "NULL")}, {seq}, "
+            $"({RawSql.Literal(id)}, {tenantId}, {workspace}, '{type}', {(parent is { } p ? RawSql.Literal(p) : "NULL")}, {seq}, "
             + $"'{properties}'::jsonb, {(views is null ? "NULL" : $"'{views}'::jsonb")}, '{lifecycle}', NULL, "
             + $"{actor ?? principal}, {actor ?? principal}, '{created}'::timestamptz, '{modified}'::timestamptz)";
 
@@ -454,18 +454,18 @@ public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
             Row(PrivateTask, tenant, closed, "task", PrivateFolder, 9000, """{"title": "Secret plan 50%_off", "status": "Doing", "points": 1000, "tags": ["Urgent"], "due_date": "2026-08-12"}""", "2026-08-13T00:00:00Z", "2026-08-15T00:00:00Z"),
             Row(BetaTask, beta, betaWorkspace, "task", null, 10000, """{"title": "Beta plan 50%_off", "status": "Doing", "points": 1000, "tags": ["Urgent"], "due_date": "2026-08-12"}""", "2026-08-13T00:00:00Z", "2026-08-15T00:00:00Z", actor: betaPrincipal));
 
-        var all = string.Join(", ", new[] { Work, TaskA, TaskB, Sub, TaskC, Loose, Deleted, PrivateFolder, PrivateTask, BetaTask }.Select(Literal));
+        var all = string.Join(", ", new[] { Work, TaskA, TaskB, Sub, TaskC, Loose, Deleted, PrivateFolder, PrivateTask, BetaTask }.Select(RawSql.Literal));
 
         var sql = $$"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
-            VALUES ({{Literal(Member)}}, {{tenant}}, 'alpha-workspace-query-member', 'user', 'Member',
+            VALUES ({{RawSql.Literal(Member)}}, {{tenant}}, 'alpha-workspace-query-member', 'user', 'Member',
                     'workspace-query-member@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({{open}}, 'principal', {{Literal(Member)}}, {{tenant}}, 'viewer',
+            VALUES ({{open}}, 'principal', {{RawSql.Literal(Member)}}, {{tenant}}, 'viewer',
                     {{principal}}, now());
 
             INSERT INTO workspace
@@ -488,11 +488,11 @@ public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
              WHERE id IN ({{all}}) AND parent_id IS NOT NULL;
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            VALUES ({{Literal(TaskC)}}, {{Literal(Work)}}, {{tenant}}, {{open}}, 2);
+            VALUES ({{RawSql.Literal(TaskC)}}, {{RawSql.Literal(Work)}}, {{tenant}}, {{open}}, 2);
 
             UPDATE item
                SET created_at = '2026-06-01T00:00:00Z', last_modified_at = '2026-06-01T00:00:00Z'
-             WHERE id = {{Literal(Seed)}};
+             WHERE id = {{RawSql.Literal(Seed)}};
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -510,7 +510,4 @@ public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

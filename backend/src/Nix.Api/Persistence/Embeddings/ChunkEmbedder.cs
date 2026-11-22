@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Nix.Persistence.Sql;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -29,6 +30,7 @@ public sealed class ChunkEmbedder(
     private const int BatchSize = 4;
     private static readonly TimeSpan EmptyDelay = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan FailureDelay = TimeSpan.FromSeconds(30);
+    private readonly PooledSql _db = new(dataSource);
     private readonly ILogger<ChunkEmbedder> _logger = logger ?? NullLogger<ChunkEmbedder>.Instance;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -67,23 +69,17 @@ public sealed class ChunkEmbedder(
     /// <summary>Embeds one batch and returns how many chunks it took; exposed for tests.</summary>
     public async Task<int> EmbedOnceAsync(CancellationToken cancellationToken)
     {
-        var pending = new List<(Guid Tenant, Guid Item, int Ord, string Hash, string Text)>(BatchSize);
-        var find = dataSource.CreateCommand("SELECT * FROM nix_find_unembedded_chunks(@limit)");
-        await using (find.ConfigureAwait(false))
-        {
-            find.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = BatchSize });
-            var reader = await find.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
+        var pending = await _db.RowsAsync(
+            "SELECT * FROM nix_find_unembedded_chunks(@limit)",
+            static reader =>
             {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    var heading = reader.GetString(4);
-                    var body = reader.GetString(5);
-                    pending.Add((reader.GetGuid(0), reader.GetGuid(1), reader.GetInt32(2), reader.GetString(3),
-                        heading.Length == 0 ? body : heading + "\n" + body));
-                }
-            }
-        }
+                var heading = reader.GetString(4);
+                var body = reader.GetString(5);
+                return (Tenant: reader.GetGuid(0), Item: reader.GetGuid(1), Ord: reader.GetInt32(2), Hash: reader.GetString(3),
+                    Text: heading.Length == 0 ? body : heading + "\n" + body);
+            },
+            cancellationToken,
+            NixParameter.Integer("limit", BatchSize)).ConfigureAwait(false);
         if (pending.Count == 0)
         {
             return 0;

@@ -94,7 +94,7 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
             new { expectedRevision = 1, rule = Rule("Again", PropertyTrigger) }))
         {
             Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
-            Assert.Equal("automation.conflict", await ProblemCodeAsync(stale));
+            Assert.Equal("automation.conflict", await HttpProblem.CodeAsync(stale));
         }
 
         using (var runs = await SendAsync(HttpMethod.Get, $"/api/v1/automations/{id:D}/runs", admin))
@@ -109,7 +109,7 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
 
         using var gone = await SendAsync(HttpMethod.Get, $"/api/v1/automations/{id:D}", admin);
         Assert.Equal(HttpStatusCode.NotFound, gone.StatusCode);
-        Assert.Equal("automation.not_found", await ProblemCodeAsync(gone));
+        Assert.Equal("automation.not_found", await HttpProblem.CodeAsync(gone));
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
         using var invalid = await SendAsync(HttpMethod.Post, Collection, admin,
             Rule("Bad", """{"type":"schedule","freq":"hourly","interval":1,"time":"09:00"}"""));
         Assert.Equal(HttpStatusCode.UnprocessableEntity, invalid.StatusCode);
-        Assert.Equal("automation.invalid", await ProblemCodeAsync(invalid));
+        Assert.Equal("automation.invalid", await HttpProblem.CodeAsync(invalid));
 
         using var unavailable = await SendAsync(HttpMethod.Post, Collection, admin, new
         {
@@ -130,7 +130,7 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
             actions = JsonElement.Parse("""[{"type":"create_from_template","templateId":"0199a000-0000-7000-8000-000000000001"}]"""),
         });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, unavailable.StatusCode);
-        Assert.Equal("automation.action_unavailable", await ProblemCodeAsync(unavailable));
+        Assert.Equal("automation.action_unavailable", await HttpProblem.CodeAsync(unavailable));
     }
 
     [Fact]
@@ -148,14 +148,14 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
 
         using var denied = await SendAsync(HttpMethod.Post, Collection, admin, routine);
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
-        Assert.Equal("automation.pet_routine_owner_required", await ProblemCodeAsync(denied));
+        Assert.Equal("automation.pet_routine_owner_required", await HttpProblem.CodeAsync(denied));
 
         using var ordinaryRule = await SendAsync(HttpMethod.Post, Collection, admin, Rule("Notify", PropertyTrigger));
         Assert.Equal(HttpStatusCode.Created, ordinaryRule.StatusCode);
         using var changed = await SendAsync(HttpMethod.Put, ordinaryRule.Headers.Location!.OriginalString, admin,
             new { expectedRevision = 1, rule = routine });
         Assert.Equal(HttpStatusCode.Forbidden, changed.StatusCode);
-        Assert.Equal("automation.pet_routine_owner_required", await ProblemCodeAsync(changed));
+        Assert.Equal("automation.pet_routine_owner_required", await HttpProblem.CodeAsync(changed));
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
 
         using var refused = await SendAsync(HttpMethod.Post, Collection, admin, Rule("One more", PropertyTrigger));
         Assert.Equal(HttpStatusCode.UnprocessableEntity, refused.StatusCode);
-        Assert.Equal("automation.limit_reached", await ProblemCodeAsync(refused));
+        Assert.Equal("automation.limit_reached", await HttpProblem.CodeAsync(refused));
     }
 
     [Fact]
@@ -245,11 +245,5 @@ public sealed class AutomationEndpointTests : IAsyncLifetime
         }
 
         return await _client.SendAsync(request, Cancellation);
-    }
-
-    private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response)
-    {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
-        return document.RootElement.GetProperty("code").GetString();
     }
 }

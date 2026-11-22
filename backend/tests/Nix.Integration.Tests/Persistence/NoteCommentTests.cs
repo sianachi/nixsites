@@ -128,7 +128,7 @@ public sealed class NoteCommentTests : IAsyncLifetime
         await using (connection.ConfigureAwait(false))
         {
             Assert.Equal(1, await RawSql.CountAsync(connection, null, "SELECT count(*) FROM notification WHERE kind = 'comment'"));
-            Assert.Equal(0, await RawSql.CountAsync(connection, null, $"SELECT count(*) FROM notification WHERE principal_id = {Literal(Stranger)}"));
+            Assert.Equal(0, await RawSql.CountAsync(connection, null, $"SELECT count(*) FROM notification WHERE principal_id = {RawSql.Literal(Stranger)}"));
         }
     }
 
@@ -141,7 +141,7 @@ public sealed class NoteCommentTests : IAsyncLifetime
         {
             await RawSql.ExecuteAsync(connection, null, $"""
                 INSERT INTO note_comment (id, tenant_id, item_id, thread_id, author_principal_id, imported_author, body, mention_ids, created_at)
-                VALUES ({Literal(id)}, {Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(Note)}, {Literal(id)}, {Literal(Commenter)}, 'Original Author', 'old', ARRAY[{Literal(Editor)}], now());
+                VALUES ({RawSql.Literal(id)}, {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(Note)}, {RawSql.Literal(id)}, {RawSql.Literal(Commenter)}, 'Original Author', 'old', ARRAY[{RawSql.Literal(Editor)}], now());
                 """);
             Assert.Equal(0, await RawSql.CountAsync(connection, null, "SELECT count(*) FROM scheduled_trigger WHERE source = 'note.comment'"));
         }
@@ -178,7 +178,7 @@ public sealed class NoteCommentTests : IAsyncLifetime
         var thread = (await AddAsync(Commenter, Note, "first")).Value;
         await RunAsync($"""
             INSERT INTO note_comment (id, tenant_id, item_id, thread_id, author_principal_id, body, mention_ids, created_at)
-            SELECT gen_random_uuid(), {Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(Note)}, {Literal(thread.Id)}, {Literal(Commenter)}, 'filler', ARRAY[]::uuid[], now()
+            SELECT gen_random_uuid(), {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(Note)}, {RawSql.Literal(thread.Id)}, {RawSql.Literal(Commenter)}, 'filler', ARRAY[]::uuid[], now()
               FROM generate_series(1, 1999);
             """);
 
@@ -192,7 +192,7 @@ public sealed class NoteCommentTests : IAsyncLifetime
         {
             var refused = await Assert.ThrowsAsync<Npgsql.PostgresException>(() => RawSql.ExecuteAsync(connection, null, $"""
                 INSERT INTO note_comment (id, tenant_id, item_id, thread_id, author_principal_id, body, mention_ids, created_at)
-                VALUES (gen_random_uuid(), {Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(Note)}, {Literal(thread.Id)}, {Literal(Commenter)}, 'x', ARRAY[]::uuid[], now());
+                VALUES (gen_random_uuid(), {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(Note)}, {RawSql.Literal(thread.Id)}, {RawSql.Literal(Commenter)}, 'x', ARRAY[]::uuid[], now());
                 """));
             Assert.Equal("23514", refused.SqlState);
         }
@@ -249,7 +249,7 @@ public sealed class NoteCommentTests : IAsyncLifetime
 
         await RunAsync($"""
             INSERT INTO item_lock (item_id, tenant_id, password_hash, locked_by, locked_at)
-            VALUES ({Literal(Note)}, {Literal(M0SchemaSeed.Alpha.TenantId)}, 'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', {Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
+            VALUES ({RawSql.Literal(Note)}, {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, 'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
             UPDATE note_comment_revision SET revision = revision + 1;
             """);
 
@@ -323,7 +323,7 @@ public sealed class NoteCommentTests : IAsyncLifetime
         await using (connection.ConfigureAwait(false))
         {
             return [.. await RawSql.GuidListAsync(connection, null,
-                $"SELECT principal_id FROM scheduled_trigger WHERE source = 'note.comment' AND rule_id = {Literal(commentId)}")];
+                $"SELECT principal_id FROM scheduled_trigger WHERE source = 'note.comment' AND rule_id = {RawSql.Literal(commentId)}")];
         }
     }
 
@@ -344,42 +344,42 @@ public sealed class NoteCommentTests : IAsyncLifetime
 
     private async Task SeedAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var granter = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var granter = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
         var sql = $$"""
             INSERT INTO principal (principal_id, tenant_id, external_subject, kind, display_name, email, status, deprovisioned_at)
             VALUES
-                ({{Literal(Viewer)}}, {{tenant}}, 'c-viewer', 'user', 'Viewer', 'viewer@example.test', 'active', NULL),
-                ({{Literal(Commenter)}}, {{tenant}}, 'c-commenter', 'user', 'Commenter', 'commenter@example.test', 'active', NULL),
-                ({{Literal(Editor)}}, {{tenant}}, 'c-editor', 'user', 'Editor', 'editor@example.test', 'active', NULL),
-                ({{Literal(Stranger)}}, {{tenant}}, 'c-stranger', 'user', 'Stranger', 'stranger@example.test', 'active', NULL);
+                ({{RawSql.Literal(Viewer)}}, {{tenant}}, 'c-viewer', 'user', 'Viewer', 'viewer@example.test', 'active', NULL),
+                ({{RawSql.Literal(Commenter)}}, {{tenant}}, 'c-commenter', 'user', 'Commenter', 'commenter@example.test', 'active', NULL),
+                ({{RawSql.Literal(Editor)}}, {{tenant}}, 'c-editor', 'user', 'Editor', 'editor@example.test', 'active', NULL),
+                ({{RawSql.Literal(Stranger)}}, {{tenant}}, 'c-stranger', 'user', 'Stranger', 'stranger@example.test', 'active', NULL);
 
             INSERT INTO workspace_member (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
             VALUES
-                ({{workspace}}, 'principal', {{Literal(Viewer)}}, {{tenant}}, 'viewer', {{granter}}, now()),
-                ({{workspace}}, 'principal', {{Literal(Commenter)}}, {{tenant}}, 'commenter', {{granter}}, now()),
-                ({{workspace}}, 'principal', {{Literal(Editor)}}, {{tenant}}, 'editor', {{granter}}, now());
+                ({{workspace}}, 'principal', {{RawSql.Literal(Viewer)}}, {{tenant}}, 'viewer', {{granter}}, now()),
+                ({{workspace}}, 'principal', {{RawSql.Literal(Commenter)}}, {{tenant}}, 'commenter', {{granter}}, now()),
+                ({{workspace}}, 'principal', {{RawSql.Literal(Editor)}}, {{tenant}}, 'editor', {{granter}}, now());
 
             INSERT INTO item (id, tenant_id, workspace_id, type, parent_id, seq, properties, settings, lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
             VALUES
-                ({{Literal(Note)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000, '{"title": "Plan"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(LockedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 2000, '{"title": "Locked"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 3000, '{"title": "Old"}'::jsonb, '{"comments": true}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000, '{"title": "Parent"}'::jsonb, '{"comments": true}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
-                ({{Literal(UnderTrashed)}}, {{tenant}}, {{workspace}}, 'note', {{Literal(TrashedParent)}}, 1000, '{"title": "Child"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now());
+                ({{RawSql.Literal(Note)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000, '{"title": "Plan"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{RawSql.Literal(LockedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 2000, '{"title": "Locked"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{RawSql.Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 'note', NULL, 3000, '{"title": "Old"}'::jsonb, '{"comments": true}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{RawSql.Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000, '{"title": "Parent"}'::jsonb, '{"comments": true}'::jsonb, 'deleted', NULL, {{granter}}, {{granter}}, now(), now()),
+                ({{RawSql.Literal(UnderTrashed)}}, {{tenant}}, {{workspace}}, 'note', {{RawSql.Literal(TrashedParent)}}, 1000, '{"title": "Child"}'::jsonb, '{"comments": true}'::jsonb, 'active', NULL, {{granter}}, {{granter}}, now(), now());
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES
-                ({{Literal(Note)}}, {{Literal(Note)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(LockedNote)}}, {{Literal(LockedNote)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(TrashedNote)}}, {{Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(TrashedParent)}}, {{Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(UnderTrashed)}}, {{Literal(UnderTrashed)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(UnderTrashed)}}, {{Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 1);
+                ({{RawSql.Literal(Note)}}, {{RawSql.Literal(Note)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(LockedNote)}}, {{RawSql.Literal(LockedNote)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(TrashedNote)}}, {{RawSql.Literal(TrashedNote)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(TrashedParent)}}, {{RawSql.Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(UnderTrashed)}}, {{RawSql.Literal(UnderTrashed)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(UnderTrashed)}}, {{RawSql.Literal(TrashedParent)}}, {{tenant}}, {{workspace}}, 1);
 
             INSERT INTO item_lock (item_id, tenant_id, password_hash, locked_by, locked_at)
-            VALUES ({{Literal(LockedNote)}}, {{tenant}}, 'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', {{granter}}, now());
+            VALUES ({{RawSql.Literal(LockedNote)}}, {{tenant}}, 'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', {{granter}}, now());
             """;
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -387,6 +387,4 @@ public sealed class NoteCommentTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) => $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

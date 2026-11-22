@@ -391,9 +391,9 @@ public sealed class WorkspaceCalendarAuthorizationTests : IAsyncLifetime
 
     private async Task HideContainersBelowDeletedAncestorAsync(Guid datedContainerId, Guid unplaceableContainerId)
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -407,22 +407,22 @@ public sealed class WorkspaceCalendarAuthorizationTests : IAsyncLifetime
                        lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                        last_modified_at)
                   VALUES
-                      ({{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 'note', NULL, 900,
+                      ({{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 'note', NULL, 900,
                        '{"title":"Deleted ancestor"}'::jsonb, 'deleted', NULL, {{principal}},
                        {{principal}}, now(), now());
 
                   UPDATE item
-                     SET parent_id = {{Literal(DeletedAncestor)}}
-                   WHERE id IN ({{Literal(datedContainerId)}}, {{Literal(unplaceableContainerId)}});
+                     SET parent_id = {{RawSql.Literal(DeletedAncestor)}}
+                   WHERE id IN ({{RawSql.Literal(datedContainerId)}}, {{RawSql.Literal(unplaceableContainerId)}});
 
                   INSERT INTO item_closure
                       (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
                   VALUES
-                      ({{Literal(DeletedAncestor)}}, {{Literal(DeletedAncestor)}},
+                      ({{RawSql.Literal(DeletedAncestor)}}, {{RawSql.Literal(DeletedAncestor)}},
                        {{tenant}}, {{workspace}}, 0),
-                      ({{Literal(datedContainerId)}}, {{Literal(DeletedAncestor)}},
+                      ({{RawSql.Literal(datedContainerId)}}, {{RawSql.Literal(DeletedAncestor)}},
                        {{tenant}}, {{workspace}}, 1),
-                      ({{Literal(unplaceableContainerId)}}, {{Literal(DeletedAncestor)}},
+                      ({{RawSql.Literal(unplaceableContainerId)}}, {{RawSql.Literal(DeletedAncestor)}},
                        {{tenant}}, {{workspace}}, 1);
                   """);
         }
@@ -437,21 +437,21 @@ public sealed class WorkspaceCalendarAuthorizationTests : IAsyncLifetime
     /// </remarks>
     private async Task SeedCalendarsAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var open = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var closed = Literal(PrivateWorkspace);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var open = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var closed = RawSql.Literal(PrivateWorkspace);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $$"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
-            VALUES ({{Literal(Member)}}, {{tenant}}, 'alpha-calendar-member', 'user', 'Member',
+            VALUES ({{RawSql.Literal(Member)}}, {{tenant}}, 'alpha-calendar-member', 'user', 'Member',
                     'calendar-member@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({{open}}, 'principal', {{Literal(Member)}}, {{tenant}}, 'viewer',
+            VALUES ({{open}}, 'principal', {{RawSql.Literal(Member)}}, {{tenant}}, 'viewer',
                     {{principal}}, now());
 
             INSERT INTO workspace
@@ -465,57 +465,57 @@ public sealed class WorkspaceCalendarAuthorizationTests : IAsyncLifetime
                  last_modified_at)
             VALUES
                 -- Containers. Each declares the property its children are placed by.
-                ({{Literal(DueContainer)}}, {{tenant}}, {{open}}, 'note', NULL, 1000,
+                ({{RawSql.Literal(DueContainer)}}, {{tenant}}, {{open}}, 'note', NULL, 1000,
                  '{"title": "Deadlines"}'::jsonb,
                  '{"views": [{"id": "v1", "kind": "calendar", "name": "By due", "dateProperty": "due"}]}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
-                ({{Literal(StartsContainer)}}, {{tenant}}, {{open}}, 'note', NULL, 2000,
+                ({{RawSql.Literal(StartsContainer)}}, {{tenant}}, {{open}}, 'note', NULL, 2000,
                  '{"title": "Sessions"}'::jsonb,
                  '{"views": [{"id": "v1", "kind": "list", "name": "All"}, {"id": "v2", "kind": "calendar", "name": "When", "dateProperty": "starts"}]}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
                 -- Offers a calendar and names nothing to place by.
-                ({{Literal(UnplaceableContainer)}}, {{tenant}}, {{open}}, 'note', NULL, 3000,
+                ({{RawSql.Literal(UnplaceableContainer)}}, {{tenant}}, {{open}}, 'note', NULL, 3000,
                  '{"title": "Misconfigured"}'::jsonb,
                  '{"views": [{"id": "v1", "kind": "calendar", "name": "Unset"}]}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
                 -- Two calendars. The first declared is the one that counts.
-                ({{Literal(TwiceContainer)}}, {{tenant}}, {{open}}, 'note', NULL, 4000,
+                ({{RawSql.Literal(TwiceContainer)}}, {{tenant}}, {{open}}, 'note', NULL, 4000,
                  '{"title": "Both"}'::jsonb,
                  '{"views": [{"id": "v1", "kind": "calendar", "name": "A", "dateProperty": "due"}, {"id": "v2", "kind": "calendar", "name": "B", "dateProperty": "starts"}]}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
                 -- A container in the workspace this caller may not read.
-                ({{Literal(PrivateWorkspace)}}, {{tenant}}, {{closed}}, 'note', NULL, 5000,
+                ({{RawSql.Literal(PrivateWorkspace)}}, {{tenant}}, {{closed}}, 'note', NULL, 5000,
                  '{"title": "Confidential"}'::jsonb,
                  '{"views": [{"id": "v1", "kind": "calendar", "name": "When", "dateProperty": "due"}]}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
                 -- The dated children.
-                ({{Literal(AllDay)}}, {{tenant}}, {{open}}, 'note', {{Literal(DueContainer)}}, 1100,
+                ({{RawSql.Literal(AllDay)}}, {{tenant}}, {{open}}, 'note', {{RawSql.Literal(DueContainer)}}, 1100,
                  '{"title": "Filing", "due": "2026-03-12"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
-                ({{Literal(Undated)}}, {{tenant}}, {{open}}, 'note', {{Literal(DueContainer)}}, 1200,
+                ({{RawSql.Literal(Undated)}}, {{tenant}}, {{open}}, 'note', {{RawSql.Literal(DueContainer)}}, 1200,
                  '{"title": "Someday"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
-                ({{Literal(Moment)}}, {{tenant}}, {{open}}, 'note', {{Literal(StartsContainer)}}, 2100,
+                ({{RawSql.Literal(Moment)}}, {{tenant}}, {{open}}, 'note', {{RawSql.Literal(StartsContainer)}}, 2100,
                  '{"title": "Standup", "starts": "2026-03-17T09:00:00+00:00[Europe/London]"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
-                ({{Literal(FarFuture)}}, {{tenant}}, {{open}}, 'note', {{Literal(StartsContainer)}}, 2200,
+                ({{RawSql.Literal(FarFuture)}}, {{tenant}}, {{open}}, 'note', {{RawSql.Literal(StartsContainer)}}, 2200,
                  '{"title": "Later", "starts": "2027-01-04"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
-                ({{Literal(Twice)}}, {{tenant}}, {{open}}, 'note', {{Literal(TwiceContainer)}}, 4100,
+                ({{RawSql.Literal(Twice)}}, {{tenant}}, {{open}}, 'note', {{RawSql.Literal(TwiceContainer)}}, 4100,
                  '{"title": "Ambiguous", "due": "2026-03-20", "starts": "2026-03-25"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
 
-                ({{Literal(PrivateDated)}}, {{tenant}}, {{closed}}, 'note',
-                 {{Literal(PrivateWorkspace)}}, 5100,
+                ({{RawSql.Literal(PrivateDated)}}, {{tenant}}, {{closed}}, 'note',
+                 {{RawSql.Literal(PrivateWorkspace)}}, 5100,
                  '{"title": "Board pack", "due": "2026-03-15"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now());
             """;
@@ -526,7 +526,4 @@ public sealed class WorkspaceCalendarAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

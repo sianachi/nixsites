@@ -65,7 +65,7 @@ public static class SearchSql
     /// <c>item_search</c> and write <c>title ILIKE ... OR body_vector @@ ...</c> - cannot use
     /// one combined index. No single index spans two tables, and one joined arm would make the
     /// permission and match predicates inseparable. Split, each source keeps its own permission
-    /// predicate and physical plan, and the aggregate merges the two. The runtime-role evidence at
+    /// predicate and physical plan, and the ranking merges the two. The runtime-role evidence at
     /// the current corpus uses the workspace index for titles and scans the bounded search table
     /// for bodies; it does not pretend the two expression indexes were selected when they were not.
     /// </para>
@@ -110,8 +110,10 @@ public static class SearchSql
     /// so computing a text rank for it would be arithmetic nothing reads.
     /// </para>
     /// <para>
-    /// <c>bool_or</c> and <c>max</c> over the union: an item matching both ways appears in both arms
-    /// and must come back once, as a title match, carrying the body rank it earned.
+    /// An item matching both ways is one row, as a title match carrying the body rank it earned:
+    /// the title set is joined to the body set, and the body set is anti-joined to the title set,
+    /// rather than unioned and grouped, so no hash aggregate over every body hit runs before the
+    /// ranking. The body hits are matched and ranked once, ahead of the item join (see <c>hits</c>).
     /// </para>
     /// <para>
     /// <c>websearch_to_tsquery</c> rather than <c>plainto_tsquery</c>: it takes quoted phrases and
@@ -127,10 +129,8 @@ public static class SearchSql
     /// </remarks>
     public static readonly string MatchingItems = $$"""
         WITH {{ItemLockSql.ClosedLockDescendants}},
-        matches AS (
-            SELECT item.id AS item_id,
-                   true AS title_matched,
-                   0::real AS rank
+        title AS MATERIALIZED (
+            SELECT item.id AS item_id
             FROM item
             WHERE item.tenant_id = @tenant_id
               AND item.workspace_id = ANY(@workspace_ids)
@@ -142,19 +142,23 @@ public static class SearchSql
                   FROM closed_lock_descendants AS hidden
                   WHERE hidden.descendant_id = item.id
               )
-
-            UNION ALL
-
+        ),
+        -- Matched and ranked where the vector is read, before any join: ranked above a join the
+        -- vector is read a second time from a copied row, which cost more than the scan itself.
+        hits AS MATERIALIZED (
             SELECT search.item_id,
-                   false AS title_matched,
                    ts_rank(search.body_vector, websearch_to_tsquery('english', @query)) AS rank
             FROM item_search AS search
-            JOIN item
-              ON item.tenant_id = search.tenant_id
-             AND item.id = search.item_id
             WHERE search.tenant_id = @tenant_id
               AND search.body_vector @@ websearch_to_tsquery('english', @query)
-              AND item.workspace_id = ANY(@workspace_ids)
+        ),
+        body AS (
+            SELECT hits.item_id, hits.rank
+            FROM hits
+            JOIN item
+              ON item.tenant_id = @tenant_id
+             AND item.id = hits.item_id
+            WHERE item.workspace_id = ANY(@workspace_ids)
               AND item.lifecycle_state = 'active'
               AND item.template_id IS NULL
               AND (cardinality(@lock_ids) = 0
@@ -162,16 +166,22 @@ public static class SearchSql
                   SELECT 1
                   FROM item_closure AS lock_edge
                   WHERE lock_edge.tenant_id = @tenant_id
-                    AND lock_edge.descendant_id = search.item_id
+                    AND lock_edge.descendant_id = hits.item_id
                     AND lock_edge.ancestor_id = ANY(@lock_ids)
                  ))
         ),
         ranked AS (
-            SELECT item_id,
-                   bool_or(title_matched) AS title_matched,
-                   max(rank) AS rank
-            FROM matches
-            GROUP BY item_id
+            SELECT title.item_id,
+                   true AS title_matched,
+                   greatest(0::real, coalesce(body.rank, 0::real)) AS rank
+            FROM title
+            LEFT JOIN body ON body.item_id = title.item_id
+            UNION ALL
+            SELECT body.item_id,
+                   false,
+                   body.rank
+            FROM body
+            WHERE NOT EXISTS (SELECT 1 FROM title WHERE title.item_id = body.item_id)
         )
         SELECT item.id,
                item.workspace_id,

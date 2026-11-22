@@ -464,12 +464,12 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
 
     private async Task SeedCorpusAsync()
     {
-        var alphaTenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var alphaWorkspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var alphaPrincipal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var betaTenant = Literal(M0SchemaSeed.Beta.TenantId);
-        var betaWorkspace = Literal(M0SchemaSeed.Beta.WorkspaceId);
-        var betaPrincipal = Literal(M0SchemaSeed.Beta.PrincipalId);
+        var alphaTenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var alphaWorkspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var alphaPrincipal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var betaTenant = RawSql.Literal(M0SchemaSeed.Beta.TenantId);
+        var betaWorkspace = RawSql.Literal(M0SchemaSeed.Beta.WorkspaceId);
+        var betaPrincipal = RawSql.Literal(M0SchemaSeed.Beta.PrincipalId);
 
         var sql = $$"""
             INSERT INTO item
@@ -477,7 +477,7 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                  last_modified_at)
             VALUES
-                ({{Literal(AlphaRoot)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note', NULL, 199999,
+                ({{RawSql.Literal(AlphaRoot)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note', NULL, 199999,
                  '{"title":"Rollup corpus root"}'::jsonb, 'active', NULL, {{alphaPrincipal}},
                  {{alphaPrincipal}}, now(), now());
 
@@ -485,7 +485,7 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties,
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
             SELECT gen_random_uuid(), {{alphaTenant}}, {{alphaWorkspace}}, 'note',
-                   {{Literal(AlphaRoot)}}, 200000 + n,
+                   {{RawSql.Literal(AlphaRoot)}}, 200000 + n,
                    jsonb_build_object('title', 'Container ' || n),
                    'active', NULL, {{alphaPrincipal}}, {{alphaPrincipal}}, now(), now()
             FROM generate_series(1, {{Containers}}) AS n;
@@ -531,7 +531,7 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                  last_modified_at)
             VALUES
-                ({{Literal(BetaContainer)}}, {{betaTenant}}, {{betaWorkspace}}, 'note', NULL, 399999,
+                ({{RawSql.Literal(BetaContainer)}}, {{betaTenant}}, {{betaWorkspace}}, 'note', NULL, 399999,
                  '{"title":"Other tenant container"}'::jsonb, 'active', NULL, {{betaPrincipal}},
                  {{betaPrincipal}}, now(), now());
 
@@ -541,7 +541,7 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties,
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
             SELECT gen_random_uuid(), {{betaTenant}}, {{betaWorkspace}}, 'note',
-                   {{Literal(BetaContainer)}}, 400000 + n,
+                   {{RawSql.Literal(BetaContainer)}}, 400000 + n,
                    jsonb_build_object('title', 'Other tenant ' || n, 'estimate', (n % 7)),
                    'active', NULL, {{betaPrincipal}}, {{betaPrincipal}}, now(), now()
             FROM generate_series(1, {{BetaItems}}) AS n;
@@ -553,11 +553,11 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                  last_modified_at)
             VALUES
-                ({{Literal(BigRoot)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note', NULL, 299998,
+                ({{RawSql.Literal(BigRoot)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note', NULL, 299998,
                  '{"title":"Large corpus root"}'::jsonb, 'active', NULL, {{alphaPrincipal}},
                  {{alphaPrincipal}}, now(), now()),
-                ({{Literal(BigContainer)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note',
-                 {{Literal(BigRoot)}}, 299999, '{"title":"Large container"}'::jsonb, 'active', NULL,
+                ({{RawSql.Literal(BigContainer)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note',
+                 {{RawSql.Literal(BigRoot)}}, 299999, '{"title":"Large container"}'::jsonb, 'active', NULL,
                  {{alphaPrincipal}}, {{alphaPrincipal}}, now(), now());
 
             -- The new parent follows 125k rows. Refresh the cached foreign-key lookup plans
@@ -569,7 +569,7 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties,
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
             SELECT gen_random_uuid(), {{alphaTenant}}, {{alphaWorkspace}}, 'note',
-                   {{Literal(BigContainer)}}, 500000 + n,
+                   {{RawSql.Literal(BigContainer)}}, 500000 + n,
                    jsonb_build_object(
                        'title', 'Entry ' || n,
                        'date', to_char(date '2021-10-01' + (n % 1826), 'YYYY-MM-DD'),
@@ -591,13 +591,13 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
             -- Beta's own closure, so its container is visible in its own tenant and the refusal
             -- above is the tenant boundary rather than a missing edge.
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT child.id, {{Literal(BetaContainer)}}, child.tenant_id, child.workspace_id, 1
+            SELECT child.id, {{RawSql.Literal(BetaContainer)}}, child.tenant_id, child.workspace_id, 1
             FROM item AS child
             WHERE child.tenant_id = {{betaTenant}}
               AND child.seq >= 400001;
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT id, {{Literal(AlphaRoot)}}, tenant_id, workspace_id, 1
+            SELECT id, {{RawSql.Literal(AlphaRoot)}}, tenant_id, workspace_id, 1
             FROM item
             WHERE tenant_id = {{alphaTenant}}
               AND seq BETWEEN 200001 AND {{200000 + Containers}};
@@ -609,18 +609,18 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
               AND child.seq >= 300001;
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT child.id, {{Literal(AlphaRoot)}}, child.tenant_id, child.workspace_id, 2
+            SELECT child.id, {{RawSql.Literal(AlphaRoot)}}, child.tenant_id, child.workspace_id, 2
             FROM item AS child
             WHERE child.tenant_id = {{alphaTenant}}
               AND child.seq BETWEEN 300001 AND 399999;
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT id, {{Literal(BigRoot)}}, tenant_id, workspace_id, 1
+            SELECT id, {{RawSql.Literal(BigRoot)}}, tenant_id, workspace_id, 1
             FROM item
-            WHERE id = {{Literal(BigContainer)}};
+            WHERE id = {{RawSql.Literal(BigContainer)}};
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT child.id, {{Literal(BigRoot)}}, child.tenant_id, child.workspace_id, 2
+            SELECT child.id, {{RawSql.Literal(BigRoot)}}, child.tenant_id, child.workspace_id, 2
             FROM item AS child
             WHERE child.tenant_id = {{alphaTenant}}
               AND child.seq >= 500001;
@@ -647,7 +647,4 @@ public sealed class RollupPlanEvidenceTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql, commandTimeoutSeconds: 600);
         }
     }
-
-    private static string Literal(Guid id) =>
-        $"'{id.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

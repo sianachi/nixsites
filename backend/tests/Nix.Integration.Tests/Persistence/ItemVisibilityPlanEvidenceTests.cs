@@ -176,13 +176,13 @@ public sealed class ItemVisibilityPlanEvidenceTests : IAsyncLifetime
 
     private async Task SeedCorpusAsync()
     {
-        var alphaTenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var alphaWorkspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var alphaPrincipal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var alphaRoot = Literal(M0SchemaSeed.Alpha.ItemId);
-        var betaTenant = Literal(M0SchemaSeed.Beta.TenantId);
-        var betaWorkspace = Literal(M0SchemaSeed.Beta.WorkspaceId);
-        var betaPrincipal = Literal(M0SchemaSeed.Beta.PrincipalId);
+        var alphaTenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var alphaWorkspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var alphaPrincipal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var alphaRoot = RawSql.Literal(M0SchemaSeed.Alpha.ItemId);
+        var betaTenant = RawSql.Literal(M0SchemaSeed.Beta.TenantId);
+        var betaWorkspace = RawSql.Literal(M0SchemaSeed.Beta.WorkspaceId);
+        var betaPrincipal = RawSql.Literal(M0SchemaSeed.Beta.PrincipalId);
 
         var sql = $$"""
             INSERT INTO item
@@ -276,9 +276,6 @@ public sealed class ItemVisibilityPlanEvidenceTests : IAsyncLifetime
 
     private static Guid ChainItem(int depth) =>
         Guid.Parse($"aaaaaaaa-aaaa-4aaa-8aaa-{depth.ToString("D12", CultureInfo.InvariantCulture)}");
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 
     private sealed class ExplainQueryInterceptor(string marker) : DbCommandInterceptor
     {

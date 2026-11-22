@@ -123,30 +123,30 @@ public sealed class NotePassageTests : IAsyncLifetime
     /// <summary>As the migrator: Core can only read chunks, and the collaboration service writes them.</summary>
     private async Task SeedAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var open = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var closed = Literal(PrivateWorkspace);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var open = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var closed = RawSql.Literal(PrivateWorkspace);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         string Item(Guid id, string workspace, Guid? parent, string title, string state) =>
-            $"({Literal(id)}, {tenant}, {workspace}, 'note', {(parent is { } p ? Literal(p) : "NULL")}, 1, "
+            $"({RawSql.Literal(id)}, {tenant}, {workspace}, 'note', {(parent is { } p ? RawSql.Literal(p) : "NULL")}, 1, "
             + $"'{{\"title\": \"{title}\"}}'::jsonb, '{state}', NULL, {principal}, {principal}, now(), now())";
 
         string Edge(Guid descendant, Guid ancestor, string workspace, int depth) =>
-            $"({Literal(descendant)}, {Literal(ancestor)}, {tenant}, {workspace}, {depth})";
+            $"({RawSql.Literal(descendant)}, {RawSql.Literal(ancestor)}, {tenant}, {workspace}, {depth})";
 
         string Chunk(Guid item, int ord, string heading, string body) =>
-            $"({tenant}, {Literal(item)}, {ord}, 1, '{heading}', '{body}', 'h{ord}', to_tsvector('english', '{heading} {body}'))";
+            $"({tenant}, {RawSql.Literal(item)}, {ord}, 1, '{heading}', '{body}', 'h{ord}', to_tsvector('english', '{heading} {body}'))";
 
         var sql = $$"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status, deprovisioned_at)
-            VALUES ({{Literal(Member)}}, {{tenant}}, 'alpha-passage-member', 'user', 'Member',
+            VALUES ({{RawSql.Literal(Member)}}, {{tenant}}, 'alpha-passage-member', 'user', 'Member',
                     'passages@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({{open}}, 'principal', {{Literal(Member)}}, {{tenant}}, 'viewer', {{principal}}, now());
+            VALUES ({{open}}, 'principal', {{RawSql.Literal(Member)}}, {{tenant}}, 'viewer', {{principal}}, now());
 
             INSERT INTO workspace
                 (workspace_id, tenant_id, name, version_retention_days, coalesce_window_min,
@@ -174,7 +174,7 @@ public sealed class NotePassageTests : IAsyncLifetime
                 {{Edge(PrivateNote, PrivateNote, closed, 0)}};
 
             INSERT INTO item_lock (item_id, tenant_id, password_hash, locked_by, locked_at)
-            VALUES ({{Literal(LockedChild)}}, {{tenant}},
+            VALUES ({{RawSql.Literal(LockedChild)}}, {{tenant}},
                     'pbkdf2-sha256$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
                     {{principal}}, now());
 
@@ -204,7 +204,7 @@ public sealed class NotePassageTests : IAsyncLifetime
         };
         var vectors = embedder.Embed([.. rows.Select(row => row.Text)])!;
         var updates = string.Join('\n', rows.Select((row, index) =>
-            $"UPDATE item_chunk SET embedding = '{LocalEmbedder.ToLiteral(vectors[index])}'::vector WHERE item_id = {Literal(row.Item)};"));
+            $"UPDATE item_chunk SET embedding = '{LocalEmbedder.ToLiteral(vectors[index])}'::vector WHERE item_id = {RawSql.Literal(row.Item)};"));
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -212,7 +212,4 @@ public sealed class NotePassageTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, updates);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

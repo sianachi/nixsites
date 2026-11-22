@@ -371,20 +371,20 @@ public sealed class PersonalAccessTokenStoreTests : IAsyncLifetime
 
     private async Task SeedNeighbourAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var granter = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var granter = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
-            VALUES ({Literal(Neighbour)}, {tenant}, 'alpha-token-neighbour', 'user', 'Neighbour',
+            VALUES ({RawSql.Literal(Neighbour)}, {tenant}, 'alpha-token-neighbour', 'user', 'Neighbour',
                     'token-neighbour@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({workspace}, 'principal', {Literal(Neighbour)}, {tenant}, 'editor', {granter}, now());
+            VALUES ({workspace}, 'principal', {RawSql.Literal(Neighbour)}, {tenant}, 'editor', {granter}, now());
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -393,7 +393,4 @@ public sealed class PersonalAccessTokenStoreTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

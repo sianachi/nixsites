@@ -299,8 +299,8 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, $"""
                 INSERT INTO workspace_member
                     (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-                VALUES ({Literal(PrivateWorkspace)}, 'principal', {Literal(M0SchemaSeed.Alpha.PrincipalId)},
-                        {Literal(M0SchemaSeed.Alpha.TenantId)}, 'viewer', {Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
+                VALUES ({RawSql.Literal(PrivateWorkspace)}, 'principal', {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)},
+                        {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, 'viewer', {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
                 """);
         }
 
@@ -604,13 +604,13 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
     /// <summary>Re-parents root items under <see cref="Folder"/>, closure included, as the migrator.</summary>
     private async Task MoveUnderFolderAsync(params Guid[] items)
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var open = Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var open = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
         var sql = new StringBuilder();
         foreach (var item in items)
         {
-            sql.Append(CultureInfo.InvariantCulture, $"UPDATE item SET parent_id = {Literal(Folder)} WHERE id = {Literal(item)};\n");
-            sql.Append(CultureInfo.InvariantCulture, $"INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth) VALUES ({Literal(item)}, {Literal(Folder)}, {tenant}, {open}, 1);\n");
+            sql.Append(CultureInfo.InvariantCulture, $"UPDATE item SET parent_id = {RawSql.Literal(Folder)} WHERE id = {RawSql.Literal(item)};\n");
+            sql.Append(CultureInfo.InvariantCulture, $"INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth) VALUES ({RawSql.Literal(item)}, {RawSql.Literal(Folder)}, {tenant}, {open}, 1);\n");
         }
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -640,10 +640,10 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
     /// </summary>
     private async Task SeedAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var open = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var closed = Literal(PrivateWorkspace);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var open = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var closed = RawSql.Literal(PrivateWorkspace);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         string Row(
             Guid id,
@@ -654,28 +654,28 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
             Guid? parent = null,
             string modified = "2026-09-01T12:00:00Z",
             bool template = false) =>
-            $"({Literal(id)}, {tenant}, {workspace}, 'note', {(parent is { } p ? Literal(p) : "NULL")}, {seq}, "
+            $"({RawSql.Literal(id)}, {tenant}, {workspace}, 'note', {(parent is { } p ? RawSql.Literal(p) : "NULL")}, {seq}, "
             + $"'{{\"title\": \"{title}\"}}'::jsonb, '{state}', NULL, {principal}, {principal}, "
             + $"'2026-09-01T12:00:00Z', '{modified}', "
             + (template
                 ? $"(SELECT template_id FROM workspace_template WHERE tenant_id = {tenant} LIMIT 1), gen_random_uuid())"
                 : "NULL, NULL)");
 
-        string Self(Guid id, string workspace) => $"({Literal(id)}, {Literal(id)}, {tenant}, {workspace}, 0)";
+        string Self(Guid id, string workspace) => $"({RawSql.Literal(id)}, {RawSql.Literal(id)}, {tenant}, {workspace}, 0)";
 
         string Edge(Guid source, Guid target) =>
-            $"({tenant}, {Literal(source)}, {Literal(target)}, 1, 1)";
+            $"({tenant}, {RawSql.Literal(source)}, {RawSql.Literal(target)}, 1, 1)";
 
         var sql = $$"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
-            VALUES ({{Literal(Member)}}, {{tenant}}, 'alpha-suggest-member', 'user', 'Member',
+            VALUES ({{RawSql.Literal(Member)}}, {{tenant}}, 'alpha-suggest-member', 'user', 'Member',
                     'suggest-member@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({{open}}, 'principal', {{Literal(Member)}}, {{tenant}}, 'viewer', {{principal}}, now());
+            VALUES ({{open}}, 'principal', {{RawSql.Literal(Member)}}, {{tenant}}, 'viewer', {{principal}}, now());
 
             INSERT INTO workspace
                 (workspace_id, tenant_id, name, version_retention_days, coalesce_window_min,
@@ -713,7 +713,7 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
                 {{Row(TemplateItem, open, "Template plan", 3710, template: true)}};
 
             UPDATE item SET properties = '{"title": "Beta launch plan"}'::jsonb
-            WHERE id = {{Literal(M0SchemaSeed.Beta.ItemId)}};
+            WHERE id = {{RawSql.Literal(M0SchemaSeed.Beta.ItemId)}};
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES
@@ -726,9 +726,9 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
                 {{Self(WeeklyReviews[2], open)}}, {{Self(WeeklyReviews[3], open)}},
                 {{Self(LockedFolder, open)}}, {{Self(SourceUnderLock, open)}}, {{Self(OnlyUnderLock, open)}},
                 {{Self(DeletedItem, open)}}, {{Self(TemplateItem, open)}},
-                ({{Literal(Hidden)}}, {{Literal(DeletedFolder)}}, {{tenant}}, {{open}}, 1),
-                ({{Literal(Child)}}, {{Literal(Folder)}}, {{tenant}}, {{open}}, 1),
-                ({{Literal(SourceUnderLock)}}, {{Literal(LockedFolder)}}, {{tenant}}, {{open}}, 1);
+                ({{RawSql.Literal(Hidden)}}, {{RawSql.Literal(DeletedFolder)}}, {{tenant}}, {{open}}, 1),
+                ({{RawSql.Literal(Child)}}, {{RawSql.Literal(Folder)}}, {{tenant}}, {{open}}, 1),
+                ({{RawSql.Literal(SourceUnderLock)}}, {{RawSql.Literal(LockedFolder)}}, {{tenant}}, {{open}}, 1);
 
             INSERT INTO item_link (tenant_id, source_item_id, target_item_id, occurrences, seq)
             VALUES
@@ -749,7 +749,4 @@ public sealed class SearchSuggestionAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

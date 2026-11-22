@@ -156,9 +156,9 @@ public sealed class TrashAndQuotaPlanEvidenceTests : IAsyncLifetime
 
     private async Task SeedCorpusAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
         {
@@ -198,8 +198,6 @@ public sealed class TrashAndQuotaPlanEvidenceTests : IAsyncLifetime
 
         }
     }
-
-    private static string Literal(Guid value) => $"'{value:D}'::uuid";
 
     private static NpgsqlParameter Uuid(string name, Guid value) => new(name, NpgsqlDbType.Uuid) { Value = value };
 

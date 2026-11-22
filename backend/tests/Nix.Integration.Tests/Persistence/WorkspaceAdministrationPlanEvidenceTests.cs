@@ -203,9 +203,9 @@ public sealed class WorkspaceAdministrationPlanEvidenceTests : IAsyncLifetime
 
     private async Task SeedCorpusAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
         {
@@ -237,7 +237,7 @@ public sealed class WorkspaceAdministrationPlanEvidenceTests : IAsyncLifetime
                 INSERT INTO workspace
                     (workspace_id, tenant_id, name, version_retention_days,
                      coalesce_window_min, storage_quota_bytes, created_at)
-                VALUES ({{Literal(InviteeWorkspaceId)}}, {{tenant}}, 'Invitee plan workspace',
+                VALUES ({{RawSql.Literal(InviteeWorkspaceId)}}, {{tenant}}, 'Invitee plan workspace',
                         90, 10, 10737418240, now());
 
                 INSERT INTO workspace_member
@@ -263,8 +263,6 @@ public sealed class WorkspaceAdministrationPlanEvidenceTests : IAsyncLifetime
                 """, commandTimeoutSeconds: 120);
         }
     }
-
-    private static string Literal(Guid value) => $"'{value:D}'::uuid";
     private static NpgsqlParameter Uuid(string name, Guid value) => new(name, NpgsqlDbType.Uuid) { Value = value };
     private static NpgsqlParameter UuidNull(string name) => new(name, NpgsqlDbType.Uuid) { Value = DBNull.Value };
     private static NpgsqlParameter TimestampNull(string name) => new(name, NpgsqlDbType.TimestampTz) { Value = DBNull.Value };

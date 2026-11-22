@@ -121,7 +121,7 @@ public sealed class SearchAuthorizationTests : IAsyncLifetime
         {
             await RawSql.ExecuteAsync(connection, transaction: null, $$"""
                 UPDATE item SET settings = '{"withholdFromPets": {{protection}}}'::jsonb
-                WHERE id = {{Literal(VisibleSource)}};
+                WHERE id = {{RawSql.Literal(VisibleSource)}};
                 """);
         }
 
@@ -433,21 +433,21 @@ public sealed class SearchAuthorizationTests : IAsyncLifetime
     /// </remarks>
     private async Task SeedSearchableCorpusAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var openWorkspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var closedWorkspace = Literal(PrivateWorkspace);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var openWorkspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var closedWorkspace = RawSql.Literal(PrivateWorkspace);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $$"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
-            VALUES ({{Literal(Member)}}, {{tenant}}, 'alpha-search-member', 'user', 'Member',
+            VALUES ({{RawSql.Literal(Member)}}, {{tenant}}, 'alpha-search-member', 'user', 'Member',
                     'member@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({{openWorkspace}}, 'principal', {{Literal(Member)}}, {{tenant}}, 'viewer',
+            VALUES ({{openWorkspace}}, 'principal', {{RawSql.Literal(Member)}}, {{tenant}}, 'viewer',
                     {{principal}}, now());
 
             INSERT INTO workspace
@@ -459,48 +459,48 @@ public sealed class SearchAuthorizationTests : IAsyncLifetime
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state,
                  purge_after, created_by, last_modified_by, created_at, last_modified_at)
             VALUES
-                ({{Literal(VisibleItem)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 2000,
+                ({{RawSql.Literal(VisibleItem)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 2000,
                  '{"title": "Quarterly notes"}'::jsonb, 'active', NULL, {{principal}}, {{principal}},
                  now(), now()),
-                ({{Literal(VisibleSource)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 3000,
+                ({{RawSql.Literal(VisibleSource)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 3000,
                  '{"title": "Ledger review"}'::jsonb, 'active', NULL, {{principal}}, {{principal}},
                  now(), now()),
-                ({{Literal(PrivateItem)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 4000,
+                ({{RawSql.Literal(PrivateItem)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 4000,
                  '{"title": "Confidential ledger"}'::jsonb, 'active', NULL, {{principal}},
                  {{principal}}, now(), now());
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES
-                ({{Literal(VisibleItem)}}, {{Literal(VisibleItem)}}, {{tenant}}, {{openWorkspace}}, 0),
-                ({{Literal(VisibleSource)}}, {{Literal(VisibleSource)}}, {{tenant}}, {{openWorkspace}}, 0),
-                ({{Literal(PrivateItem)}}, {{Literal(PrivateItem)}}, {{tenant}}, {{closedWorkspace}}, 0);
+                ({{RawSql.Literal(VisibleItem)}}, {{RawSql.Literal(VisibleItem)}}, {{tenant}}, {{openWorkspace}}, 0),
+                ({{RawSql.Literal(VisibleSource)}}, {{RawSql.Literal(VisibleSource)}}, {{tenant}}, {{openWorkspace}}, 0),
+                ({{RawSql.Literal(PrivateItem)}}, {{RawSql.Literal(PrivateItem)}}, {{tenant}}, {{closedWorkspace}}, 0);
 
             INSERT INTO item_search (tenant_id, item_id, seq, updated_at, body_vector)
             VALUES
-                ({{tenant}}, {{Literal(VisibleItem)}}, 1, now(),
+                ({{tenant}}, {{RawSql.Literal(VisibleItem)}}, 1, now(),
                  to_tsvector('english', 'Notes on photosynthesis and on the ledger')),
-                ({{tenant}}, {{Literal(VisibleSource)}}, 1, now(),
+                ({{tenant}}, {{RawSql.Literal(VisibleSource)}}, 1, now(),
                  to_tsvector('english', 'A review of the numbers')),
-                ({{tenant}}, {{Literal(PrivateItem)}}, 1, now(),
+                ({{tenant}}, {{RawSql.Literal(PrivateItem)}}, 1, now(),
                  to_tsvector('english', 'The acquisition and its terms'));
 
             INSERT INTO item_link (tenant_id, source_item_id, target_item_id, occurrences, seq)
             VALUES
-                ({{tenant}}, {{Literal(VisibleSource)}}, {{Literal(VisibleItem)}}, 3, 1),
-                ({{tenant}}, {{Literal(PrivateItem)}}, {{Literal(VisibleItem)}}, 1, 1);
+                ({{tenant}}, {{RawSql.Literal(VisibleSource)}}, {{RawSql.Literal(VisibleItem)}}, 3, 1),
+                ({{tenant}}, {{RawSql.Literal(PrivateItem)}}, {{RawSql.Literal(VisibleItem)}}, 1, 1);
 
             -- Beta's own corpus, using the same words, so a missing tenant predicate has something
             -- to wrongly return. Updates rather than inserts: the shared seed already gives every
             -- tenant's item a row in both tables, and this only changes what they say.
             UPDATE item
                SET properties = '{"title": "Beta ledger"}'::jsonb
-             WHERE tenant_id = {{Literal(M0SchemaSeed.Beta.TenantId)}}
-               AND id = {{Literal(M0SchemaSeed.Beta.ItemId)}};
+             WHERE tenant_id = {{RawSql.Literal(M0SchemaSeed.Beta.TenantId)}}
+               AND id = {{RawSql.Literal(M0SchemaSeed.Beta.ItemId)}};
 
             UPDATE item_search
                SET body_vector = to_tsvector('english', 'Beta keeps a ledger too')
-             WHERE tenant_id = {{Literal(M0SchemaSeed.Beta.TenantId)}}
-               AND item_id = {{Literal(M0SchemaSeed.Beta.ItemId)}};
+             WHERE tenant_id = {{RawSql.Literal(M0SchemaSeed.Beta.TenantId)}}
+               AND item_id = {{RawSql.Literal(M0SchemaSeed.Beta.ItemId)}};
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -512,10 +512,10 @@ public sealed class SearchAuthorizationTests : IAsyncLifetime
 
     private async Task HideBelowDeletedAncestorAsync(Guid itemId)
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var ancestor = Literal(DeletedAncestor);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var ancestor = RawSql.Literal(DeletedAncestor);
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -537,9 +537,9 @@ public sealed class SearchAuthorizationTests : IAsyncLifetime
                       (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
                   VALUES
                       ({{ancestor}}, {{ancestor}}, {{tenant}}, {{workspace}}, 0),
-                      ({{Literal(itemId)}}, {{ancestor}}, {{tenant}}, {{workspace}}, 1);
+                      ({{RawSql.Literal(itemId)}}, {{ancestor}}, {{tenant}}, {{workspace}}, 1);
 
-                  UPDATE item SET parent_id = {{ancestor}} WHERE id = {{Literal(itemId)}};
+                  UPDATE item SET parent_id = {{ancestor}} WHERE id = {{RawSql.Literal(itemId)}};
                   """);
         }
     }
@@ -556,12 +556,9 @@ public sealed class SearchAuthorizationTests : IAsyncLifetime
                   INSERT INTO item_link
                       (tenant_id, source_item_id, target_item_id, occurrences, seq)
                   VALUES
-                      ({{Literal(M0SchemaSeed.Alpha.TenantId)}},
-                       {{Literal(M0SchemaSeed.Alpha.ItemId)}}, {{Literal(VisibleItem)}}, 1, 1);
+                      ({{RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}},
+                       {{RawSql.Literal(M0SchemaSeed.Alpha.ItemId)}}, {{RawSql.Literal(VisibleItem)}}, 1, 1);
                   """);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

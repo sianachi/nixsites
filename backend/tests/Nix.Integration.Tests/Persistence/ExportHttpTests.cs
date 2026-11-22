@@ -192,7 +192,7 @@ public sealed class ExportHttpTests : IAsyncLifetime
             $"/api/v1/items/{unrelatedItem:D}",
             delegated!);
         Assert.Equal(HttpStatusCode.Forbidden, unrelatedRead.StatusCode);
-        Assert.Equal("auth.insufficient_scope", await ProblemCodeAsync(unrelatedRead));
+        Assert.Equal("auth.insufficient_scope", await HttpProblem.CodeAsync(unrelatedRead));
         using var otherTenantRead = await SendAsync(
             HttpMethod.Get,
             $"/api/v1/items/{M0SchemaSeed.Beta.ItemId:D}",
@@ -204,7 +204,7 @@ public sealed class ExportHttpTests : IAsyncLifetime
             delegated!,
             new { title = "Must not change" });
         Assert.Equal(HttpStatusCode.Forbidden, forbiddenWrite.StatusCode);
-        Assert.Equal("auth.insufficient_scope", await ProblemCodeAsync(forbiddenWrite));
+        Assert.Equal("auth.insufficient_scope", await HttpProblem.CodeAsync(forbiddenWrite));
 
         using var destination = await InternalAsync(
             HttpMethod.Get,
@@ -246,7 +246,7 @@ public sealed class ExportHttpTests : IAsyncLifetime
             $"/internal/authz/items/{exportRoot:D}",
             delegated!);
         Assert.Equal(HttpStatusCode.Unauthorized, revoked.StatusCode);
-        Assert.Equal("auth.token_revoked", await ProblemCodeAsync(revoked));
+        Assert.Equal("auth.token_revoked", await HttpProblem.CodeAsync(revoked));
 
         using var status = await SendAsync(HttpMethod.Get, $"/api/v1/exports/{exportId:D}", token);
         status.EnsureSuccessStatusCode();
@@ -392,7 +392,7 @@ public sealed class ExportHttpTests : IAsyncLifetime
                 idempotencyKey = "export-http-replay",
             });
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
-        Assert.Equal("exports.idempotency_conflict", await ProblemCodeAsync(conflict));
+        Assert.Equal("exports.idempotency_conflict", await HttpProblem.CodeAsync(conflict));
     }
 
     [Fact]
@@ -406,7 +406,7 @@ public sealed class ExportHttpTests : IAsyncLifetime
             token,
             new { itemId, format = "pdf", scope = "item", idempotencyKey = "export-http-page-legal", pageSize = "legal" });
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
-        Assert.Equal("exports.request_invalid", await ProblemCodeAsync(refused));
+        Assert.Equal("exports.request_invalid", await HttpProblem.CodeAsync(refused));
 
         using var letter = await SendAsync(
             HttpMethod.Post,
@@ -508,12 +508,6 @@ public sealed class ExportHttpTests : IAsyncLifetime
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
         request.Headers.TryAddWithoutValidation(InternalBoundaryMiddleware.SecretHeaderName, InternalSecret);
         return await _client.SendAsync(request, Cancellation);
-    }
-
-    private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response)
-    {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
-        return document.RootElement.GetProperty("code").GetString();
     }
 
     private sealed class ConfiguredApplicationFactory(
