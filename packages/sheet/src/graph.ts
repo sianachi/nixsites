@@ -165,6 +165,17 @@ export function orderFormulas(
     // ends up #LIMIT! through the engine's own fallback.
   }
 
+  return topologicalOrder(dependents, indegree);
+}
+
+/**
+ * Kahn's algorithm over a built graph: `indegree` holds every node (its count of unsettled
+ * precedents) and `dependents` the nodes that wait on each one. Nodes left over are in a cycle.
+ */
+export function topologicalOrder(
+  dependents: ReadonlyMap<string, readonly string[]>,
+  indegree: Map<string, number>,
+): { readonly order: string[]; readonly cyclic: Set<string> } {
   const queue: string[] = [];
   for (const [key, degree] of indegree) {
     if (degree === 0) {
@@ -189,9 +200,9 @@ export function orderFormulas(
     }
   }
   const cyclic = new Set<string>();
-  if (order.length < formulas.size) {
+  if (order.length < indegree.size) {
     const ordered = new Set(order);
-    for (const key of formulas.keys()) {
+    for (const key of indegree.keys()) {
       if (!ordered.has(key)) {
         cyclic.add(key);
       }
