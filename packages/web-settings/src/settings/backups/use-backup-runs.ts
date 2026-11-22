@@ -1,7 +1,8 @@
 import { backups, isCanceledError, isNixApiError, type BackupRun } from '@nix/api-client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useLoadOnMount } from '@nix/web-foundation/lib/use-load-on-mount';
 
 export type BackupRunsStatus = 'loading' | 'ready' | 'error';
 
@@ -43,15 +44,7 @@ export function useBackupRuns(): BackupRunsState {
     [client],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    queueMicrotask(() => {
-      void load(controller.signal);
-    });
-    return () => {
-      controller.abort();
-    };
-  }, [load]);
+  useLoadOnMount(load);
 
   const reload = useCallback(async (): Promise<void> => {
     await load(undefined, true);

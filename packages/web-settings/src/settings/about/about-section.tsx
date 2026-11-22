@@ -1,6 +1,6 @@
 import { health, isCanceledError, type ServiceVersion } from '@nix/api-client';
 import { Button, Tag, Text } from '@nix/ui';
-import { useCallback, useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useState, type ReactElement } from 'react';
 
 import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
 import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
@@ -8,6 +8,7 @@ import { useWebConfig } from '@nix/web-foundation/lib/web-config';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { OfflineCopyUsage } from '@nix/web-platform/offline/offline-copy-usage';
 import { SettingsSection } from '../shared/settings-section';
+import { useLoadOnMount } from '@nix/web-foundation/lib/use-load-on-mount';
 
 /** A readable name for a service as Core reports it; workers carry their roles after a colon. */
 export function serviceLabel(service: string): string {
@@ -52,15 +53,7 @@ export function AboutSection(): ReactElement {
     [client],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    queueMicrotask(() => {
-      void load(controller.signal);
-    });
-    return () => {
-      controller.abort();
-    };
-  }, [load]);
+  useLoadOnMount(load);
 
   const services: readonly ServiceVersion[] =
     state.status === 'ready'

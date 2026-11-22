@@ -5,9 +5,10 @@ import {
   type CommandEndpoint,
   type QueryEndpoint,
 } from '@nix/api-client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useLoadOnMount } from '@nix/web-foundation/lib/use-load-on-mount';
 
 /**
  * The caller's personal access tokens: the list, the mint, and the revocation.
@@ -127,18 +128,7 @@ export function useAccessTokens(): AccessTokensState {
     [client],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    // queueMicrotask so the first setState lands after the effect returns rather than during it,
-    // the same cascade-stopper `use-workspace-tree.ts` documents.
-    queueMicrotask(() => {
-      void load(controller.signal);
-    });
-
-    return () => {
-      controller.abort();
-    };
-  }, [load]);
+  useLoadOnMount(load);
 
   const reload = useCallback(async (): Promise<void> => {
     await load(undefined, true);
