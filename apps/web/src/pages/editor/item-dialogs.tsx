@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 
 import { ExportDialog } from '@nix/web-platform/export/export-dialog';
-import { ImportDialog } from '@nix/web-workspaces/import/import-dialog';
 import { MobileItemMove } from '../../items/mobile-item-move';
 import { LockDialog } from '../../locks/lock-dialog';
 import type { useItemLock } from '../../locks/use-item-lock';
+import { ImportDialog } from '../../shell/lazy-screens';
 import type { ShellContext } from '../../shell/shell-context';
 
 export type ItemDialogName = 'move' | 'export' | 'lock' | 'import';
@@ -70,19 +70,21 @@ export function ItemDialogs({
       ) : null}
 
       {open === 'import' ? (
-        <ImportDialog
-          open
-          parentId={itemId}
-          getAccessToken={getAccessToken}
-          onClose={() => {
-            onClose();
-          }}
-          onImported={(rootItemId) => {
-            // Revealed rather than navigated to: the person is mid-import in a dialog that still
-            // has the report to show, so the tree opens to the result without yanking the page.
-            void tree.reveal(rootItemId);
-          }}
-        />
+        <Suspense fallback={null}>
+          <ImportDialog
+            open
+            parentId={itemId}
+            getAccessToken={getAccessToken}
+            onClose={() => {
+              onClose();
+            }}
+            onImported={(rootItemId) => {
+              // Revealed rather than navigated to: the person is mid-import in a dialog that still
+              // has the report to show, so the tree opens to the result without yanking the page.
+              void tree.reveal(rootItemId);
+            }}
+          />
+        </Suspense>
       ) : null}
     </>
   );

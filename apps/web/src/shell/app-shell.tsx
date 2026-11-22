@@ -15,16 +15,24 @@ import { ItemDialogProvider } from '../items/item-dialog-provider';
 import { MobileNavigation } from './mobile-navigation';
 import { petAttentionText } from '@nix/web-pets/pets/pet-attention';
 import { usePetNavEntry } from '@nix/web-pets/pets/use-pet-nav-entry';
+import { ImportDialog } from './lazy-screens';
 import { PetJobCompanion } from '../pages/pet-page';
 import { PwaControls } from '@nix/web-platform/pwa/pwa-controls';
 import { useRememberLocation } from '@nix/web-platform/pwa/use-remember-location';
 import { focusRing, useUndo } from '@nix/ui';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
-import { ImportDialog } from '@nix/web-workspaces/import/import-dialog';
 import { consumeInterruptedImportForWorkspace } from '@nix/web-foundation/lib/import-interrupted-notice';
 import { useWorkspaceTree, type TreeItem } from '@nix/web-collections/items/use-workspace-tree';
 import { announce, useAnnouncement } from '@nix/web-foundation/a11y/announcer';
@@ -1194,19 +1202,21 @@ export function AppShell({
       ) : null}
 
       {workspaceImportOpen ? (
-        <ImportDialog
-          open
-          parentId={null}
-          getAccessToken={getAccessToken}
-          onClose={() => {
-            setWorkspaceImportOpen(false);
-          }}
-          onImported={(rootItemId) => {
-            // Reveal the imported vault without opening it over the report the person is still
-            // reading. This is the same promise as a contextual import inside an open note.
-            void tree.reveal(rootItemId);
-          }}
-        />
+        <Suspense fallback={null}>
+          <ImportDialog
+            open
+            parentId={null}
+            getAccessToken={getAccessToken}
+            onClose={() => {
+              setWorkspaceImportOpen(false);
+            }}
+            onImported={(rootItemId) => {
+              // Reveal the imported vault without opening it over the report the person is still
+              // reading. This is the same promise as a contextual import inside an open note.
+              void tree.reveal(rootItemId);
+            }}
+          />
+        </Suspense>
       ) : null}
 
       <CommandPalette

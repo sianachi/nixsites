@@ -25,3 +25,6 @@ export const TemplateImportPage = lazy(async () => ({
   default: (await import('@nix/web-templates/templates/import/template-import-page'))
     .TemplateImportPage,
 }));
+export const ImportDialog = lazy(async () => ({
+  default: (await import('@nix/web-workspaces/import/import-dialog')).ImportDialog,
+}));

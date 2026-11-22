@@ -325,7 +325,7 @@ describe('the navigation rail', () => {
 
     await screen.findByRole('navigation', { name: /destinations/i });
     await user.click(within(rail()).getByRole('button', { name: 'Import' }));
-    const dialog = screen.getByRole('dialog', { name: 'Import' });
+    const dialog = await screen.findByRole('dialog', { name: 'Import' });
     expect(within(dialog).getByText(/Obsidian vault/i)).toBeVisible();
 
     await user.upload(
@@ -467,7 +467,7 @@ describe('workspace pages on a phone', () => {
     await user.click(menuButton());
     await user.click(screen.getByRole('menuitem', { name: 'Import' }));
 
-    expect(screen.getByRole('dialog', { name: 'Import' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Import' })).toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: /explorer/i })).not.toBeInTheDocument();
   });
 });
