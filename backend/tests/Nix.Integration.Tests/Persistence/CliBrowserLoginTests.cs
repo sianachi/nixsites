@@ -366,6 +366,10 @@ public sealed class CliBrowserLoginTests(NixPostgresFixture fixture) : IAsyncLif
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.DoesNotContain("<script", await invalid.Content.ReadAsStringAsync(Cancellation), StringComparison.Ordinal);
         Assert.Contains("script-src 'none'; connect-src 'none'", invalid.Headers.GetValues("Content-Security-Policy").Single(), StringComparison.Ordinal);
+        // Well formed but never issued: the store is asked and must refuse, not offer approval.
+        var unknown = await _browser.GetAsync(new Uri("/auth/cli?user_code=ABCDEFGHJK", UriKind.Relative), Cancellation);
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.DoesNotContain("<script", await unknown.Content.ReadAsStringAsync(Cancellation), StringComparison.Ordinal);
     }
 
     [Fact]

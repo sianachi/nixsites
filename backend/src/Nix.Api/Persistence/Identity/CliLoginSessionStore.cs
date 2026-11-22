@@ -19,8 +19,11 @@ public sealed class CliLoginSessionStore(NpgsqlDataSource dataSource) : ICliLogi
 
     /// <inheritdoc />
     public async ValueTask<DateTimeOffset?> FindPendingAsync(string userHash, CancellationToken cancellationToken) =>
-        await _db.ScalarAsync<DateTimeOffset>("SELECT nix_find_pending_cli_login(@user)", cancellationToken,
-            Text("user", userHash)).ConfigureAwait(false);
+        // NULL (unknown, expired, decided or used) must stay null: ScalarAsync<DateTimeOffset> would
+        // turn it into DateTimeOffset.MinValue and the consent page would offer approval for a dead code.
+        (await _db.RowsAsync("SELECT nix_find_pending_cli_login(@user)",
+            static reader => reader.IsDBNull(0) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(0),
+            cancellationToken, Text("user", userHash)).ConfigureAwait(false)).FirstOrDefault();
 
     /// <inheritdoc />
     public async ValueTask<bool> DecideAsync(string userHash, string browserHash, bool approve, CancellationToken cancellationToken) =>
