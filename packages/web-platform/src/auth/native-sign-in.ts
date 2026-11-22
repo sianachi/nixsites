@@ -1,4 +1,4 @@
-import { androidChannelPost } from '@nix/sync-sqlite';
+import { androidChannelPost } from '@nix/sync-sqlite/webkit-driver';
 
 interface SignInHandler {
   postMessage(message: unknown): Promise<unknown>;
