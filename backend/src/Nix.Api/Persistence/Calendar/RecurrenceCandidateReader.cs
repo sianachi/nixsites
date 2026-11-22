@@ -7,7 +7,6 @@ using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Calendar;
 
@@ -67,13 +66,13 @@ public sealed class RecurrenceCandidateReader(
             RecurrenceSql.WorkspaceRecurrenceCandidates,
             default,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid) { Value = workspaceId.Value },
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers },
-                new NpgsqlParameter("from", NpgsqlDbType.Text) { Value = firstDay },
-                new NpgsqlParameter("to", NpgsqlDbType.Text) { Value = lastDay },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("workspace_id", workspaceId.Value),
+                NixParameter.UuidArray("workspace_ids", identifiers),
+                NixParameter.Text("from", firstDay),
+                NixParameter.Text("to", lastDay),
                 await LockFilterParameters.ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken).ConfigureAwait(false),
-                new NpgsqlParameter("candidate_limit", NpgsqlDbType.Integer) { Value = candidateLimit },
+                NixParameter.Integer("candidate_limit", candidateLimit),
             ],
             cancellationToken);
 

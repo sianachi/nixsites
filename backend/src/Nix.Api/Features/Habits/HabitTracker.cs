@@ -25,7 +25,7 @@ public sealed record SetHabitStatus(ItemId ItemId, HabitStatusRequest Status) : 
 /// <summary>Habit operations share ordinary item authorization, writes and transaction boundaries.</summary>
 public sealed class HabitTrackerHandler(
     IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IItemLocks locks,
     IHabitLock habitLock,
     NixDispatcher dispatcher,
@@ -298,15 +298,8 @@ public sealed class HabitTrackerHandler(
 
     private async ValueTask<Item?> FindAsync(ItemId itemId, bool write, CancellationToken cancellationToken)
     {
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null)
-        {
-            return null;
-        }
-        var allowed = write
-            ? await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            : await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false);
-        return allowed ? item : null;
+        var lookup = await visible.FindAsync(itemId, write ? ItemAccess.Write : ItemAccess.Read, cancellationToken).ConfigureAwait(false);
+        return lookup.IsSuccess ? lookup.Value : null;
     }
 
     private async ValueTask<Result<IReadOnlyList<Item>>> ChildrenAsync(Item parent, CancellationToken cancellationToken)

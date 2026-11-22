@@ -32,10 +32,8 @@ public sealed record RunItemChart(ItemId ItemId, string ViewId) : IQuery<Result<
 
 /// <summary>Handles <see cref="RunItemChart"/>.</summary>
 public sealed class RunItemChartHandler(
-    IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IChildAggregates aggregates,
-    IItemLocks locks,
     TimeProvider clock,
     IPrincipalPreferencesStore preferences,
     INixSessionContextAccessor session)
@@ -72,19 +70,15 @@ public sealed class RunItemChartHandler(
 
         // The same refusal an unreadable item gets everywhere: "you may not see this" would confirm
         // the thing exists, which is how an outsider enumerates a workspace an identifier at a time.
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        // A chart is a view of the children, and a lock covers them.
+        var lookup = await visible.FindAsync(
+            itemId, ItemAccess.Read, cancellationToken, lockedDetail: $"Item {itemId} is locked. Unlock it to see its chart.").ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<ItemChart>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<ItemChart>(lookup.Error);
         }
 
-        // A chart is a view of the children, and a lock covers them.
-        if (!await locks.MayReadBodyAsync(itemId, cancellationToken).ConfigureAwait(false))
-        {
-            return Result.Failure<ItemChart>(
-                ItemErrors.Locked($"Item {itemId} is locked. Unlock it to see its chart."));
-        }
+        var item = lookup.Value;
 
         ViewDefinition? found = null;
         foreach (var view in ViewDefinitionsJson.Read(item.Views).Views)

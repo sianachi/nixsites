@@ -15,7 +15,7 @@ namespace Nix.Features.Comments;
 /// must not be locked, so a mention of someone outside the workspace notifies nobody.
 /// </summary>
 public sealed class CommentNoticeSource(
-    IItemTree tree, IPermissionResolver permissions, IItemLocks locks, INoteComments comments, INotificationWriter notifications)
+    IVisibleItems visible, INoteComments comments, INotificationWriter notifications)
     : ITriggerSource
 {
     /// <summary>The source name the database trigger records.</summary>
@@ -47,13 +47,13 @@ public sealed class CommentNoticeSource(
         }
 
         var itemId = ItemId.From(itemGuid);
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || !await locks.MayReadBodyAsync(itemId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Read, cancellationToken, lockedDetail: "locked").ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
             return TriggerOutcome.Skipped("unreadable");
         }
+
+        var item = lookup.Value;
 
         var comment = await comments.FindAsync(itemId, commentId, cancellationToken).ConfigureAwait(false);
         if (comment is null)

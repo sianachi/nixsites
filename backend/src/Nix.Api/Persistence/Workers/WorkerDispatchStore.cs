@@ -53,7 +53,7 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
         Guid jobId,
         string owner,
         int leaseSeconds,
-        CancellationToken cancellationToken) => await _db.ScalarAsync<bool?>(
+        CancellationToken cancellationToken) => await _db.ScalarAsync<bool>(
             RenewJobSql,
             cancellationToken,
             Uuid("job_id", jobId),
@@ -162,7 +162,7 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
     /// <summary>Idempotently schedules deletion of one completed export at the durable retention boundary.</summary>
     public async ValueTask<bool> ScheduleExportCleanupAsync(
         Guid jobId,
-        CancellationToken cancellationToken) => await _db.ScalarAsync<bool?>(
+        CancellationToken cancellationToken) => await _db.ScalarAsync<bool>(
             ScheduleExportCleanupSql,
             cancellationToken,
             Uuid("job_id", jobId)).ConfigureAwait(false) is true;

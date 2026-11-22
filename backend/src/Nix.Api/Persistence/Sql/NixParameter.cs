@@ -15,8 +15,8 @@ internal static class NixParameter
     internal static NpgsqlParameter Integer(string name, int value) =>
         new(name, NpgsqlDbType.Integer) { Value = value };
 
-    internal static NpgsqlParameter Boolean(string name, bool value) =>
-        new(name, NpgsqlDbType.Boolean) { Value = value };
+    internal static NpgsqlParameter Boolean(string name, bool? value) =>
+        new(name, NpgsqlDbType.Boolean) { Value = value is { } actual ? actual : DBNull.Value };
 
     internal static NpgsqlParameter Timestamp(string name, DateTimeOffset? value) =>
         new(name, NpgsqlDbType.TimestampTz) { Value = value is { } actual ? actual : DBNull.Value };
@@ -30,6 +30,19 @@ internal static class NixParameter
     internal static NpgsqlParameter UuidArray(string name, Guid[] values) =>
         new(name, NpgsqlDbType.Uuid | NpgsqlDbType.Array) { Value = values };
 
-    internal static NpgsqlParameter TextArray(string name, string[] values) =>
-        new(name, NpgsqlDbType.Text | NpgsqlDbType.Array) { Value = values };
+    internal static NpgsqlParameter TextArray(string name, string[]? values) =>
+        new(name, NpgsqlDbType.Text | NpgsqlDbType.Array) { Value = values is null ? DBNull.Value : values };
+
+    internal static NpgsqlParameter Int8(string name, long value) =>
+        new(name, NpgsqlDbType.Bigint) { Value = value };
+
+    internal static NpgsqlParameter Bytes(string name, ReadOnlyMemory<byte> value) =>
+        new(name, NpgsqlDbType.Bytea) { Value = value.ToArray() };
+
+    /// <summary>A timestamptz bound as a UTC <see cref="DateTime"/>.</summary>
+    internal static NpgsqlParameter Instant(string name, DateTimeOffset value) =>
+        new(name, NpgsqlDbType.TimestampTz) { Value = value.UtcDateTime };
+
+    internal static NpgsqlParameter TimestampArray(string name, DateTimeOffset[] values) =>
+        new(name, NpgsqlDbType.Array | NpgsqlDbType.TimestampTz) { Value = values };
 }

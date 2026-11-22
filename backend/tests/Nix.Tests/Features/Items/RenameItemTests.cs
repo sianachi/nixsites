@@ -60,7 +60,7 @@ public sealed class RenameItemTests
     private static RenameItemHandler Handler(RecordingTree tree, RecordingFileStore files) => new(
         tree,
         files,
-        new WritablePermissions(),
+        new VisibleItems(tree, new WritablePermissions(), new OpenLocks()),
         new Session(),
         TimeProvider.System);
 

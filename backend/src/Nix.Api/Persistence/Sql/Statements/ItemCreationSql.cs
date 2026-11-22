@@ -3,12 +3,6 @@ namespace Nix.Persistence.Sql.Statements;
 /// <summary>Creation receipts use their tenant/principal/key primary key and the current transaction.</summary>
 public static class ItemCreationSql
 {
-    /// <summary>Serializes a request UUID across Core instances without locking unrelated creations.</summary>
-    public const string Lock = """
-        SELECT pg_advisory_xact_lock(hashtextextended(
-            'item-create:' || @tenant_id::text || ':' || @principal_id::text || ':' || @key::text, 0))
-        """;
-
     /// <summary>Compares canonical JSON input without retaining duplicate item content.</summary>
     public const string Find = """
         SELECT item_id, request_hash = sha256(convert_to(@request::jsonb::text, 'UTF8'))

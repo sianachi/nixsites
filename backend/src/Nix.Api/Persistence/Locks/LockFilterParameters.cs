@@ -42,15 +42,12 @@ internal static class LockFilterParameters
         ArgumentNullException.ThrowIfNull(credential);
         ArgumentNullException.ThrowIfNull(clock);
 
-        var ids = await sql.ScalarOrDefaultAsync<Guid[]>(
+        var ids = await sql.ScalarRefAsync<Guid[]>(
             ItemLockSql.ClosedLockIds,
             [
                 Tenant(tenant),
-                new NpgsqlParameter("credential_id", NpgsqlDbType.Uuid)
-                {
-                    Value = credential.CredentialId is { } id ? id : DBNull.Value,
-                },
-                new NpgsqlParameter("now", NpgsqlDbType.TimestampTz) { Value = clock.GetUtcNow() },
+                NixParameter.Uuid("credential_id", credential.CredentialId),
+                NixParameter.Timestamp("now", clock.GetUtcNow()),
             ],
             cancellationToken).ConfigureAwait(false);
 
@@ -69,7 +66,7 @@ internal static class LockFilterParameters
     {
         ArgumentNullException.ThrowIfNull(sql);
 
-        var ids = await sql.ScalarOrDefaultAsync<Guid[]>(
+        var ids = await sql.ScalarRefAsync<Guid[]>(
             ItemLockSql.AllLockIds,
             [Tenant(tenant)],
             cancellationToken).ConfigureAwait(false);

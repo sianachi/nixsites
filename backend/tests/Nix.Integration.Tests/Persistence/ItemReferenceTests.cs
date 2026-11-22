@@ -258,7 +258,7 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
 
         await using var deleter = await BeginAsync(Locker);
         var handler = new DeleteItemHandler(
-            deleter.Resolve<IItemTree>(), deleter.Resolve<IPermissionResolver>(),
+            deleter.Resolve<IItemTree>(), deleter.Resolve<IPermissionResolver>(), deleter.Resolve<IVisibleItems>(),
             deleter.Resolve<INixSessionContextAccessor>(), TimeProvider.System,
             deleter.Resolve<IStructuralLock>(), deleter.Resolve<IItemProtections>());
         var pending = handler.HandleAsync(new DeleteItem(item), Cancellation).AsTask();

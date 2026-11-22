@@ -4,7 +4,6 @@ using Nix.Domain.Files;
 using Nix.Domain.Importing;
 using Nix.Domain.Items;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Importing;
 

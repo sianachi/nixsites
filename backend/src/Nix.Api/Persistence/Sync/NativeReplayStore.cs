@@ -5,7 +5,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Sync;
@@ -17,12 +16,9 @@ public sealed class NativeReplayStore(NixDbContext database, NixSqlExecutor sql,
         ?? throw new InvalidOperationException("Native replay requires an authenticated unit of work.");
 
     /// <inheritdoc />
-    public async ValueTask LockOperationAsync(Guid operationId, CancellationToken cancellationToken) =>
-        _ = await sql.ExecuteAsync(NativeReplaySql.LockOperation,
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text)
-            {
-                Value = $"native-replay:{Context.TenantId.Value:D}:{Context.PrincipalId.Value:D}:{operationId:D}",
-            }], cancellationToken).ConfigureAwait(false);
+    public ValueTask LockOperationAsync(Guid operationId, CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockNativeReplayAsync(
+            Context.TenantId.Value, Context.PrincipalId.Value, operationId, cancellationToken);
 
     /// <inheritdoc />
     public async ValueTask<NativeReplayReceipt?> FindAsync(Guid operationId, CancellationToken cancellationToken)
@@ -38,27 +34,27 @@ public sealed class NativeReplayStore(NixDbContext database, NixSqlExecutor sql,
     /// <inheritdoc />
     public async ValueTask<long?> LockItemRevisionAsync(WorkspaceId workspaceId, ItemId itemId, CancellationToken cancellationToken)
     {
-        var found = await sql.ScalarOrDefaultAsync<Guid>(NativeReplaySql.LockItem,
+        var found = await sql.ScalarAsync<Guid>(NativeReplaySql.LockItem,
             ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false);
-        if (found == Guid.Empty)
+        if (found is null)
         {
             return null;
         }
-        return await sql.ScalarOrDefaultAsync<long>(NativeReplaySql.ItemRevision,
+        return await sql.ScalarAsync<long>(NativeReplaySql.ItemRevision,
             ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async ValueTask<bool> ItemExistsAsync(WorkspaceId workspaceId, ItemId itemId, CancellationToken cancellationToken) =>
-        await sql.ScalarOrDefaultAsync<Guid>(NativeReplaySql.ItemExists,
-            ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false) != Guid.Empty;
+        await sql.ScalarAsync<Guid>(NativeReplaySql.ItemExists,
+            ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false) is not null;
 
     /// <inheritdoc />
     public async ValueTask SaveAsync(Guid operationId, WorkspaceId workspaceId, string fingerprint, string response, CancellationToken cancellationToken) =>
         _ = await sql.ExecuteAsync(NativeReplaySql.SaveReceipt,
             [.. OperationParameters(operationId), Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("fingerprint", NpgsqlDbType.Text) { Value = fingerprint },
-                new NpgsqlParameter("response", NpgsqlDbType.Text) { Value = response }], cancellationToken).ConfigureAwait(false);
+                NixParameter.Text("fingerprint", fingerprint),
+                NixParameter.Text("response", response)], cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask BeginMutationAsync(CancellationToken cancellationToken) =>

@@ -2,7 +2,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Embeddings;
 
@@ -98,11 +97,11 @@ public sealed class ChunkEmbedder(
             {
                 var chunk = pending[index];
                 var command = new NpgsqlBatchCommand("SELECT nix_set_chunk_embedding(@tenant, @item, @ord, @hash, @embedding::vector)");
-                command.Parameters.Add(new NpgsqlParameter<Guid>("tenant", NpgsqlDbType.Uuid) { TypedValue = chunk.Tenant });
-                command.Parameters.Add(new NpgsqlParameter<Guid>("item", NpgsqlDbType.Uuid) { TypedValue = chunk.Item });
-                command.Parameters.Add(new NpgsqlParameter<int>("ord", NpgsqlDbType.Integer) { TypedValue = chunk.Ord });
-                command.Parameters.Add(new NpgsqlParameter<string>("hash", NpgsqlDbType.Text) { TypedValue = chunk.Hash });
-                command.Parameters.Add(new NpgsqlParameter<string>("embedding", NpgsqlDbType.Text) { TypedValue = LocalEmbedder.ToLiteral(vectors[index]) });
+                command.Parameters.Add(NixParameter.Uuid("tenant", chunk.Tenant));
+                command.Parameters.Add(NixParameter.Uuid("item", chunk.Item));
+                command.Parameters.Add(NixParameter.Integer("ord", chunk.Ord));
+                command.Parameters.Add(NixParameter.Text("hash", chunk.Hash));
+                command.Parameters.Add(NixParameter.Text("embedding", LocalEmbedder.ToLiteral(vectors[index])));
                 batch.BatchCommands.Add(command);
             }
             await batch.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);

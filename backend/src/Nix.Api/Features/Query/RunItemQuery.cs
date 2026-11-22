@@ -42,11 +42,10 @@ public sealed record ItemQueryResults(QueryResults Results, string ViewId, strin
 /// client - see <see cref="QueryOperators.Me"/> for why that would defeat the check.
 /// </param>
 public sealed class RunItemQueryHandler(
-    IItemTree tree,
+    IVisibleItems visible,
     IPermissionResolver permissions,
     IItemQuery query,
     INixSessionContextAccessor session,
-    IItemLocks locks,
     IPrincipalPreferencesStore preferences)
     : IQueryHandler<RunItemQuery, Result<ItemQueryResults>>
 {
@@ -88,19 +87,15 @@ public sealed class RunItemQueryHandler(
                 + "'me' token needs an acting principal, and there is no anonymous path to this "
                 + "query.");
 
-        var item = await tree.FindAsync(query.ItemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        // A lock withholds an item's views along with its body, a saved query among them.
+        var lookup = await visible.FindAsync(
+            query.ItemId, ItemAccess.Read, cancellationToken, lockedDetail: $"Item {query.ItemId} is locked. Unlock it to run its views.").ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<ItemQueryResults>(ItemErrors.NotFound($"No item {query.ItemId} is visible."));
+            return Result.Failure<ItemQueryResults>(lookup.Error);
         }
 
-        // A lock withholds an item's views along with its body, a saved query among them.
-        if (!await locks.MayReadBodyAsync(query.ItemId, cancellationToken).ConfigureAwait(false))
-        {
-            return Result.Failure<ItemQueryResults>(
-                ItemErrors.Locked($"Item {query.ItemId} is locked. Unlock it to run its views."));
-        }
+        var item = lookup.Value;
 
         var stored = ViewDefinitionsJson.Read(item.Views);
         ViewDefinition? view = null;

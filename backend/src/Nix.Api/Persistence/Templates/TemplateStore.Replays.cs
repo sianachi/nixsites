@@ -13,7 +13,6 @@ using Nix.Domain.Templates;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Templates;
 

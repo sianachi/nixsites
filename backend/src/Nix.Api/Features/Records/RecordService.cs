@@ -24,6 +24,7 @@ namespace Nix.Features.Records;
 internal sealed class RecordService(
     IItemTree tree,
     IPermissionResolver permissions,
+    IVisibleItems visibleItems,
     IRecordKeyStore store,
     IStructuralLock topology,
     INativeReplayStore receipts,
@@ -128,11 +129,13 @@ internal sealed class RecordService(
     public async ValueTask<Result<(string Outcome, Item Item)>> UpsertAsync(ItemId parentId, UpsertRecordRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var parent = await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false);
-        if (parent is null || !await permissions.CanWriteWorkspaceAsync(parent.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visibleItems.FindAsync(parentId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<(string, Item)>(ItemErrors.NotFound($"No item {parentId} is visible."));
+            return Result.Failure<(string, Item)>(lookup.Error);
         }
+
+        var parent = lookup.Value;
 
         await topology.AcquireWorkspaceTopologyAsync(parent.WorkspaceId, cancellationToken).ConfigureAwait(false);
         return await WithReceiptAsync(
@@ -417,10 +420,14 @@ internal sealed class RecordService(
             }
 
             var saved = JsonNode.Parse(previous.Response)!;
-            var replayed = await tree.FindAsync(ItemId.From(saved["itemId"]!.GetValue<Guid>()), cancellationToken).ConfigureAwait(false);
-            return replayed is not null && await permissions.CanWriteWorkspaceAsync(replayed.WorkspaceId, cancellationToken).ConfigureAwait(false)
-                ? Result.Success((saved["outcome"]!.GetValue<string>(), replayed))
-                : Result.Failure<(string, Item)>(ItemErrors.NotFound("The record this key created is no longer available."));
+            var replayed = await visibleItems.FindAsync(
+                ItemId.From(saved["itemId"]!.GetValue<Guid>()),
+                ItemAccess.Write,
+                cancellationToken,
+                notFoundDetail: "The record this key created is no longer available.").ConfigureAwait(false);
+            return replayed.IsSuccess
+                ? Result.Success((saved["outcome"]!.GetValue<string>(), replayed.Value))
+                : Result.Failure<(string, Item)>(replayed.Error);
         }
 
         var result = await write().ConfigureAwait(false);

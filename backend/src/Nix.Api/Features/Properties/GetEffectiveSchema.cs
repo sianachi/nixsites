@@ -20,9 +20,8 @@ public sealed record GetEffectiveSchema(ItemId ItemId) : IQuery<Result<Effective
 
 /// <summary>Handles <see cref="GetEffectiveSchema"/>.</summary>
 public sealed class GetEffectiveSchemaHandler(
-    IItemTree tree,
     ISchemaResolver schemas,
-    IPermissionResolver permissions)
+    IVisibleItems visible)
     : IQueryHandler<GetEffectiveSchema, Result<EffectiveSchema>>
 {
     /// <summary>Reads the effective schema.</summary>
@@ -37,12 +36,13 @@ public sealed class GetEffectiveSchemaHandler(
 
         var itemId = query.ItemId;
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Read, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<EffectiveSchema>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<EffectiveSchema>(lookup.Error);
         }
+
+        var item = lookup.Value;
 
         var effective = await schemas.ResolveForItemAsync(itemId, cancellationToken).ConfigureAwait(false);
 

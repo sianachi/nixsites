@@ -6,7 +6,6 @@ using Nix.Domain.Query;
 using Nix.Domain.Views;
 using NodaTime;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Sql.Statements;
 
@@ -464,10 +463,7 @@ public static class QuerySql
                 // Ancestry through the closure, strictly beneath: an item is not inside itself.
                 // The id is a typed parameter; the grammar has already proven it parses.
                 var ancestor = $"{name}_ancestor";
-                parameters.Add(new NpgsqlParameter(ancestor, NpgsqlDbType.Uuid)
-                {
-                    Value = Guid.ParseExact(rule.Value, "D"),
-                });
+                parameters.Add(NixParameter.Uuid(ancestor, Guid.ParseExact(rule.Value, "D")));
                 sql.Append(CultureInfo.InvariantCulture, $"""
                     {(negated ? "NOT " : string.Empty)}EXISTS (
                           SELECT 1
@@ -583,7 +579,7 @@ public static class QuerySql
 
     private static string Instant(string name, DateTimeOffset value, List<NpgsqlParameter> parameters)
     {
-        parameters.Add(new NpgsqlParameter(name, NpgsqlDbType.TimestampTz) { Value = value });
+        parameters.Add(NixParameter.Timestamp(name, value));
         return name;
     }
 
@@ -701,10 +697,7 @@ public static class QuerySql
         {
             if (!parameters.Exists(parameter => parameter.ParameterName == "group_order"))
             {
-                parameters.Add(new NpgsqlParameter("group_order", NpgsqlDbType.Array | NpgsqlDbType.Text)
-                {
-                    Value = grouping.Order.ToArray(),
-                });
+                parameters.Add(NixParameter.TextArray("group_order", grouping.Order.ToArray()));
             }
 
             sql.Append(CultureInfo.InvariantCulture, $"array_position(@group_order, {column}) ASC NULLS LAST, ");
@@ -766,7 +759,7 @@ public static class QuerySql
         // the same value, because names are generated from the rule's position.
         if (!parameters.Exists(parameter => parameter.ParameterName == name))
         {
-            parameters.Add(new NpgsqlParameter(name, NpgsqlDbType.Text) { Value = value });
+            parameters.Add(NixParameter.Text(name, value));
         }
 
         return name;

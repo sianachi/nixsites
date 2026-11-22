@@ -6,6 +6,7 @@ using Nix.Domain.Primitives;
 using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
+using Nix.Features.Items;
 using Nix.Features.Views;
 using Nix.Tests.Support;
 
@@ -52,7 +53,7 @@ public sealed class ContainerViewsConcurrencyTests
     {
         var tree = InaccessibleTree(access);
         var schemas = new Schemas();
-        var handler = new GetContainerViewsHandler(tree, schemas, new Permissions(access != "denied"));
+        var handler = new GetContainerViewsHandler(schemas, new VisibleItems(tree, new Permissions(access != "denied"), new OpenLocks()));
 
         var result = await handler.HandleAsync(new GetContainerViews(ContainerId), Cancellation);
 
@@ -68,7 +69,7 @@ public sealed class ContainerViewsConcurrencyTests
     public async Task Configuration_read_returns_the_version_of_the_exact_stored_value_including_no_views(bool empty)
     {
         var item = Container(empty ? null : ViewDefinitionsJson.Write([View("All work")], "list"));
-        var handler = new GetContainerViewsHandler(new RecordingTree(item), new Schemas(), new Permissions(true));
+        var handler = new GetContainerViewsHandler(new Schemas(), new VisibleItems(new RecordingTree(item), new Permissions(true), new OpenLocks()));
 
         var result = await handler.HandleAsync(new GetContainerViews(ContainerId), Cancellation);
 
@@ -83,7 +84,7 @@ public sealed class ContainerViewsConcurrencyTests
         var item = Container(ViewDefinitionsJson.Write([View("All work")], "list"));
         var tree = new RecordingTree(item);
         var handler = new SetContainerViewsHandler(
-            tree, new Permissions(true, false), new Session(), TimeProvider.System, new Schemas());
+            tree, new VisibleItems(tree, new Permissions(true, false), new OpenLocks()), new Session(), TimeProvider.System, new Schemas());
 
         var result = await handler.HandleAsync(
             new SetContainerViews(ContainerId, [View("Renamed")], "list", ExpectedVersion: ViewConfigurationVersion.FromStored(item.Views)),
@@ -137,7 +138,7 @@ public sealed class ContainerViewsConcurrencyTests
     {
         var item = Container(ViewDefinitionsJson.Write([View("All work")], "list"));
         var handler = new SetContainerViewsHandler(
-            new Query.StubTree(item, Workspace), new Permissions(true), new Session(), TimeProvider.System, new Schemas());
+            new Query.StubTree(item, Workspace), new VisibleItems(new Query.StubTree(item, Workspace), new Permissions(true), new OpenLocks()), new Session(), TimeProvider.System, new Schemas());
 
         var result = await handler.HandleAsync(
             new SetContainerViews(ContainerId, [View("Renamed")], "list", ExpectedVersion: ViewConfigurationVersion.FromStored(item.Views)),
@@ -221,7 +222,7 @@ public sealed class ContainerViewsConcurrencyTests
     };
 
     private static SetContainerViewsHandler WriteHandler(RecordingTree tree, bool writable = true) => new(
-        tree, new Permissions(writable), new Session(), TimeProvider.System, new Schemas());
+        tree, new VisibleItems(tree, new Permissions(writable), new OpenLocks()), new Session(), TimeProvider.System, new Schemas());
 
     private static ViewDefinition View(string name) => new("list", name, ViewKind.List, [], null, [], null, null, false);
 

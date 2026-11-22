@@ -13,7 +13,6 @@ using Nix.Domain.Templates;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Templates;
 
@@ -47,9 +46,7 @@ public sealed partial class TemplateStore
 
         // Share the structural lock before discovering/copying source rows. The transfer's
         // provisioning guard and capture publication must see one another atomically.
-        await _database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({$"finance-workspace:{workspaceId.Value:D}"}, 0))",
-            cancellationToken).ConfigureAwait(false);
+        await Locks.AcquireWorkspaceTopologyAsync(workspaceId, cancellationToken).ConfigureAwait(false);
         await LockWorkspaceTemplatesAsync(workspaceId, cancellationToken).ConfigureAwait(false);
         await LockIdempotencyKeyAsync(idempotencyKey, cancellationToken).ConfigureAwait(false);
         if (await IdempotencyKeyBelongsElsewhereAsync(

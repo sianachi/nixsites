@@ -117,20 +117,18 @@ public static class PublicFormEndpoints
         Guid itemId,
         string viewId,
         HttpContext httpContext,
-        [FromServices] IItemTree tree,
+        [FromServices] IVisibleItems visible,
         [FromServices] IPublicFormStore store,
-        [FromServices] IPermissionResolver permissions,
         [FromServices] PublicFormTokenService tokens)
     {
-        var item = await tree.FindAsync(ItemId.From(itemId), httpContext.RequestAborted)
+        var lookup = await visible.FindAsync(ItemId.From(itemId), ItemAccess.Write, httpContext.RequestAborted)
             .ConfigureAwait(false);
-        if (item is null
-            || FindInteractiveForm(item, viewId) is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, httpContext.RequestAborted)
-                .ConfigureAwait(false))
+        if (lookup.IsFailure || FindInteractiveForm(lookup.Value, viewId) is null)
         {
             return NotFound();
         }
+
+        var item = lookup.Value;
 
         var link = await store.FindForUpdateAsync(item.Id, viewId, httpContext.RequestAborted)
             .ConfigureAwait(false);
@@ -160,9 +158,8 @@ public static class PublicFormEndpoints
         Guid itemId,
         string viewId,
         HttpContext httpContext,
-        [FromServices] IItemTree tree,
+        [FromServices] IVisibleItems visible,
         [FromServices] IPublicFormStore store,
-        [FromServices] IPermissionResolver permissions,
         [FromServices] ISchemaResolver schemas,
         [FromServices] INixSessionContextAccessor session,
         [FromServices] PublicFormTokenService tokens,
@@ -175,17 +172,15 @@ public static class PublicFormEndpoints
                 title: "Public forms are not configured");
         }
 
-        var item = await tree.FindAsync(ItemId.From(itemId), httpContext.RequestAborted)
+        var lookup = await visible.FindAsync(ItemId.From(itemId), ItemAccess.Write, httpContext.RequestAborted)
             .ConfigureAwait(false);
-        var view = item is null ? null : FindInteractiveForm(item, viewId);
-        if (item is null
-            || view is null
-            || item.LifecycleState != ItemLifecycleState.Active
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, httpContext.RequestAborted)
-                .ConfigureAwait(false))
+        var view = lookup.IsFailure ? null : FindInteractiveForm(lookup.Value, viewId);
+        if (lookup.IsFailure || view is null)
         {
             return NotFound();
         }
+
+        var item = lookup.Value;
 
         var response = await PublishConfiguredAsync(
             item,
@@ -296,20 +291,19 @@ public static class PublicFormEndpoints
         Guid itemId,
         string viewId,
         HttpContext httpContext,
-        [FromServices] IItemTree tree,
+        [FromServices] IVisibleItems visible,
         [FromServices] IPublicFormStore store,
-        [FromServices] IPermissionResolver permissions,
         [FromServices] INixSessionContextAccessor session,
         [FromServices] TimeProvider clock)
     {
-        var item = await tree.FindAsync(ItemId.From(itemId), httpContext.RequestAborted)
+        var lookup = await visible.FindAsync(ItemId.From(itemId), ItemAccess.Write, httpContext.RequestAborted)
             .ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, httpContext.RequestAborted)
-                .ConfigureAwait(false))
+        if (lookup.IsFailure)
         {
             return NotFound();
         }
+
+        var item = lookup.Value;
 
         var link = await store.FindForUpdateAsync(item.Id, viewId, httpContext.RequestAborted)
             .ConfigureAwait(false);

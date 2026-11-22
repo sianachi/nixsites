@@ -8,7 +8,6 @@ using Nix.Persistence.Query;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Search;
@@ -71,10 +70,10 @@ public sealed class ItemSearch(
             [
                 Uuid("tenant_id", Tenant.Value),
                 UuidArray("workspace_ids", readableWorkspaces),
-                new NpgsqlParameter("title_pattern", NpgsqlDbType.Text) { Value = ContainsPattern(query) },
-                new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = query },
-                new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
-                new NpgsqlParameter("pet_sources_only", NpgsqlDbType.Boolean) { Value = petSourcesOnly },
+                NixParameter.Text("title_pattern", ContainsPattern(query)),
+                NixParameter.Text("query", query),
+                NixParameter.Integer("limit", limit),
+                NixParameter.Boolean("pet_sources_only", petSourcesOnly),
                 await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
                 await ClosedLocksAsync(cancellationToken).ConfigureAwait(false),
             ],
@@ -139,15 +138,12 @@ public sealed class ItemSearch(
                 default,
                 [
                     Uuid("tenant_id", Tenant.Value),
-                    new NpgsqlParameter("root_id", NpgsqlDbType.Uuid) { Value = rootId is { } root ? root.Value : DBNull.Value },
+                    Uuid("root_id", rootId?.Value),
                     UuidArray("workspace_ids", readableWorkspaces),
-                    new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = query },
-                    new NpgsqlParameter("query_embedding", NpgsqlDbType.Text)
-                    {
-                        Value = vector is null ? DBNull.Value : LocalEmbedder.ToLiteral(vector),
-                    },
-                    new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
-                    new NpgsqlParameter("pet_sources_only", NpgsqlDbType.Boolean) { Value = petSourcesOnly },
+                    NixParameter.Text("query", query),
+                    NixParameter.Text("query_embedding", vector is null ? null : LocalEmbedder.ToLiteral(vector)),
+                    NixParameter.Integer("limit", limit),
+                    NixParameter.Boolean("pet_sources_only", petSourcesOnly),
                     locks,
                 ],
                 cancellationToken);
@@ -210,14 +206,11 @@ public sealed class ItemSearch(
             [
                 Uuid("tenant_id", Tenant.Value),
                 UuidArray("workspace_ids", readableWorkspaces),
-                new NpgsqlParameter("phrases", NpgsqlDbType.Array | NpgsqlDbType.Text) { Value = values },
+                NixParameter.TextArray("phrases", values),
                 ItemIdArray("exclude_ids", excludedItems),
-                new NpgsqlParameter("per_phrase_limit", NpgsqlDbType.Integer) { Value = MentionsPerPhrase },
-                new NpgsqlParameter("candidate_limit", NpgsqlDbType.Integer)
-                {
-                    Value = Math.Max(limit, MentionCandidateLimit),
-                },
-                new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
+                NixParameter.Integer("per_phrase_limit", MentionsPerPhrase),
+                NixParameter.Integer("candidate_limit", Math.Max(limit, MentionCandidateLimit)),
+                NixParameter.Integer("limit", limit),
                 await ClosedLocksAsync(cancellationToken).ConfigureAwait(false),
             ],
             cancellationToken);
@@ -282,7 +275,7 @@ public sealed class ItemSearch(
             identifiers[index] = values[index].Value;
         }
 
-        return new NpgsqlParameter(name, NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers };
+        return NixParameter.UuidArray(name, identifiers);
     }
 
     private static NpgsqlParameter UuidArray(string name, IReadOnlyList<WorkspaceId> values)
@@ -293,7 +286,7 @@ public sealed class ItemSearch(
             identifiers[index] = values[index].Value;
         }
 
-        return new NpgsqlParameter(name, NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers };
+        return NixParameter.UuidArray(name, identifiers);
     }
 
     /// <summary>Reads the digest columns every item listing projects.</summary>

@@ -100,8 +100,7 @@ internal static class PublicLinkEndpoints
     private static async Task<IResult> Get(
         Guid itemId,
         HttpContext context,
-        [FromServices] IItemTree tree,
-        [FromServices] IPermissionResolver permissions,
+        [FromServices] IVisibleItems visible,
         [FromServices] IConfiguration configuration,
         [FromServices] IPublicLinkStore store,
         [FromServices] INixSessionContextAccessor sessions,
@@ -113,12 +112,13 @@ internal static class PublicLinkEndpoints
             return disabled;
         }
 
-        var item = await tree.FindAsync(ItemId.From(itemId), context.RequestAborted).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, context.RequestAborted).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(ItemId.From(itemId), ItemAccess.Write, context.RequestAborted).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
             return Refuse(context, 404, "public_links.not_found", "No such item is visible.");
         }
+
+        var item = lookup.Value;
 
         var link = await store.FindActiveAsync(item.Id, context.RequestAborted).ConfigureAwait(false);
         return link is null
@@ -130,8 +130,7 @@ internal static class PublicLinkEndpoints
         Guid itemId,
         PutPublicLinkRequest request,
         HttpContext context,
-        [FromServices] IItemTree tree,
-        [FromServices] IPermissionResolver permissions,
+        [FromServices] IVisibleItems visible,
         [FromServices] IConfiguration configuration,
         [FromServices] IPublicLinkStore store,
         [FromServices] PublicLinkTokenService tokens,
@@ -152,11 +151,13 @@ internal static class PublicLinkEndpoints
         }
 
         var ct = context.RequestAborted;
-        var item = await tree.FindAsync(ItemId.From(itemId), ct).ConfigureAwait(false);
-        if (item is null || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, ct).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(ItemId.From(itemId), ItemAccess.Write, ct).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
             return Refuse(context, 404, "public_links.not_found", "No such item is visible.");
         }
+
+        var item = lookup.Value;
 
         var workspace = await store.FindWorkspaceAsync(item.WorkspaceId, ct).ConfigureAwait(false);
         if (workspace is null || !AgentPolicyGate.MayCreatePublicLink(tokenScope, workspace))
@@ -266,8 +267,7 @@ internal static class PublicLinkEndpoints
     private static async Task<IResult> Revoke(
         Guid itemId,
         HttpContext context,
-        [FromServices] IItemTree tree,
-        [FromServices] IPermissionResolver permissions,
+        [FromServices] IVisibleItems visible,
         [FromServices] IConfiguration configuration,
         [FromServices] IPublicLinkStore store,
         [FromServices] INixSessionContextAccessor sessions,
@@ -279,11 +279,13 @@ internal static class PublicLinkEndpoints
         }
 
         var ct = context.RequestAborted;
-        var item = await tree.FindAsync(ItemId.From(itemId), ct).ConfigureAwait(false);
-        if (item is null || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, ct).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(ItemId.From(itemId), ItemAccess.Write, ct).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
             return Refuse(context, 404, "public_links.not_found", "No such item is visible.");
         }
+
+        var item = lookup.Value;
 
         var link = await store.FindActiveAsync(item.Id, ct).ConfigureAwait(false);
         if (link is null)

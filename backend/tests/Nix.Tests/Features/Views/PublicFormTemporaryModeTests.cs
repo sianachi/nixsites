@@ -117,6 +117,8 @@ public sealed class PublicFormTemporaryModeTests(ContractHostFactory factory)
             services.AddSingleton<IPublicFormStore>(store);
             services.AddSingleton<ISchemaResolver>(new EmptySchemas());
             services.AddSingleton<IPermissionResolver>(new StubPermissions([item.WorkspaceId]));
+            services.AddSingleton<IVisibleItems>(new Nix.Features.Items.VisibleItems(
+                new StubTree(item), new StubPermissions([item.WorkspaceId]), new Nix.Tests.Support.OpenLocks()));
             services.AddSingleton<INixSessionContextAccessor>(new StubSession(
                 NixSessionContext.ForTenant(item.TenantId, item.CreatedBy)));
             services.AddSingleton(Tokens());

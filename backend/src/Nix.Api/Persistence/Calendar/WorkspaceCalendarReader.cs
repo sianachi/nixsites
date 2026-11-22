@@ -7,7 +7,6 @@ using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Calendar;
 
@@ -74,19 +73,16 @@ public sealed class WorkspaceCalendarReader(
             CalendarSql.WorkspaceCalendar,
             default,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid) { Value = workspaceId.Value },
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("workspace_id", workspaceId.Value),
+                NixParameter.UuidArray("workspace_ids", identifiers),
                 // Every root generation: a purged root is replaced, and the notes under its successor
                 // are as much the workspace's daily notes as those under the original.
-                new NpgsqlParameter("daily_root_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
-                {
-                    Value = DeterministicProvisioningId.DailyNotesRootGenerations(workspaceId),
-                },
-                new NpgsqlParameter("from", NpgsqlDbType.Text) { Value = firstDay },
-                new NpgsqlParameter("to", NpgsqlDbType.Text) { Value = lastDay },
+                NixParameter.UuidArray("daily_root_ids", DeterministicProvisioningId.DailyNotesRootGenerations(workspaceId)),
+                NixParameter.Text("from", firstDay),
+                NixParameter.Text("to", lastDay),
                 await LockFilterParameters.ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken).ConfigureAwait(false),
-                new NpgsqlParameter("entry_limit", NpgsqlDbType.Integer) { Value = entryLimit },
+                NixParameter.Integer("entry_limit", entryLimit),
             ],
             cancellationToken);
 

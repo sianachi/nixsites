@@ -3,6 +3,7 @@ using Nix.Abstractions.Scheduling;
 using Nix.Domain.Identity;
 using Nix.Domain.Scheduling;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -93,23 +94,17 @@ public sealed class ScheduledTriggerStore(NixDbContext database) : IScheduledTri
         return await database.Database.ExecuteSqlRawAsync(
             sql,
             [
-                new NpgsqlParameter<string>("kind", NpgsqlDbType.Text) { TypedValue = TriggerStorage.ToText(kind) },
-                new NpgsqlParameter<string>("source", NpgsqlDbType.Text) { TypedValue = source },
-                new NpgsqlParameter<DateTimeOffset>("now", NpgsqlDbType.TimestampTz) { TypedValue = now },
+                NixParameter.Text("kind", TriggerStorage.ToText(kind)),
+                NixParameter.Text("source", source),
+                NixParameter.Timestamp("now", now),
                 UuidArray("tenant_ids", rows.Select(row => (Guid?)row.TenantId.Value)),
                 UuidArray("ids", rows.Select(_ => (Guid?)Guid.CreateVersion7())),
                 UuidArray("workspace_ids", rows.Select(row => row.WorkspaceId?.Value)),
                 UuidArray("principal_ids", rows.Select(row => (Guid?)row.PrincipalId.Value)),
                 UuidArray("source_item_ids", rows.Select(row => row.SourceItemId)),
                 UuidArray("rule_ids", rows.Select(row => row.RuleId)),
-                new NpgsqlParameter<DateTimeOffset[]>("fire_ats", NpgsqlDbType.Array | NpgsqlDbType.TimestampTz)
-                {
-                    TypedValue = rows.Select(row => row.FireAt.ToUniversalTime()).ToArray(),
-                },
-                new NpgsqlParameter<string[]>("dedupe_keys", NpgsqlDbType.Array | NpgsqlDbType.Text)
-                {
-                    TypedValue = rows.Select(row => row.DedupeKey).ToArray(),
-                },
+                NixParameter.TimestampArray("fire_ats", rows.Select(row => row.FireAt.ToUniversalTime()).ToArray()),
+                NixParameter.TextArray("dedupe_keys", rows.Select(row => row.DedupeKey).ToArray()),
             ],
             cancellationToken).ConfigureAwait(false);
     }

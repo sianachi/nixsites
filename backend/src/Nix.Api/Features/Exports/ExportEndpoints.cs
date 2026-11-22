@@ -88,6 +88,7 @@ internal static class ExportEndpoints
         [FromServices] IWorkerCapabilityRegistry registry,
         [FromServices] IWorkerJobStore jobs,
         [FromServices] IItemTree tree,
+        [FromServices] IVisibleItems visible,
         [FromServices] IPermissionResolver permissions,
         [FromServices] IItemLocks locks,
         [FromServices] IWorkspaceLocks workspaceLocks,
@@ -143,12 +144,13 @@ internal static class ExportEndpoints
             return Problem(context, 503, "exports.format_unavailable", "Export format unavailable", "The active worker advertised an invalid export format contract.");
         }
 
-        var item = await tree.FindAsync(ItemId.From(request.ItemId), context.RequestAborted).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, context.RequestAborted).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(ItemId.From(request.ItemId), ItemAccess.Read, context.RequestAborted).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
             return Problem(context, 404, "exports.item_not_found", "Export source not found", "No such item is visible.");
         }
+
+        var item = lookup.Value;
 
         // An export copies bodies out of Nix, which is exactly what a lock withholds, and it runs
         // in a worker under a delegation that cannot hold an unlock. Refused up front rather than

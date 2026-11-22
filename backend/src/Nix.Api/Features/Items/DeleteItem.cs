@@ -51,6 +51,7 @@ public sealed record DeleteItem(ItemId ItemId) : ICommand<ItemId>
 public sealed class DeleteItemHandler(
     IItemTree tree,
     IPermissionResolver permissions,
+    IVisibleItems visibleItems,
     INixSessionContextAccessor session,
     TimeProvider clock,
     IStructuralLock topology,
@@ -107,12 +108,13 @@ public sealed class DeleteItemHandler(
         // A pin is created under this same lock, so the pin check below cannot miss a pin being added.
         var workspaceId = item.WorkspaceId;
         await topology.AcquireWorkspaceTopologyAsync(workspaceId, cancellationToken).ConfigureAwait(false);
-        item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null || item.WorkspaceId != workspaceId || item.LifecycleState != ItemLifecycleState.Active
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var again = await visibleItems.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (again.IsFailure || again.Value.WorkspaceId != workspaceId)
         {
             return Result.Failure<ItemId>(ItemErrors.NotFound($"No item {itemId} is visible."));
         }
+
+        item = again.Value;
 
         if (item.NoDelete && !(command.CalendarWrite && item.ManagedBy is not null))
         {

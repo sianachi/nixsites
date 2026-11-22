@@ -29,8 +29,7 @@ public sealed record GetItem(ItemId ItemId) : IQuery<Result<Item>>;
 /// permission resolver answers the workspace one, and both must agree before a row is returned.
 /// </remarks>
 public sealed class GetItemHandler(
-    IItemTree tree,
-    IPermissionResolver permissions)
+    IVisibleItems visible)
     : IQueryHandler<GetItem, Result<Item>>
 {
     /// <summary>Reads the item.</summary>
@@ -43,19 +42,7 @@ public sealed class GetItemHandler(
 
         var itemId = query.ItemId;
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null)
-        {
-            return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
-        }
-
-        var mayRead = await permissions
-            .CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken)
-            .ConfigureAwait(false);
-
-        return mayRead
-            ? Result.Success(item)
-            : Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
+        return await visible.FindAsync(itemId, ItemAccess.Read, cancellationToken).ConfigureAwait(false);
     }
 }
 

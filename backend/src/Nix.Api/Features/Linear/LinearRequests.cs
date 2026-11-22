@@ -18,7 +18,7 @@ namespace Nix.Features.Linear;
 internal sealed partial class LinearRequests(
     ILinearStore store,
     INixSessionContextAccessor session,
-    IItemTree tree,
+    IVisibleItems visible,
     IPermissionResolver permissions,
     IItemLocks locks,
     IPersonalAccessTokens tokens,
@@ -274,15 +274,13 @@ internal sealed partial class LinearRequests(
 
     private async ValueTask<Item?> ReadTaskAsync(ItemId id, CancellationToken token)
     {
-        var item = await tree.FindAsync(id, token).ConfigureAwait(false);
-        if (item is null || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, token).ConfigureAwait(false)
-            || (await locks.LockedAmongAsync([id], token).ConfigureAwait(false)).Count != 0
-            || !await locks.MayReadBodyAsync(id, token).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(id, ItemAccess.Read, token, lockedDetail: "locked").ConfigureAwait(false);
+        if (lookup.IsFailure || (await locks.LockedAmongAsync([id], token).ConfigureAwait(false)).Count != 0)
         {
             return null;
         }
 
-        return item;
+        return lookup.Value;
     }
 
     private async Task<bool> RequesterIsCurrentAsync(LinearTaskRequest request, CancellationToken token)

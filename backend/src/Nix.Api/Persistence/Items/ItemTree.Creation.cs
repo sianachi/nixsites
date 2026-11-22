@@ -3,7 +3,6 @@ using Nix.Domain.Items;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Items;
@@ -14,11 +13,12 @@ public sealed partial class ItemTree
     public async ValueTask<ItemCreationReceipt?> GetCreationReceiptAsync(
         Guid key, string request, CancellationToken cancellationToken)
     {
-        var parameters = CreationParameters(key);
-        await _sql.ExecuteAsync(ItemCreationSql.Lock, parameters, cancellationToken).ConfigureAwait(false);
+        var context = _session.Current ?? throw new InvalidOperationException("No item creation session is established.");
+        await new AdvisoryLocks(_dbContext).LockItemCreationAsync(
+            context.TenantId.Value, context.PrincipalId.Value, key, cancellationToken).ConfigureAwait(false);
         await foreach (var receipt in _sql.QueryAsync<ItemCreationReceipt, CreationReceiptMapper>(
             ItemCreationSql.Find, default,
-            [.. CreationParameters(key), new NpgsqlParameter("request", NpgsqlDbType.Text) { Value = request }],
+            [.. CreationParameters(key), NixParameter.Text("request", request)],
             cancellationToken).ConfigureAwait(false))
         {
             return receipt;
@@ -32,7 +32,7 @@ public sealed partial class ItemTree
         Guid key, string request, ItemId itemId, CancellationToken cancellationToken) =>
         await _sql.ExecuteAsync(ItemCreationSql.Insert,
             [.. CreationParameters(key),
-                new NpgsqlParameter("request", NpgsqlDbType.Text) { Value = request },
+                NixParameter.Text("request", request),
                 Uuid("item_id", itemId.Value)], cancellationToken).ConfigureAwait(false);
 
     private NpgsqlParameter[] CreationParameters(Guid key)

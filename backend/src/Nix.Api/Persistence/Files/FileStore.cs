@@ -170,9 +170,7 @@ public sealed class FileStore(
         }
         // Completion already runs inside NixUnitOfWorkMiddleware's transaction. A transaction-
         // scoped advisory lock serializes file publication with workspace transfers.
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({upload.WorkspaceId.Value.ToString()}, 0))",
-            cancellationToken).ConfigureAwait(false);
+        await new AdvisoryLocks(database).LockWorkspaceFilesAsync(upload.WorkspaceId, cancellationToken).ConfigureAwait(false);
         // A transfer shares this lock. Re-read containment after waiting for it so a
         // replacement upload cannot publish into a file that has left its source workspace.
         if (upload.ParentId is { } parent)
@@ -473,7 +471,7 @@ public sealed class FileStore(
     /// The one shown-version rule: the highest-numbered approved version, else the current upload
     /// unless it is revoked, else the newest non-revoked version. A revoked version is never shown,
     /// so the sequence is empty when every version is revoked. The first element is the shown one.
-    /// <c>ListAttachmentsHandler.Statement</c> restates it in SQL and a test holds the two to the
+    /// <c>AttachmentStore.Statement</c> restates it in SQL and a test holds the two to the
     /// same answer.
     /// </summary>
     public static IOrderedQueryable<FileVersion> ShownFirst(IQueryable<FileVersion> versions, FileVersionId currentVersionId) =>
@@ -617,21 +615,12 @@ public sealed class FileStore(
 
     private NixSessionContext Context => session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-    private Task<int> LockUploadAsync(FileUploadId id, CancellationToken cancellationToken)
-    {
-        var context = Context;
-        return database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({$"file-upload:{context.TenantId.Value:N}:{id.Value:N}"}, 0))",
-            cancellationToken);
-    }
+    private ValueTask LockUploadAsync(FileUploadId id, CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockFileUploadAsync(Context.TenantId.Value, id.Value, cancellationToken);
 
-    private Task<int> LockIdempotencyAsync(string idempotencyKey, CancellationToken cancellationToken)
-    {
-        var context = Context;
-        return database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({$"file-upload-key:{context.TenantId.Value:N}:{context.PrincipalId.Value:N}:{idempotencyKey}"}, 0))",
-            cancellationToken);
-    }
+    private ValueTask LockIdempotencyAsync(string idempotencyKey, CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockFileUploadKeyAsync(
+            Context.TenantId.Value, Context.PrincipalId.Value, idempotencyKey, cancellationToken);
 
     private static FileUploadRecord ToUpload(FileUpload value) => new(value.Id.Value, value.WorkspaceId.Value, value.Purpose, value.Status, value.ObjectKey, value.ExpiresAt, value.PublishedItemId?.Value, value.FailureCode, value.PublishedVersionId?.Value);
     private static FileVersionRecord ToVersion(FileVersion value, bool current) => new(

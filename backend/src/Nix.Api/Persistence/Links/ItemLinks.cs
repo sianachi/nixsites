@@ -7,7 +7,6 @@ using Nix.Persistence.Search;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Links;
 
@@ -58,10 +57,10 @@ public sealed class ItemLinks(
             SearchSql.ItemsLinkingTo,
             default,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("target_item_id", NpgsqlDbType.Uuid) { Value = targetId.Value },
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers },
-                new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("target_item_id", targetId.Value),
+                NixParameter.UuidArray("workspace_ids", identifiers),
+                NixParameter.Integer("limit", limit),
                 await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
             ],
             cancellationToken);
@@ -109,15 +108,12 @@ public sealed class ItemLinks(
             SearchSql.CoCitedItems,
             default,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("target_item_id", NpgsqlDbType.Uuid) { Value = targetId.Value },
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers },
-                new NpgsqlParameter("source_limit", NpgsqlDbType.Integer) { Value = sourceLimit },
-                new NpgsqlParameter("candidate_limit", NpgsqlDbType.Integer)
-                {
-                    Value = Math.Max(limit, RelatedCandidateLimit),
-                },
-                new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("target_item_id", targetId.Value),
+                NixParameter.UuidArray("workspace_ids", identifiers),
+                NixParameter.Integer("source_limit", sourceLimit),
+                NixParameter.Integer("candidate_limit", Math.Max(limit, RelatedCandidateLimit)),
+                NixParameter.Integer("limit", limit),
                 await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
                 await LockFilterParameters
                     .ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken)

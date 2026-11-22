@@ -170,7 +170,7 @@ public sealed record AppendViewSetup(
 public sealed class AppendViewSetupHandler(
     IItemTree tree,
     ISchemaResolver schemas,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     INixSessionContextAccessor session,
     TimeProvider clock)
     : ICommandHandler<AppendViewSetup, Item>
@@ -182,17 +182,14 @@ public sealed class AppendViewSetupHandler(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(
+            command.ItemId, ItemAccess.Write, cancellationToken, notFoundDetail: "This item is not visible.").ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound("This item is not visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
 
-        if (item.LifecycleState != ItemLifecycleState.Active)
-        {
-            return Result.Failure<Item>(ItemErrors.LifecycleConflict("A deleted item cannot be configured."));
-        }
+        var item = lookup.Value;
 
         if (command.Views.IsDefaultOrEmpty && command.Properties.IsDefaultOrEmpty)
         {
@@ -290,7 +287,7 @@ public sealed record ReplaceViewSetup(
 public sealed class ReplaceViewSetupHandler(
     IItemTree tree,
     ISchemaResolver schemas,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     INixSessionContextAccessor session,
     TimeProvider clock)
     : ICommandHandler<ReplaceViewSetup, Item>
@@ -302,17 +299,14 @@ public sealed class ReplaceViewSetupHandler(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(
+            command.ItemId, ItemAccess.Write, cancellationToken, notFoundDetail: "This item is not visible.").ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound("This item is not visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
 
-        if (item.LifecycleState != ItemLifecycleState.Active)
-        {
-            return Result.Failure<Item>(ItemErrors.LifecycleConflict("A deleted item cannot be configured."));
-        }
+        var item = lookup.Value;
 
         if (command.Views.IsDefaultOrEmpty)
         {

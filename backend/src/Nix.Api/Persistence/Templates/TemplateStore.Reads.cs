@@ -13,8 +13,8 @@ using Nix.Domain.Properties;
 using Nix.Domain.Templates;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
+using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Templates;
 
@@ -73,8 +73,8 @@ public sealed partial class TemplateStore
         return await _database.Items
             .FromSqlRaw(
                 "SELECT * FROM item WHERE tenant_id = @tenant_id AND id = ANY(@item_ids) ORDER BY id FOR UPDATE",
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Context.TenantId.Value },
-                new NpgsqlParameter("item_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = ids })
+                NixParameter.Uuid("tenant_id", Context.TenantId.Value),
+                NixParameter.UuidArray("item_ids", ids))
             .IgnoreQueryFilters()
             .AsTracking()
             .ToListAsync(cancellationToken)
@@ -327,9 +327,9 @@ public sealed partial class TemplateStore
         await _database.Database.ExecuteSqlRawAsync(
             sql,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Context.TenantId.Value },
-                new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid) { Value = workspaceId.Value },
-                new NpgsqlParameter("retained", NpgsqlDbType.Integer) { Value = RetainedManagedOperationHistory },
+                NixParameter.Uuid("tenant_id", Context.TenantId.Value),
+                NixParameter.Uuid("workspace_id", workspaceId.Value),
+                NixParameter.Integer("retained", RetainedManagedOperationHistory),
             ],
             cancellationToken).ConfigureAwait(false);
     }

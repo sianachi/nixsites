@@ -415,9 +415,8 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
 
 /// <summary>Reads and writes note bodies for the item routes.</summary>
 public sealed class ItemBodyHandlers(
-    IItemTree tree,
+    IVisibleItems visible,
     IPermissionResolver permissions,
-    IItemLocks locks,
     INixSessionContextAccessor session,
     ItemBodyClient bodies) : IQueryHandler<ReadItemBody, Result<ItemBodyResponse>>,
     ICommandHandler<WriteItemBody, ItemBodyWriteResponse>
@@ -479,19 +478,16 @@ public sealed class ItemBodyHandlers(
     {
         _ = session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        // "Locked" is said only after the read check, matching the collaboration authorization: an
+        // item the caller cannot see is not found, and "locked" is reserved for somebody who could open it.
+        var lookup = await visible.FindAsync(
+            itemId, ItemAccess.Read, cancellationToken, lockedDetail: $"The body of item {itemId} is locked.").ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
 
-        // Said only after the read check, matching the collaboration authorization: an item the
-        // caller cannot see is not found, and "locked" is reserved for somebody who could open it.
-        if (!await locks.MayReadBodyAsync(item.Id, cancellationToken).ConfigureAwait(false))
-        {
-            return Result.Failure<Item>(ItemErrors.Locked($"The body of item {itemId} is locked."));
-        }
+        var item = lookup.Value;
 
         if (!IsProse(item.Type))
         {

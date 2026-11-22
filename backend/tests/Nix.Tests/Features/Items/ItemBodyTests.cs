@@ -9,6 +9,7 @@ using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Features.Items;
 using Nix.Tests.Features.Query;
+using Nix.Tests.Support;
 
 namespace Nix.Tests.Features.Items;
 
@@ -391,9 +392,11 @@ public sealed class ItemBodyTests
             }
 
             return new ItemBodyHandlers(
-                new StubTree(item, Workspace),
+                new VisibleItems(
+                    new StubTree(item, Workspace),
+                    new Gate(canRead ? [Workspace] : [], canWrite ? [Workspace] : []),
+                    new StubLocks(open)),
                 new Gate(canRead ? [Workspace] : [], canWrite ? [Workspace] : []),
-                new StubLocks(open),
                 new StubSession(session ? NixSessionContext.ForTenant(Tenant, Principal) : null),
                 new ItemBodyClient(http, new ConfigurationBuilder().AddInMemoryCollection(values).Build()));
         }

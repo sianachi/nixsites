@@ -7,6 +7,7 @@ using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Nix.Features.Charts;
+using Nix.Features.Items;
 using Nix.Tests.Features.Query;
 using Nix.Tests.Support;
 
@@ -96,10 +97,8 @@ public sealed class RunItemChartTests
             [new ViewDefinition("chart", "Chart", ViewKind.Chart, [], "done_on", [], null, null, false, Chart: options)]);
 
         return new RunItemChartHandler(
-            new StubTree(ItemWithViews(views)),
-            new StubPermissions([Workspace]),
+            new VisibleItems(new StubTree(ItemWithViews(views)), new StubPermissions([Workspace]), new StubLocks(open: true)),
             aggregates,
-            new StubLocks(open: true),
             new FixedTimeProvider(Now),
             new StubPreferences(zone),
             new StubSession(NixSessionContext.ForTenant(Tenant, Reader)));

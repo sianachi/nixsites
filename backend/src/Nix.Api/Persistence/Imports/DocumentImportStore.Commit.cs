@@ -8,8 +8,8 @@ using Nix.Domain.Importing;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Persistence.ObjectStorage;
+using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Importing;
 
@@ -99,9 +99,7 @@ public sealed partial class DocumentImportStore
         }
 
         // File publication and workspace transfers share this per-workspace lock.
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({operation.WorkspaceId.Value.ToString()}, 0))",
-            cancellationToken).ConfigureAwait(false);
+        await new AdvisoryLocks(database).LockWorkspaceFilesAsync(operation.WorkspaceId, cancellationToken).ConfigureAwait(false);
 
         var now = clock.GetUtcNow();
         var targetIds = ordered.ToDictionary(item => item.SourceId, _ => ItemId.Create(), StringComparer.Ordinal);
@@ -539,8 +537,8 @@ public sealed partial class DocumentImportStore
         await database.Database.ExecuteSqlRawAsync(
             sql,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Context.TenantId.Value },
-                new NpgsqlParameter("item_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = ids },
+                NixParameter.Uuid("tenant_id", Context.TenantId.Value),
+                NixParameter.UuidArray("item_ids", ids),
             ],
             cancellationToken).ConfigureAwait(false);
     }

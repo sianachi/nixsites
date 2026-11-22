@@ -79,9 +79,7 @@ public sealed partial class TemplateStore
                 TemplateErrors.NotFound("A file attached to this template is no longer visible."));
         }
 
-        await _database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({workspaceId.Value.ToString()}, 0))",
-            cancellationToken).ConfigureAwait(false);
+        await Locks.LockWorkspaceFilesAsync(workspaceId, cancellationToken).ConfigureAwait(false);
 
         var sourceIds = candidates.Select(candidate => candidate.SourceItemId).Where(id => id is not null)
             .Select(id => id!.Value).Distinct().ToArray();

@@ -3,8 +3,6 @@ namespace Nix.Persistence.Sql.Statements;
 /// <summary>Exact receipt and item-revision point reads, using the composite primary keys.</summary>
 internal static class NativeReplaySql
 {
-    internal const string LockOperation = "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));";
-
     internal const string FindReceipt = """
         SELECT workspace_id, request_fingerprint, response::text
         FROM native_replay_receipt

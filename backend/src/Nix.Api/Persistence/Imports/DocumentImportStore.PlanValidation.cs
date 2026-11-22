@@ -5,7 +5,6 @@ using Nix.Domain.Items;
 using Nix.Domain.Properties;
 using Nix.Domain.Views;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Importing;
 

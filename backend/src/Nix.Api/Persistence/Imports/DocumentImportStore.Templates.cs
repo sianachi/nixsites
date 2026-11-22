@@ -7,7 +7,6 @@ using Nix.Domain.Items;
 using Nix.Domain.Templates;
 using Nix.Persistence.ObjectStorage;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Importing;
 
@@ -207,9 +206,7 @@ public sealed partial class DocumentImportStore
         {
             return [];
         }
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({operation.WorkspaceId.Value.ToString()}, 0))",
-            cancellationToken).ConfigureAwait(false);
+        await new AdvisoryLocks(database).LockWorkspaceFilesAsync(operation.WorkspaceId, cancellationToken).ConfigureAwait(false);
 
         var now = clock.GetUtcNow();
         var versions = new List<FileVersion>(fileVersions.Count);

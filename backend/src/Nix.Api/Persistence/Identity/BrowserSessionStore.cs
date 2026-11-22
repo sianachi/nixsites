@@ -5,7 +5,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Identity;
 
@@ -25,7 +24,7 @@ public sealed class BrowserSessionStore(
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenHash);
         return ResolveAsync(
             BrowserSessionSql.ResolveByTokenHash,
-            new NpgsqlParameter("token_hash", NpgsqlDbType.Text) { Value = tokenHash },
+            NixParameter.Text("token_hash", tokenHash),
             cancellationToken);
     }
 
@@ -34,7 +33,7 @@ public sealed class BrowserSessionStore(
         BrowserSessionId id,
         CancellationToken cancellationToken) => ResolveAsync(
             BrowserSessionSql.ResolveById,
-            new NpgsqlParameter("session_id", NpgsqlDbType.Uuid) { Value = id.Value },
+            NixParameter.Uuid("session_id", id.Value),
             cancellationToken);
 
     /// <inheritdoc />

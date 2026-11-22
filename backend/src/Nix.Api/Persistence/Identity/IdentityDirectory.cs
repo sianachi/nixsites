@@ -4,7 +4,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Identity;
@@ -65,7 +64,7 @@ public sealed class IdentityDirectory(NpgsqlDataSource dataSource) : IIdentityDi
         return await QuerySingleAsync(
             IdentitySql.FindPrincipalByExternalIdentity,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = tenantId.Value },
+                NixParameter.Uuid("tenant_id", tenantId.Value),
                 Text("external_issuer", externalIssuer),
                 Text("external_subject", externalSubject),
             ],
@@ -85,8 +84,8 @@ public sealed class IdentityDirectory(NpgsqlDataSource dataSource) : IIdentityDi
         await QuerySingleAsync(
             IdentitySql.FindPrincipalById,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = tenantId.Value },
-                new NpgsqlParameter("principal_id", NpgsqlDbType.Uuid) { Value = principalId.Value },
+                NixParameter.Uuid("tenant_id", tenantId.Value),
+                NixParameter.Uuid("principal_id", principalId.Value),
             ],
             static reader => new AuthenticatedPrincipal(
                 PrincipalId.From(reader.GetGuid(0)),

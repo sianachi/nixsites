@@ -69,7 +69,7 @@ public sealed class HabitFixtureReplayTests : IAsyncLifetime
         var query = HttpUtility.ParseQueryString(request.Query);
         var itemId = Guid.Parse(request.AbsolutePath.Split('/')[4]);
         var handler = new HabitTrackerHandler(
-            work.Resolve<IItemTree>(), work.Resolve<IPermissionResolver>(), work.Resolve<IItemLocks>(),
+            work.Resolve<IItemTree>(), work.Resolve<IVisibleItems>(), work.Resolve<IItemLocks>(),
             work.Resolve<IHabitLock>(), work.Resolve<NixDispatcher>(), clock);
         var result = await handler.HandleAsync(
             new ReadHabitTracker(ItemId.From(itemId), Day(query["from"]), Day(query["to"])), Cancellation);
