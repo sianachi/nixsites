@@ -475,12 +475,12 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
 
     private async Task SeedCorpusAsync()
     {
-        var alphaTenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var alphaWorkspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var alphaPrincipal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var betaTenant = Literal(M0SchemaSeed.Beta.TenantId);
-        var betaWorkspace = Literal(M0SchemaSeed.Beta.WorkspaceId);
-        var betaPrincipal = Literal(M0SchemaSeed.Beta.PrincipalId);
+        var alphaTenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var alphaWorkspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var alphaPrincipal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var betaTenant = RawSql.Literal(M0SchemaSeed.Beta.TenantId);
+        var betaWorkspace = RawSql.Literal(M0SchemaSeed.Beta.WorkspaceId);
+        var betaPrincipal = RawSql.Literal(M0SchemaSeed.Beta.PrincipalId);
 
         // Containers first, each declaring a calendar view over the reserved due-date key, then
         // the children spread across them with dates around the query day and a third completed.
@@ -490,7 +490,7 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                  last_modified_at)
             VALUES
-                ({{Literal(AlphaRoot)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note', NULL, 199999,
+                ({{RawSql.Literal(AlphaRoot)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note', NULL, 199999,
                  '{"title":"Corpus root"}'::jsonb, 'active', NULL, {{alphaPrincipal}},
                  {{alphaPrincipal}}, now(), now());
 
@@ -498,7 +498,7 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties, views,
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
             SELECT gen_random_uuid(), {{alphaTenant}}, {{alphaWorkspace}}, 'note',
-                   {{Literal(AlphaRoot)}}, 200000 + n,
+                   {{RawSql.Literal(AlphaRoot)}}, 200000 + n,
                    jsonb_build_object('title', 'Container ' || n),
                    jsonb_build_object('views', jsonb_build_array(jsonb_build_object(
                        'id', 'v' || n, 'name', 'Calendar', 'kind', 'calendar',
@@ -560,7 +560,7 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
             WHERE seq >= 199999;
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT id, {{Literal(AlphaRoot)}}, tenant_id, workspace_id, 1
+            SELECT id, {{RawSql.Literal(AlphaRoot)}}, tenant_id, workspace_id, 1
             FROM item
             WHERE tenant_id = {{alphaTenant}}
               AND seq BETWEEN 200001 AND {{200000 + Containers}};
@@ -572,7 +572,7 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
               AND child.seq >= 300001;
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT child.id, {{Literal(AlphaRoot)}}, child.tenant_id, child.workspace_id, 2
+            SELECT child.id, {{RawSql.Literal(AlphaRoot)}}, child.tenant_id, child.workspace_id, 2
             FROM item AS child
             WHERE child.tenant_id = {{alphaTenant}}
               AND child.seq >= 300001;
@@ -600,7 +600,4 @@ public sealed class TaskSemanticsPlanEvidenceTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql, commandTimeoutSeconds: 120);
         }
     }
-
-    private static string Literal(Guid id) =>
-        $"'{id.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

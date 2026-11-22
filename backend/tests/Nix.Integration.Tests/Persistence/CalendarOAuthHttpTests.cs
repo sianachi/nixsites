@@ -224,7 +224,7 @@ public sealed class CalendarOAuthHttpTests(NixPostgresFixture fixture) : IAsyncL
         using (var duplicate = await _host.SendAsync(HttpMethod.Post, "/api/v1/me/calendar/links", bearer, request))
         {
             Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
-            Assert.Equal("calendar.link_exists", await ProblemCodeAsync(duplicate));
+            Assert.Equal("calendar.link_exists", await HttpProblem.CodeAsync(duplicate));
         }
 
         // A read-only calendar can only be imported.
@@ -243,7 +243,7 @@ public sealed class CalendarOAuthHttpTests(NixPostgresFixture fixture) : IAsyncL
             new { connectionId, externalCalendarId = "holidays", workspaceId = TestTenants.AlphaWorkspace, container = new { itemId = M0SchemaSeed.Alpha.ItemId }, direction = "import_only" }))
         {
             Assert.Equal(HttpStatusCode.Conflict, clash.StatusCode);
-            Assert.Equal("calendar.container_schema_conflict", await ProblemCodeAsync(clash));
+            Assert.Equal("calendar.container_schema_conflict", await HttpProblem.CodeAsync(clash));
         }
 
         using (var patched = await _host.SendAsync(HttpMethod.Patch, $"/api/v1/me/calendar/links/{linkId:D}", bearer, new { revision = 1, status = "paused" }))
@@ -254,13 +254,13 @@ public sealed class CalendarOAuthHttpTests(NixPostgresFixture fixture) : IAsyncL
         using (var stale = await _host.SendAsync(HttpMethod.Patch, $"/api/v1/me/calendar/links/{linkId:D}", bearer, new { revision = 1, status = "active" }))
         {
             Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
-            Assert.Equal("calendar.conflict", await ProblemCodeAsync(stale));
+            Assert.Equal("calendar.conflict", await HttpProblem.CodeAsync(stale));
         }
 
         using (var sync = await _host.SendAsync(HttpMethod.Post, $"/api/v1/me/calendar/links/{linkId:D}/sync", writer, new { }))
         {
             Assert.Equal(HttpStatusCode.Conflict, sync.StatusCode);
-            Assert.Equal("calendar.link_inactive", await ProblemCodeAsync(sync));
+            Assert.Equal("calendar.link_inactive", await HttpProblem.CodeAsync(sync));
         }
 
         using (var log = await _host.SendAsync(HttpMethod.Get, $"/api/v1/me/calendar/links/{linkId:D}/log", writer))
@@ -355,12 +355,6 @@ public sealed class CalendarOAuthHttpTests(NixPostgresFixture fixture) : IAsyncL
         }
 
         return await _host.Client.SendAsync(request, Cancellation);
-    }
-
-    private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response)
-    {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
-        return document.RootElement.GetProperty("code").GetString();
     }
 
     private async Task<long> CountAsync(string sql)

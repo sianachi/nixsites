@@ -80,9 +80,9 @@ public sealed class RecurrenceCandidateAuthorizationTests : IAsyncLifetime
 
     private async Task SeedCandidatesAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $$"""
             INSERT INTO item
@@ -90,24 +90,24 @@ public sealed class RecurrenceCandidateAuthorizationTests : IAsyncLifetime
                  lifecycle_state, recurrence, purge_after, created_by, last_modified_by,
                  created_at, last_modified_at)
             VALUES
-                ({{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000,
+                ({{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000,
                  '{"title":"Deleted ancestor"}'::jsonb, NULL, 'deleted', NULL, NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 'note',
-                 {{Literal(DeletedAncestor)}}, 2000, '{"title":"Hidden calendar"}'::jsonb,
+                ({{RawSql.Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 'note',
+                 {{RawSql.Literal(DeletedAncestor)}}, 2000, '{"title":"Hidden calendar"}'::jsonb,
                  '{"views":[{"id":"v1","kind":"calendar","name":"Due","dateProperty":"due_date"}]}'::jsonb,
                  'active', NULL, NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(HiddenChild)}}, {{tenant}}, {{workspace}}, 'note',
-                 {{Literal(HiddenContainer)}}, 3000,
+                ({{RawSql.Literal(HiddenChild)}}, {{tenant}}, {{workspace}}, 'note',
+                 {{RawSql.Literal(HiddenContainer)}}, 3000,
                  '{"title":"Hidden series","due_date":"2026-03-02"}'::jsonb, NULL,
                  'active', '{"freq":"daily","interval":1}'::jsonb, NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000,
+                ({{RawSql.Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 'note', NULL, 4000,
                  '{"title":"Visible calendar"}'::jsonb,
                  '{"views":[{"id":"v1","kind":"calendar","name":"Due","dateProperty":"due_date"}]}'::jsonb,
                  'active', NULL, NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(VisibleChild)}}, {{tenant}}, {{workspace}}, 'note',
-                 {{Literal(VisibleContainer)}}, 5000,
+                ({{RawSql.Literal(VisibleChild)}}, {{tenant}}, {{workspace}}, 'note',
+                 {{RawSql.Literal(VisibleContainer)}}, 5000,
                  '{"title":"Visible series","due_date":"2026-03-03"}'::jsonb, NULL,
                  'active', '{"freq":"daily","interval":1}'::jsonb, NULL,
                  {{principal}}, {{principal}}, now(), now());
@@ -115,15 +115,15 @@ public sealed class RecurrenceCandidateAuthorizationTests : IAsyncLifetime
             INSERT INTO item_closure
                 (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             VALUES
-                ({{Literal(DeletedAncestor)}}, {{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(HiddenContainer)}}, {{Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(HiddenContainer)}}, {{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 1),
-                ({{Literal(HiddenChild)}}, {{Literal(HiddenChild)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(HiddenChild)}}, {{Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 1),
-                ({{Literal(HiddenChild)}}, {{Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 2),
-                ({{Literal(VisibleContainer)}}, {{Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(VisibleChild)}}, {{Literal(VisibleChild)}}, {{tenant}}, {{workspace}}, 0),
-                ({{Literal(VisibleChild)}}, {{Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 1);
+                ({{RawSql.Literal(DeletedAncestor)}}, {{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(HiddenContainer)}}, {{RawSql.Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(HiddenContainer)}}, {{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 1),
+                ({{RawSql.Literal(HiddenChild)}}, {{RawSql.Literal(HiddenChild)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(HiddenChild)}}, {{RawSql.Literal(HiddenContainer)}}, {{tenant}}, {{workspace}}, 1),
+                ({{RawSql.Literal(HiddenChild)}}, {{RawSql.Literal(DeletedAncestor)}}, {{tenant}}, {{workspace}}, 2),
+                ({{RawSql.Literal(VisibleContainer)}}, {{RawSql.Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(VisibleChild)}}, {{RawSql.Literal(VisibleChild)}}, {{tenant}}, {{workspace}}, 0),
+                ({{RawSql.Literal(VisibleChild)}}, {{RawSql.Literal(VisibleContainer)}}, {{tenant}}, {{workspace}}, 1);
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -135,8 +135,8 @@ public sealed class RecurrenceCandidateAuthorizationTests : IAsyncLifetime
 
     private async Task SetAncestorBoundaryAsync(string lifecycle, bool templateOwned)
     {
-        var template = templateOwned ? Literal(M0SchemaSeed.Alpha.TemplateId) : "NULL";
-        var source = templateOwned ? Literal(DeletedAncestor) : "NULL";
+        var template = templateOwned ? RawSql.Literal(M0SchemaSeed.Alpha.TemplateId) : "NULL";
+        var source = templateOwned ? RawSql.Literal(DeletedAncestor) : "NULL";
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
@@ -149,11 +149,8 @@ public sealed class RecurrenceCandidateAuthorizationTests : IAsyncLifetime
                      SET lifecycle_state = '{{lifecycle}}',
                          template_id = {{template}},
                          template_source_id = {{source}}
-                   WHERE id = {{Literal(DeletedAncestor)}};
+                   WHERE id = {{RawSql.Literal(DeletedAncestor)}};
                   """);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

@@ -137,7 +137,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
         {
             using var response = await _host.WorkerAsync(HttpMethod.Post, $"{basePath}/{path}", job, execution, body);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("calendar.request_invalid", await ProblemCodeAsync(response));
+            Assert.Equal("calendar.request_invalid", await HttpProblem.CodeAsync(response));
         }
 
         using var badLimit = await _host.WorkerAsync(HttpMethod.Get, $"{basePath}/changes?limit=101", job, execution);
@@ -155,7 +155,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
         using (var wrongLink = await _host.WorkerAsync(HttpMethod.Post, $"/internal/worker-executions/calendar/links/{other.Id:D}/session", job, execution))
         {
             Assert.Equal(HttpStatusCode.Conflict, wrongLink.StatusCode);
-            Assert.Equal("calendar.link_unavailable", await ProblemCodeAsync(wrongLink));
+            Assert.Equal("calendar.link_unavailable", await HttpProblem.CodeAsync(wrongLink));
         }
 
         // Paused still lets the in-flight round finish; stopped does not.
@@ -168,7 +168,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
         await ExecuteAsync($"UPDATE calendar_link SET status = 'stopped' WHERE id = '{link.Id}'");
         using var stopped = await _host.WorkerAsync(HttpMethod.Get, $"/internal/worker-executions/calendar/links/{link.Id:D}/changes?limit=10", job, execution);
         Assert.Equal(HttpStatusCode.Conflict, stopped.StatusCode);
-        Assert.Equal("calendar.link_unavailable", await ProblemCodeAsync(stopped));
+        Assert.Equal("calendar.link_unavailable", await HttpProblem.CodeAsync(stopped));
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
             var (job, execution) = await _host.ClaimJobAsync(Alpha, link);
             using var session = await _host.WorkerAsync(HttpMethod.Post, $"/internal/worker-executions/calendar/links/{link.Id:D}/session", job, execution);
             Assert.Equal(HttpStatusCode.Conflict, session.StatusCode);
-            Assert.Equal("calendar.needs_reauth", await ProblemCodeAsync(session));
+            Assert.Equal("calendar.needs_reauth", await HttpProblem.CodeAsync(session));
         }
 
         Assert.Equal("needs_reauth", await TextAsync($"SELECT status FROM calendar_connection WHERE id = '{connection}'"));
@@ -204,7 +204,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
         using (var outage = await _host.WorkerAsync(HttpMethod.Post, path, first, firstExecution))
         {
             Assert.Equal(HttpStatusCode.ServiceUnavailable, outage.StatusCode);
-            Assert.Equal("calendar.provider_unavailable", await ProblemCodeAsync(outage));
+            Assert.Equal("calendar.provider_unavailable", await HttpProblem.CodeAsync(outage));
         }
 
         _host.Provider.RefreshOutcome = "rotate";
@@ -582,7 +582,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
         await LockAsync(folder);
         using var locked = await _host.WorkerAsync(HttpMethod.Get, $"/internal/worker-executions/calendar/links/{link.Id:D}/changes?limit=10", job, execution);
         Assert.Equal(HttpStatusCode.Conflict, locked.StatusCode);
-        Assert.Equal("calendar.link_unavailable", await ProblemCodeAsync(locked));
+        Assert.Equal("calendar.link_unavailable", await HttpProblem.CodeAsync(locked));
     }
 
     [Fact]
@@ -596,7 +596,7 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
         using (var superseded = await _host.WorkerAsync(HttpMethod.Get, path, first, firstExecution))
         {
             Assert.Equal(HttpStatusCode.Conflict, superseded.StatusCode);
-            Assert.Equal("calendar.link_unavailable", await ProblemCodeAsync(superseded));
+            Assert.Equal("calendar.link_unavailable", await HttpProblem.CodeAsync(superseded));
         }
 
         using var current = await _host.WorkerAsync(HttpMethod.Get, path, second, secondExecution);
@@ -1123,12 +1123,6 @@ public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IA
         }
 
         throw new InvalidOperationException($"No Nix.slnx above {AppContext.BaseDirectory}.");
-    }
-
-    private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response)
-    {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
-        return document.RootElement.GetProperty("code").GetString();
     }
 
     private async Task<long> CountAsync(string sql)

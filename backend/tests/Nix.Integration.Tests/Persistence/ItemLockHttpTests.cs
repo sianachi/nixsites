@@ -111,7 +111,7 @@ public sealed class ItemLockHttpTests : IAsyncLifetime
         using (var closed = await InternalAuthzAsync(other))
         {
             Assert.Equal(HttpStatusCode.Forbidden, closed.StatusCode);
-            Assert.Equal("internal.body_locked", await ProblemCodeAsync(closed));
+            Assert.Equal("internal.body_locked", await HttpProblem.CodeAsync(closed));
         }
 
         using (var unlocked = await SendAsync(HttpMethod.Post, $"{ItemPath}/unlock", other, new { password = "hunter22" }))
@@ -133,13 +133,13 @@ public sealed class ItemLockHttpTests : IAsyncLifetime
         using (var tooShort = await SendAsync(HttpMethod.Put, $"{ItemPath}/lock", token, new { password = "abc" }))
         {
             Assert.Equal(HttpStatusCode.BadRequest, tooShort.StatusCode);
-            Assert.Equal("locks.password_invalid", await ProblemCodeAsync(tooShort));
+            Assert.Equal("locks.password_invalid", await HttpProblem.CodeAsync(tooShort));
         }
 
         using (var notLocked = await SendAsync(HttpMethod.Post, $"{ItemPath}/unlock", token, new { password = "hunter22" }))
         {
             Assert.Equal(HttpStatusCode.Conflict, notLocked.StatusCode);
-            Assert.Equal("locks.not_locked", await ProblemCodeAsync(notLocked));
+            Assert.Equal("locks.not_locked", await HttpProblem.CodeAsync(notLocked));
         }
 
         using (var _ = await SendAsync(HttpMethod.Put, $"{ItemPath}/lock", token, new { password = "hunter22" }))
@@ -149,13 +149,13 @@ public sealed class ItemLockHttpTests : IAsyncLifetime
         using (var wrong = await SendAsync(HttpMethod.Post, $"{ItemPath}/lock/remove", token, new { password = "nope!" }))
         {
             Assert.Equal(HttpStatusCode.Forbidden, wrong.StatusCode);
-            Assert.Equal("locks.wrong_password", await ProblemCodeAsync(wrong));
+            Assert.Equal("locks.wrong_password", await HttpProblem.CodeAsync(wrong));
         }
 
         using (var again = await SendAsync(HttpMethod.Put, $"{ItemPath}/lock", token, new { password = "second" }))
         {
             Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
-            Assert.Equal("locks.already_locked", await ProblemCodeAsync(again));
+            Assert.Equal("locks.already_locked", await HttpProblem.CodeAsync(again));
         }
 
         using (var missing = await SendAsync(HttpMethod.Get, $"/api/v1/items/{Guid.NewGuid():D}/lock", token))
@@ -195,7 +195,7 @@ public sealed class ItemLockHttpTests : IAsyncLifetime
         using (var closed = await SendAsync(HttpMethod.Get, childrenPath, other))
         {
             Assert.Equal((HttpStatusCode)423, closed.StatusCode);
-            Assert.Equal("items.locked", await ProblemCodeAsync(closed));
+            Assert.Equal("items.locked", await HttpProblem.CodeAsync(closed));
         }
 
         using (var open = await SendAsync(HttpMethod.Get, childrenPath, mine))
@@ -285,7 +285,7 @@ public sealed class ItemLockHttpTests : IAsyncLifetime
             });
 
         Assert.Equal(HttpStatusCode.Conflict, begin.StatusCode);
-        Assert.Equal("exports.item_locked", await ProblemCodeAsync(begin));
+        Assert.Equal("exports.item_locked", await HttpProblem.CodeAsync(begin));
     }
 
     private async Task<string?> UnlockedUntilAsync(string token)
@@ -340,12 +340,6 @@ public sealed class ItemLockHttpTests : IAsyncLifetime
         }
 
         return await _client.SendAsync(request, Cancellation);
-    }
-
-    private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response)
-    {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
-        return document.RootElement.GetProperty("code").GetString();
     }
 
     private sealed class ConfiguredApplicationFactory(

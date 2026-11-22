@@ -39,14 +39,14 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
             INSERT INTO workspace
                 (workspace_id, tenant_id, name, version_retention_days, coalesce_window_min,
                  storage_quota_bytes, created_at)
-            VALUES ({Literal(OtherWorkspace)}, {Literal(M0SchemaSeed.Alpha.TenantId)},
+            VALUES ({RawSql.Literal(OtherWorkspace)}, {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)},
                     'Other workspace', 30, 10, 1073741824, now());
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({Literal(OtherWorkspace)}, 'principal', {Literal(M0SchemaSeed.Alpha.PrincipalId)},
-                    {Literal(M0SchemaSeed.Alpha.TenantId)}, 'owner',
-                    {Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
+            VALUES ({RawSql.Literal(OtherWorkspace)}, 'principal', {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)},
+                    {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, 'owner',
+                    {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
             """);
     }
 
@@ -202,7 +202,7 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
         Assert.True((await AddAsync(holder, file, v1)).IsSuccess);
 
         var v2 = await AddVersionAsync(file, 2, "draft");
-        await ExecuteAsMigratorAsync($"UPDATE file_body SET current_version_id = {Literal(v2)} WHERE item_id = {Literal(file.Value)}");
+        await ExecuteAsMigratorAsync($"UPDATE file_body SET current_version_id = {RawSql.Literal(v2)} WHERE item_id = {RawSql.Literal(file.Value)}");
 
         var pin = Assert.Single((await ListAsync(holder)).Value.Items);
         Assert.Equal(v1, pin.TargetFileVersionId);
@@ -301,7 +301,7 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
         Assert.True((await DeleteAsync(holder)).IsSuccess);
         Assert.True((await SendAsync<PurgeItem, ItemId>(Locker, new PurgeItem(holder))).IsSuccess);
 
-        Assert.Equal(0, await CountAsync($"SELECT count(*) FROM item_reference WHERE holder_item_id = {Literal(holder.Value)}"));
+        Assert.Equal(0, await CountAsync($"SELECT count(*) FROM item_reference WHERE holder_item_id = {RawSql.Literal(holder.Value)}"));
         var survivor = Assert.Single((await ListAsync(pointer)).Value.Items);
         Assert.False(survivor.TargetAvailable);
     }
@@ -363,7 +363,7 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
     private async Task<(ItemId File, Guid Version)> NewFileAsync(string title, ItemId parent, string state)
     {
         var file = await CreateAsync(title, parent);
-        await ExecuteAsMigratorAsync($"UPDATE item SET type = 'file' WHERE id = {Literal(file.Value)}");
+        await ExecuteAsMigratorAsync($"UPDATE item SET type = 'file' WHERE id = {RawSql.Literal(file.Value)}");
         return (file, await AddVersionAsync(file, 1, state));
     }
 
@@ -374,16 +374,16 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
             INSERT INTO file_version
                 (file_version_id, tenant_id, workspace_id, item_id, version, object_key, file_name,
                  media_type, byte_length, sha256, previewable, created_by, created_at, state)
-            VALUES ({Literal(id)}, {Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(M0SchemaSeed.Alpha.WorkspaceId)},
-                    {Literal(file.Value)}, {number}, 'files/test/{id:N}', 'letter.pdf', 'application/pdf', 4,
+            VALUES ({RawSql.Literal(id)}, {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId)},
+                    {RawSql.Literal(file.Value)}, {number}, 'files/test/{id:N}', 'letter.pdf', 'application/pdf', 4,
                     repeat('{id.ToString("N", CultureInfo.InvariantCulture)[0]}', 63) || '{number}', false,
-                    {Literal(M0SchemaSeed.Alpha.PrincipalId)}, now(), '{state}')
+                    {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)}, now(), '{state}')
             """);
         return id;
     }
 
     private Task SetVersionStateAsync(Guid version, string state) =>
-        ExecuteAsMigratorAsync($"UPDATE file_version SET state = '{state}' WHERE file_version_id = {Literal(version)}");
+        ExecuteAsMigratorAsync($"UPDATE file_version SET state = '{state}' WHERE file_version_id = {RawSql.Literal(version)}");
 
     private Task<Result<ItemReferenceResponse>> AddAsync(
         ItemId holder, ItemId target, Guid? version = null, string? role = null, Guid? credential = null) =>
@@ -437,7 +437,7 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
         var connection = await fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
         {
-            return await RawSql.TextAsync(connection, null, $"SELECT sha256 FROM file_version WHERE file_version_id = {Literal(version)}");
+            return await RawSql.TextAsync(connection, null, $"SELECT sha256 FROM file_version WHERE file_version_id = {RawSql.Literal(version)}");
         }
     }
 
@@ -465,7 +465,4 @@ public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifet
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

@@ -37,17 +37,17 @@ public sealed class ItemSettingsTests(NixPostgresFixture fixture) : IAsyncLifeti
     {
         await fixture.ResetAsync();
         await M0SchemaSeed.SeedBothTenantsAsync(fixture);
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var granter = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var granter = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
         await RunAsync($"""
             INSERT INTO principal (principal_id, tenant_id, external_subject, kind, display_name, email, status, deprovisioned_at)
             VALUES
-                ({Literal(Viewer)}, {tenant}, 's-viewer', 'user', 'Viewer', 'viewer@example.test', 'active', NULL),
-                ({Literal(Editor)}, {tenant}, 's-editor', 'user', 'Editor', 'editor@example.test', 'active', NULL);
+                ({RawSql.Literal(Viewer)}, {tenant}, 's-viewer', 'user', 'Viewer', 'viewer@example.test', 'active', NULL),
+                ({RawSql.Literal(Editor)}, {tenant}, 's-editor', 'user', 'Editor', 'editor@example.test', 'active', NULL);
             INSERT INTO workspace_member (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
             VALUES
-                ({Literal(Workspace.Value)}, 'principal', {Literal(Viewer)}, {tenant}, 'viewer', {granter}, now()),
-                ({Literal(Workspace.Value)}, 'principal', {Literal(Editor)}, {tenant}, 'editor', {granter}, now());
+                ({RawSql.Literal(Workspace.Value)}, 'principal', {RawSql.Literal(Viewer)}, {tenant}, 'viewer', {granter}, now()),
+                ({RawSql.Literal(Workspace.Value)}, 'principal', {RawSql.Literal(Editor)}, {tenant}, 'editor', {granter}, now());
             """);
     }
 
@@ -355,6 +355,4 @@ public sealed class ItemSettingsTests(NixPostgresFixture fixture) : IAsyncLifeti
             await RawSql.ExecuteAsync(connection, null, sql);
         }
     }
-
-    private static string Literal(Guid value) => $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

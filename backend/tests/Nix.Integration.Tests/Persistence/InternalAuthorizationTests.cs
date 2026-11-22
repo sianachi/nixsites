@@ -191,23 +191,23 @@ public sealed class InternalAuthorizationTests : IAsyncLifetime
 
     private async Task SeedPrincipalsAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var granter = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var granter = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
             VALUES
-                ({Literal(Outsider)}, {tenant}, 'alpha-internal-outsider', 'user', 'Outsider',
+                ({RawSql.Literal(Outsider)}, {tenant}, 'alpha-internal-outsider', 'user', 'Outsider',
                  'internal-outsider@example.test', 'active', NULL),
-                ({Literal(Viewer)}, {tenant}, 'alpha-internal-viewer', 'user', 'Viewer',
+                ({RawSql.Literal(Viewer)}, {tenant}, 'alpha-internal-viewer', 'user', 'Viewer',
                  'internal-viewer@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({workspace}, 'principal', {Literal(Viewer)}, {tenant}, 'viewer', {granter}, now());
+            VALUES ({workspace}, 'principal', {RawSql.Literal(Viewer)}, {tenant}, 'viewer', {granter}, now());
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -216,7 +216,4 @@ public sealed class InternalAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

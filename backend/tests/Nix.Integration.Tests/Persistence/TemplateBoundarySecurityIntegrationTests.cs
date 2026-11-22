@@ -172,18 +172,18 @@ public sealed class TemplateBoundarySecurityIntegrationTests : IAsyncLifetime
 
     private async Task SeedTemplateBoundaryAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var template = Literal(M0SchemaSeed.Alpha.TemplateId);
-        var operation = Literal(M0SchemaSeed.Alpha.TemplateOperationId);
-        var application = Literal(M0SchemaSeed.Alpha.TemplateApplicationId);
-        var ordinaryRoot = Literal(M0SchemaSeed.Alpha.ItemId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var template = RawSql.Literal(M0SchemaSeed.Alpha.TemplateId);
+        var operation = RawSql.Literal(M0SchemaSeed.Alpha.TemplateOperationId);
+        var application = RawSql.Literal(M0SchemaSeed.Alpha.TemplateApplicationId);
+        var ordinaryRoot = RawSql.Literal(M0SchemaSeed.Alpha.ItemId);
 
         var sql = $$"""
             UPDATE workspace_template
-               SET root_item_id = {{Literal(HiddenActiveRoot)}},
-                   pending_root_item_id = {{Literal(HiddenProvisioningRoot)}},
+               SET root_item_id = {{RawSql.Literal(HiddenActiveRoot)}},
+                   pending_root_item_id = {{RawSql.Literal(HiddenProvisioningRoot)}},
                    state = 'active'
              WHERE template_id = {{template}};
 
@@ -192,64 +192,64 @@ public sealed class TemplateBoundarySecurityIntegrationTests : IAsyncLifetime
                  template_id, template_source_id, lifecycle_state, purge_after, created_by,
                  last_modified_by, created_at, last_modified_at)
             VALUES
-                ({{Literal(HiddenActiveRoot)}}, {{tenant}}, {{workspace}}, 'note', NULL, 100,
+                ({{RawSql.Literal(HiddenActiveRoot)}}, {{tenant}}, {{workspace}}, 'note', NULL, 100,
                  '{"title":"vaultcanary active calendar"}'::jsonb,
                  '{"views":[{"id":"calendar","kind":"calendar","name":"Calendar","dateProperty":"due"}]}'::jsonb,
-                 {{template}}, {{Literal(ActiveRootSource)}}, 'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(HiddenActiveChild)}}, {{tenant}}, {{workspace}}, 'note',
-                 {{Literal(HiddenActiveRoot)}}, 200,
+                 {{template}}, {{RawSql.Literal(ActiveRootSource)}}, 'active', NULL, {{principal}}, {{principal}}, now(), now()),
+                ({{RawSql.Literal(HiddenActiveChild)}}, {{tenant}}, {{workspace}}, 'note',
+                 {{RawSql.Literal(HiddenActiveRoot)}}, 200,
                  '{"title":"vaultcanary active child","due":"2026-08-16"}'::jsonb, NULL,
-                 {{template}}, {{Literal(ActiveChildSource)}}, 'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(HiddenProvisioningRoot)}}, {{tenant}}, {{workspace}}, 'note', NULL, 300,
+                 {{template}}, {{RawSql.Literal(ActiveChildSource)}}, 'active', NULL, {{principal}}, {{principal}}, now(), now()),
+                ({{RawSql.Literal(HiddenProvisioningRoot)}}, {{tenant}}, {{workspace}}, 'note', NULL, 300,
                  '{"title":"vaultcanary provisioning calendar"}'::jsonb,
                  '{"views":[{"id":"calendar","kind":"calendar","name":"Calendar","dateProperty":"due"}]}'::jsonb,
-                 {{template}}, {{Literal(ProvisioningRootSource)}}, 'provisioning', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(HiddenProvisioningChild)}}, {{tenant}}, {{workspace}}, 'note',
-                 {{Literal(HiddenProvisioningRoot)}}, 400,
+                 {{template}}, {{RawSql.Literal(ProvisioningRootSource)}}, 'provisioning', NULL, {{principal}}, {{principal}}, now(), now()),
+                ({{RawSql.Literal(HiddenProvisioningChild)}}, {{tenant}}, {{workspace}}, 'note',
+                 {{RawSql.Literal(HiddenProvisioningRoot)}}, 400,
                  '{"title":"vaultcanary provisioning child","due":"2026-08-17"}'::jsonb, NULL,
-                 {{template}}, {{Literal(ProvisioningChildSource)}}, 'provisioning', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(ExistingPriorChild)}}, {{tenant}}, {{workspace}}, 'note', {{ordinaryRoot}}, 500,
+                 {{template}}, {{RawSql.Literal(ProvisioningChildSource)}}, 'provisioning', NULL, {{principal}}, {{principal}}, now(), now()),
+                ({{RawSql.Literal(ExistingPriorChild)}}, {{tenant}}, {{workspace}}, 'note', {{ordinaryRoot}}, 500,
                  '{"title":"Existing prior child"}'::jsonb, NULL, NULL, NULL, 'active', NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(ApplicationBodylessTarget)}}, {{tenant}}, {{workspace}}, 'note', {{ordinaryRoot}}, 600,
+                ({{RawSql.Literal(ApplicationBodylessTarget)}}, {{tenant}}, {{workspace}}, 'note', {{ordinaryRoot}}, 600,
                  '{"title":"Application bodyless target"}'::jsonb, NULL, NULL, NULL, 'provisioning', NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(ApplicationBodyTarget)}}, {{tenant}}, {{workspace}}, 'note', {{ordinaryRoot}}, 700,
+                ({{RawSql.Literal(ApplicationBodyTarget)}}, {{tenant}}, {{workspace}}, 'note', {{ordinaryRoot}}, 700,
                  '{"title":"Application body target"}'::jsonb, NULL, NULL, NULL, 'provisioning', NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(OperationBodylessTarget)}}, {{tenant}}, {{workspace}}, 'note', NULL, 800,
+                ({{RawSql.Literal(OperationBodylessTarget)}}, {{tenant}}, {{workspace}}, 'note', NULL, 800,
                  '{"title":"Operation bodyless target"}'::jsonb, NULL, {{template}},
-                 {{Literal(Guid.Parse("a2000000-1111-4111-8111-a20000000008"))}}, 'provisioning', NULL,
+                 {{RawSql.Literal(Guid.Parse("a2000000-1111-4111-8111-a20000000008"))}}, 'provisioning', NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(OperationBodyTarget)}}, {{tenant}}, {{workspace}}, 'note', NULL, 900,
+                ({{RawSql.Literal(OperationBodyTarget)}}, {{tenant}}, {{workspace}}, 'note', NULL, 900,
                  '{"title":"Operation body target"}'::jsonb, NULL, {{template}},
-                 {{Literal(Guid.Parse("a2000000-1111-4111-8111-a20000000009"))}}, 'provisioning', NULL,
+                 {{RawSql.Literal(Guid.Parse("a2000000-1111-4111-8111-a20000000009"))}}, 'provisioning', NULL,
                  {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(OperationActiveTarget)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000,
+                ({{RawSql.Literal(OperationActiveTarget)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000,
                  '{"title":"Operation active target"}'::jsonb, NULL, {{template}},
-                 {{Literal(Guid.Parse("a2000000-1111-4111-8111-a2000000000a"))}}, 'active', NULL,
+                 {{RawSql.Literal(Guid.Parse("a2000000-1111-4111-8111-a2000000000a"))}}, 'active', NULL,
                  {{principal}}, {{principal}}, now(), now());
 
             INSERT INTO item_closure (tenant_id, workspace_id, ancestor_id, descendant_id, depth)
             VALUES
-                ({{tenant}}, {{workspace}}, {{Literal(HiddenActiveRoot)}}, {{Literal(HiddenActiveRoot)}}, 0),
-                ({{tenant}}, {{workspace}}, {{Literal(HiddenActiveChild)}}, {{Literal(HiddenActiveChild)}}, 0),
-                ({{tenant}}, {{workspace}}, {{Literal(HiddenActiveRoot)}}, {{Literal(HiddenActiveChild)}}, 1),
-                ({{tenant}}, {{workspace}}, {{Literal(HiddenProvisioningRoot)}}, {{Literal(HiddenProvisioningRoot)}}, 0),
-                ({{tenant}}, {{workspace}}, {{Literal(HiddenProvisioningChild)}}, {{Literal(HiddenProvisioningChild)}}, 0),
-                ({{tenant}}, {{workspace}}, {{Literal(HiddenProvisioningRoot)}}, {{Literal(HiddenProvisioningChild)}}, 1),
-                ({{tenant}}, {{workspace}}, {{Literal(ExistingPriorChild)}}, {{Literal(ExistingPriorChild)}}, 0),
-                ({{tenant}}, {{workspace}}, {{ordinaryRoot}}, {{Literal(ExistingPriorChild)}}, 1),
-                ({{tenant}}, {{workspace}}, {{Literal(ApplicationBodylessTarget)}}, {{Literal(ApplicationBodylessTarget)}}, 0),
-                ({{tenant}}, {{workspace}}, {{ordinaryRoot}}, {{Literal(ApplicationBodylessTarget)}}, 1),
-                ({{tenant}}, {{workspace}}, {{Literal(ApplicationBodyTarget)}}, {{Literal(ApplicationBodyTarget)}}, 0),
-                ({{tenant}}, {{workspace}}, {{ordinaryRoot}}, {{Literal(ApplicationBodyTarget)}}, 1),
-                ({{tenant}}, {{workspace}}, {{Literal(OperationBodylessTarget)}}, {{Literal(OperationBodylessTarget)}}, 0),
-                ({{tenant}}, {{workspace}}, {{Literal(OperationBodyTarget)}}, {{Literal(OperationBodyTarget)}}, 0),
-                ({{tenant}}, {{workspace}}, {{Literal(OperationActiveTarget)}}, {{Literal(OperationActiveTarget)}}, 0);
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(HiddenActiveRoot)}}, {{RawSql.Literal(HiddenActiveRoot)}}, 0),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(HiddenActiveChild)}}, {{RawSql.Literal(HiddenActiveChild)}}, 0),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(HiddenActiveRoot)}}, {{RawSql.Literal(HiddenActiveChild)}}, 1),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(HiddenProvisioningRoot)}}, {{RawSql.Literal(HiddenProvisioningRoot)}}, 0),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(HiddenProvisioningChild)}}, {{RawSql.Literal(HiddenProvisioningChild)}}, 0),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(HiddenProvisioningRoot)}}, {{RawSql.Literal(HiddenProvisioningChild)}}, 1),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(ExistingPriorChild)}}, {{RawSql.Literal(ExistingPriorChild)}}, 0),
+                ({{tenant}}, {{workspace}}, {{ordinaryRoot}}, {{RawSql.Literal(ExistingPriorChild)}}, 1),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(ApplicationBodylessTarget)}}, {{RawSql.Literal(ApplicationBodylessTarget)}}, 0),
+                ({{tenant}}, {{workspace}}, {{ordinaryRoot}}, {{RawSql.Literal(ApplicationBodylessTarget)}}, 1),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(ApplicationBodyTarget)}}, {{RawSql.Literal(ApplicationBodyTarget)}}, 0),
+                ({{tenant}}, {{workspace}}, {{ordinaryRoot}}, {{RawSql.Literal(ApplicationBodyTarget)}}, 1),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(OperationBodylessTarget)}}, {{RawSql.Literal(OperationBodylessTarget)}}, 0),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(OperationBodyTarget)}}, {{RawSql.Literal(OperationBodyTarget)}}, 0),
+                ({{tenant}}, {{workspace}}, {{RawSql.Literal(OperationActiveTarget)}}, {{RawSql.Literal(OperationActiveTarget)}}, 0);
 
             UPDATE template_application_item
-               SET source_item_id = {{Literal(HiddenActiveRoot)}},
+               SET source_item_id = {{RawSql.Literal(HiddenActiveRoot)}},
                    item_type = 'note',
                    body_required = true
              WHERE application_id = {{application}};
@@ -258,16 +258,16 @@ public sealed class TemplateBoundarySecurityIntegrationTests : IAsyncLifetime
                 (application_id, template_source_id, tenant_id, source_item_id, item_type,
                  target_item_id, is_root, created, body_required)
             VALUES
-                ({{application}}, {{Literal(ActiveChildSource)}}, {{tenant}}, {{Literal(HiddenActiveChild)}},
-                 'note', {{Literal(ExistingPriorChild)}}, false, false, true),
-                ({{application}}, {{Literal(ProvisioningRootSource)}}, {{tenant}}, {{Literal(HiddenProvisioningRoot)}},
-                 'note', {{Literal(ApplicationBodylessTarget)}}, false, true, false),
-                ({{application}}, {{Literal(ProvisioningChildSource)}}, {{tenant}}, {{Literal(HiddenProvisioningChild)}},
-                 'note', {{Literal(ApplicationBodyTarget)}}, false, true, true);
+                ({{application}}, {{RawSql.Literal(ActiveChildSource)}}, {{tenant}}, {{RawSql.Literal(HiddenActiveChild)}},
+                 'note', {{RawSql.Literal(ExistingPriorChild)}}, false, false, true),
+                ({{application}}, {{RawSql.Literal(ProvisioningRootSource)}}, {{tenant}}, {{RawSql.Literal(HiddenProvisioningRoot)}},
+                 'note', {{RawSql.Literal(ApplicationBodylessTarget)}}, false, true, false),
+                ({{application}}, {{RawSql.Literal(ProvisioningChildSource)}}, {{tenant}}, {{RawSql.Literal(HiddenProvisioningChild)}},
+                 'note', {{RawSql.Literal(ApplicationBodyTarget)}}, false, true, true);
 
             UPDATE template_operation_item
-               SET source_item_id = {{Literal(HiddenActiveRoot)}},
-                   target_item_id = {{Literal(OperationBodyTarget)}},
+               SET source_item_id = {{RawSql.Literal(HiddenActiveRoot)}},
+                   target_item_id = {{RawSql.Literal(OperationBodyTarget)}},
                    item_type = 'note',
                    body_required = true
              WHERE operation_id = {{operation}};
@@ -276,22 +276,22 @@ public sealed class TemplateBoundarySecurityIntegrationTests : IAsyncLifetime
                 (operation_id, template_source_id, tenant_id, source_item_id, target_item_id,
                  item_type, body_required)
             VALUES
-                ({{operation}}, {{Literal(ActiveChildSource)}}, {{tenant}}, {{Literal(HiddenActiveChild)}},
-                 {{Literal(OperationBodylessTarget)}}, 'note', false),
-                ({{operation}}, {{Literal(ProvisioningRootSource)}}, {{tenant}}, {{Literal(HiddenProvisioningRoot)}},
-                 {{Literal(OperationActiveTarget)}}, 'note', true);
+                ({{operation}}, {{RawSql.Literal(ActiveChildSource)}}, {{tenant}}, {{RawSql.Literal(HiddenActiveChild)}},
+                 {{RawSql.Literal(OperationBodylessTarget)}}, 'note', false),
+                ({{operation}}, {{RawSql.Literal(ProvisioningRootSource)}}, {{tenant}}, {{RawSql.Literal(HiddenProvisioningRoot)}},
+                 {{RawSql.Literal(OperationActiveTarget)}}, 'note', true);
 
             INSERT INTO item_search (tenant_id, item_id, seq, updated_at, body_vector)
             VALUES
-                ({{tenant}}, {{Literal(HiddenActiveRoot)}}, 1, now(), to_tsvector('english', 'vaultcanary active root')),
-                ({{tenant}}, {{Literal(HiddenActiveChild)}}, 1, now(), to_tsvector('english', 'vaultcanary active child')),
-                ({{tenant}}, {{Literal(HiddenProvisioningRoot)}}, 1, now(), to_tsvector('english', 'vaultcanary provisioning root')),
-                ({{tenant}}, {{Literal(HiddenProvisioningChild)}}, 1, now(), to_tsvector('english', 'vaultcanary provisioning child'));
+                ({{tenant}}, {{RawSql.Literal(HiddenActiveRoot)}}, 1, now(), to_tsvector('english', 'vaultcanary active root')),
+                ({{tenant}}, {{RawSql.Literal(HiddenActiveChild)}}, 1, now(), to_tsvector('english', 'vaultcanary active child')),
+                ({{tenant}}, {{RawSql.Literal(HiddenProvisioningRoot)}}, 1, now(), to_tsvector('english', 'vaultcanary provisioning root')),
+                ({{tenant}}, {{RawSql.Literal(HiddenProvisioningChild)}}, 1, now(), to_tsvector('english', 'vaultcanary provisioning child'));
 
             INSERT INTO item_link (tenant_id, source_item_id, target_item_id, occurrences, seq)
             VALUES
-                ({{tenant}}, {{Literal(HiddenActiveRoot)}}, {{Literal(HiddenActiveChild)}}, 1, 1),
-                ({{tenant}}, {{Literal(HiddenProvisioningRoot)}}, {{Literal(HiddenProvisioningChild)}}, 1, 1);
+                ({{tenant}}, {{RawSql.Literal(HiddenActiveRoot)}}, {{RawSql.Literal(HiddenActiveChild)}}, 1, 1),
+                ({{tenant}}, {{RawSql.Literal(HiddenProvisioningRoot)}}, {{RawSql.Literal(HiddenProvisioningChild)}}, 1, 1);
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -300,7 +300,4 @@ public sealed class TemplateBoundarySecurityIntegrationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

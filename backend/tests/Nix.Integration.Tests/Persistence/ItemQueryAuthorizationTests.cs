@@ -283,24 +283,24 @@ public sealed class ItemQueryAuthorizationTests : IAsyncLifetime
 
     private async Task SeedQueryCorpusAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var beta = Literal(M0SchemaSeed.Beta.TenantId);
-        var openWorkspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var betaWorkspace = Literal(M0SchemaSeed.Beta.WorkspaceId);
-        var closedWorkspace = Literal(PrivateWorkspace);
-        var principal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var betaPrincipal = Literal(M0SchemaSeed.Beta.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var beta = RawSql.Literal(M0SchemaSeed.Beta.TenantId);
+        var openWorkspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var betaWorkspace = RawSql.Literal(M0SchemaSeed.Beta.WorkspaceId);
+        var closedWorkspace = RawSql.Literal(PrivateWorkspace);
+        var principal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var betaPrincipal = RawSql.Literal(M0SchemaSeed.Beta.PrincipalId);
 
         var sql = $$"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
-            VALUES ({{Literal(Member)}}, {{tenant}}, 'alpha-query-member', 'user', 'Member',
+            VALUES ({{RawSql.Literal(Member)}}, {{tenant}}, 'alpha-query-member', 'user', 'Member',
                     'query-member@example.test', 'active', NULL);
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({{openWorkspace}}, 'principal', {{Literal(Member)}}, {{tenant}}, 'viewer',
+            VALUES ({{openWorkspace}}, 'principal', {{RawSql.Literal(Member)}}, {{tenant}}, 'viewer',
                     {{principal}}, now());
 
             INSERT INTO workspace
@@ -313,70 +313,70 @@ public sealed class ItemQueryAuthorizationTests : IAsyncLifetime
                  lifecycle_state, purge_after, created_by, last_modified_by, created_at,
                  last_modified_at)
             VALUES
-                ({{Literal(SmartList)}}, {{tenant}}, {{openWorkspace}}, 'query', NULL, 1000,
+                ({{RawSql.Literal(SmartList)}}, {{tenant}}, {{openWorkspace}}, 'query', NULL, 1000,
                  '{"title": "Overdue things", "due": "2026-01-01"}'::jsonb,
                  '{"views":[{"id":"overdue","name":"Overdue","kind":"query","sortDescending":false,
                    "filters":[{"property":"due","operator":"before","value":"today"},
                               {"property":"done","operator":"not-equals","value":"true"}]}],
                    "default":"overdue"}'::jsonb,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(Tracker)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 2000,
+                ({{RawSql.Literal(Tracker)}}, {{tenant}}, {{openWorkspace}}, 'note', NULL, 2000,
                  '{"title": "Tracker"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(Overdue)}}, {{tenant}}, {{openWorkspace}}, 'note', {{Literal(Tracker)}},
+                ({{RawSql.Literal(Overdue)}}, {{tenant}}, {{openWorkspace}}, 'note', {{RawSql.Literal(Tracker)}},
                  3000, '{"title": "Water plants", "due": "2026-08-10"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(DoneOverdue)}}, {{tenant}}, {{openWorkspace}}, 'note',
-                 {{Literal(Tracker)}}, 4000,
+                ({{RawSql.Literal(DoneOverdue)}}, {{tenant}}, {{openWorkspace}}, 'note',
+                 {{RawSql.Literal(Tracker)}}, 4000,
                  '{"title": "Ship invoice", "due": "2026-08-01", "done": true}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(Future)}}, {{tenant}}, {{openWorkspace}}, 'note', {{Literal(Tracker)}},
+                ({{RawSql.Literal(Future)}}, {{tenant}}, {{openWorkspace}}, 'note', {{RawSql.Literal(Tracker)}},
                  5000, '{"title": "Order filament", "due": "2026-08-20"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(DueToday)}}, {{tenant}}, {{openWorkspace}}, 'note', {{Literal(Tracker)}},
+                ({{RawSql.Literal(DueToday)}}, {{tenant}}, {{openWorkspace}}, 'note', {{RawSql.Literal(Tracker)}},
                  6000, '{"title": "Stand-up notes", "due": "2026-08-15"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(ZonedOverdue)}}, {{tenant}}, {{openWorkspace}}, 'note',
-                 {{Literal(Tracker)}}, 7000,
+                ({{RawSql.Literal(ZonedOverdue)}}, {{tenant}}, {{openWorkspace}}, 'note',
+                 {{RawSql.Literal(Tracker)}}, 7000,
                  '{"title": "Zoned call", "due": "2026-08-10T09:00:00+00:00[Europe/London]"}'::jsonb,
                  NULL, 'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(WindowEdge)}}, {{tenant}}, {{openWorkspace}}, 'note',
-                 {{Literal(Tracker)}}, 8000,
+                ({{RawSql.Literal(WindowEdge)}}, {{tenant}}, {{openWorkspace}}, 'note',
+                 {{RawSql.Literal(Tracker)}}, 8000,
                  '{"title": "Window edge", "due": "2026-08-22"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(PastWindow)}}, {{tenant}}, {{openWorkspace}}, 'note',
-                 {{Literal(Tracker)}}, 9000,
+                ({{RawSql.Literal(PastWindow)}}, {{tenant}}, {{openWorkspace}}, 'note',
+                 {{RawSql.Literal(Tracker)}}, 9000,
                  '{"title": "Past window", "due": "2026-08-23"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(DeletedOverdue)}}, {{tenant}}, {{openWorkspace}}, 'note',
-                 {{Literal(Tracker)}}, 10000,
+                ({{RawSql.Literal(DeletedOverdue)}}, {{tenant}}, {{openWorkspace}}, 'note',
+                 {{RawSql.Literal(Tracker)}}, 10000,
                  '{"title": "Old chore", "due": "2026-08-02"}'::jsonb, NULL,
                  'deleted', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(PrivateA)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 11000,
+                ({{RawSql.Literal(PrivateA)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 11000,
                  '{"title": "Private a", "due": "2026-08-01"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(PrivateB)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 12000,
+                ({{RawSql.Literal(PrivateB)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 12000,
                  '{"title": "Private b", "due": "2026-08-02"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(PrivateC)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 13000,
+                ({{RawSql.Literal(PrivateC)}}, {{tenant}}, {{closedWorkspace}}, 'note', NULL, 13000,
                  '{"title": "Private c", "due": "2026-08-03"}'::jsonb, NULL,
                  'active', NULL, {{principal}}, {{principal}}, now(), now()),
-                ({{Literal(BetaOverdue)}}, {{beta}}, {{betaWorkspace}}, 'note', NULL, 14000,
+                ({{RawSql.Literal(BetaOverdue)}}, {{beta}}, {{betaWorkspace}}, 'note', NULL, 14000,
                  '{"title": "Beta overdue", "due": "2026-08-01"}'::jsonb, NULL,
                  'active', NULL, {{betaPrincipal}}, {{betaPrincipal}}, now(), now());
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
             SELECT id, id, tenant_id, workspace_id, 0 FROM item
-             WHERE id IN ({{Literal(SmartList)}}, {{Literal(Tracker)}}, {{Literal(Overdue)}},
-                          {{Literal(DoneOverdue)}}, {{Literal(Future)}}, {{Literal(DueToday)}},
-                          {{Literal(ZonedOverdue)}}, {{Literal(WindowEdge)}},
-                          {{Literal(PastWindow)}}, {{Literal(DeletedOverdue)}},
-                          {{Literal(PrivateA)}}, {{Literal(PrivateB)}}, {{Literal(PrivateC)}},
-                          {{Literal(BetaOverdue)}});
+             WHERE id IN ({{RawSql.Literal(SmartList)}}, {{RawSql.Literal(Tracker)}}, {{RawSql.Literal(Overdue)}},
+                          {{RawSql.Literal(DoneOverdue)}}, {{RawSql.Literal(Future)}}, {{RawSql.Literal(DueToday)}},
+                          {{RawSql.Literal(ZonedOverdue)}}, {{RawSql.Literal(WindowEdge)}},
+                          {{RawSql.Literal(PastWindow)}}, {{RawSql.Literal(DeletedOverdue)}},
+                          {{RawSql.Literal(PrivateA)}}, {{RawSql.Literal(PrivateB)}}, {{RawSql.Literal(PrivateC)}},
+                          {{RawSql.Literal(BetaOverdue)}});
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT id, {{Literal(Tracker)}}, tenant_id, workspace_id, 1 FROM item
-             WHERE parent_id = {{Literal(Tracker)}};
+            SELECT id, {{RawSql.Literal(Tracker)}}, tenant_id, workspace_id, 1 FROM item
+             WHERE parent_id = {{RawSql.Literal(Tracker)}};
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -396,23 +396,20 @@ public sealed class ItemQueryAuthorizationTests : IAsyncLifetime
                 transaction: null,
                 $$"""
                   DELETE FROM item_closure
-                   WHERE descendant_id = {{Literal(itemId)}}
+                   WHERE descendant_id = {{RawSql.Literal(itemId)}}
                      AND depth > 0;
 
                   UPDATE item
-                     SET parent_id = {{Literal(deletedAncestorId)}}
-                   WHERE id = {{Literal(itemId)}};
+                     SET parent_id = {{RawSql.Literal(deletedAncestorId)}}
+                   WHERE id = {{RawSql.Literal(itemId)}};
 
                   INSERT INTO item_closure
                       (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
                   VALUES
-                      ({{Literal(itemId)}}, {{Literal(deletedAncestorId)}},
-                       {{Literal(M0SchemaSeed.Alpha.TenantId)}},
-                       {{Literal(M0SchemaSeed.Alpha.WorkspaceId)}}, 1);
+                      ({{RawSql.Literal(itemId)}}, {{RawSql.Literal(deletedAncestorId)}},
+                       {{RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}},
+                       {{RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId)}}, 1);
                   """);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

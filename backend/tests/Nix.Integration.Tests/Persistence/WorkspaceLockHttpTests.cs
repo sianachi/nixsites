@@ -122,7 +122,7 @@ public sealed class WorkspaceLockHttpTests : IAsyncLifetime
         using (var wrong = await SendAsync(HttpMethod.Post, $"/api/v1/workspaces/{Vault:D}/unlock", first, new { password = "nope nope" }))
         {
             Assert.Equal(HttpStatusCode.Forbidden, wrong.StatusCode);
-            Assert.Equal("workspaces.wrong_password", await ProblemCodeAsync(wrong));
+            Assert.Equal("workspaces.wrong_password", await HttpProblem.CodeAsync(wrong));
         }
 
         using (var unlocked = await SendAsync(HttpMethod.Post, $"/api/v1/workspaces/{Vault:D}/unlock", first, new { password = Password }))
@@ -192,7 +192,7 @@ public sealed class WorkspaceLockHttpTests : IAsyncLifetime
         using (var tooShort = await SendAsync(HttpMethod.Put, $"/api/v1/workspaces/{Vault:D}/password", owner, new { password = "abc" }))
         {
             Assert.Equal(HttpStatusCode.BadRequest, tooShort.StatusCode);
-            Assert.Equal("workspaces.password_invalid", await ProblemCodeAsync(tooShort));
+            Assert.Equal("workspaces.password_invalid", await HttpProblem.CodeAsync(tooShort));
         }
 
         await SetPasswordAsync(owner, Vault);
@@ -200,7 +200,7 @@ public sealed class WorkspaceLockHttpTests : IAsyncLifetime
         using (var noCurrent = await SendAsync(HttpMethod.Put, $"/api/v1/workspaces/{Vault:D}/password", owner, new { password = "something else" }))
         {
             Assert.Equal(HttpStatusCode.Conflict, noCurrent.StatusCode);
-            Assert.Equal("workspaces.password_exists", await ProblemCodeAsync(noCurrent));
+            Assert.Equal("workspaces.password_exists", await HttpProblem.CodeAsync(noCurrent));
         }
 
         using (var wrongCurrent = await SendAsync(
@@ -219,7 +219,7 @@ public sealed class WorkspaceLockHttpTests : IAsyncLifetime
             HttpMethod.Post, $"/api/v1/workspaces/{Plain:D}/password/remove", owner, new { password = Password }))
         {
             Assert.Equal(HttpStatusCode.Conflict, notSet.StatusCode);
-            Assert.Equal("workspaces.password_not_set", await ProblemCodeAsync(notSet));
+            Assert.Equal("workspaces.password_not_set", await HttpProblem.CodeAsync(notSet));
         }
     }
 
@@ -330,7 +330,7 @@ public sealed class WorkspaceLockHttpTests : IAsyncLifetime
                 last = response.StatusCode;
                 if (last == HttpStatusCode.TooManyRequests)
                 {
-                    Assert.Equal("workspaces.too_many_attempts", await ProblemCodeAsync(response));
+                    Assert.Equal("workspaces.too_many_attempts", await HttpProblem.CodeAsync(response));
                     break;
                 }
             }
@@ -388,7 +388,7 @@ public sealed class WorkspaceLockHttpTests : IAsyncLifetime
         using (var seven = await SendAsync(HttpMethod.Put, $"/api/v1/workspaces/{Vault:D}/password", owner, new { password = "1234567" }))
         {
             Assert.Equal(HttpStatusCode.BadRequest, seven.StatusCode);
-            Assert.Equal("workspaces.password_invalid", await ProblemCodeAsync(seven));
+            Assert.Equal("workspaces.password_invalid", await HttpProblem.CodeAsync(seven));
         }
 
         await SetPasswordAsync(owner, Vault);
@@ -558,7 +558,7 @@ public sealed class WorkspaceLockHttpTests : IAsyncLifetime
         if (member)
         {
             Assert.Equal(HttpStatusCode.Forbidden, authorize.StatusCode);
-            Assert.Equal("internal.workspace_locked", await ProblemCodeAsync(authorize));
+            Assert.Equal("internal.workspace_locked", await HttpProblem.CodeAsync(authorize));
         }
         else
         {
@@ -646,12 +646,6 @@ public sealed class WorkspaceLockHttpTests : IAsyncLifetime
         }
 
         return await _client.SendAsync(request, Cancellation);
-    }
-
-    private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response)
-    {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
-        return document.RootElement.GetProperty("code").GetString();
     }
 
     private async Task<string?> RoleOfAsync(Guid principal)

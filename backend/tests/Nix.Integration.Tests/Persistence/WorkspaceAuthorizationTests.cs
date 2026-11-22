@@ -224,9 +224,9 @@ public sealed class WorkspaceAuthorizationTests : IAsyncLifetime
                     INSERT INTO workspace_member
                         (workspace_id, subject_type, subject_id, tenant_id, role,
                          granted_by, granted_at)
-                    VALUES ({Literal(M0SchemaSeed.Alpha.WorkspaceId)}, 'principal',
-                            {Literal(FutureRoleHolder)}, {Literal(M0SchemaSeed.Alpha.TenantId)},
-                            'archivist', {Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
+                    VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId)}, 'principal',
+                            {RawSql.Literal(FutureRoleHolder)}, {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)},
+                            'archivist', {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
                     """));
             Assert.Equal(PostgresErrorCodes.CheckViolation, failure.SqlState);
         }
@@ -262,41 +262,41 @@ public sealed class WorkspaceAuthorizationTests : IAsyncLifetime
 
     private async Task SeedPrincipalsAsync()
     {
-        var tenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var workspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var granter = Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var granter = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
         var sql = $"""
             INSERT INTO principal
                 (principal_id, tenant_id, external_subject, kind, display_name, email, status,
                  deprovisioned_at)
             VALUES
-                ({Literal(Outsider)}, {tenant}, 'alpha-outsider', 'user', 'Outsider',
+                ({RawSql.Literal(Outsider)}, {tenant}, 'alpha-outsider', 'user', 'Outsider',
                  'outsider@example.test', 'active', NULL),
-                ({Literal(Viewer)}, {tenant}, 'alpha-viewer', 'user', 'Viewer',
+                ({RawSql.Literal(Viewer)}, {tenant}, 'alpha-viewer', 'user', 'Viewer',
                  'viewer@example.test', 'active', NULL),
-                ({Literal(GroupMember)}, {tenant}, 'alpha-group-member', 'user', 'Group member',
+                ({RawSql.Literal(GroupMember)}, {tenant}, 'alpha-group-member', 'user', 'Group member',
                  'grouped@example.test', 'active', NULL),
-                ({Literal(Administrator)}, {tenant}, 'alpha-administrator', 'user', 'Administrator',
+                ({RawSql.Literal(Administrator)}, {tenant}, 'alpha-administrator', 'user', 'Administrator',
                  'administrator@example.test', 'active', NULL),
-                ({Literal(FutureRoleHolder)}, {tenant}, 'alpha-future-role', 'user', 'Future role',
+                ({RawSql.Literal(FutureRoleHolder)}, {tenant}, 'alpha-future-role', 'user', 'Future role',
                  'future@example.test', 'active', NULL);
 
             INSERT INTO principal_group (group_id, tenant_id, name, external_id)
-            VALUES ({Literal(EditorGroup)}, {tenant}, 'Alpha editors', 'alpha-editors');
+            VALUES ({RawSql.Literal(EditorGroup)}, {tenant}, 'Alpha editors', 'alpha-editors');
 
             INSERT INTO group_membership (group_id, principal_id, tenant_id, source)
-            VALUES ({Literal(EditorGroup)}, {Literal(GroupMember)}, {tenant}, 'directory');
+            VALUES ({RawSql.Literal(EditorGroup)}, {RawSql.Literal(GroupMember)}, {tenant}, 'directory');
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
             VALUES
-                ({workspace}, 'principal', {Literal(Viewer)}, {tenant}, 'viewer', {granter}, now()),
-                ({workspace}, 'group', {Literal(EditorGroup)}, {tenant}, 'editor', {granter}, now());
+                ({workspace}, 'principal', {RawSql.Literal(Viewer)}, {tenant}, 'viewer', {granter}, now()),
+                ({workspace}, 'group', {RawSql.Literal(EditorGroup)}, {tenant}, 'editor', {granter}, now());
 
             INSERT INTO tenant_role
                 (tenant_id, subject_type, subject_id, role, granted_by, granted_at)
-            VALUES ({tenant}, 'principal', {Literal(Administrator)}, 'admin', {granter}, now());
+            VALUES ({tenant}, 'principal', {RawSql.Literal(Administrator)}, 'admin', {granter}, now());
             """;
 
         var connection = await _fixture.OpenMigratorConnectionAsync();
@@ -305,7 +305,4 @@ public sealed class WorkspaceAuthorizationTests : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

@@ -125,7 +125,7 @@ public sealed class ItemLockTests(NixPostgresFixture fixture) : IAsyncLifetime
     {
         await LockAsync(Locker, "hunter22");
         await ExecuteAsMigratorAsync(
-            $"UPDATE item_unlock SET expires_at = now() - interval '1 second' WHERE credential_id = {Literal(Locker)}");
+            $"UPDATE item_unlock SET expires_at = now() - interval '1 second' WHERE credential_id = {RawSql.Literal(Locker)}");
 
         Assert.Null((await StateAsync(Locker)).UnlockedUntil);
         Assert.True((await AuthorizeAsync(Locker)).IsFailure);
@@ -389,7 +389,7 @@ public sealed class ItemLockTests(NixPostgresFixture fixture) : IAsyncLifetime
     public async Task A_template_owned_item_cannot_be_locked()
     {
         await ExecuteAsMigratorAsync(
-            $"UPDATE item SET template_id = (SELECT template_id FROM workspace_template WHERE tenant_id = {Literal(M0SchemaSeed.Alpha.TenantId)} LIMIT 1), template_source_id = gen_random_uuid() WHERE id = {Literal(M0SchemaSeed.Alpha.ItemId)}");
+            $"UPDATE item SET template_id = (SELECT template_id FROM workspace_template WHERE tenant_id = {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)} LIMIT 1), template_source_id = gen_random_uuid() WHERE id = {RawSql.Literal(M0SchemaSeed.Alpha.ItemId)}");
 
         var refused = await LockAsync(Locker, "hunter22");
 
@@ -488,7 +488,4 @@ public sealed class ItemLockTests(NixPostgresFixture fixture) : IAsyncLifetime
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

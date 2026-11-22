@@ -197,26 +197,26 @@ public sealed class BulkItemVisibilityPlanEvidenceTests : IAsyncLifetime
 
     private async Task SeedCorpusAsync()
     {
-        var alphaTenant = Literal(M0SchemaSeed.Alpha.TenantId);
-        var alphaWorkspace = Literal(M0SchemaSeed.Alpha.WorkspaceId);
-        var alphaPrincipal = Literal(M0SchemaSeed.Alpha.PrincipalId);
-        var betaTenant = Literal(M0SchemaSeed.Beta.TenantId);
-        var betaWorkspace = Literal(M0SchemaSeed.Beta.WorkspaceId);
-        var betaPrincipal = Literal(M0SchemaSeed.Beta.PrincipalId);
+        var alphaTenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var alphaWorkspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var alphaPrincipal = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var betaTenant = RawSql.Literal(M0SchemaSeed.Beta.TenantId);
+        var betaWorkspace = RawSql.Literal(M0SchemaSeed.Beta.WorkspaceId);
+        var betaPrincipal = RawSql.Literal(M0SchemaSeed.Beta.PrincipalId);
 
         var sql = $$"""
             INSERT INTO item
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state,
                  purge_after, created_by, last_modified_by, created_at, last_modified_at)
             VALUES
-                ({{Literal(Root)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note', NULL, 599999,
+                ({{RawSql.Literal(Root)}}, {{alphaTenant}}, {{alphaWorkspace}}, 'note', NULL, 599999,
                  '{"title":"Visibility root"}'::jsonb, 'active', NULL, {{alphaPrincipal}},
                  {{alphaPrincipal}}, now(), now());
 
             INSERT INTO item
                 (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state,
                  purge_after, created_by, last_modified_by, created_at, last_modified_at)
-            SELECT gen_random_uuid(), {{alphaTenant}}, {{alphaWorkspace}}, 'note', {{Literal(Root)}},
+            SELECT gen_random_uuid(), {{alphaTenant}}, {{alphaWorkspace}}, 'note', {{RawSql.Literal(Root)}},
                    600000 + n,
                    jsonb_build_object(
                        'title', CASE WHEN n <= 32
@@ -239,7 +239,7 @@ public sealed class BulkItemVisibilityPlanEvidenceTests : IAsyncLifetime
             WHERE seq >= 599999;
 
             INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
-            SELECT id, {{Literal(Root)}}, tenant_id, workspace_id, 1
+            SELECT id, {{RawSql.Literal(Root)}}, tenant_id, workspace_id, 1
             FROM item
             WHERE tenant_id = {{alphaTenant}} AND seq >= 600001;
 
@@ -256,8 +256,8 @@ public sealed class BulkItemVisibilityPlanEvidenceTests : IAsyncLifetime
             INSERT INTO item_link (tenant_id, source_item_id, target_item_id, occurrences, seq)
             SELECT tenant_id, id,
                    CASE WHEN seq <= 600100
-                        THEN {{Literal(M0SchemaSeed.Alpha.ItemId)}}
-                        ELSE {{Literal(Root)}} END,
+                        THEN {{RawSql.Literal(M0SchemaSeed.Alpha.ItemId)}}
+                        ELSE {{RawSql.Literal(Root)}} END,
                    1, 1
             FROM item
             WHERE tenant_id = {{alphaTenant}} AND seq >= 600001;
@@ -338,7 +338,4 @@ public sealed class BulkItemVisibilityPlanEvidenceTests : IAsyncLifetime
 
     private static NpgsqlParameter Integer(string name, int value) =>
         new(name, NpgsqlDbType.Integer) { Value = value };
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

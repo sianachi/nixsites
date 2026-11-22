@@ -172,7 +172,7 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
             $$"""
             UPDATE item
                SET views = '{"views":[{"id":"cal","name":"Calendar","kind":"calendar","dateProperty":"due_date"}]}'::jsonb
-             WHERE id = {{Literal(M0SchemaSeed.Alpha.ItemId)}}
+             WHERE id = {{RawSql.Literal(M0SchemaSeed.Alpha.ItemId)}}
             """);
         var dated = await CreateAsync("Dentist", Folder, new JsonObject { ["due_date"] = "2026-09-24" });
         await LockAsync(Locker, Folder, "hunter22");
@@ -256,14 +256,14 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
             INSERT INTO workspace
                 (workspace_id, tenant_id, name, version_retention_days, coalesce_window_min,
                  storage_quota_bytes, created_at)
-            VALUES ({Literal(OtherWorkspace)}, {Literal(M0SchemaSeed.Alpha.TenantId)},
+            VALUES ({RawSql.Literal(OtherWorkspace)}, {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)},
                     'Other workspace', 30, 10, 1073741824, now());
 
             INSERT INTO workspace_member
                 (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
-            VALUES ({Literal(OtherWorkspace)}, 'principal', {Literal(M0SchemaSeed.Alpha.PrincipalId)},
-                    {Literal(M0SchemaSeed.Alpha.TenantId)}, 'owner',
-                    {Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
+            VALUES ({RawSql.Literal(OtherWorkspace)}, 'principal', {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)},
+                    {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, 'owner',
+                    {RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId)}, now());
             """);
 
         var work = await BeginAsync(Locker);
@@ -289,7 +289,7 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
         await LockAsync(Locker, Folder, "hunter22");
         await ExecuteAsMigratorAsync($"""
             UPDATE item SET lifecycle_state = 'deleted'
-            WHERE id = {Literal(Folder.Value)}
+            WHERE id = {RawSql.Literal(Folder.Value)}
             """);
 
         var work = await BeginAsync(Locker);
@@ -395,7 +395,7 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
         await ExecuteAsMigratorAsync(
             $"""
             INSERT INTO item_search (tenant_id, item_id, seq, updated_at, body_vector, body_text)
-            VALUES ({Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(child.Value)}, 1, now(),
+            VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(child.Value)}, 1, now(),
                     to_tsvector('english', 'secret words'), 'secret words')
             """);
 
@@ -533,7 +533,7 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
             return await RawSql.TextAsync(
                 connection,
                 transaction: null,
-                $"SELECT body_text FROM nix_read_search_index_body({Literal(M0SchemaSeed.Alpha.TenantId)}, {Literal(item.Value)})");
+                $"SELECT body_text FROM nix_read_search_index_body({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(item.Value)})");
         }
     }
 
@@ -556,7 +556,4 @@ public sealed class ItemLockSubtreeTests(NixPostgresFixture fixture) : IAsyncLif
             await RawSql.ExecuteAsync(connection, transaction: null, sql);
         }
     }
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

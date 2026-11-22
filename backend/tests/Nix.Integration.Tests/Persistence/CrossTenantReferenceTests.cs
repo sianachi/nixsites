@@ -105,23 +105,23 @@ public sealed class CrossTenantReferenceTests : IAsyncLifetime
         },
     };
 
-    private static string Alpha => Literal(M0SchemaSeed.Alpha.TenantId);
+    private static string Alpha => RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
 
-    private static string AlphaWorkspace => Literal(M0SchemaSeed.Alpha.WorkspaceId);
+    private static string AlphaWorkspace => RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
 
-    private static string AlphaPrincipal => Literal(M0SchemaSeed.Alpha.PrincipalId);
+    private static string AlphaPrincipal => RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
 
-    private static string AlphaGroup => Literal(M0SchemaSeed.Alpha.GroupId);
+    private static string AlphaGroup => RawSql.Literal(M0SchemaSeed.Alpha.GroupId);
 
-    private static string AlphaItem => Literal(M0SchemaSeed.Alpha.ItemId);
+    private static string AlphaItem => RawSql.Literal(M0SchemaSeed.Alpha.ItemId);
 
-    private static string BetaWorkspace => Literal(M0SchemaSeed.Beta.WorkspaceId);
+    private static string BetaWorkspace => RawSql.Literal(M0SchemaSeed.Beta.WorkspaceId);
 
-    private static string BetaPrincipal => Literal(M0SchemaSeed.Beta.PrincipalId);
+    private static string BetaPrincipal => RawSql.Literal(M0SchemaSeed.Beta.PrincipalId);
 
-    private static string BetaGroup => Literal(M0SchemaSeed.Beta.GroupId);
+    private static string BetaGroup => RawSql.Literal(M0SchemaSeed.Beta.GroupId);
 
-    private static string BetaItem => Literal(M0SchemaSeed.Beta.ItemId);
+    private static string BetaItem => RawSql.Literal(M0SchemaSeed.Beta.ItemId);
 
     public async ValueTask InitializeAsync()
     {
@@ -174,7 +174,4 @@ public sealed class CrossTenantReferenceTests : IAsyncLifetime
     }
 
     private static string NewId() => "gen_random_uuid()";
-
-    private static string Literal(Guid value) =>
-        $"'{value.ToString("D", CultureInfo.InvariantCulture)}'::uuid";
 }

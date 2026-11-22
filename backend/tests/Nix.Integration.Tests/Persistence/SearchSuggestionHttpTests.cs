@@ -136,7 +136,7 @@ public sealed class SearchSuggestionHttpTests : IAsyncLifetime
             });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("search.mention_text_too_long", await ProblemCodeAsync(response));
+        Assert.Equal("search.mention_text_too_long", await HttpProblem.CodeAsync(response));
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public sealed class SearchSuggestionHttpTests : IAsyncLifetime
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/search/mentions", token, new { text = "Project Atlas" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("search.mention_workspace_required", await ProblemCodeAsync(response));
+        Assert.Equal("search.mention_workspace_required", await HttpProblem.CodeAsync(response));
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public sealed class SearchSuggestionHttpTests : IAsyncLifetime
             new { text = "Project Atlas", workspaceId = M0SchemaSeed.Alpha.WorkspaceId, excludeIds = exclusions });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("search.too_many_mention_exclusions", await ProblemCodeAsync(response));
+        Assert.Equal("search.too_many_mention_exclusions", await HttpProblem.CodeAsync(response));
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public sealed class SearchSuggestionHttpTests : IAsyncLifetime
 
         using var refused = await SendAsync(HttpMethod.Post, "/api/v1/search/mentions", reader, lookup);
         Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
-        Assert.Equal("request.rate_limited", await ProblemCodeAsync(refused));
+        Assert.Equal("request.rate_limited", await HttpProblem.CodeAsync(refused));
         Assert.True(refused.Headers.RetryAfter?.Delta > TimeSpan.Zero);
 
         // Same address, same minute: a burst of suggestions must not cost the person their saves.
@@ -242,7 +242,7 @@ public sealed class SearchSuggestionHttpTests : IAsyncLifetime
             token);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("items.not_found", await ProblemCodeAsync(response));
+        Assert.Equal("items.not_found", await HttpProblem.CodeAsync(response));
     }
 
     [Fact]
@@ -314,12 +314,6 @@ public sealed class SearchSuggestionHttpTests : IAsyncLifetime
         }
 
         return await _client.SendAsync(request, Cancellation);
-    }
-
-    private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response)
-    {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
-        return document.RootElement.GetProperty("code").GetString();
     }
 
     private sealed class ConfiguredApplicationFactory(Dictionary<string, string?> settings)
