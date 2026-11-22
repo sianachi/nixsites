@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Nix.Abstractions.Workers;
 
 namespace Nix.Workers;
@@ -15,7 +17,22 @@ public interface IWorkerJobHandler
 /// <summary>A leased job together with the execution identity that owns its lease.</summary>
 /// <param name="Job">The leased row.</param>
 /// <param name="ExecutionId">The lease owner, sent as <c>x-nix-worker-execution-id</c> on every tenant-scoped call.</param>
-public sealed record WorkerExecution(DispatchedWorkerJob Job, string ExecutionId);
+public sealed record WorkerExecution(DispatchedWorkerJob Job, string ExecutionId)
+{
+    /// <summary>The job payload, or <see langword="null"/> when it is not valid JSON of that shape.</summary>
+    public T? ReadPayload<T>(JsonTypeInfo<T> info)
+        where T : class
+    {
+        try
+        {
+            return JsonSerializer.Deserialize(Job.Payload, info);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+}
 
 /// <summary>An expected job failure with a stable code, the same vocabulary the Go handlers reported.</summary>
 public sealed class WorkerJobException : Exception

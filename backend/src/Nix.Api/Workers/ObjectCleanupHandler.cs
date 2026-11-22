@@ -26,15 +26,7 @@ public sealed class ObjectCleanupHandler(WorkerLoopbackClient core, ObjectTransf
         {
             throw WorkerJobException.Fail("cleanup_kind_mismatch", "job kind is not object.cleanup");
         }
-        ObjectCleanupJobPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize(job.Job.Payload, ObjectCleanupJsonContext.Default.ObjectCleanupJobPayload);
-        }
-        catch (JsonException)
-        {
-            payload = null;
-        }
+        var payload = job.ReadPayload(ObjectCleanupJsonContext.Default.ObjectCleanupJobPayload);
         if (payload is null || string.IsNullOrEmpty(payload.OwnerKind) || payload.OwnerKind.Length > 80 || payload.OwnerId == Guid.Empty
             || payload.NotBefore == default || payload.ObjectKeys is null || payload.ObjectKeys.Count > 10_002)
         {

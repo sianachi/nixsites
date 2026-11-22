@@ -31,15 +31,7 @@ public sealed class FilePublishHandler(WorkerLoopbackClient core, ObjectTransfer
         {
             throw WorkerJobException.Fail("files.kind_mismatch", "job kind is not file.publish");
         }
-        FileInspectPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize(job.Job.Payload, FilesJsonContext.Default.FileInspectPayload);
-        }
-        catch (JsonException)
-        {
-            payload = null;
-        }
+        var payload = job.ReadPayload(FilesJsonContext.Default.FileInspectPayload);
         if (payload is null || payload.UploadId == Guid.Empty)
         {
             throw WorkerJobException.Fail("files.payload_invalid", "uploadId is required");

@@ -104,7 +104,6 @@ export function RequireSession(): ReactNode {
         void signIn();
       }}
       error={error ?? configurationHint}
-      host={globalThis.location.host}
     />
   );
 }

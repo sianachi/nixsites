@@ -1,5 +1,4 @@
 #pragma warning disable CA2000 // Justification: the request body handed to the loopback client is owned and disposed by the request it is attached to.
-using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Nix.Features.TemplateImports;
@@ -27,15 +26,7 @@ public sealed class TemplateImportHandler(WorkerLoopbackClient core, ObjectTrans
     public async Task<string?> HandleAsync(WorkerExecution job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
-        TemplateImportJobPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize(job.Job.Payload, TemplateImportsJsonContext.Default.TemplateImportJobPayload);
-        }
-        catch (JsonException)
-        {
-            payload = null;
-        }
+        var payload = job.ReadPayload(TemplateImportsJsonContext.Default.TemplateImportJobPayload);
         if (payload is null || payload.ImportId == Guid.Empty)
         {
             throw WorkerJobException.Fail("template_payload_invalid", "importId must be a UUID");
@@ -258,8 +249,8 @@ public sealed class TemplateImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
         using (archives)
         {
-            var expected = plan.Files!.ToDictionary(file => Key(file.ItemId, file.Version), StringComparer.Ordinal);
-            var transfers = (stage.FileTransfers ?? []).ToDictionary(mapping => Key(mapping.SourceItemId, mapping.TargetVersion), StringComparer.Ordinal);
+            var expected = plan.Files!.ToDictionary(file => ImportSupport.VersionKey(file.ItemId, file.Version), StringComparer.Ordinal);
+            var transfers = (stage.FileTransfers ?? []).ToDictionary(mapping => ImportSupport.VersionKey(mapping.SourceItemId, mapping.TargetVersion), StringComparer.Ordinal);
             var seen = new HashSet<string>(StringComparer.Ordinal);
             Guid? after = null;
             while (true)
@@ -282,7 +273,7 @@ public sealed class TemplateImportHandler(WorkerLoopbackClient core, ObjectTrans
                 }
                 foreach (var file in page.Files)
                 {
-                    var key = Key(file.SourceItemId, file.TargetVersion);
+                    var key = ImportSupport.VersionKey(file.SourceItemId, file.TargetVersion);
                     if (!expected.TryGetValue(key, out var descriptor) || !transfers.TryGetValue(key, out var mapping) || mapping.TransferId != file.TransferId || mapping.TargetItemId != file.TargetItemId
                         || file.FileName != descriptor.FileName || file.MediaType != descriptor.MediaType || file.ByteLength != descriptor.ByteLength || !string.Equals(file.Sha256, descriptor.Sha256, StringComparison.OrdinalIgnoreCase))
                     {
@@ -331,40 +322,15 @@ public sealed class TemplateImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
     }
 
-    private async Task CopyTemplateFileAsync(NixArchiveFiles archive, TemplateImportFileVersionCapabilityResponse file, CancellationToken cancellationToken)
+    private Task CopyTemplateFileAsync(NixArchiveFiles archive, TemplateImportFileVersionCapabilityResponse file, CancellationToken cancellationToken)
     {
         if (file.UploadUrl is null || file.VerifyUrl is null)
         {
             throw new ObjectTransferException("Core omitted a staged template file capability");
         }
-        try
-        {
-            await ImportSupport.VerifyObjectAsync(objects, file.VerifyUrl, file.ByteLength, file.Sha256, cancellationToken).ConfigureAwait(false);
-            return;
-        }
-        catch (ObjectTransferException exception) when (exception.NotFound)
-        {
-        }
-        var content = archive.OpenVersion(file.SourceItemId, file.TargetVersion, file.ByteLength);
-        await using (content.ConfigureAwait(false))
-        {
-            using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            using var hashing = new HashingReadStream(content, digest);
-            try
-            {
-                await objects.UploadCreateOnlyAsync(file.UploadUrl, file.MediaType, hashing, file.ByteLength, file.Sha256, cancellationToken).ConfigureAwait(false);
-            }
-            catch (ObjectTransferException exception) when (exception.AlreadyExists)
-            {
-                await ImportSupport.VerifyObjectAsync(objects, file.VerifyUrl, file.ByteLength, file.Sha256, cancellationToken).ConfigureAwait(false);
-                return;
-            }
-            if (!string.Equals(Convert.ToHexStringLower(digest.GetCurrentHash()), file.Sha256, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ObjectTransferException("archive file digest does not match its declaration") { Conflict = true };
-            }
-        }
-        await ImportSupport.VerifyObjectAsync(objects, file.VerifyUrl, file.ByteLength, file.Sha256, cancellationToken).ConfigureAwait(false);
+        return ImportSupport.CopyArchiveVersionAsync(
+            objects, archive, file.SourceItemId, file.TargetVersion, file.ByteLength, file.MediaType, file.Sha256, file.UploadUrl,
+            token => ImportSupport.VerifyObjectAsync(objects, file.VerifyUrl, file.ByteLength, file.Sha256, token), "archive file digest does not match its declaration", cancellationToken);
     }
 
     private static bool ValidMetadata(Guid workspaceId, string origin, string? managedSource, string idempotencyKey, string fileName, string mediaType, long byteLength, Uri? sourceUrl, Uri? sourceDeleteUrl, Uri? planUploadUrl, Uri? planDeleteUrl, DateTimeOffset? capabilityExpires)
@@ -407,7 +373,7 @@ public sealed class TemplateImportHandler(WorkerLoopbackClient core, ObjectTrans
         {
             return false;
         }
-        var expectedFiles = (plan.Files ?? []).Select(file => Key(file.ItemId, file.Version)).ToHashSet(StringComparer.Ordinal);
+        var expectedFiles = (plan.Files ?? []).Select(file => ImportSupport.VersionKey(file.ItemId, file.Version)).ToHashSet(StringComparer.Ordinal);
         var transfers = stage.FileTransfers ?? [];
         if (transfers.Count != expectedFiles.Count)
         {
@@ -416,7 +382,7 @@ public sealed class TemplateImportHandler(WorkerLoopbackClient core, ObjectTrans
         var seenTransfers = new HashSet<Guid>();
         foreach (var mapping in transfers)
         {
-            if (!expectedFiles.Contains(Key(mapping.SourceItemId, mapping.TargetVersion)) || mapping.TransferId == Guid.Empty
+            if (!expectedFiles.Contains(ImportSupport.VersionKey(mapping.SourceItemId, mapping.TargetVersion)) || mapping.TransferId == Guid.Empty
                 || !Guid.TryParse(mapping.SourceItemId, out var sourceId) || !itemTargets.TryGetValue(sourceId, out var target) || target != mapping.TargetItemId || !seenTransfers.Add(mapping.TransferId))
             {
                 return false;
@@ -522,7 +488,6 @@ public sealed class TemplateImportHandler(WorkerLoopbackClient core, ObjectTrans
 
     private static bool SameSet(IEnumerable<Guid> left, IEnumerable<Guid> right) => left.Order().SequenceEqual(right.Order());
 
-    private static string Key(string itemId, int version) => itemId + "/" + version.ToString(System.Globalization.CultureInfo.InvariantCulture);
 }
 
 /// <summary>What a finished template preview reports.</summary>

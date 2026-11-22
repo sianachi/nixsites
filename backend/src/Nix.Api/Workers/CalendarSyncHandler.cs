@@ -31,15 +31,7 @@ public sealed class CalendarSyncHandler(
     public async Task<string?> HandleAsync(WorkerExecution job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
-        CalendarSyncJobPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize(job.Job.Payload, CalendarWorkerJsonContext.Default.CalendarSyncJobPayload);
-        }
-        catch (JsonException)
-        {
-            payload = null;
-        }
+        var payload = job.ReadPayload(CalendarWorkerJsonContext.Default.CalendarSyncJobPayload);
         if (payload is null || payload.LinkId == Guid.Empty)
         {
             throw WorkerJobException.Fail("calendar_payload_invalid", "the durable calendar sync request is invalid");
