@@ -1,5 +1,12 @@
 import { Dialog } from '@nix/ui';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useMemo,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from 'react';
 import {
   matchPath,
   NavigationType,
@@ -11,10 +18,8 @@ import {
 } from 'react-router';
 
 import { useLayoutKind } from '@nix/web-foundation/layout/viewport';
-import { AttachmentsPage } from '../pages/attachments-page';
-import { SettingsPage } from '../pages/settings-page';
-import { TrashPage } from '../pages/trash-page';
 import { WorkspacesPage } from '../pages/workspaces-page';
+import { AttachmentsPage, SettingsPage, TrashPage } from './lazy-screens';
 import {
   InRouteDialogContext,
   useRouteDialog,
@@ -153,7 +158,7 @@ export function useRouteDialogRouting(): {
 
 const SCREENS: Record<
   RouteDialogKind,
-  { readonly title: string; readonly width: string; readonly Screen: () => ReactNode }
+  { readonly title: string; readonly width: string; readonly Screen: ComponentType }
 > = {
   attachments: { title: 'Attachments', width: 'sm:max-w-4xl', Screen: AttachmentsPage },
   settings: { title: 'Settings', width: 'sm:max-w-5xl', Screen: SettingsPage },
@@ -182,7 +187,9 @@ export function RouteDialog(): ReactNode {
           onClose={dialog.close}
           className={width}
         >
-          <Screen />
+          <Suspense fallback={null}>
+            <Screen />
+          </Suspense>
         </Dialog>
       </InRouteDialogContext.Provider>
     </UNSAFE_LocationContext.Provider>

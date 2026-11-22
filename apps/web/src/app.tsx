@@ -12,18 +12,20 @@ import { BookmarksPage } from './pages/bookmarks-page';
 import { CalendarPage } from './pages/calendar-page';
 import { EditorPage } from './pages/editor-page';
 import { PetPage } from './pages/pet-page';
-import { PetActivityPage } from './pages/pet-activity-page';
 import { OAuthAuthorizePage } from './pages/oauth-authorize-page';
 import { NotFoundPage } from './pages/not-found-page';
 import { PublicFormPage } from './pages/public-form-page';
 import { PublicLinkPage } from './pages/public-link-page';
-import { SettingsPage } from './pages/settings-page';
-import { TemplateLibraryPage } from '@nix/web-templates/templates/library/template-library-page';
-import { TemplateImportPage } from '@nix/web-templates/templates/import/template-import-page';
-import { TrashPage } from './pages/trash-page';
-import { AttachmentsPage } from './pages/attachments-page';
+import {
+  AttachmentsPage,
+  CreationStudioPage,
+  PetActivityPage,
+  SettingsPage,
+  TemplateImportPage,
+  TemplateLibraryPage,
+  TrashPage,
+} from './shell/lazy-screens';
 import { WorkspacesPage } from './pages/workspaces-page';
-import { CreationStudioPage } from './pages/creation-studio-page';
 import { LocalSignInPage } from './pages/local-auth/local-sign-in-page';
 import { LocalSetupPage } from './pages/local-auth/local-setup-page';
 import { AccountLinkPage } from './pages/local-auth/account-link-page';
@@ -195,11 +197,29 @@ export function AppRoutes(): ReactElement {
             than a destination, and search opens over whatever is on screen, so neither
             has a route of its own. */}
                 <Route index element={<EditorPage />} />
-                <Route path="new/:recipe" element={<CreationStudioPage />} />
-                <Route path="items/:itemId/views/new/:recipe" element={<CreationStudioPage />} />
+                <Route
+                  path="new/:recipe"
+                  element={
+                    <RouteLoading what="the creation studio">
+                      <CreationStudioPage />
+                    </RouteLoading>
+                  }
+                />
+                <Route
+                  path="items/:itemId/views/new/:recipe"
+                  element={
+                    <RouteLoading what="the creation studio">
+                      <CreationStudioPage />
+                    </RouteLoading>
+                  }
+                />
                 <Route
                   path="items/:itemId/views/:viewId/edit/:recipe"
-                  element={<CreationStudioPage />}
+                  element={
+                    <RouteLoading what="the creation studio">
+                      <CreationStudioPage />
+                    </RouteLoading>
+                  }
                 />
 
                 {/* The rail's workspace-view destinations. These *are* places, unlike a board
@@ -220,14 +240,49 @@ export function AppRoutes(): ReactElement {
                   }
                 />
                 <Route path="pet" element={<PetPage />} />
-                <Route path="pet/activity" element={<PetActivityPage />} />
+                <Route
+                  path="pet/activity"
+                  element={
+                    <RouteLoading what="the activity">
+                      <PetActivityPage />
+                    </RouteLoading>
+                  }
+                />
                 <Route path="bookmarks" element={<BookmarksPage />} />
-                <Route path="trash" element={<TrashPage />} />
-                <Route path="attachments" element={<AttachmentsPage />} />
+                <Route
+                  path="trash"
+                  element={
+                    <RouteLoading what="the trash">
+                      <TrashPage />
+                    </RouteLoading>
+                  }
+                />
+                <Route
+                  path="attachments"
+                  element={
+                    <RouteLoading what="the attachments">
+                      <AttachmentsPage />
+                    </RouteLoading>
+                  }
+                />
                 <Route path="workspaces" element={<WorkspacesPage />} />
-                <Route path="templates" element={<TemplateLibraryPage />} />
+                <Route
+                  path="templates"
+                  element={
+                    <RouteLoading what="the templates">
+                      <TemplateLibraryPage />
+                    </RouteLoading>
+                  }
+                />
                 <Route path="templates/new" element={studio} />
-                <Route path="templates/import" element={<TemplateImportPage />} />
+                <Route
+                  path="templates/import"
+                  element={
+                    <RouteLoading what="the template import">
+                      <TemplateImportPage />
+                    </RouteLoading>
+                  }
+                />
                 <Route path="templates/:templateId/create" element={studio} />
                 <Route path="templates/:templateId/edit" element={studio} />
                 <Route path="items/:itemId/templates/apply/:templateId" element={studio} />
@@ -237,7 +292,14 @@ export function AppRoutes(): ReactElement {
             access tokens where somebody already expects account-level controls. Not
             lazy-loaded, for the rail destinations' reason - the screen is small, and a
             Suspense boundary around nothing is a fallback that can only ever flash. */}
-                <Route path="settings" element={<SettingsPage />} />
+                <Route
+                  path="settings"
+                  element={
+                    <RouteLoading what="the settings">
+                      <SettingsPage />
+                    </RouteLoading>
+                  }
+                />
                 <Route
                   path="workspace-groups/:groupId"
                   element={<LegacyWorkspaceGroupRedirect />}
