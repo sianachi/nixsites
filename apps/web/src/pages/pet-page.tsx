@@ -1,6 +1,14 @@
 import { items, locks, type Item, type PetProfile, type PetSettings } from '@nix/api-client';
 import { Dialog, Text, cn, focusRing } from '@nix/ui';
-import { useEffect, useRef, useState, type ComponentProps, type ReactElement } from 'react';
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactElement,
+} from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
@@ -14,7 +22,7 @@ import { useNarrowViewport } from '@nix/web-foundation/layout/viewport';
 import { paneColumn } from '@nix/web-foundation/layout/regions';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { chatTabId, useTabStore } from '@nix/web-foundation/lib/tab-store';
-import { Conversation, type ConversationProps } from '@nix/web-pets/pets/conversation/conversation';
+import type { ConversationProps } from '@nix/web-pets/pets/conversation/conversation';
 import { usePaneIndex } from '@nix/web-platform/panes/pane-context';
 import { selectedItemParam } from '@nix/web-platform/panes/pane-params';
 import { PetCanvasReviewLayout, PetCanvasReviewPane } from '../panel/pet-canvas-review';
@@ -43,6 +51,12 @@ function ignoreDecisions(): void {
  * A note's conversation (`?root=`) belongs in a tab where tabs are drawn, so on a wide window this
  * hands it to the editor; a narrow window or Zen keeps it here.
  */
+// The conversation (messages, tools, generated UI) is the heaviest part of the companion and is
+// only drawn once someone opens it, so it loads on that first open instead of with the shell.
+const Conversation = lazy(async () => ({
+  default: (await import('@nix/web-pets/pets/conversation/conversation')).Conversation,
+}));
+
 export function PetPage(): ReactElement {
   const { workspaceId } = useWorkspace();
   const [search] = useSearchParams();
@@ -490,15 +504,18 @@ function PetJobConversation({
         }),
   });
   return (
-    <Conversation
-      {...props}
-      jobs={{
-        ...jobs,
-        ...(!itemDialog && (jobs.enabled || workspaceJobsEnabled)
-          ? { options: <PetActivityLink workspaceId={props.workspaceId} /> }
-          : {}),
-      }}
-    />
+    // A status line, not LoadingPanel: its heading would skip a level under the page's h1.
+    <Suspense fallback={<Text role="status">Loading the conversation…</Text>}>
+      <Conversation
+        {...props}
+        jobs={{
+          ...jobs,
+          ...(!itemDialog && (jobs.enabled || workspaceJobsEnabled)
+            ? { options: <PetActivityLink workspaceId={props.workspaceId} /> }
+            : {}),
+        }}
+      />
+    </Suspense>
   );
 }
 

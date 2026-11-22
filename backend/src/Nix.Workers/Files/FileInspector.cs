@@ -184,7 +184,7 @@ public static class FileInspector
         };
 
     private static bool ValidPngCrc(ReadOnlySpan<byte> body, ReadOnlySpan<byte> expected) =>
-        expected.Length == 4 && Crc32(body) == BinaryPrimitives.ReadUInt32BigEndian(expected);
+        expected.Length == 4 && Import.Crc32.Append(0, body) == BinaryPrimitives.ReadUInt32BigEndian(expected);
 
     private static ImageFacts Jpeg(ReadOnlySpan<byte> header, long totalBytes)
     {
@@ -599,34 +599,5 @@ public static class FileInspector
             }
         }
         return true;
-    }
-
-    private static readonly uint[] CrcTable = BuildCrcTable();
-
-    // CRC-32 (IEEE), as PNG chunks use; System.IO.Hashing is not referenced here.
-    private static uint Crc32(ReadOnlySpan<byte> data)
-    {
-        var table = CrcTable;
-        var crc = 0xffffffffu;
-        foreach (var value in data)
-        {
-            crc = table[(crc ^ value) & 0xff] ^ (crc >> 8);
-        }
-        return ~crc;
-    }
-
-    private static uint[] BuildCrcTable()
-    {
-        var table = new uint[256];
-        for (var n = 0u; n < 256; n++)
-        {
-            var c = n;
-            for (var k = 0; k < 8; k++)
-            {
-                c = (c & 1) != 0 ? 0xedb88320 ^ (c >> 1) : c >> 1;
-            }
-            table[n] = c;
-        }
-        return table;
     }
 }

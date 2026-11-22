@@ -26,7 +26,7 @@ public static class ExportWriters
         }
         return format.ToUpperInvariant() switch
         {
-            "MARKDOWN" or "MD" => WriteMarkdownAsync(output, records, limits, cancellationToken),
+            "MARKDOWN" => WriteMarkdownAsync(output, records, limits, cancellationToken),
             "DOCX" => DocxWriter.WriteAsync(output, records, limits, cancellationToken),
             "PDF" => PdfWriter.WriteAsync(output, records, limits, pageSize, cancellationToken),
             _ => throw new ArgumentException($"unsupported streaming export format: {format}", nameof(format)),

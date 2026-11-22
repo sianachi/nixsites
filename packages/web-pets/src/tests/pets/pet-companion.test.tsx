@@ -109,7 +109,7 @@ describe('companion workflow', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Talk with Cat' }));
-    await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
+    await user.click(await screen.findByRole('button', { name: 'More conversation actions' }));
     await user.click(screen.getByRole('menuitem', { name: 'Open as page' }));
 
     expect(await screen.findByRole('heading', { name: 'Companion page' })).toBeVisible();
@@ -285,7 +285,7 @@ describe('companion workflow', () => {
   });
 
   async function openSettings(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
+    await user.click(await screen.findByRole('button', { name: 'More conversation actions' }));
     await user.click(screen.getByRole('menuitem', { name: 'Chat settings' }));
   }
 
@@ -485,7 +485,7 @@ describe('companion workflow', () => {
     const messages = screen.getByRole('log', { name: 'Conversation messages' });
     expect(messages).not.toContainElement(screen.getByRole('textbox', { name: 'Message Cat' }));
     expect(screen.queryByRole('button', { name: 'New conversation' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
+    await user.click(await screen.findByRole('button', { name: 'More conversation actions' }));
     expect(screen.getByRole('menuitem', { name: 'New conversation' })).toBeVisible();
   });
 
@@ -649,7 +649,7 @@ describe('companion workflow', () => {
     };
     client.execute.mockResolvedValue(pendingConnection);
     client.query.mockResolvedValue(pendingConnection);
-    await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
+    await user.click(await screen.findByRole('button', { name: 'More conversation actions' }));
     await user.click(screen.getByRole('menuitem', { name: 'Reload conversation' }));
     expect(await screen.findByText('Waiting for your approval')).toBeVisible();
   });
@@ -741,7 +741,7 @@ describe('companion workflow', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'Talk with Cat' }));
     await screen.findByRole('dialog', { name: 'Conversation with Cat' });
-    await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
+    await user.click(await screen.findByRole('button', { name: 'More conversation actions' }));
     await user.click(screen.getByRole('menuitem', { name: 'Chat settings' }));
     const heading = await screen.findByRole('heading', { name: 'Chat settings', level: 3 });
     await waitFor(() => {
@@ -764,7 +764,7 @@ describe('companion workflow', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'Talk with Cat' }));
     await screen.findByRole('dialog', { name: 'Conversation with Cat' });
-    const trigger = screen.getByRole('button', { name: 'More conversation actions' });
+    const trigger = await screen.findByRole('button', { name: 'More conversation actions' });
     await user.click(trigger);
     await user.click(screen.getByRole('menuitem', { name: 'Past conversations' }));
     await screen.findByRole('heading', { name: 'Past conversations', level: 3 });
@@ -900,7 +900,7 @@ describe('companion workflow', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'Talk with Cat' }));
     expect(await screen.findByText('Weekly plan')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
+    await user.click(await screen.findByRole('button', { name: 'More conversation actions' }));
     await user.click(screen.getByRole('menuitem', { name: 'Rename conversation' }));
     const field = screen.getByRole('textbox', { name: 'Conversation title' });
     await user.clear(field);

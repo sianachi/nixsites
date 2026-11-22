@@ -10,6 +10,7 @@ import {
   useState,
   type PointerEvent,
   type ReactElement,
+  type SyntheticEvent,
 } from 'react';
 
 import { prefersReducedMotion } from '@nix/web-foundation/lib/motion';
@@ -340,9 +341,6 @@ interface NodeMarkProps {
   /** Whether the label is written permanently rather than waiting for a hover. */
   readonly named: boolean;
 
-  /** Whether the label sits on the node's other side because the usual one was taken. */
-  readonly flipped: boolean;
-
   /** Whether a click or tap has picked this node, so its handles are shown and its actions are offered below. */
   readonly selected: boolean;
 
@@ -398,7 +396,6 @@ const NodeMark = memo(function NodeMark({
   node,
   centreX,
   named,
-  flipped,
   selected,
   lit,
   recency,
@@ -456,7 +453,7 @@ const NodeMark = memo(function NodeMark({
             raw lengths in it. */}
         <NodeShape type={node.type} x={node.x} y={node.y} radius={node.radius} recency={recency} />
         <text
-          {...labelPlacement(node, centreX, flipped)}
+          {...labelPlacement(node, centreX)}
           y={node.y}
           dy="0.35em"
           className={`${NODE_LABEL} ${lit ? '' : 'group-data-[dimming]/graph:text-muted'} ${named ? '' : LABEL_REVEAL}`}
@@ -731,6 +728,29 @@ function HighlightLayer({
  */
 const PULL = 0.3;
 const PULL_LIMIT = 48;
+
+/** The edges whose two ends have both arrived in a replay; all of them when none is running. */
+function arrivedEdges(
+  arrived: ReadonlySet<string> | null,
+  all: {
+    readonly parentEdges: readonly ParentEdge[];
+    readonly referenceEdges: readonly ReferenceEdge[];
+  },
+): {
+  readonly parentEdges: readonly ParentEdge[];
+  readonly referenceEdges: readonly ReferenceEdge[];
+} {
+  return arrived === null
+    ? all
+    : {
+        parentEdges: all.parentEdges.filter(
+          (edge) => arrived.has(edge.parentId) && arrived.has(edge.childId),
+        ),
+        referenceEdges: all.referenceEdges.filter(
+          (edge) => arrived.has(edge.sourceId) && arrived.has(edge.targetId),
+        ),
+      };
+}
 
 /** A node being dragged, and how far it has come since the press, in graph units. */
 interface Pull {
@@ -1061,21 +1081,7 @@ function GraphDrawing({
     setPlaying(false);
   }
 
-  // The edges drawn during a replay: only those whose two ends have both arrived.
-  const drawnEdges = useMemo(
-    () =>
-      arrived === null
-        ? edges
-        : {
-            parentEdges: edges.parentEdges.filter(
-              (edge) => arrived.has(edge.parentId) && arrived.has(edge.childId),
-            ),
-            referenceEdges: edges.referenceEdges.filter(
-              (edge) => arrived.has(edge.sourceId) && arrived.has(edge.targetId),
-            ),
-          },
-    [arrived, edges],
-  );
+  const drawnEdges = useMemo(() => arrivedEdges(arrived, edges), [arrived, edges]);
   const latest = lapse === null || lapse === 0 ? undefined : order[lapse - 1];
 
   /** Puts one node in the middle of the pane, close enough to read, and picks it out. */
@@ -1545,6 +1551,13 @@ function GraphDrawing({
     readGesture();
   };
 
+  const rememberNodeUnder = (event: SyntheticEvent): void => {
+    contextNodeId.current =
+      event.target instanceof Element
+        ? (event.target.closest('[data-graph-node]')?.getAttribute('data-graph-node') ?? null)
+        : null;
+  };
+
   const selectedNode =
     selectedId === null ? undefined : nodes.find((node) => node.id === selectedId);
   const handleRadius = isPointerCoarse() ? 12 : 6;
@@ -1702,20 +1715,8 @@ function GraphDrawing({
             {...target}
             ref={paneRef}
             className="h-[60dvh] min-w-0 overflow-hidden rounded-md border border-divider"
-            onPointerDownCapture={(event) => {
-              contextNodeId.current =
-                event.target instanceof Element
-                  ? (event.target.closest('[data-graph-node]')?.getAttribute('data-graph-node') ??
-                    null)
-                  : null;
-            }}
-            onContextMenuCapture={(event) => {
-              contextNodeId.current =
-                event.target instanceof Element
-                  ? (event.target.closest('[data-graph-node]')?.getAttribute('data-graph-node') ??
-                    null)
-                  : null;
-            }}
+            onPointerDownCapture={rememberNodeUnder}
+            onContextMenuCapture={rememberNodeUnder}
           >
             <svg
               ref={svgRef}
@@ -1818,20 +1819,8 @@ function GraphDrawing({
                 <HighlightLayer
                   // During a replay, an edge to a node that has not arrived yet is not drawn here
                   // either.
-                  parentEdges={
-                    arrived === null
-                      ? activeEdges.parentEdges
-                      : activeEdges.parentEdges.filter(
-                          (edge) => arrived.has(edge.parentId) && arrived.has(edge.childId),
-                        )
-                  }
-                  referenceEdges={
-                    arrived === null
-                      ? activeEdges.referenceEdges
-                      : activeEdges.referenceEdges.filter(
-                          (edge) => arrived.has(edge.sourceId) && arrived.has(edge.targetId),
-                        )
-                  }
+                  parentEdges={arrivedEdges(arrived, activeEdges).parentEdges}
+                  referenceEdges={arrivedEdges(arrived, activeEdges).referenceEdges}
                   pulses={!prefersReducedMotion()}
                 />
               )}
@@ -1855,7 +1844,6 @@ function GraphDrawing({
                   node={node}
                   centreX={layout.width / 2}
                   named={node.id === hoveredId || node.id === focusedId || node.id === selectedId}
-                  flipped={false}
                   selected={node.id === selectedId}
                   lit={lit?.has(node.id) === true}
                   recency={recencyOf(node.lastModifiedAt, now)}

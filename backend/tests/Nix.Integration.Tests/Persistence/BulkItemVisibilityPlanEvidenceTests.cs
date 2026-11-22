@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Nix.Integration.Tests.Harness;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
@@ -99,6 +100,64 @@ public sealed class BulkItemVisibilityPlanEvidenceTests : IAsyncLifetime
             ]);
         RecordAndAssert("Backlinks", backlinkPlan);
         Assert.Contains("ix_item_link_target_occurrences", backlinkPlan, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("%Visibility match%", "zzqx")]
+    [InlineData("%zzqx%", "visibility")]
+    [InlineData("%visibility%", "visibility")]
+    public async Task Search_probes_hidden_ancestors_only_for_the_rows_that_reach_the_limit(
+        string titlePattern,
+        string query)
+    {
+        // 32 items match each arm, far more than the limit: probing before the sort would run the
+        // ancestor probe once per hit, probing after it runs it once per returned row.
+        const int Limit = 5;
+        var plan = await ExplainAsync(
+            SearchSql.MatchingItems,
+            [
+                Uuids("workspace_ids", [M0SchemaSeed.Alpha.WorkspaceId]),
+                Text("title_pattern", titlePattern),
+                Text("query", query),
+                Integer("limit", Limit),
+                new NpgsqlParameter("pet_sources_only", NpgsqlDbType.Boolean) { Value = false },
+                Uuids("lock_ids", []),
+                Uuids("closed_lock_ids", []),
+            ]);
+
+        // One arm matches nothing, so its half of the plan legitimately never executes.
+        _output.WriteLine(plan);
+        AssertProbeLoopsBoundedBy(plan, Limit);
+    }
+
+    [Fact]
+    public async Task Backlinks_probe_hidden_ancestors_only_for_the_rows_that_reach_the_limit()
+    {
+        const int Limit = 5;
+        var plan = await ExplainAsync(
+            SearchSql.ItemsLinkingTo,
+            [
+                Uuid("target_item_id", M0SchemaSeed.Alpha.ItemId),
+                Uuids("workspace_ids", [M0SchemaSeed.Alpha.WorkspaceId]),
+                Integer("limit", Limit),
+                Uuids("lock_ids", [_itemIds[^1]]),
+            ]);
+
+        RecordAndAssert("Backlink probes", plan);
+        AssertProbeLoopsBoundedBy(plan, Limit);
+    }
+
+    private static void AssertProbeLoopsBoundedBy(string plan, int limit)
+    {
+        var loops = Regex.Matches(
+                plan,
+                "IX_item_closure_tenant_id_descendant_id\"[^\r\n]*loops=(\\d+)",
+                RegexOptions.CultureInvariant)
+            .Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture))
+            .ToList();
+
+        Assert.NotEmpty(loops);
+        Assert.All(loops, count => Assert.True(count <= limit, $"probe ran {count} times for limit {limit}:\n{plan}"));
     }
 
     [Fact]

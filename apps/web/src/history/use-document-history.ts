@@ -85,64 +85,85 @@ export function useDocumentHistory(itemId: string): DocumentHistoryState {
     [],
   );
 
+  /**
+   * Runs one paged load: aborts the previous one, clears the refusal, and drops the answer if the
+   * caller moved on. `fetchPage` resolves to the state writes to apply once the answer is fresh.
+   */
+  const load = useCallback(
+    async (
+      fetchPage: (config: HistoryRequestConfig) => Promise<HistoryResult<() => void>>,
+    ): Promise<void> => {
+      loadControllerRef.current?.abort();
+      const controller = new AbortController();
+      loadControllerRef.current = controller;
+      const requestItemId = itemId;
+
+      setLoading(true);
+      setRefusal(null);
+
+      try {
+        const token = await getAccessToken();
+        if (stale(controller, requestItemId)) {
+          return;
+        }
+        if (token === null) {
+          setRefusal(UNAUTHENTICATED_REFUSAL);
+          setLoading(false);
+          return;
+        }
+
+        const result = await fetchPage({
+          itemId: requestItemId,
+          token,
+          signal: controller.signal,
+        });
+        if (stale(controller, requestItemId)) {
+          return;
+        }
+
+        if (!result.ok) {
+          setRefusal(result.refusal);
+        } else {
+          result.value();
+        }
+        setLoading(false);
+      } catch (error) {
+        if (stale(controller, requestItemId)) {
+          return;
+        }
+        setRefusal(requestFailure(error));
+        setLoading(false);
+      }
+    },
+    [getAccessToken, itemId, stale],
+  );
+
   /** Fetches the newest page from scratch, replacing whatever the lists currently hold. */
-  const refresh = useCallback(async (): Promise<void> => {
-    loadControllerRef.current?.abort();
-    const controller = new AbortController();
-    loadControllerRef.current = controller;
-    const requestItemId = itemId;
-
-    setLoading(true);
-    setRefusal(null);
-
-    try {
-      const token = await getAccessToken();
-      if (stale(controller, requestItemId)) {
-        return;
-      }
-      if (token === null) {
-        setRefusal(UNAUTHENTICATED_REFUSAL);
-        setLoading(false);
-        return;
-      }
-
-      const config: HistoryRequestConfig = {
-        itemId: requestItemId,
-        token,
-        signal: controller.signal,
-      };
-      const [revisionsResult, namedVersionsResult] = await Promise.all([
-        listRevisions(config, { limit: PAGE_SIZE }),
-        listNamedVersions(config),
-      ]);
-      if (stale(controller, requestItemId)) {
-        return;
-      }
-
-      if (!revisionsResult.ok) {
-        setRefusal(revisionsResult.refusal);
-        setLoading(false);
-        return;
-      }
-      if (!namedVersionsResult.ok) {
-        setRefusal(namedVersionsResult.refusal);
-        setLoading(false);
-        return;
-      }
-
-      setRevisions(revisionsResult.value.revisions);
-      setHasMore(revisionsResult.value.hasMore);
-      setHeadSeq(revisionsResult.value.headSeq);
-      setNamedVersions(namedVersionsResult.value);
-      setLoading(false);
-    } catch (error) {
-      if (stale(controller, requestItemId)) {
-        return;
-      }
-      setRefusal(requestFailure(error));
-      setLoading(false);
-    }
-  }, [getAccessToken, itemId, stale]);
+  const refresh = useCallback(
+    () =>
+      load(async (config) => {
+        const [revisionsResult, namedVersionsResult] = await Promise.all([
+          listRevisions(config, { limit: PAGE_SIZE }),
+          listNamedVersions(config),
+        ]);
+        if (!revisionsResult.ok) {
+          return revisionsResult;
+        }
+        if (!namedVersionsResult.ok) {
+          return namedVersionsResult;
+        }
+        return {
+          ok: true,
+          value: () => {
+            setRevisions(revisionsResult.value.revisions);
+            setHasMore(revisionsResult.value.hasMore);
+            setHeadSeq(revisionsResult.value.headSeq);
+            setNamedVersions(namedVersionsResult.value);
+          },
+        };
+      }),
+    [load],
+  );
 
   useEffect(() => {
     itemIdRef.current = itemId;
@@ -184,52 +205,21 @@ export function useDocumentHistory(itemId: string): DocumentHistoryState {
     if (!hasMore || loading || before === undefined) {
       return;
     }
-
-    loadControllerRef.current?.abort();
-    const controller = new AbortController();
-    loadControllerRef.current = controller;
-    const requestItemId = itemId;
-
-    setLoading(true);
-    setRefusal(null);
-
-    try {
-      const token = await getAccessToken();
-      if (stale(controller, requestItemId)) {
-        return;
-      }
-      if (token === null) {
-        setRefusal(UNAUTHENTICATED_REFUSAL);
-        setLoading(false);
-        return;
-      }
-
-      const result = await listRevisions(
-        { itemId: requestItemId, token, signal: controller.signal },
-        { before, limit: PAGE_SIZE },
-      );
-      if (stale(controller, requestItemId)) {
-        return;
-      }
-
+    await load(async (config) => {
+      const result = await listRevisions(config, { before, limit: PAGE_SIZE });
       if (!result.ok) {
-        setRefusal(result.refusal);
-        setLoading(false);
-        return;
+        return result;
       }
-
-      setRevisions((current) => [...current, ...result.value.revisions]);
-      setHasMore(result.value.hasMore);
-      setHeadSeq(result.value.headSeq);
-      setLoading(false);
-    } catch (error) {
-      if (stale(controller, requestItemId)) {
-        return;
-      }
-      setRefusal(requestFailure(error));
-      setLoading(false);
-    }
-  }, [getAccessToken, hasMore, itemId, loading, revisions, stale]);
+      return {
+        ok: true,
+        value: () => {
+          setRevisions((current) => [...current, ...result.value.revisions]);
+          setHasMore(result.value.hasMore);
+          setHeadSeq(result.value.headSeq);
+        },
+      };
+    });
+  }, [hasMore, load, loading, revisions]);
 
   /** Runs one authenticated one-off action, tracked so an unmount can abort it. */
   const runOperation = useCallback(

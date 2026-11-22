@@ -105,8 +105,8 @@ public sealed class CalendarTransport
         }
     }
 
-    /// <summary>The bearer headers every provider call carries.</summary>
-    public static Dictionary<string, string> BearerHeaders(string accessToken, bool json = false)
+    /// <summary>The bearer headers every provider call carries, plus <c>If-Match</c> when a last known version guards the write.</summary>
+    public static Dictionary<string, string> BearerHeaders(string accessToken, bool json = false, string? version = null)
     {
         var headers = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -117,7 +117,26 @@ public sealed class CalendarTransport
         {
             headers["Content-Type"] = "application/json";
         }
+        if (!string.IsNullOrEmpty(version))
+        {
+            headers["If-Match"] = version;
+        }
         return headers;
+    }
+
+    /// <summary>Deletes guarded by <paramref name="version"/>; an event already gone upstream is not an error, a stale version is a conflict.</summary>
+    internal async Task DeleteGuardedAsync(string path, string accessToken, string version, Func<int, byte[], CalendarProviderException> apiError, CancellationToken cancellationToken)
+    {
+        var (status, response) = await SendAsync(HttpMethod.Delete, path, BearerHeaders(accessToken, version: version), null, cancellationToken).ConfigureAwait(false);
+        switch (status)
+        {
+            case 200 or 204 or 404 or 410:
+                return;
+            case 412:
+                throw new ProviderWriteException(ProviderWriteFailure.Conflict);
+            default:
+                throw apiError(status, response);
+        }
     }
 
     // Uri already lower-cases the scheme and a DNS host.
