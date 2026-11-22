@@ -14,6 +14,8 @@ public sealed class BrowserSessionStore(
     NixDbContext context,
     INixSessionContextAccessor sessionContext) : IBrowserSessions
 {
+    private readonly LocalSignInDb _db = new(dataSource);
+
     /// <inheritdoc />
     public ValueTask<AuthenticatedBrowserSession?> FindByTokenHashAsync(
         string tokenHash,
@@ -76,37 +78,16 @@ public sealed class BrowserSessionStore(
     private async ValueTask<AuthenticatedBrowserSession?> ResolveAsync(
         string sql,
         NpgsqlParameter parameter,
-        CancellationToken cancellationToken)
-    {
-        var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using (connection.ConfigureAwait(false))
-        {
-#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
-            // Justification: both statements are constants above; the sole value is bound.
-            var command = new NpgsqlCommand(sql, connection);
-#pragma warning restore CA2100
-            await using (command.ConfigureAwait(false))
-            {
-                command.Parameters.Add(parameter);
-                var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-                await using (reader.ConfigureAwait(false))
-                {
-                    if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                    {
-                        return null;
-                    }
-
-                    return new AuthenticatedBrowserSession(
-                        BrowserSessionId.From(reader.GetGuid(0)),
-                        TenantId.From(reader.GetGuid(1)),
-                        PrincipalId.From(reader.GetGuid(2)),
-                        ParseStatus(reader.GetString(3)),
-                        reader.GetString(4),
-                        await reader.GetFieldValueAsync<DateTimeOffset>(5, cancellationToken).ConfigureAwait(false));
-                }
-            }
-        }
-    }
+        CancellationToken cancellationToken) =>
+        (await _db.RowsAsync(sql,
+            static reader => new AuthenticatedBrowserSession(
+                BrowserSessionId.From(reader.GetGuid(0)),
+                TenantId.From(reader.GetGuid(1)),
+                PrincipalId.From(reader.GetGuid(2)),
+                ParseStatus(reader.GetString(3)),
+                reader.GetString(4),
+                reader.GetFieldValue<DateTimeOffset>(5)),
+            cancellationToken, parameter).ConfigureAwait(false)).FirstOrDefault();
 
     private static PrincipalStatus ParseStatus(string value) => value switch
     {

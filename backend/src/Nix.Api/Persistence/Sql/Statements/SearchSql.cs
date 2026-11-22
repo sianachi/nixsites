@@ -179,7 +179,10 @@ public static class SearchSql
                item.properties ->> 'title' AS title,
                item.parent_id,
                item.last_modified_at
-        FROM ranked
+        -- Ordered before the per-row visibility probes below, so the probes run on the rows that
+        -- reach LIMIT, not on every match. OFFSET 0 keeps the planner from flattening this away.
+        FROM (SELECT item_id, title_matched, rank FROM ranked
+              ORDER BY title_matched DESC, rank DESC, item_id OFFSET 0) AS ranked
         JOIN item
           ON item.tenant_id = @tenant_id
          AND item.id = ranked.item_id

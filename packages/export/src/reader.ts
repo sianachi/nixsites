@@ -429,7 +429,7 @@ export function validateTemplateArchive(archive: ReadArchiveResult): TemplateArc
       );
     }
     validateBodyKind(bundle);
-    validateViews(bundle);
+    if (bundle.views !== null) validateViewsSnapshot(bundle.views, bundle.id);
   }
   return profile;
 }
@@ -518,6 +518,7 @@ const FORM_CONDITION_OPERATORS = new Set([
 ]);
 const FORM_IDENTITY_ROLES = new Set(['name', 'email']);
 const FORM_TITLE_MODES = new Set(['generated', 'field']);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CARD_SIZES = new Set(['small', 'medium', 'large']);
 
 function validateBodyKind(bundle: ItemBundle): void {
@@ -537,11 +538,6 @@ function validateBodyKind(bundle: ItemBundle): void {
       `The body for item ${bundle.id} does not match item type "${bundle.type}".`,
     );
   }
-}
-
-function validateViews(bundle: ItemBundle): void {
-  if (bundle.views === null) return;
-  validateViewsSnapshot(bundle.views, bundle.id);
 }
 
 function validateViewsSnapshot(views: ViewsSnapshot, ownerId: string): void {
@@ -1105,7 +1101,7 @@ function validInitializationDefault(
     const parsed = new Date(`${value}T00:00:00.000Z`);
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
   }
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  return UUID_PATTERN.test(value);
 }
 
 function parseTemplateInitializationInput(value: unknown): TemplateInitializationInput {
@@ -1379,8 +1375,7 @@ function parseProperty(value: unknown, owner: string): SchemaSnapshot['propertie
       !shortText(source.field, 160) ||
       source.field.startsWith('$') ||
       (source.itemId !== null &&
-        (typeof source.itemId !== 'string' ||
-          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(source.itemId)))
+        (typeof source.itemId !== 'string' || !UUID_PATTERN.test(source.itemId)))
     ) {
       throw refusal(
         'archive.schema_invalid',

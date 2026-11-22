@@ -458,18 +458,8 @@ export function SpreadsheetGrid(props: SpreadsheetGridProps): ReactNode {
                   onChange={(event) => {
                     dispatch({ type: 'setDraft', draft: event.target.value });
                   }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      commitDraft('down');
-                    } else if (event.key === 'Tab') {
-                      event.preventDefault();
-                      commitDraft('right');
-                    } else if (event.key === 'Escape') {
-                      event.preventDefault();
-                      cancelEdit();
-                    }
-                  }}
+                  onCommit={commitDraft}
+                  onCancel={cancelEdit}
                   onBlur={() => {
                     // A genuine click-away commits, as in every spreadsheet. This blur fires
                     // synchronously inside the cell handler's focus() call, BEFORE that handler's own

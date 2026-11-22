@@ -25,6 +25,8 @@ namespace Nix.Persistence.Identity;
 /// </remarks>
 public sealed class IdentityDirectory(NpgsqlDataSource dataSource) : IIdentityDirectory
 {
+    private readonly LocalSignInDb _db = new(dataSource);
+
     /// <inheritdoc />
     public async ValueTask<IdentityProviderRegistration?> ResolveProviderAsync(
         string issuer,
@@ -97,29 +99,8 @@ public sealed class IdentityDirectory(NpgsqlDataSource dataSource) : IIdentityDi
         NpgsqlParameter[] parameters,
         Func<NpgsqlDataReader, TRow> map,
         CancellationToken cancellationToken)
-        where TRow : class
-    {
-        var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using (connection.ConfigureAwait(false))
-        {
-#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
-            // Justification: the statement is a const from IdentitySql; every value is bound.
-            var command = new NpgsqlCommand(sql, connection);
-#pragma warning restore CA2100
-            await using (command.ConfigureAwait(false))
-            {
-                command.Parameters.AddRange(parameters);
-
-                var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-                await using (reader.ConfigureAwait(false))
-                {
-                    return await reader.ReadAsync(cancellationToken).ConfigureAwait(false)
-                        ? map(reader)
-                        : null;
-                }
-            }
-        }
-    }
+        where TRow : class =>
+        (await _db.RowsAsync(sql, map, cancellationToken, parameters).ConfigureAwait(false)).FirstOrDefault();
 
     /// <summary>
     /// Anything unrecognised is treated as deprovisioned.

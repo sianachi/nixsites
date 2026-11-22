@@ -6,6 +6,7 @@ using Nix.Domain.Primitives;
 using Nix.Domain.Recurrence;
 using Nix.Domain.Tenancy;
 using Nix.Features.Calendar;
+using Nix.Tests.Features.Query;
 
 namespace Nix.Tests.Features.Calendar;
 
@@ -274,32 +275,6 @@ public sealed class GetWorkspaceCalendarTests
                 Until: null,
                 CompletedThrough: null,
                 Completed: ImmutableArray<DateOnly>.Empty));
-
-    /// <summary>Answers with a fixed readable set, the way the resolver does for one principal.</summary>
-    private sealed class StubPermissions : IPermissionResolver
-    {
-        private readonly IReadOnlyList<WorkspaceId> _readable;
-
-        internal StubPermissions(IReadOnlyList<WorkspaceId> readable) => _readable = readable;
-
-        public ValueTask<bool> CanReadWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable.Contains(workspaceId));
-
-        public ValueTask<bool> CanWriteWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable.Contains(workspaceId));
-
-        public ValueTask<bool> CanCommentWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => ValueTask.FromResult(false);
-
-
-        public ValueTask<bool> CanManageWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(false);
-
-        public ValueTask<IReadOnlyList<WorkspaceId>> ReadableWorkspacesAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable);
-
-        public ValueTask<bool> IsTenantAdministratorAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult(false);
-    }
 
     /// <summary>A reader that answers with a prepared calendar, ignoring what it was asked.</summary>
     /// <remarks>

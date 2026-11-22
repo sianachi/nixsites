@@ -7,6 +7,7 @@ using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Nix.Features.Views;
+using Nix.Tests.Support;
 
 namespace Nix.Tests.Features.Views;
 
@@ -275,7 +276,7 @@ public sealed class ContainerViewsConcurrencyTests
         public ValueTask<bool> IsTenantAdministratorAsync(CancellationToken cancellationToken) => ValueTask.FromResult(false);
     }
 
-    private sealed class RecordingTree(Item? item) : IItemTree
+    private sealed class RecordingTree(Item? item) : ThrowingItemTree, IItemTree
     {
         public bool Visible { get; init; } = true;
         public bool ConditionalWriteSucceeds { get; init; } = true;
@@ -288,10 +289,10 @@ public sealed class ContainerViewsConcurrencyTests
         public WorkspaceId? WrittenWorkspace { get; private set; }
         public PrincipalId? WrittenActor { get; private set; }
 
-        public ValueTask<Item?> FindAsync(ItemId id, CancellationToken cancellationToken) =>
+        public override ValueTask<Item?> FindAsync(ItemId id, CancellationToken cancellationToken) =>
             ValueTask.FromResult(Visible && item?.Id == id && item.TenantId == Tenant ? item : null);
 
-        public ValueTask<Item?> FindStoredAsync(ItemId id, CancellationToken cancellationToken)
+        public override ValueTask<Item?> FindStoredAsync(ItemId id, CancellationToken cancellationToken)
         {
             StoredReads++;
             return ValueTask.FromResult(item?.Id == id ? item : null);
@@ -314,24 +315,12 @@ public sealed class ContainerViewsConcurrencyTests
             return ValueTask.FromResult(ConditionalWriteSucceeds);
         }
 
-        public ValueTask UpdateViewsAsync(ItemId id, string? views, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken)
+        public override ValueTask UpdateViewsAsync(ItemId id, string? views, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken)
         {
             UnconditionalWrites++;
             WrittenViews = views;
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<IReadOnlySet<ItemId>> WithChildrenAsync(WorkspaceId workspaceId, IReadOnlyList<ItemId> parents, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<IReadOnlyList<Item>> ListChildrenAsync(WorkspaceId workspaceId, ItemId? parentId, bool includeDeleted, long? afterSeq, int limit, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<bool> WorkspaceExistsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<long> NextSiblingSequenceAsync(WorkspaceId workspaceId, ItemId? parentId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<long> AllocateSiblingSequenceAsync(WorkspaceId workspaceId, ItemId? parentId, ItemId movingId, ItemId? afterId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask InsertAsync(Item inserted, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask UpdatePropertiesAsync(ItemId id, string properties, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask UpdateSchemaAsync(ItemId id, string? schema, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask TouchAsync(ItemId id, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<bool> WouldCreateCycleAsync(ItemId id, ItemId parentId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask ReparentAsync(ItemId id, ItemId? newParentId, long seq, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask SetLifecycleAsync(ItemId id, ItemLifecycleState state, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

@@ -5,6 +5,7 @@ using Nix.Domain.Items;
 using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Features.Items;
+using Nix.Tests.Support;
 
 namespace Nix.Tests.Features.Items;
 
@@ -210,7 +211,7 @@ public sealed class CreateItemIdempotencyTests
         public ValueTask<bool> IsTenantAdministratorAsync(CancellationToken cancellationToken) => ValueTask.FromResult(false);
     }
 
-    private sealed class RecordingTree : IItemTree
+    private sealed class RecordingTree : ThrowingItemTree, IItemTree
     {
         public Dictionary<ItemId, Item> Items { get; } = [];
         public Dictionary<Guid, (string Request, ItemId ItemId)> Receipts { get; } = [];
@@ -227,19 +228,19 @@ public sealed class CreateItemIdempotencyTests
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<Item?> FindAsync(ItemId id, CancellationToken cancellationToken) => ValueTask.FromResult(Items.GetValueOrDefault(id));
-        public ValueTask<Item?> FindStoredAsync(ItemId id, CancellationToken cancellationToken) => FindAsync(id, cancellationToken);
-        public ValueTask<bool> WorkspaceExistsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => ValueTask.FromResult(true);
-        public ValueTask<long> NextSiblingSequenceAsync(WorkspaceId workspaceId, ItemId? parentId, CancellationToken cancellationToken) => ValueTask.FromResult(1000L * (InsertCalls + 1));
+        public override ValueTask<Item?> FindAsync(ItemId id, CancellationToken cancellationToken) => ValueTask.FromResult(Items.GetValueOrDefault(id));
+        public override ValueTask<Item?> FindStoredAsync(ItemId id, CancellationToken cancellationToken) => FindAsync(id, cancellationToken);
+        public override ValueTask<bool> WorkspaceExistsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => ValueTask.FromResult(true);
+        public override ValueTask<long> NextSiblingSequenceAsync(WorkspaceId workspaceId, ItemId? parentId, CancellationToken cancellationToken) => ValueTask.FromResult(1000L * (InsertCalls + 1));
 
-        public ValueTask InsertAsync(Item item, CancellationToken cancellationToken)
+        public override ValueTask InsertAsync(Item item, CancellationToken cancellationToken)
         {
             Items.Add(item.Id, item);
             InsertCalls++;
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask UpdatePropertiesAsync(ItemId id, string properties, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken)
+        public override ValueTask UpdatePropertiesAsync(ItemId id, string properties, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken)
         {
             var item = Items[id];
             Items[id] = new Item
@@ -260,14 +261,5 @@ public sealed class CreateItemIdempotencyTests
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<IReadOnlySet<ItemId>> WithChildrenAsync(WorkspaceId workspaceId, IReadOnlyList<ItemId> parents, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<IReadOnlyList<Item>> ListChildrenAsync(WorkspaceId workspaceId, ItemId? parentId, bool includeDeleted, long? afterSeq, int limit, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<long> AllocateSiblingSequenceAsync(WorkspaceId workspaceId, ItemId? parentId, ItemId movingId, ItemId? afterId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask UpdateSchemaAsync(ItemId id, string? schema, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask UpdateViewsAsync(ItemId id, string? views, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask TouchAsync(ItemId id, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask<bool> WouldCreateCycleAsync(ItemId id, ItemId parentId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask ReparentAsync(ItemId id, ItemId? newParentId, long seq, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public ValueTask SetLifecycleAsync(ItemId id, ItemLifecycleState state, PrincipalId actor, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }
