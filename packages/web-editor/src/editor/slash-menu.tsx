@@ -1,6 +1,6 @@
 import type { ItemInsertKind } from './item-insert-dialog';
 import { TOGGLE_LEVELS, type ToggleLevel } from '@nix/editor-schema';
-import { Listbox, placeFloatingMenu, readViewportBounds, useListbox } from '@nix/ui';
+import { Listbox, useListbox } from '@nix/ui';
 import type { ReactNode } from 'react';
 import type { Editor } from '@tiptap/react';
 import {
@@ -32,7 +32,7 @@ import {
   MAX_QUERY as REFERENCE_MAX_QUERY,
   findTrigger as findReferenceTrigger,
 } from './reference-menu';
-import { useEditorListbox, useEditorTrigger } from './trigger-menu';
+import { CaretMenu, useEditorListbox, useEditorTrigger } from './trigger-menu';
 
 /**
  * The frecency namespace for slash commands. One for every workspace: a command is not workspace
@@ -527,36 +527,14 @@ export function SlashMenu({
     return null;
   }
 
-  // Below the caret at up to 280px wide, unless the viewport - a phone's, with its keyboard
-  // already open - has no room for that: then the menu narrows, shrinks, or flips above.
-  const placement = placeFloatingMenu(
-    { left: trigger.left, top: trigger.top, bottom: trigger.bottom },
-    280,
-    readViewportBounds(),
-  );
-
-  const menuPosition = {
-    left: placement.left,
-    top: placement.top,
-    width: placement.maxWidth,
-    maxHeight: placement.maxHeight,
-  };
   return (
-    <div
-      // Positioned against the caret in viewport coordinates, so it follows the text rather than
-      // the scroller - which the editor does under it.
-      style={menuPosition} // design-token-exempt: a caret's position is a runtime measurement, not a scale step.
-      className={[
-        'fixed z-20 flex flex-col overflow-y-auto rounded-md border border-divider bg-background shadow-md',
-        placement.above ? '-mb-1 -translate-y-full' : 'mt-1',
-      ].join(' ')}
-    >
+    <CaretMenu trigger={trigger} width={280}>
       <Listbox
         label="Insert a block"
         options={options}
         controller={listbox}
         emptyMessage="No block matches."
       />
-    </div>
+    </CaretMenu>
   );
 }
