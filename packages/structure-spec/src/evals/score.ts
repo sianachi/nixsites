@@ -51,6 +51,19 @@ function matches(predicate: Predicate, bp: Blueprint, nodes: Node[], depths: num
   }
 }
 
+const FIXED_CRITERIA = [
+  ['validator', 20],
+  ['itemCount', 10],
+  ['computed', 10],
+  ['views', 10],
+  ['inheritance', 10],
+  ['taskKeys', 10],
+  ['recurrenceOrHabit', 10],
+  ['duplicateContainers', 5],
+  ['why', 5],
+  ['predicates', 10],
+] as const;
+
 /** A reproducible quality score for a proposed design blueprint. The validator gate is independent. */
 export function scoreBlueprint(
   bp: Blueprint | null,
@@ -64,18 +77,7 @@ export function scoreBlueprint(
   const declineExpected = expectations.mustHave.some((predicate) => predicate.kind === 'declines');
   if (declineExpected) {
     const correct = bp === null;
-    for (const [id, max] of [
-      ['validator', 20],
-      ['itemCount', 10],
-      ['computed', 10],
-      ['views', 10],
-      ['inheritance', 10],
-      ['taskKeys', 10],
-      ['recurrenceOrHabit', 10],
-      ['duplicateContainers', 5],
-      ['why', 5],
-      ['predicates', 10],
-    ] as const) {
+    for (const [id, max] of FIXED_CRITERIA) {
       add(
         id,
         correct ? max : 0,
@@ -86,18 +88,7 @@ export function scoreBlueprint(
     return { total: criteria.reduce((sum, criterion) => sum + criterion.score, 0), criteria };
   }
   if (bp === null) {
-    for (const [id, max] of [
-      ['validator', 20],
-      ['itemCount', 10],
-      ['computed', 10],
-      ['views', 10],
-      ['inheritance', 10],
-      ['taskKeys', 10],
-      ['recurrenceOrHabit', 10],
-      ['duplicateContainers', 5],
-      ['why', 5],
-      ['predicates', 10],
-    ] as const) {
+    for (const [id, max] of FIXED_CRITERIA) {
       add(id, 0, max, 'No blueprint was proposed.');
     }
     return { total: 0, criteria };

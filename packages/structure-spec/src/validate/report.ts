@@ -1,3 +1,6 @@
+import type { z } from 'zod';
+
+import type { FieldRefResolution } from '../spec/refs.js';
 import type { StructureProperty, StructureView } from '../types.js';
 
 /**
@@ -45,4 +48,34 @@ export interface ValidationContext {
   /** The item's current property values, used to require a due date before setting recurrence. */
   itemValues?: Record<string, unknown>;
   today: string;
+}
+
+function formatPath(path: readonly PropertyKey[]): string {
+  let result = '';
+  for (const segment of path) {
+    if (typeof segment === 'number') {
+      result += `[${String(segment)}]`;
+    } else {
+      const text = String(segment);
+      result += result.length === 0 ? text : `.${text}`;
+    }
+  }
+  return result;
+}
+
+export function zodIssuesToProblems(error: z.ZodError): Problem[] {
+  return error.issues.map((issue) => ({
+    path: formatPath(issue.path),
+    code: issue.code,
+    message: issue.message,
+  }));
+}
+
+export function refFailureMessage(
+  ref: string,
+  resolution: Extract<FieldRefResolution, { ok: false }>,
+): string {
+  return resolution.code === 'unknown'
+    ? `'${ref}' does not name a field.`
+    : `'${ref}' could mean ${resolution.candidates.join(' or ')}; say which.`;
 }
