@@ -504,7 +504,8 @@ function PetJobConversation({
         }),
   });
   return (
-    <Suspense fallback={<LoadingPanel label="the conversation" />}>
+    // A status line, not LoadingPanel: its heading would skip a level under the page's h1.
+    <Suspense fallback={<Text role="status">Loading the conversation…</Text>}>
       <Conversation
         {...props}
         jobs={{
