@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Xml;
+using Nix.Workers.Import;
 
 namespace Nix.Workers.Files;
 
@@ -424,7 +425,7 @@ public static partial class Thumbnails
         }
         cancellationToken.ThrowIfCancellationRequested();
 
-        var opfPath = Clean(RootfilePath(ReadEntry(files.GetValueOrDefault("META-INF/container.xml"), MaxXmlBytes)));
+        var opfPath = ImportArchive.CleanPath(RootfilePath(ReadEntry(files.GetValueOrDefault("META-INF/container.xml"), MaxXmlBytes)));
         var (meta, items) = ParsePackage(ReadEntry(files.GetValueOrDefault(opfPath), MaxXmlBytes));
         var directory = Dir(opfPath);
         foreach (var item in CoverCandidates(meta, items))
@@ -595,43 +596,14 @@ public static partial class Thumbnails
         {
             return null;
         }
-        var name = Clean(directory + "/" + href);
+        var name = ImportArchive.CleanPath(directory + "/" + href);
         return name == ".." || name.StartsWith("../", StringComparison.Ordinal) || name.StartsWith('/') ? null : name;
-    }
-
-    // Go's path.Clean: lexical, slash-separated.
-    private static string Clean(string path)
-    {
-        var rooted = path.StartsWith('/');
-        var parts = new List<string>();
-        foreach (var part in path.Split('/'))
-        {
-            if (part.Length == 0 || part == ".")
-            {
-                continue;
-            }
-            if (part == "..")
-            {
-                if (parts.Count > 0 && parts[^1] != "..")
-                {
-                    parts.RemoveAt(parts.Count - 1);
-                }
-                else if (!rooted)
-                {
-                    parts.Add(part);
-                }
-                continue;
-            }
-            parts.Add(part);
-        }
-        var joined = string.Join('/', parts);
-        return rooted ? "/" + joined : joined.Length == 0 ? "." : joined;
     }
 
     // Go's path.Dir.
     private static string Dir(string path)
     {
         var slash = path.LastIndexOf('/');
-        return Clean(slash < 0 ? string.Empty : path[..(slash + 1)]);
+        return ImportArchive.CleanPath(slash < 0 ? string.Empty : path[..(slash + 1)]);
     }
 }

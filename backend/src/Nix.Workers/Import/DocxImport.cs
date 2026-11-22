@@ -125,19 +125,24 @@ internal static class DocxImport
         };
     }
 
+    /// <summary>An optional small part, validated like the main document; null when the archive has none.</summary>
+    private static byte[]? ReadOptionalXml(ZipArchive archive, string name, string label, ImportPlanLimits limits, int maxDepth)
+    {
+        if (ImportArchive.Find(archive, name) is null)
+        {
+            return null;
+        }
+        var body = ImportArchive.ReadEntry(archive, name, Math.Min(limits.MaxEntryBytes, 2 << 20));
+        return SafeXml.Validate(body, maxDepth, MaxXmlTokens) is { } error ? throw new ImportPlanException(label + ": " + error) : body;
+    }
+
     private static (Dictionary<string, string> Links, Dictionary<string, string> Images) ReadRelationships(ZipArchive archive, ImportPlanLimits limits, int maxDepth)
     {
         var links = new Dictionary<string, string>(StringComparer.Ordinal);
         var images = new Dictionary<string, string>(StringComparer.Ordinal);
-        const string name = "word/_rels/document.xml.rels";
-        if (ImportArchive.Find(archive, name) is null)
+        if (ReadOptionalXml(archive, "word/_rels/document.xml.rels", "DOCX relationships", limits, maxDepth) is not { } body)
         {
             return (links, images);
-        }
-        var body = ImportArchive.ReadEntry(archive, name, Math.Min(limits.MaxEntryBytes, 2 << 20));
-        if (SafeXml.Validate(body, maxDepth, MaxXmlTokens) is { } error)
-        {
-            throw new ImportPlanException("DOCX relationships: " + error);
         }
         foreach (var relation in SafeXml.Root(body).Children("Relationship"))
         {
@@ -231,16 +236,10 @@ internal static class DocxImport
 
     private static Dictionary<string, string> ReadNumbering(ZipArchive archive, ImportPlanLimits limits, int maxDepth)
     {
-        const string name = "word/numbering.xml";
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (ImportArchive.Find(archive, name) is null)
+        if (ReadOptionalXml(archive, "word/numbering.xml", "DOCX numbering", limits, maxDepth) is not { } body)
         {
             return result;
-        }
-        var body = ImportArchive.ReadEntry(archive, name, Math.Min(limits.MaxEntryBytes, 2 << 20));
-        if (SafeXml.Validate(body, maxDepth, MaxXmlTokens) is { } error)
-        {
-            throw new ImportPlanException("DOCX numbering: " + error);
         }
         var document = SafeXml.Root(body);
         var abstracts = new Dictionary<string, string>(StringComparer.Ordinal);

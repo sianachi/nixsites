@@ -197,7 +197,7 @@ public sealed class FilePublishHandler(WorkerLoopbackClient core, ObjectTransfer
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(Thumbnails.ThumbnailTimeout);
             var result = Thumbnails.FromStagedFile(spool, inspected.ByteLength, fileName, inspected.DetectedMediaType, timeout.Token);
-            if (result is null || result.Bytes.Length == 0 || result.Bytes.Length > Thumbnails.MaxThumbnailBytes)
+            if (result is null)
             {
                 return inspected;
             }
