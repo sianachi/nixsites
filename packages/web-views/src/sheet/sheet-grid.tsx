@@ -489,18 +489,8 @@ export function SheetGrid({ sheet: editable, readOnly = false }: SheetGridProps)
                     onChange={(event) => {
                       dispatch({ type: 'setDraft', draft: event.target.value });
                     }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        commitDraft('down');
-                      } else if (event.key === 'Tab') {
-                        event.preventDefault();
-                        commitDraft('right');
-                      } else if (event.key === 'Escape') {
-                        event.preventDefault();
-                        cancelEdit();
-                      }
-                    }}
+                    onCommit={commitDraft}
+                    onCancel={cancelEdit}
                     onBlur={() => {
                       // Clicking elsewhere commits, as in every spreadsheet; the
                       // cell handler that took the click has already done so via

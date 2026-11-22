@@ -31,16 +31,41 @@ export interface CellEditorProps {
   value: string;
   position: CellEditorPosition;
   onChange: (event: ChangeEvent<EditorElement>) => void;
-  onKeyDown: (event: ReactKeyboardEvent<EditorElement>) => void;
+  /** Enter commits downward, Tab to the right; Escape cancels. */
+  onCommit: (then: 'down' | 'right') => void;
+  onCancel: () => void;
   onBlur: (event: FocusEvent<EditorElement>) => void;
   maxLength?: number;
   multiline?: boolean;
 }
 
 export const CellEditor = forwardRef<EditorElement, CellEditorProps>(function CellEditor(
-  { ariaLabel, value, position, onChange, onKeyDown, onBlur, maxLength, multiline = false },
+  {
+    ariaLabel,
+    value,
+    position,
+    onChange,
+    onCommit,
+    onCancel,
+    onBlur,
+    maxLength,
+    multiline = false,
+  },
   ref,
 ) {
+  function onKeyDown(event: ReactKeyboardEvent<EditorElement>): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onCommit('down');
+    } else if (event.key === 'Tab') {
+      event.preventDefault();
+      onCommit('right');
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      onCancel();
+    }
+  }
+
   if (!multiline) {
     return (
       <input

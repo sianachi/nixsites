@@ -79,16 +79,6 @@ export function drawList(request: RenderRequest): Drawing {
   };
 }
 
-/** A property-backed spreadsheet uses the same row data as a list, but owns a grid presentation. */
-export function drawSheet(request: RenderRequest): Drawing {
-  return drawList(request);
-}
-
-/** Smart-list results are rows after the server has applied the stored filter rules. */
-export function drawQuery(request: RenderRequest): Drawing {
-  return drawList(request);
-}
-
 export function drawForm(request: RenderRequest): Drawing {
   const { view, schema, palette, width } = request;
   const keys = view.columns.filter((key) => key !== 'title').slice(0, 8);

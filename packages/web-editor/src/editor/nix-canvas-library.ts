@@ -2,7 +2,7 @@ import type { NonDeletedExcalidrawElement } from '@excalidraw/excalidraw/element
 import type { LibraryItem } from '@excalidraw/excalidraw/types';
 
 import type { CanvasElement } from './canvas-binding';
-import { prepareCanvasElements } from './nix-canvas-model';
+import { prepareCanvasElements, record } from './nix-canvas-model';
 
 const LEGACY_ITEM_TYPE = 'nix-canvas-library-item';
 const LEGACY_CREATED_AT = 1;
@@ -166,8 +166,4 @@ function stableHash(value: string): string {
     hash = BigInt.asUintN(64, hash * 1_099_511_628_211n);
   }
   return hash.toString(36);
-}
-
-function record(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
