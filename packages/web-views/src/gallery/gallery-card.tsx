@@ -12,12 +12,10 @@ import { useClickSelects } from '@nix/web-collections/core/item-open-click';
 import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
 import { useCompactCollection } from '@nix/web-foundation/layout/zen-presentation';
-import { CardPropertySummary } from '../core/card-property-summary';
-import { ValuePopover } from '@nix/web-collections/properties/value-popover';
+import { CardFields } from '../core/card-property-summary';
 import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
 import { rowGestures } from '@nix/web-collections/core/use-item-selection';
 import { FileThumbnail } from '@nix/web-collections/thumbnails/index';
-import { ListCell } from '../list/list-cell';
 import { CARD_SIZE_COVER, type CardSize } from './card-size';
 import { CoverPane } from './cover-pane';
 import type { Cover } from './gallery-cover';
@@ -249,33 +247,17 @@ export function GalleryCard(props: GalleryCardProps): ReactNode {
             </div>
           ) : null}
 
-          {compact ? (
-            <CardPropertySummary item={item} fields={fields} />
-          ) : fields.length === 0 ? null : (
-            // `relative z-10`: the title button's `after:absolute after:inset-0` stretched hit area
-            // sits on top of the card in DOM order, and without a stacking context of its own this
-            // layer would swallow every click a field control below it is meant to receive - a tap
-            // meant for a select or a checkbox opening the item instead.
-            <div className="relative z-10 -mx-2 flex flex-wrap gap-x-1">
-              {fields.map((field) => (
-                <ValuePopover
-                  key={field.key}
-                  item={item}
-                  property={field}
-                  density="chip"
-                  labelled
-                  className="max-w-full"
-                >
-                  <ListCell
-                    item={item}
-                    property={field}
-                    density="card"
-                    onWrite={(value) => onWrite(item.id, field.key, value)}
-                  />
-                </ValuePopover>
-              ))}
-            </div>
-          )}
+          {/* `relative z-10`: the title button's `after:absolute after:inset-0` stretched hit area
+              sits on top of the card in DOM order, and without a stacking context of its own this
+              layer would swallow every click a field control below it is meant to receive - a tap
+              meant for a select or a checkbox opening the item instead. */}
+          <CardFields
+            item={item}
+            fields={fields}
+            compact={compact}
+            className="relative z-10 -mx-2 flex flex-wrap gap-x-1"
+            onWrite={onWrite}
+          />
         </li>
       )}
     </ContextMenu>
