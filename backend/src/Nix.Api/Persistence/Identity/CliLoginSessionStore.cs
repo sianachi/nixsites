@@ -3,6 +3,7 @@ using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Identity;
 
@@ -106,8 +107,6 @@ public sealed class CliLoginSessionStore(NpgsqlDataSource dataSource) : ICliLogi
         command.Parameters.AddRange(parameters);
         return command;
     }
-
-    private static NpgsqlParameter Text(string name, string value) => new(name, NpgsqlDbType.Text) { Value = value };
 
     private static async ValueTask<AuthenticatedBrowserSession> ReadSessionAsync(NpgsqlDataReader reader, int offset, CancellationToken cancellationToken) =>
         new(BrowserSessionId.From(reader.GetGuid(offset)), TenantId.From(reader.GetGuid(offset + 1)),

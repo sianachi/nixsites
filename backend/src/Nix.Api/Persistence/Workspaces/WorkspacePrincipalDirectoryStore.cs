@@ -4,6 +4,7 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Workspaces;
 
@@ -37,8 +38,8 @@ public sealed class WorkspacePrincipalDirectoryStore(
             [
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                UuidOrNull("after_principal_id", afterPrincipalId?.Value),
-                TextOrNull("query", search),
+                Uuid("after_principal_id", afterPrincipalId?.Value),
+                Text("query", search),
                 Integer("limit", limit),
             ],
             cancellationToken);
@@ -48,18 +49,6 @@ public sealed class WorkspacePrincipalDirectoryStore(
         }
         return rows;
     }
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
-
-    private static NpgsqlParameter UuidOrNull(string name, Guid? value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value is { } actual ? actual : DBNull.Value };
-
-    private static NpgsqlParameter TextOrNull(string name, string? value) =>
-        new(name, NpgsqlDbType.Text) { Value = value is null ? DBNull.Value : value };
-
-    private static NpgsqlParameter Integer(string name, int value) =>
-        new(name, NpgsqlDbType.Integer) { Value = value };
 
     private readonly struct WorkspacePrincipalMapper : INixRowMapper<WorkspacePrincipalSnapshot>
     {

@@ -7,6 +7,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Identity;
 
@@ -48,8 +49,8 @@ public sealed class PersonalWorkspaceProvisioner(
                 Text("subject", subject),
                 Text("issuer", issuer),
                 Text("display_name", displayName),
-                NullableText("email", profile.Email),
-                NullableText("email_normalized", normalizedEmail),
+                Text("email", profile.Email),
+                Text("email_normalized", normalizedEmail),
                 Boolean("email_verified", normalizedEmail is not null),
             ],
             cancellationToken).ConfigureAwait(false);
@@ -116,8 +117,8 @@ public sealed class PersonalWorkspaceProvisioner(
                 Uuid("principal_id", principalId.Value),
                 Text("issuer", issuer),
                 Text("subject", subject),
-                NullableText("email", profile.Email),
-                NullableText("email_normalized", normalizedEmail),
+                Text("email", profile.Email),
+                Text("email_normalized", normalizedEmail),
                 Boolean("email_verified", normalizedEmail is not null),
             ],
             cancellationToken).ConfigureAwait(false);
@@ -232,21 +233,6 @@ public sealed class PersonalWorkspaceProvisioner(
             ? trimmed + suffix
             : trimmed[..(200 - suffix.Length)] + suffix;
     }
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
-
-    private static NpgsqlParameter Text(string name, string value) =>
-        new(name, NpgsqlDbType.Text) { Value = value };
-
-    private static NpgsqlParameter NullableText(string name, string? value) =>
-        new(name, NpgsqlDbType.Text) { Value = value is null ? DBNull.Value : value };
-
-    private static NpgsqlParameter Boolean(string name, bool value) =>
-        new(name, NpgsqlDbType.Boolean) { Value = value };
-
-    private static NpgsqlParameter Timestamp(string name, DateTimeOffset value) =>
-        new(name, NpgsqlDbType.TimestampTz) { Value = value };
 
     private readonly record struct ProvisionedPrincipal(
         PrincipalId Id,

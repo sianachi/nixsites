@@ -200,9 +200,6 @@ const READ_ONLY = new Set([
   'find_action',
 ]);
 
-/** A read-only operation never needs an approval card. */
-export const isReadOnlyOperation = (operation: string): boolean => READ_ONLY.has(operation);
-
 function canonicalField(args: Record<string, unknown>, field: string): void {
   const value = args[field];
   if (typeof value === 'string' && value !== '') {

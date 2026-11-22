@@ -5,6 +5,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Authorization;
 
@@ -238,9 +239,6 @@ public sealed class WorkspaceMembershipResolver(
 
     private NpgsqlParameter NowParameter() =>
         new("now", NpgsqlDbType.TimestampTz) { Value = _clock.GetUtcNow() };
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
 
     /// <summary>One membership grant row: the workspace, and the role text as stored.</summary>
     private readonly record struct WorkspaceGrant(WorkspaceId WorkspaceId, string Role);

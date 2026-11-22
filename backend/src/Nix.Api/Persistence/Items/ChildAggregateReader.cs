@@ -9,6 +9,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Items;
 
@@ -131,8 +132,8 @@ public sealed class ChildAggregateReader(
                 // Binding the group key instead would have Postgres total the property the chart
                 // is grouping by and the reader throw the answer away - and would drag that
                 // property through the numeric bound for no reason.
-                NullableText("measure_key", measureKey),
-                Int("limit", capped),
+                Text("measure_key", measureKey),
+                Integer("limit", capped),
             ],
             cancellationToken);
 
@@ -183,10 +184,10 @@ public sealed class ChildAggregateReader(
                 Text("split_key", splitKey),
 
                 // Null rather than the group key, for the reason BucketAsync gives.
-                NullableText("measure_key", measureKey),
-                Int("series_limit", Math.Clamp(seriesLimit, 1, MaximumSeries)),
-                Int("bucket_limit", Math.Clamp(bucketLimit, 1, MaximumBuckets)),
-                Int("cell_limit", cells),
+                Text("measure_key", measureKey),
+                Integer("series_limit", Math.Clamp(seriesLimit, 1, MaximumSeries)),
+                Integer("bucket_limit", Math.Clamp(bucketLimit, 1, MaximumBuckets)),
+                Integer("cell_limit", cells),
             ],
             cancellationToken);
 
@@ -239,12 +240,12 @@ public sealed class ChildAggregateReader(
                 Uuid("workspace_id", workspaceId.Value),
                 Uuid("parent_id", parent.Value),
                 Text("group_key", dateKey),
-                NullableText("split_key", splitKey),
-                NullableText("measure_key", measureKey),
-                NullableText("from_day", firstDay?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-                NullableText("to_day", lastDay?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-                Int("series_limit", Math.Clamp(seriesLimit, 1, MaximumSeries)),
-                Int("cell_limit", cells),
+                Text("split_key", splitKey),
+                Text("measure_key", measureKey),
+                Text("from_day", firstDay?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                Text("to_day", lastDay?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                Integer("series_limit", Math.Clamp(seriesLimit, 1, MaximumSeries)),
+                Integer("cell_limit", cells),
             ],
             cancellationToken);
 
@@ -297,24 +298,6 @@ public sealed class ChildAggregateReader(
     /// </summary>
     private static readonly FrozenDictionary<ChildAggregateKey, ChildAggregate> EmptyFold =
         FrozenDictionary<ChildAggregateKey, ChildAggregate>.Empty;
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
-
-    private static NpgsqlParameter UuidArray(string name, Guid[] values) =>
-        new(name, NpgsqlDbType.Uuid | NpgsqlDbType.Array) { Value = values };
-
-    private static NpgsqlParameter TextArray(string name, string[] values) =>
-        new(name, NpgsqlDbType.Text | NpgsqlDbType.Array) { Value = values };
-
-    private static NpgsqlParameter Text(string name, string value) =>
-        new(name, NpgsqlDbType.Text) { Value = value };
-
-    private static NpgsqlParameter NullableText(string name, string? value) =>
-        new(name, NpgsqlDbType.Text) { Value = value is null ? DBNull.Value : value };
-
-    private static NpgsqlParameter Int(string name, int value) =>
-        new(name, NpgsqlDbType.Integer) { Value = value };
 
     private readonly record struct FoldRow(Guid Parent, string Key, ChildAggregate Aggregate);
 

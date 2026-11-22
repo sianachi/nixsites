@@ -9,6 +9,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Sites;
 
@@ -792,12 +793,6 @@ public sealed class SiteStore(NixDbContext database, NixSqlExecutor sql, INixSes
     }
 
     private NpgsqlParameter TenantParameter() => Uuid("tenant_id", Tenant.Value);
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
-
-    private static NpgsqlParameter UuidArray(string name, Guid[] values) =>
-        new(name, NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = values };
 
     private readonly struct IdentifierMapper : INixRowMapper<Guid>
     {

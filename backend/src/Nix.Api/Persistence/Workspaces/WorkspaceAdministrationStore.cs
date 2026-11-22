@@ -7,6 +7,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Workspaces;
 
@@ -159,8 +160,8 @@ public sealed partial class WorkspaceAdministrationStore(
             [
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
-                TimestampOrNull("after_created_at", afterCreatedAt),
-                UuidOrNull("after_id", afterId?.Value),
+                Timestamp("after_created_at", afterCreatedAt),
+                Uuid("after_id", afterId?.Value),
                 Integer("limit", limit),
             ],
             cancellationToken);
@@ -505,9 +506,9 @@ public sealed partial class WorkspaceAdministrationStore(
             default,
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
-                Uuid("workspace_id", workspaceId.Value), TimestampOrNull("after_granted_at", afterGrantedAt),
-                TextOrNull("after_subject_type", afterSubjectType), UuidOrNull("after_id", afterId),
-                UuidOrNull("target_principal_id", null),
+                Uuid("workspace_id", workspaceId.Value), Timestamp("after_granted_at", afterGrantedAt),
+                Text("after_subject_type", afterSubjectType), Uuid("after_id", afterId),
+                Uuid("target_principal_id", null),
                 Integer("limit", limit),
             ], cancellationToken);
         await foreach (var row in query.ConfigureAwait(false))
@@ -534,9 +535,9 @@ public sealed partial class WorkspaceAdministrationStore(
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                UuidOrNull("after_id", afterId?.Value),
+                Uuid("after_id", afterId?.Value),
                 Integer("limit", limit),
-                TextOrNull("query", search),
+                Text("query", search),
             ],
             cancellationToken);
         await foreach (var row in query.ConfigureAwait(false))
@@ -560,9 +561,9 @@ public sealed partial class WorkspaceAdministrationStore(
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                TimestampOrNull("after_granted_at", null),
-                TextOrNull("after_subject_type", null),
-                UuidOrNull("after_id", null),
+                Timestamp("after_granted_at", null),
+                Text("after_subject_type", null),
+                Uuid("after_id", null),
                 Uuid("target_principal_id", principalId.Value),
                 Integer("limit", 1),
             ],
@@ -590,8 +591,8 @@ public sealed partial class WorkspaceAdministrationStore(
             default,
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
-                Uuid("workspace_id", workspaceId.Value), TimestampOrNull("after_invited_at", afterInvitedAt),
-                UuidOrNull("after_id", afterId), Integer("limit", limit),
+                Uuid("workspace_id", workspaceId.Value), Timestamp("after_invited_at", afterInvitedAt),
+                Uuid("after_id", afterId), Integer("limit", limit),
             ], cancellationToken);
         await foreach (var row in query.ConfigureAwait(false))
         {
@@ -830,7 +831,7 @@ public sealed partial class WorkspaceAdministrationStore(
             default,
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
-                UuidOrNull("credential_id", _credential.CredentialId),
+                Uuid("credential_id", _credential.CredentialId),
                 Uuid("workspace_id", workspaceId.Value),
                 new NpgsqlParameter("candidate_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = candidateIds },
             ],
@@ -893,7 +894,7 @@ public sealed partial class WorkspaceAdministrationStore(
             default,
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
-                UuidOrNull("credential_id", _credential.CredentialId),
+                Uuid("credential_id", _credential.CredentialId),
                 Uuid("workspace_id", workspaceId.Value), Uuid("parent_id", parentId), Uuid("item_id", itemId),
                 Text("title", settings.FormatTitle(day)), Text("date", date), Timestamp("now", now),
             ],
@@ -926,7 +927,7 @@ public sealed partial class WorkspaceAdministrationStore(
             default,
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
-                UuidOrNull("credential_id", _credential.CredentialId),
+                Uuid("credential_id", _credential.CredentialId),
                 Uuid("workspace_id", workspaceId.Value), Uuid("item_id", itemId), Timestamp("now", now),
             ],
             cancellationToken);
@@ -956,7 +957,7 @@ public sealed partial class WorkspaceAdministrationStore(
             default,
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
-                Uuid("workspace_id", workspaceId.Value), UuidOrNull("parent_id", parentId),
+                Uuid("workspace_id", workspaceId.Value), Uuid("parent_id", parentId),
                 new NpgsqlParameter("candidate_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = candidateIds },
             ],
             cancellationToken);
@@ -983,9 +984,9 @@ public sealed partial class WorkspaceAdministrationStore(
             default,
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
-                UuidOrNull("credential_id", _credential.CredentialId),
+                Uuid("credential_id", _credential.CredentialId),
                 Uuid("workspace_id", workspaceId.Value), Uuid("item_id", itemId),
-                UuidOrNull("parent_id", parentId), Text("title", title), Timestamp("now", now),
+                Uuid("parent_id", parentId), Text("title", title), Timestamp("now", now),
             ],
             cancellationToken);
         await foreach (var row in rows.ConfigureAwait(false))
@@ -995,23 +996,6 @@ public sealed partial class WorkspaceAdministrationStore(
 
         return state == "active";
     }
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
-    private static NpgsqlParameter UuidOrNull(string name, Guid? value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value is { } actual ? actual : DBNull.Value };
-    private static NpgsqlParameter Text(string name, string value) =>
-        new(name, NpgsqlDbType.Text) { Value = value };
-    private static NpgsqlParameter TextOrNull(string name, string? value) =>
-        new(name, NpgsqlDbType.Text) { Value = value is null ? DBNull.Value : value };
-    private static NpgsqlParameter Integer(string name, int value) =>
-        new(name, NpgsqlDbType.Integer) { Value = value };
-    private static NpgsqlParameter Boolean(string name, bool value) =>
-        new(name, NpgsqlDbType.Boolean) { Value = value };
-    private static NpgsqlParameter Timestamp(string name, DateTimeOffset value) =>
-        new(name, NpgsqlDbType.TimestampTz) { Value = value };
-    private static NpgsqlParameter TimestampOrNull(string name, DateTimeOffset? value) =>
-        new(name, NpgsqlDbType.TimestampTz) { Value = value is { } actual ? actual : DBNull.Value };
 
     private readonly struct WorkspaceMapper : INixRowMapper<WorkspaceSnapshot>
     {

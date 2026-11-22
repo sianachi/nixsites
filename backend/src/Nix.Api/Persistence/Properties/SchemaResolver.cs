@@ -5,6 +5,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Properties;
 
@@ -96,9 +97,6 @@ public sealed class SchemaResolver(
             ? await ResolveForItemAsync(parent, cancellationToken).ConfigureAwait(false)
             : PropertySchema.Empty;
     }
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
 
     /// <summary>Reads the declared schema out of an ancestor row.</summary>
     /// <remarks>

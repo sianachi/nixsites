@@ -4,6 +4,7 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Identity;
 
@@ -90,9 +91,6 @@ public sealed class IdentityDirectory(NpgsqlDataSource dataSource) : IIdentityDi
                 ParseStatus(reader.GetString(2)),
                 reader.GetString(3)),
             cancellationToken).ConfigureAwait(false);
-
-    private static NpgsqlParameter Text(string name, string value) =>
-        new(name, NpgsqlDbType.Text) { Value = value };
 
     private async ValueTask<TRow?> QuerySingleAsync<TRow>(
         string sql,

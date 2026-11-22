@@ -1,4 +1,3 @@
-import type { z } from 'zod';
 import { propertyFormulaProblem } from '@nix/sheet';
 
 import { LIMITS } from '../catalog/tables.js';
@@ -13,7 +12,6 @@ import {
   structuredSpecSchema,
   viewSetupSpecSchema,
 } from '../spec/operations.js';
-import type { FieldRefResolution } from '../spec/refs.js';
 import { isTitleColumnReference, type ViewSpec } from '../spec/view.js';
 import { mergeProperties } from '../vocabulary/merge-properties.js';
 import { TYPE_GROUP_KEY } from '../vocabulary/property-types.js';
@@ -23,7 +21,13 @@ import { tryResolveKey } from '../compile/resolve.js';
 import { refuseSchema } from './schema-rules.js';
 import { refuseViews } from './view-rules.js';
 import { validateValue } from './values.js';
-import type { Problem, ValidationContext, ValidationReport } from './report.js';
+import {
+  refFailureMessage,
+  zodIssuesToProblems,
+  type Problem,
+  type ValidationContext,
+  type ValidationReport,
+} from './report.js';
 import { validateUpdateView } from './update-view.js';
 
 export type SpecOperation =
@@ -42,27 +46,6 @@ interface RefScope {
   added: readonly StructureProperty[];
 }
 
-function formatPath(path: readonly PropertyKey[]): string {
-  let result = '';
-  for (const segment of path) {
-    if (typeof segment === 'number') {
-      result += `[${String(segment)}]`;
-    } else {
-      const text = String(segment);
-      result += result.length === 0 ? text : `.${text}`;
-    }
-  }
-  return result;
-}
-
-function zodIssuesToProblems(error: z.ZodError): Problem[] {
-  return error.issues.map((issue) => ({
-    path: formatPath(issue.path),
-    code: issue.code,
-    message: issue.message,
-  }));
-}
-
 function statsFromRaw(raw: unknown): ValidationReport['stats'] {
   const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
   return {
@@ -70,15 +53,6 @@ function statsFromRaw(raw: unknown): ValidationReport['stats'] {
     views: Array.isArray(record.views) ? record.views.length : 0,
     entries: Array.isArray(record.entries) ? record.entries.length : 0,
   };
-}
-
-function refFailureMessage(
-  ref: string,
-  resolution: Extract<FieldRefResolution, { ok: false }>,
-): string {
-  return resolution.code === 'unknown'
-    ? `'${ref}' does not name a field.`
-    : `'${ref}' could mean ${resolution.candidates.join(' or ')}; say which.`;
 }
 
 /**

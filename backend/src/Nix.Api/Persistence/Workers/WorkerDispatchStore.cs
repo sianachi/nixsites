@@ -2,6 +2,7 @@ using Nix.Abstractions.Workers;
 using Nix.Persistence.ObjectStorage;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Workers;
 
@@ -313,18 +314,6 @@ public sealed class WorkerDispatchStore(NpgsqlDataSource dataSource) : IWorkerDi
             }
         }
     }
-
-    private static NpgsqlParameter Text(string name, string? value) =>
-        new(name, NpgsqlDbType.Text) { Value = value is null ? DBNull.Value : value };
-
-    private static NpgsqlParameter Json(string name, string? value) =>
-        new(name, NpgsqlDbType.Jsonb) { Value = value is null ? DBNull.Value : value };
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
-
-    private static NpgsqlParameter Boolean(string name, bool value) =>
-        new(name, NpgsqlDbType.Boolean) { Value = value };
 
     private static WorkerResultApplicationOutcome ParseApplicationOutcome(string value) => value switch
     {

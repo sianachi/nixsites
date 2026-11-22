@@ -6,6 +6,7 @@ using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Recurrence;
 
@@ -62,7 +63,7 @@ public sealed class RecurrenceStore(
             [
                 Uuid("tenant_id", Tenant.Value),
                 Uuid("item_id", itemId.Value),
-                NullableText("recurrence", ruleJson),
+                Text("recurrence", ruleJson),
                 Uuid("actor", Actor.Value),
             ],
             cancellationToken).ConfigureAwait(false);
@@ -142,15 +143,6 @@ public sealed class RecurrenceStore(
 
         return (false, null);
     }
-
-    private static NpgsqlParameter Uuid(string name, Guid value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value };
-
-    private static NpgsqlParameter Text(string name, string value) =>
-        new(name, NpgsqlDbType.Text) { Value = value };
-
-    private static NpgsqlParameter NullableText(string name, string? value) =>
-        new(name, NpgsqlDbType.Text) { Value = value is null ? DBNull.Value : value };
 
     /// <summary>Reads a single nullable text column.</summary>
     private readonly struct NullableTextMapper : INixRowMapper<string?>

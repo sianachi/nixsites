@@ -402,28 +402,13 @@ function rewriteInlineImages(
     if (isLocalImageTarget(source)) {
       environment.importScan.unresolvedLocalImages += 1;
       environment.localImageTargets.push(source);
-      if (linkDepth > 0 || !isAllowedLinkAddress(source)) {
-        rewritten.push(replacementText(imageText(child)));
-        continue;
-      }
-      const open = new Token('link_open', 'a', 1);
-      open.attrs = [['href', source]];
-      const title = child.attrGet('title');
-      if (title !== null) {
-        open.attrSet('title', title);
-      }
-      rewritten.push(open, replacementText(alt.length > 0 ? alt : source));
-      rewritten.push(new Token('link_close', 'a', -1));
-      continue;
-    }
-
-    if (!isPersistableImageTarget(source)) {
+    } else if (!isPersistableImageTarget(source)) {
       environment.importScan.unsupportedImageAddresses += 1;
       rewritten.push(replacementText(imageText(child)));
       continue;
+    } else {
+      environment.importScan.inlineImagesFlattened += 1;
     }
-
-    environment.importScan.inlineImagesFlattened += 1;
     if (linkDepth > 0 || !isAllowedLinkAddress(source)) {
       rewritten.push(replacementText(imageText(child)));
       continue;
