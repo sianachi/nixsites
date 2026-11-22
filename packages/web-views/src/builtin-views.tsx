@@ -14,15 +14,10 @@ import {
   MousePointerClick,
   Table2,
 } from 'lucide-react';
+import { lazy } from 'react';
 
 import { BoardView } from './board/board-view';
 import { normalizeChartView } from './chart/chart-options';
-import { ChartOptionsEditor } from './chart/chart-options-editor';
-import { ChartView } from './chart/chart-view';
-import { ChecklistDetailChoice, ChecklistView } from './checklist/checklist-view';
-import { MatrixView } from './matrix/matrix-view';
-import { OutlineView } from './outline/outline-view';
-import { CalendarView } from './calendar/calendar-view';
 import {
   canChartBy,
   canGroupBy,
@@ -38,16 +33,51 @@ import {
   type ViewKindDescriptor,
 } from './core/view-kinds';
 import { CARD_SIZES, DEFAULT_CARD_SIZE, type CardSize } from './gallery/card-size';
-import { GalleryView } from './gallery/gallery-view';
 import { DEFAULT_DRIVE_LAYOUT, DRIVE_LAYOUTS, type DriveLayout } from './drive/drive-layout';
-import { DriveView } from './drive/drive-view';
-import { FormWithSubmissions } from './form/form-with-submissions';
-import { InteractiveFormEditor } from './form/interactive-form-editor';
 import { ListView } from './list/list-view';
-import { QueryView } from './query/query-view';
-import { SpreadsheetView } from './spreadsheet/spreadsheet-view';
-import { TimelineView } from './timeline/timeline-view';
-import { HabitTrackerView } from './habit-tracker/habit-tracker-view';
+
+// Loaded when a view of that kind is first drawn: list and board are what a workspace opens on,
+// the rest would otherwise ship in the entry chunk for everyone. `renderContent` and the
+// configuration panel hold the Suspense boundaries.
+const ChartOptionsEditor = lazy(async () => ({
+  default: (await import('./chart/chart-options-editor')).ChartOptionsEditor,
+}));
+const ChartView = lazy(async () => ({ default: (await import('./chart/chart-view')).ChartView }));
+const MatrixView = lazy(async () => ({
+  default: (await import('./matrix/matrix-view')).MatrixView,
+}));
+const OutlineView = lazy(async () => ({
+  default: (await import('./outline/outline-view')).OutlineView,
+}));
+const CalendarView = lazy(async () => ({
+  default: (await import('./calendar/calendar-view')).CalendarView,
+}));
+const GalleryView = lazy(async () => ({
+  default: (await import('./gallery/gallery-view')).GalleryView,
+}));
+const DriveView = lazy(async () => ({ default: (await import('./drive/drive-view')).DriveView }));
+const FormWithSubmissions = lazy(async () => ({
+  default: (await import('./form/form-with-submissions')).FormWithSubmissions,
+}));
+const InteractiveFormEditor = lazy(async () => ({
+  default: (await import('./form/interactive-form-editor')).InteractiveFormEditor,
+}));
+const QueryView = lazy(async () => ({ default: (await import('./query/query-view')).QueryView }));
+const SpreadsheetView = lazy(async () => ({
+  default: (await import('./spreadsheet/spreadsheet-view')).SpreadsheetView,
+}));
+const TimelineView = lazy(async () => ({
+  default: (await import('./timeline/timeline-view')).TimelineView,
+}));
+const HabitTrackerView = lazy(async () => ({
+  default: (await import('./habit-tracker/habit-tracker-view')).HabitTrackerView,
+}));
+const ChecklistView = lazy(async () => ({
+  default: (await import('./checklist/checklist-view')).ChecklistView,
+}));
+const ChecklistDetailChoice = lazy(async () => ({
+  default: (await import('./checklist/checklist-view')).ChecklistDetailChoice,
+}));
 
 /**
  * Every kind of view under `views/`, and everything this build knows about each one. The custom

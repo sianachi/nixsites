@@ -136,7 +136,7 @@ it('selects checklist lines from the menu, then by their boxes, apart from the b
   );
   await user.pointer({
     keys: '[MouseRight]',
-    target: screen.getByRole('button', { name: 'Open First' }),
+    target: await screen.findByRole('button', { name: 'Open First' }),
   });
   await user.click(await screen.findByRole('menuitem', { name: 'Select' }));
   await user.click(await screen.findByRole('checkbox', { name: 'Select Second' }));

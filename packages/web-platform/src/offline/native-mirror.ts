@@ -3,13 +3,12 @@ import {
   fileDelete,
   fileDownload,
   fileGet,
-  openSqliteMirror,
   usage,
   windowNixStorePost,
   wipe,
   type NixStorePost,
-  type SqliteMirrorStore,
-} from '@nix/sync-sqlite';
+} from '@nix/sync-sqlite/webkit-driver';
+import type { SqliteMirrorStore } from '@nix/sync-sqlite';
 import { z } from 'zod';
 
 import { inNativeShell } from '../pwa/install-nix';
@@ -114,6 +113,8 @@ export class NativeMirror {
     await this.store?.close();
     this.store = null;
     const scope = { serverOrigin: this.deps.origin, ...account };
+    // The browser and the home-screen app never get here, so the store loads only in the shell.
+    const { openSqliteMirror } = await import('@nix/sync-sqlite/mirror');
     const driver = createWebkitSqliteDriver(this.deps.post);
     let store: SqliteMirrorStore;
     try {

@@ -1114,6 +1114,7 @@ export class DocumentSession {
     const seq = this.#headSeq;
     // Encoded once: these bytes both build the frozen copy and are what the snapshot stores.
     const captured = Y.encodeStateAsUpdate(this.#doc);
+    const bytesAtCapture = this.#bytesSinceEncode;
     const frozen = new Y.Doc();
     Y.applyUpdate(frozen, captured);
     let written: boolean;
@@ -1139,7 +1140,12 @@ export class DocumentSession {
     if (written) {
       this.#lastSnapshotSeq = seq;
       this.#lastSnapshotAt = this.now();
-      this.#encodedBase = Y.encodeStateAsUpdate(this.#doc).byteLength;
+      // No update arrived during the write: the document is still what was captured, so its
+      // size is known without encoding it again.
+      this.#encodedBase =
+        this.#bytesSinceEncode === bytesAtCapture
+          ? captured.byteLength
+          : Y.encodeStateAsUpdate(this.#doc).byteLength;
       this.#bytesSinceEncode = 0;
       this.#context.resizeResident?.(this, this.estimatedBytes);
     }

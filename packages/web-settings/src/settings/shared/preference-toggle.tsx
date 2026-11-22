@@ -25,7 +25,6 @@ export function PreferenceToggle(props: {
   readonly unsaved: string | null;
   /** True for a setting that never leaves this browser. */
   readonly deviceOnly?: boolean;
-  readonly disabled?: boolean;
   /** True when the change waits for a Save button, so it neither says "Saved" nor joins the undo history. */
   readonly draft?: boolean;
   /** Detail behind the one-line description, kept in a "More" disclosure. */
@@ -41,7 +40,6 @@ export function PreferenceToggle(props: {
         <Checkbox
           label={label}
           checked={props.checked}
-          disabled={props.disabled}
           aria-describedby={descriptionId}
           onChange={(event) => {
             const next = event.target.checked;

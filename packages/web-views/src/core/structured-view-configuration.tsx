@@ -1,6 +1,6 @@
 import { Button, Field, Icon, Select, Text, focusRing } from '@nix/ui';
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 
 import type { PropertyDefinition, View } from '@nix/web-collections/core/container-model';
 import { FilterRulesEditor } from './filter-rules-editor';
@@ -187,7 +187,9 @@ export function StructuredViewConfiguration({
         </Field>
       ) : null}
 
-      {descriptor?.configurationEditor?.({ view, fields, onChange })}
+      <Suspense fallback={null}>
+        {descriptor?.configurationEditor?.({ view, fields, onChange })}
+      </Suspense>
 
       {showColumns ? <ViewColumns view={view} fields={fields} onChange={onChange} /> : null}
 

@@ -41,7 +41,7 @@ it('browses spreadsheet records on phones while retaining an explicit grid', asy
   await user.click(screen.getByRole('button', { name: 'Release plan' }));
   expect(onOpen).toHaveBeenCalledWith(note.id);
   await user.click(screen.getByRole('button', { name: 'Show spreadsheet grid' }));
-  expect(screen.getByRole('grid')).toBeInTheDocument();
+  expect(await screen.findByRole('grid')).toBeInTheDocument();
 });
 
 it('offers no calendar grid toggle in month mode on a phone, where the strip is the calendar', () => {
@@ -66,7 +66,7 @@ it('shows dated calendar items in an agenda and keeps undated items available', 
       onOpen={onOpen}
     />,
   );
-  const agenda = screen.getByRole('region', { name: 'Calendar agenda' });
+  const agenda = await screen.findByRole('region', { name: 'Calendar agenda' });
   await user.click(within(agenda).getByRole('button', { name: 'Release plan' }));
   expect(onOpen).toHaveBeenCalledWith(note.id);
   expect(screen.getByRole('button', { name: 'Unscheduled idea' })).toBeInTheDocument();
@@ -83,7 +83,7 @@ it('offers timeline date editing in place without a horizontal grid', async () =
       onOpen={vi.fn()}
     />,
   );
-  const schedule = screen.getByRole('region', { name: 'Timeline schedule' });
+  const schedule = await screen.findByRole('region', { name: 'Timeline schedule' });
   expect(within(schedule).getByRole('button', { name: 'Release plan' })).toBeInTheDocument();
   await user.click(within(schedule).getByRole('button', { name: /^Edit dates: Release plan/ }));
   expect(screen.getByLabelText('Start date')).toBeInTheDocument();

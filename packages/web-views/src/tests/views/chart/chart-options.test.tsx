@@ -78,10 +78,10 @@ describe('chart options', () => {
     });
   });
 
-  it('offer line, area and the year grid only once the chart groups by a date', () => {
+  it('offer line, area and the year grid only once the chart groups by a date', async () => {
     render(<Harness initial={chartView()} />);
 
-    const type = screen.getByRole('combobox', { name: 'Chart type' });
+    const type = await screen.findByRole('combobox', { name: 'Chart type' });
     expect(Array.from(type.querySelectorAll('option')).map((option) => option.value)).toEqual([
       'bar',
       'column',
@@ -101,10 +101,10 @@ describe('chart options', () => {
     expect(screen.getByRole('combobox', { name: 'Count per' })).toHaveValue('month');
   });
 
-  it('edit the window, the split and the line toggles', () => {
+  it('edit the window, the split and the line toggles', async () => {
     render(<Harness initial={chartView({ groupBy: 'done_on' })} />);
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Chart type' }), {
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Chart type' }), {
       target: { value: 'line' },
     });
     fireEvent.change(screen.getByRole('combobox', { name: 'Count per' }), {

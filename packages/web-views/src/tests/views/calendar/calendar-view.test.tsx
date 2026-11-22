@@ -115,7 +115,7 @@ describe('the calendar view', () => {
     const data = containerOf({ children: [KICKOFF] });
     renderAt(<ContainerView container={data} view={VIEW} onOpen={vi.fn()} />);
 
-    const checkbox = screen.getByRole('checkbox', { name: 'Select Kickoff' });
+    const checkbox = await screen.findByRole('checkbox', { name: 'Select Kickoff' });
     expect(checkbox.closest('[draggable]')).toBeNull();
     await user.click(checkbox);
     expect(screen.getByRole('toolbar', { name: 'Selected items' })).toHaveTextContent('1 selected');

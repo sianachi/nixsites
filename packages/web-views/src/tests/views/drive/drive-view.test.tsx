@@ -254,25 +254,28 @@ afterEach(() => {
 });
 
 describe('the drive view', () => {
-  it.each(['list', 'grid'])('offers item actions from the %s entry context menu', (layout) => {
-    const onOpen = vi.fn();
-    render(selectableDriveOf({ items: [NOTE, FOLDER], onOpen, layout }));
+  it.each(['list', 'grid'])(
+    'offers item actions from the %s entry context menu',
+    async (layout) => {
+      const onOpen = vi.fn();
+      render(selectableDriveOf({ items: [NOTE, FOLDER], onOpen, layout }));
 
-    fireEvent.contextMenu(screen.getByRole('button', { name: NOTE.title }), {
-      clientX: 10,
-      clientY: 10,
-    });
-    const menu = screen.getByRole('menu', { name: `${NOTE.title} actions` });
-    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Select' }));
-    expect(screen.getByRole('checkbox', { name: `Select ${NOTE.title}` })).toBeChecked();
+      fireEvent.contextMenu(await screen.findByRole('button', { name: NOTE.title }), {
+        clientX: 10,
+        clientY: 10,
+      });
+      const menu = screen.getByRole('menu', { name: `${NOTE.title} actions` });
+      fireEvent.click(within(menu).getByRole('menuitem', { name: 'Select' }));
+      expect(screen.getByRole('checkbox', { name: `Select ${NOTE.title}` })).toBeChecked();
 
-    fireEvent.keyDown(screen.getByRole('button', { name: NOTE.title }), {
-      key: 'F10',
-      shiftKey: true,
-    });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Open' }));
-    expect(onOpen).toHaveBeenCalledWith(NOTE.id);
-  });
+      fireEvent.keyDown(screen.getByRole('button', { name: NOTE.title }), {
+        key: 'F10',
+        shiftKey: true,
+      });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Open' }));
+      expect(onOpen).toHaveBeenCalledWith(NOTE.id);
+    },
+  );
 
   it('downloads a file from its context menu without selecting other files', async () => {
     render(driveOf({ items: [FILE_A, FILE_B] }));
