@@ -35,15 +35,7 @@ public sealed class ExportJobHandler(
     public async Task<string?> HandleAsync(WorkerExecution job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
-        ExportJobPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize(job.Job.Payload, ExportsJsonContext.Default.ExportJobPayload);
-        }
-        catch (JsonException)
-        {
-            payload = null;
-        }
+        var payload = job.ReadPayload(ExportsJsonContext.Default.ExportJobPayload);
         if (payload is null || !ValidPayload(payload))
         {
             throw WorkerJobException.Fail("export_payload_invalid", "the durable export request is invalid");
@@ -230,7 +222,7 @@ public sealed class ExportJobHandler(
             {
                 var version = history.Versions[index];
                 var sha256 = version.Sha256 is { Length: 64 } hex && hex.All(char.IsAsciiHexDigit) ? Convert.ToHexStringLower(Convert.FromHexString(hex)) : string.Empty;
-                if (version.Version != index + 1 || version.ByteLength < 0 || version.ByteLength > 100L << 20
+                if (version.Version != index + 1 || version.ByteLength < 0 || version.ByteLength > MaximumFileBytes
                     || !NixArchive.SafeSha256(sha256) || string.IsNullOrWhiteSpace(version.FileName)
                     || string.IsNullOrWhiteSpace(version.MediaType) || version.ExpiresAt <= DateTimeOffset.UtcNow)
                 {
@@ -264,19 +256,10 @@ public sealed class ExportJobHandler(
         }
         await using (download.ConfigureAwait(false))
         {
-            long read = 0;
-            var buffer = new byte[64 * 1024]; // byte[]: drain buffer; the digest is kept by the download
+            long read;
             try
             {
-                while (true)
-                {
-                    var count = await download.Body.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                    if (count == 0)
-                    {
-                        break;
-                    }
-                    read += count;
-                }
+                read = await ImportSupport.DrainAsync(download.Body, cancellationToken).ConfigureAwait(false);
             }
             catch (ObjectTransferException exception)
             {

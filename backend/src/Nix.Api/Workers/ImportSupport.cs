@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using Nix.Workers.Import;
 using Nix.Workers.Transfer;
 
 namespace Nix.Workers;
@@ -94,6 +96,57 @@ internal static class ImportSupport
                 throw new ObjectTransferException("the immutable destination contains different bytes") { Conflict = true };
             }
         }
+    }
+
+    /// <summary>The key a file version is matched on between a plan and Core's transfer mappings.</summary>
+    public static string VersionKey(string itemId, int version) => itemId + "/" + version.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Publishes one archive file version create-only: skips the upload when the destination
+    /// already verifies, treats "already exists" as a verify, and checks the streamed digest.
+    /// <paramref name="verify"/> applies the caller's failure mapping.
+    /// </summary>
+    public static async Task CopyArchiveVersionAsync(
+        ObjectTransfer objects,
+        NixArchiveFiles archive,
+        string sourceItemId,
+        int targetVersion,
+        long byteLength,
+        string mediaType,
+        string sha256,
+        Uri uploadUrl,
+        Func<CancellationToken, Task> verify,
+        string mismatchMessage,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await verify(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+        catch (ObjectTransferException exception) when (exception.NotFound)
+        {
+        }
+        var content = archive.OpenVersion(sourceItemId, targetVersion, byteLength);
+        await using (content.ConfigureAwait(false))
+        {
+            using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            using var hashing = new HashingReadStream(content, digest);
+            try
+            {
+                await objects.UploadCreateOnlyAsync(uploadUrl, mediaType, hashing, byteLength, sha256, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ObjectTransferException exception) when (exception.AlreadyExists)
+            {
+                await verify(cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            if (!string.Equals(Convert.ToHexStringLower(digest.GetCurrentHash()), sha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ObjectTransferException(mismatchMessage) { Conflict = true };
+            }
+        }
+        await verify(cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<long> DrainAsync(Stream stream, CancellationToken cancellationToken)

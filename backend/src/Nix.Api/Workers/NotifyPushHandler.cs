@@ -42,15 +42,7 @@ public sealed class NotifyPushHandler(
     public async Task<string?> HandleAsync(WorkerExecution job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
-        NotifyPushJobPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize(job.Job.Payload, NotifyPushJobJsonContext.Default.NotifyPushJobPayload);
-        }
-        catch (JsonException)
-        {
-            payload = null;
-        }
+        var payload = job.ReadPayload(NotifyPushJobJsonContext.Default.NotifyPushJobPayload);
         if (payload is null || payload.NotificationId == Guid.Empty)
         {
             throw WorkerJobException.Fail("notify_payload_invalid", "the durable notify request is invalid");

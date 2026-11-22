@@ -5,8 +5,6 @@ internal static class Crc32
 {
     private static readonly uint[] Table = Build();
 
-    public static uint Compute(ReadOnlySpan<byte> body) => Append(0, body);
-
     public static uint Append(uint crc, ReadOnlySpan<byte> body)
     {
         crc = ~crc;

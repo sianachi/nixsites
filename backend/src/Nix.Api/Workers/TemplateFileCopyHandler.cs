@@ -22,15 +22,7 @@ public sealed class TemplateFileCopyHandler(WorkerLoopbackClient core, ObjectTra
     public async Task<string?> HandleAsync(WorkerExecution job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
-        TemplateFileTransferJobPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize(job.Job.Payload, TemplateFileTransfersJsonContext.Default.TemplateFileTransferJobPayload);
-        }
-        catch (JsonException)
-        {
-            payload = null;
-        }
+        var payload = job.ReadPayload(TemplateFileTransfersJsonContext.Default.TemplateFileTransferJobPayload);
         if (payload is null || payload.OwnerKind is not ("operation" or "application") || payload.OwnerId == Guid.Empty)
         {
             throw WorkerJobException.Fail("template_file_copy_payload_invalid", "template file copy owner is invalid");

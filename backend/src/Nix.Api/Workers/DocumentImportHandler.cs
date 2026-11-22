@@ -37,15 +37,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
     public async Task<string?> HandleAsync(WorkerExecution job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
-        DocumentImportJobPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize(job.Job.Payload, DocumentImportsJsonContext.Default.DocumentImportJobPayload);
-        }
-        catch (JsonException)
-        {
-            payload = null;
-        }
+        var payload = job.ReadPayload(DocumentImportsJsonContext.Default.DocumentImportJobPayload);
         if (payload is null || payload.ImportId == Guid.Empty)
         {
             throw WorkerJobException.Fail("import_payload_invalid", "importId is required");
@@ -77,12 +69,12 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
         if (preview.ImportId != importId || preview.Format != kindFormat || preview.DeclaredByteLength < 0 || preview.DeclaredByteLength > limits.MaxSourceBytes)
         {
-            throw await RejectAsync(job, basePath, "import_preview_invalid", "Core returned inconsistent import metadata", cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_preview_invalid", "Core returned inconsistent import metadata").ConfigureAwait(false);
         }
         using var source = await DownloadAsync(preview.SourceUrl, limits.MaxSourceBytes, "import_source_unavailable", cancellationToken).ConfigureAwait(false);
         if (source.Size != preview.DeclaredByteLength)
         {
-            throw await RejectAsync(job, basePath, "import_size_mismatch", "uploaded source size does not match its declaration", cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_size_mismatch", "uploaded source size does not match its declaration").ConfigureAwait(false);
         }
         ImportPlan plan;
         byte[] planBytes;
@@ -93,7 +85,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
         catch (ImportPlanException exception)
         {
-            throw await RejectAsync(job, basePath, exception.Code, exception.Message, cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, exception.Code, exception.Message).ConfigureAwait(false);
         }
         try
         {
@@ -101,7 +93,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
         catch (ImportPlanException exception)
         {
-            throw await RejectAsync(job, basePath, "import_plan_invalid", exception.Message, cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_plan_invalid", exception.Message).ConfigureAwait(false);
         }
         try
         {
@@ -141,17 +133,17 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
         if (commit.ImportId != importId || commit.DeclaredByteLength < 0 || commit.DeclaredByteLength > limits.MaxSourceBytes || commit.PlanByteLength <= 0 || commit.PlanByteLength > limits.MaxPlanBytes)
         {
-            throw await RejectAsync(job, basePath, "import_commit_invalid", "Core returned inconsistent commit metadata", cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_commit_invalid", "Core returned inconsistent commit metadata").ConfigureAwait(false);
         }
         using var source = await DownloadAsync(commit.SourceUrl, limits.MaxSourceBytes, "import_source_unavailable", cancellationToken).ConfigureAwait(false);
         if (source.Size != commit.DeclaredByteLength || !string.Equals(source.Sha256, commit.SourceSha256, StringComparison.OrdinalIgnoreCase))
         {
-            throw await RejectAsync(job, basePath, "import_source_changed", "the source changed after preview", cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_source_changed", "the source changed after preview").ConfigureAwait(false);
         }
         using var planned = await DownloadAsync(commit.PlanUrl, limits.MaxPlanBytes, "import_plan_unavailable", cancellationToken).ConfigureAwait(false);
         if (planned.Size != commit.PlanByteLength || !string.Equals(planned.Sha256, commit.PlanSha256, StringComparison.OrdinalIgnoreCase))
         {
-            throw await RejectAsync(job, basePath, "import_plan_changed", "the import plan changed after preview", cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_plan_changed", "the import plan changed after preview").ConfigureAwait(false);
         }
         ImportPlan plan;
         try
@@ -160,11 +152,11 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
         catch (ImportPlanException exception)
         {
-            throw await RejectAsync(job, basePath, "import_plan_invalid", exception.Message, cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_plan_invalid", exception.Message).ConfigureAwait(false);
         }
         if (plan.Format != commit.Format || plan.Title != commit.Title || !string.Equals(plan.SourceSha256, commit.SourceSha256, StringComparison.OrdinalIgnoreCase))
         {
-            throw await RejectAsync(job, basePath, "import_plan_mismatch", "the plan does not describe this import", cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_plan_mismatch", "the plan does not describe this import").ConfigureAwait(false);
         }
         var importSource = new ImportSource(source.Path, commit.Format, commit.Title, commit.FileName, commit.DeclaredMediaType, source.Size, source.Sha256);
         try
@@ -173,12 +165,12 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
             var (_, reparsedDigest) = ImportPlanner.Encode(reparsed, limits.MaxPlanBytes);
             if (!string.Equals(reparsedDigest, commit.PlanSha256, StringComparison.OrdinalIgnoreCase))
             {
-                throw await RejectAsync(job, basePath, "import_plan_mismatch", "the deterministic preview no longer matches the source", cancellationToken).ConfigureAwait(false);
+                throw await RejectAsync(job, basePath, "import_plan_mismatch", "the deterministic preview no longer matches the source").ConfigureAwait(false);
             }
         }
         catch (ImportPlanException exception)
         {
-            throw await RejectAsync(job, basePath, exception.Code == ImportPlanException.PlanInvalid ? "import_plan_mismatch" : exception.Code, exception.Message, cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, exception.Code == ImportPlanException.PlanInvalid ? "import_plan_mismatch" : exception.Code, exception.Message).ConfigureAwait(false);
         }
 
         var stageRequest = new StageDocumentImportRequest(
@@ -201,11 +193,11 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
             {
                 throw classified;
             }
-            throw await RejectAsync(job, basePath, "import_stage_failed", exception.Message, cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_stage_failed", exception.Message).ConfigureAwait(false);
         }
         if (stage.ImportId != importId || stage.Items.Count != plan.Items.Count)
         {
-            throw await RejectAsync(job, basePath, "import_stage_invalid", "Core returned an incomplete staging map", cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_stage_invalid", "Core returned an incomplete staging map").ConfigureAwait(false);
         }
         if (plan.FileVersions is { Count: > 0 })
         {
@@ -219,7 +211,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
                 {
                     throw;
                 }
-                throw await RejectAsync(job, basePath, exception is WorkerJobException typed ? typed.Code : "import_file_invalid", exception.Message, cancellationToken).ConfigureAwait(false);
+                throw await RejectAsync(job, basePath, exception is WorkerJobException typed ? typed.Code : "import_file_invalid", exception.Message).ConfigureAwait(false);
             }
         }
 
@@ -228,14 +220,14 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         {
             if (!mapped.TryAdd(item.SourceId, item))
             {
-                throw await RejectAsync(job, basePath, "import_stage_invalid", "Core returned duplicate staging mappings", cancellationToken).ConfigureAwait(false);
+                throw await RejectAsync(job, basePath, "import_stage_invalid", "Core returned duplicate staging mappings").ConfigureAwait(false);
             }
         }
         foreach (var item in plan.Items)
         {
             if (!mapped.TryGetValue(item.SourceId, out var mapping) || mapping.ItemType != item.ItemType || mapping.BodyRequired != (item.Body is not null))
             {
-                throw await RejectAsync(job, basePath, "import_stage_invalid", "Core staging mappings disagree with the plan", cancellationToken).ConfigureAwait(false);
+                throw await RejectAsync(job, basePath, "import_stage_invalid", "Core staging mappings disagree with the plan").ConfigureAwait(false);
             }
             if (item.File is null || mapping.ObjectReady)
             {
@@ -251,7 +243,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
                 {
                     throw;
                 }
-                throw await RejectAsync(job, basePath, "import_file_invalid", exception.Message, cancellationToken).ConfigureAwait(false);
+                throw await RejectAsync(job, basePath, "import_file_invalid", exception.Message).ConfigureAwait(false);
             }
         }
         try
@@ -269,7 +261,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
         catch (WorkerLoopbackException exception)
         {
-            throw await RejectAsync(job, basePath, "import_body_invalid", exception.Message, cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_body_invalid", exception.Message).ConfigureAwait(false);
         }
         DocumentImportResponse result;
         try
@@ -284,7 +276,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
             {
                 throw classified;
             }
-            throw await RejectAsync(job, basePath, "import_finalize_failed", exception.Message, cancellationToken).ConfigureAwait(false);
+            throw await RejectAsync(job, basePath, "import_finalize_failed", exception.Message).ConfigureAwait(false);
         }
         if (result.Status != "completed" || result.RootItemId != stage.RootItemId)
         {
@@ -384,8 +376,8 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
         using (archives)
         {
-            var expected = descriptors.ToDictionary(descriptor => Key(descriptor.ItemId, descriptor.Version), StringComparer.Ordinal);
-            var mappings = (stage.FileTransfers ?? []).ToDictionary(mapping => Key(mapping.SourceItemId, mapping.TargetVersion), StringComparer.Ordinal);
+            var expected = descriptors.ToDictionary(descriptor => ImportSupport.VersionKey(descriptor.ItemId, descriptor.Version), StringComparer.Ordinal);
+            var mappings = (stage.FileTransfers ?? []).ToDictionary(mapping => ImportSupport.VersionKey(mapping.SourceItemId, mapping.TargetVersion), StringComparer.Ordinal);
             if (mappings.Count != expected.Count)
             {
                 throw new ImportPlanException("Core returned incomplete archive file-version mappings");
@@ -412,7 +404,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
                 }
                 foreach (var file in page.Files)
                 {
-                    var key = Key(file.SourceItemId, file.TargetVersion);
+                    var key = ImportSupport.VersionKey(file.SourceItemId, file.TargetVersion);
                     if (!expected.TryGetValue(key, out var descriptor) || !mappings.TryGetValue(key, out var mapping) || mapping.TransferId != file.TransferId || mapping.TargetItemId != file.TargetItemId
                         || file.FileName != descriptor.FileName || file.MediaType != descriptor.MediaType || file.ByteLength != descriptor.ByteLength || !string.Equals(file.Sha256, descriptor.Sha256, StringComparison.OrdinalIgnoreCase))
                     {
@@ -464,37 +456,10 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
     }
 
-    private async Task CopyArchiveFileVersionAsync(NixArchiveFiles archive, DocumentImportFileVersionCapabilityResponse file, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await VerifyPublishedFileAsync(file.VerifyUrl!, file.ByteLength, file.Sha256, cancellationToken).ConfigureAwait(false);
-            return;
-        }
-        catch (ObjectTransferException exception) when (exception.NotFound)
-        {
-        }
-        var content = archive.OpenVersion(file.SourceItemId, file.TargetVersion, file.ByteLength);
-        await using (content.ConfigureAwait(false))
-        {
-            using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            using var hashing = new HashingReadStream(content, digest);
-            try
-            {
-                await objects.UploadCreateOnlyAsync(file.UploadUrl!, file.MediaType, hashing, file.ByteLength, file.Sha256, cancellationToken).ConfigureAwait(false);
-            }
-            catch (ObjectTransferException exception) when (exception.AlreadyExists)
-            {
-                await VerifyPublishedFileAsync(file.VerifyUrl!, file.ByteLength, file.Sha256, cancellationToken).ConfigureAwait(false);
-                return;
-            }
-            if (!string.Equals(Convert.ToHexStringLower(digest.GetCurrentHash()), file.Sha256, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ObjectTransferException("source checksum does not match") { Conflict = true };
-            }
-        }
-        await VerifyPublishedFileAsync(file.VerifyUrl!, file.ByteLength, file.Sha256, cancellationToken).ConfigureAwait(false);
-    }
+    private Task CopyArchiveFileVersionAsync(NixArchiveFiles archive, DocumentImportFileVersionCapabilityResponse file, CancellationToken cancellationToken) =>
+        ImportSupport.CopyArchiveVersionAsync(
+            objects, archive, file.SourceItemId, file.TargetVersion, file.ByteLength, file.MediaType, file.Sha256, file.UploadUrl!,
+            token => VerifyPublishedFileAsync(file.VerifyUrl!, file.ByteLength, file.Sha256, token), "source checksum does not match", cancellationToken);
 
     private async Task VerifyPublishedFileAsync(Uri url, long size, string expectedDigest, CancellationToken cancellationToken)
     {
@@ -524,7 +489,7 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         }
     }
 
-    private async Task<WorkerJobException> RejectAsync(WorkerExecution job, string basePath, string code, string detail, CancellationToken cancellationToken)
+    private async Task<WorkerJobException> RejectAsync(WorkerExecution job, string basePath, string code, string detail)
     {
         using var cleanup = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken.None);
         cleanup.CancelAfter(TimeSpan.FromSeconds(20));
@@ -536,7 +501,6 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         {
             return ImportSupport.ApiFailure("import_rejection_failed", exception);
         }
-        _ = cancellationToken;
         return WorkerJobException.Fail(code, detail);
     }
 
@@ -553,8 +517,6 @@ public sealed class DocumentImportHandler(WorkerLoopbackClient core, ObjectTrans
         item.Body is not null,
         item.File is { } file ? new StageDocumentImportFileRequest(file.SourceKind, file.AssetPath, file.FileName, file.MediaType, file.ByteLength, file.Sha256, file.Previewable, file.PixelWidth, file.PixelHeight) : null,
         item.Comments is { ValueKind: JsonValueKind.Array } comments ? comments.Deserialize(DocumentImportsJsonContext.Default.IReadOnlyListImportCommentThread) : null);
-
-    private static string Key(string itemId, int version) => itemId + "/" + version.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Reads at most a declared number of bytes from a longer stream.</summary>
     private sealed class LimitedReadStream(Stream inner, long limit) : Stream
