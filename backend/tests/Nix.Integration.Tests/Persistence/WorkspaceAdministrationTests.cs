@@ -1085,22 +1085,22 @@ public sealed class WorkspaceAdministrationTests : IAsyncLifetime
         }
     }
 
-    private async Task<Result<DailyNoteOpened>> OpenDailyThroughCoreAsync(Guid principalId, string date)
+    private async Task<Result<DailyNoteResponse>> OpenDailyThroughCoreAsync(Guid principalId, string date)
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(Context(principalId), Cancellation);
         await using (work.ConfigureAwait(false))
         {
-            return await work.Resolve<NixDispatcher>().SendAsync<OpenDailyNote, DailyNoteOpened>(
+            return await work.Resolve<NixDispatcher>().SendAsync<OpenDailyNote, DailyNoteResponse>(
                 new OpenDailyNote(WorkspaceId.From(Visible), date), Cancellation);
         }
     }
 
-    private async Task<Result<DailyNoteOpened>> OpenDailyThroughCoreAndCommitAsync(Guid principalId, string date)
+    private async Task<Result<DailyNoteResponse>> OpenDailyThroughCoreAndCommitAsync(Guid principalId, string date)
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(Context(principalId), Cancellation);
         await using (work.ConfigureAwait(false))
         {
-            var result = await work.Resolve<NixDispatcher>().SendAsync<OpenDailyNote, DailyNoteOpened>(
+            var result = await work.Resolve<NixDispatcher>().SendAsync<OpenDailyNote, DailyNoteResponse>(
                 new OpenDailyNote(WorkspaceId.From(Visible), date), Cancellation);
             if (result.IsSuccess)
             {

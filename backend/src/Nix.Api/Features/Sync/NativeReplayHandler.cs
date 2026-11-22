@@ -170,7 +170,7 @@ public sealed class NativeReplayHandler(
         var itemId = ItemId.From(command.Request.ItemId);
         if (command.Request.Kind == "daily-note")
         {
-            var opened = await dispatcher.SendAsync<OpenDailyNote, DailyNoteOpened>(
+            var opened = await dispatcher.SendAsync<OpenDailyNote, DailyNoteResponse>(
                 new OpenDailyNote(command.WorkspaceId, payload.Date!), cancellationToken).ConfigureAwait(false);
             return opened.IsSuccess ? Result.Success(ItemId.From(opened.Value.ItemId)) : Result.Failure<ItemId>(opened.Error);
         }

@@ -5,28 +5,6 @@ using Nix.Domain.Views;
 
 namespace Nix.Features.Charts;
 
-/// <summary>One series' share of one bucket.</summary>
-/// <param name="Children">How many children of the bucket carry this series' value.</param>
-/// <param name="Total">Their measured total, or <see langword="null"/> when counting or when none carried a number.</param>
-public sealed record ChartCell(long Children, decimal? Total);
-
-/// <summary>One bucket of a drawn chart: a category, or a period on a time axis.</summary>
-/// <param name="Value">
-/// The category's value, the period's start date as <c>yyyy-MM-dd</c>, or <see langword="null"/> for
-/// the children with no value in a chart of categories.
-/// </param>
-/// <param name="Children">How many children fall in the bucket.</param>
-/// <param name="Total">Their measured total, or <see langword="null"/>.</param>
-/// <param name="Cells">One entry per series, in series order; empty when the chart is not split.</param>
-public sealed record ChartBucket(string? Value, long Children, decimal? Total, IReadOnlyList<ChartCell> Cells);
-
-/// <summary>One series of a split chart.</summary>
-/// <param name="Value">The splitting property's value, or <see langword="null"/> for children with none.</param>
-/// <param name="Other">Whether this is the series every value past the cap was folded into.</param>
-/// <param name="Children">How many drawn children carry it.</param>
-/// <param name="Total">Their measured total, or <see langword="null"/>.</param>
-public sealed record ChartSeries(string? Value, bool Other, long Children, decimal? Total);
-
 /// <summary>What a chart view drew, over every child rather than over a loaded page.</summary>
 /// <param name="GroupBy">The property the buckets are values (or dates) of.</param>
 /// <param name="Measure">What each bucket measures.</param>
@@ -56,8 +34,8 @@ public sealed record ItemChart(
     string? SplitBy,
     DateOnly? From,
     DateOnly? To,
-    IReadOnlyList<ChartBucket> Buckets,
-    IReadOnlyList<ChartSeries> Series,
+    IReadOnlyList<ChartBucketResponse> Buckets,
+    IReadOnlyList<ChartSeriesResponse> Series,
     long Children,
     long DistinctValues,
     long Unplaced,
@@ -80,8 +58,8 @@ public sealed record ItemChart(
 /// <param name="To">The last day a time axis covers.</param>
 /// <param name="OutsideWindow">Dated children outside the time axis's window.</param>
 public sealed record FoldedChart(
-    IReadOnlyList<ChartBucket> Buckets,
-    IReadOnlyList<ChartSeries> Series,
+    IReadOnlyList<ChartBucketResponse> Buckets,
+    IReadOnlyList<ChartSeriesResponse> Series,
     long Children,
     long DistinctValues,
     long Unplaced,
@@ -120,10 +98,10 @@ public static class ChartFolding
     {
         ArgumentNullException.ThrowIfNull(read);
 
-        var buckets = new List<ChartBucket>(read.Buckets.Count);
+        var buckets = new List<ChartBucketResponse>(read.Buckets.Count);
         foreach (var bucket in read.Buckets)
         {
-            buckets.Add(new ChartBucket(bucket.Value, bucket.Children, bucket.Total, []));
+            buckets.Add(new ChartBucketResponse(bucket.Value, bucket.Children, bucket.Total, []));
         }
 
         return new FoldedChart(
@@ -172,7 +150,7 @@ public static class ChartFolding
 
         var series = PickSeries(drawn, read.SeriesValues);
 
-        var buckets = new List<ChartBucket>(groups.Count);
+        var buckets = new List<ChartBucketResponse>(groups.Count);
         foreach (var group in groups)
         {
             buckets.Add(Bucket(group.Value, group.Cells, series));
@@ -309,7 +287,7 @@ public static class ChartFolding
 
         var series = split ? PickSeries(drawn, read.SeriesValues) : SeriesPick.None;
 
-        var buckets = new List<ChartBucket>(range.Count);
+        var buckets = new List<ChartBucketResponse>(range.Count);
         foreach (var start in DatePeriods.Enumerate(range))
         {
             var value = start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -329,7 +307,7 @@ public static class ChartFolding
             read.OutsideWindow);
     }
 
-    private static ChartBucket Bucket(string? value, IReadOnlyList<ChildCell> cells, SeriesPick series)
+    private static ChartBucketResponse Bucket(string? value, IReadOnlyList<ChildCell> cells, SeriesPick series)
     {
         long children = 0;
         var total = default(TotalAccumulator);
@@ -348,11 +326,11 @@ public static class ChartFolding
             }
         }
 
-        IReadOnlyList<ChartCell> split = columns is null
+        IReadOnlyList<ChartCellResponse> split = columns is null
             ? []
-            : [.. columns.Select(column => new ChartCell(column.Children, column.Total.Value))];
+            : [.. columns.Select(column => new ChartCellResponse(column.Children, column.Total.Value))];
 
-        return new ChartBucket(value, children, total.Value, split);
+        return new ChartBucketResponse(value, children, total.Value, split);
     }
 
     /// <summary>Ranks the series values across the drawn cells and keeps the largest.</summary>
@@ -389,7 +367,7 @@ public static class ChartFolding
             .ThenBy(pair => pair.Key.Value, StringComparer.Ordinal)
             .ToList();
 
-        var series = new List<ChartSeries>(Math.Min(ranked.Count, MaximumSeries) + 1);
+        var series = new List<ChartSeriesResponse>(Math.Min(ranked.Count, MaximumSeries) + 1);
         var columns = new Dictionary<SeriesKey, int>(ranked.Count);
         var foldedHere = 0;
 
@@ -398,7 +376,7 @@ public static class ChartFolding
             if (series.Count < MaximumSeries)
             {
                 columns[key] = series.Count;
-                series.Add(new ChartSeries(key.Value, Other: false, entry.Children, entry.Total.Value));
+                series.Add(new ChartSeriesResponse(key.Value, Other: false, entry.Children, entry.Total.Value));
                 continue;
             }
 
@@ -416,7 +394,7 @@ public static class ChartFolding
         // is the floor when it does not say.
         var otherValues = (int)Math.Max(foldedHere, Math.Min(int.MaxValue, seriesValues - series.Count));
         var otherColumn = series.Count;
-        series.Add(new ChartSeries(null, Other: true, otherChildren, otherTotal.Value));
+        series.Add(new ChartSeriesResponse(null, Other: true, otherChildren, otherTotal.Value));
 
         return new SeriesPick(series, columns, otherColumn, Math.Max(1, otherValues));
     }
@@ -426,7 +404,7 @@ public static class ChartFolding
 
     /// <summary>The series chosen for a chart, and which column each value is drawn in.</summary>
     private sealed record SeriesPick(
-        IReadOnlyList<ChartSeries> Series,
+        IReadOnlyList<ChartSeriesResponse> Series,
         IReadOnlyDictionary<SeriesKey, int> Columns,
         int OtherColumn,
         int OtherValues)

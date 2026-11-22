@@ -236,11 +236,11 @@ internal static class OpenDailyNoteEndpoint
     internal static async Task<Results<Ok<DailyNoteResponse>, ProblemHttpResult>> Handle(
         Guid workspaceId, string date, HttpContext context, [FromServices] NixDispatcher dispatcher)
     {
-        var result = await dispatcher.SendAsync<OpenDailyNote, DailyNoteOpened>(
+        var result = await dispatcher.SendAsync<OpenDailyNote, DailyNoteResponse>(
             new OpenDailyNote(WorkspaceId.From(workspaceId), date), context.RequestAborted)
             .ConfigureAwait(false);
         return result.Match<Results<Ok<DailyNoteResponse>, ProblemHttpResult>>(
-            opened => TypedResults.Ok(new DailyNoteResponse(opened.ItemId, opened.Created)),
+            opened => TypedResults.Ok(opened),
             error => TypedResults.Problem(WorkspaceEndpoints.Problem(context, error)));
     }
 }
