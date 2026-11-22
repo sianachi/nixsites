@@ -1,5 +1,5 @@
 import { toolSchema, workspaceTools, type DynamicTool } from './catalog.ts';
-import { flattenToolCall, isReadOnlyOperation, toolIdentity, toolOperation } from './flatten.ts';
+import { flattenToolCall, toolIdentity, toolOperation } from './flatten.ts';
 import type { Request } from '../shared/types.ts';
 import { goJson, isRecord, parseObject, UUID } from '../shared/util.ts';
 
@@ -120,5 +120,3 @@ export function workspaceToolsForRequest(r: Request): DynamicTool[] {
       noteScopeToolRefusal(state, `{"operation":"${tool.name.replace(/^nix_/, '')}"}`) === '',
   );
 }
-
-export { isReadOnlyOperation };

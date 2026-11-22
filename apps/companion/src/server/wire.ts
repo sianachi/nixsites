@@ -572,7 +572,6 @@ export const openrouterWire: ProviderWire = {
     if (response.status !== 200) throw await providerResponseError(kind, response, false);
     let text = '';
     const partials = new Map<number, { id: string; name: string; arguments: string }>();
-    const order: number[] = [];
     await readSse(ctx, response, (data) => {
       let chunk: unknown;
       try {
@@ -598,7 +597,6 @@ export const openrouterWire: ProviderWire = {
           if (partial === undefined) {
             partial = { id: '', name: '', arguments: '' };
             partials.set(index, partial);
-            order.push(index);
           }
           const fn = isRecord(call.function) ? call.function : {};
           if (str(call.id) !== '') partial.id = str(call.id);
@@ -608,9 +606,8 @@ export const openrouterWire: ProviderWire = {
       }
     });
     const calls: ProviderToolCall[] = [];
-    for (const index of order) {
-      const partial = partials.get(index);
-      if (partial === undefined || partial.name === '') continue;
+    for (const partial of partials.values()) {
+      if (partial.name === '') continue;
       calls.push({
         id: partial.id === '' ? `call-${partial.name.replaceAll(' ', '-')}` : partial.id,
         name: partial.name,
