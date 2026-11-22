@@ -8,10 +8,11 @@ import {
   type ExternalCalendar,
   type WorkspaceCalendarLink,
 } from '@nix/api-client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
+import { useLoadOnMount } from '@nix/web-foundation/lib/use-load-on-mount';
 
 /**
  * The caller's calendar sync: the accounts they have connected at Google and Microsoft, and the
@@ -150,17 +151,7 @@ export function useCalendarSync(): CalendarSyncState {
     [client, workspaceId],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    // queueMicrotask so the first setState lands after the effect returns rather than during it,
-    // the same cascade-stopper `use-workspace-tree.ts` documents.
-    queueMicrotask(() => {
-      void load(controller.signal);
-    });
-    return () => {
-      controller.abort();
-    };
-  }, [load]);
+  useLoadOnMount(load);
 
   const reload = useCallback(async (): Promise<void> => {
     await load(undefined, true);

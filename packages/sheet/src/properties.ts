@@ -1,5 +1,6 @@
 import { type FormulaNode } from './ast.js';
 import { BudgetExhausted, type EvaluationContext } from './eval-types.js';
+import { topologicalOrder } from './graph.js';
 import { evaluateFormula } from './evaluator.js';
 import { parseFormula, parseFormulaResult } from './parser.js';
 import { FORMULA_FUNCTION_ARITIES } from './functions.js';
@@ -450,43 +451,7 @@ function orderByReference(
     // did not settle, so nothing computed from a half-built graph survives.
   }
 
-  const queue: string[] = [];
-  for (const [key, degree] of indegree) {
-    if (degree === 0) {
-      queue.push(key);
-    }
-  }
-
-  const order: string[] = [];
-  let head = 0;
-  while (head < queue.length) {
-    const key = queue[head];
-    head += 1;
-    if (key === undefined) {
-      break;
-    }
-
-    order.push(key);
-    for (const dependent of dependents.get(key) ?? []) {
-      const remaining = (indegree.get(dependent) ?? 0) - 1;
-      indegree.set(dependent, remaining);
-      if (remaining === 0) {
-        queue.push(dependent);
-      }
-    }
-  }
-
-  const cyclic = new Set<string>();
-  if (order.length < nodes.size) {
-    const ordered = new Set(order);
-    for (const key of nodes.keys()) {
-      if (!ordered.has(key)) {
-        cyclic.add(key);
-      }
-    }
-  }
-
-  return { order, cyclic };
+  return topologicalOrder(dependents, indegree);
 }
 
 function collectFields(node: FormulaNode, visit: (name: string) => void): void {

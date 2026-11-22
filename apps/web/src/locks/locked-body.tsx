@@ -1,6 +1,7 @@
 import { Button, Field, Icon, Input, Text } from '@nix/ui';
 import { Lock } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
+import { usePasswordPrompt } from '@nix/web-workspaces/workspaces/use-password-prompt';
+import { useId, type ReactNode } from 'react';
 
 import type { LockClosedReason } from './use-item-lock';
 
@@ -52,37 +53,8 @@ export function LockedBody({
   onUnlock,
 }: LockedBodyProps): ReactNode {
   const headingId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
+  const { error, busy, input, onSubmit } = usePasswordPrompt(reason, onUnlock);
   const name = title.length > 0 ? title : 'Untitled';
-
-  useEffect(() => {
-    if (reason !== null) inputRef.current?.focus();
-  }, [reason]);
-
-  async function submit(event: SyntheticEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    if (busy) return;
-    if (password.length === 0) {
-      setError('Enter the password.');
-      inputRef.current?.focus();
-      return;
-    }
-
-    setBusy(true);
-    const refused = await onUnlock(password);
-    setBusy(false);
-    // Cleared either way. On a refusal the field is ready for another try; on success the prompt
-    // usually goes, and when it stays it is asking for a second lock's password.
-    setPassword('');
-    if (refused !== null) {
-      setError(refused);
-      inputRef.current?.focus();
-    }
-  }
 
   return (
     <section
@@ -111,28 +83,9 @@ export function LockedBody({
               : 'It is inside a locked item. Enter that item\u2019s password to open it in this browser for 15 minutes.'}{' '}
           The lock hides what is inside; it is not encryption.
         </Text>
-        <form
-          noValidate
-          className="flex flex-col gap-3"
-          onSubmit={(event) => {
-            void submit(event);
-          }}
-        >
+        <form noValidate className="flex flex-col gap-3" onSubmit={onSubmit}>
           <Field label="Password" error={error}>
-            {(control) => (
-              <Input
-                {...control}
-                ref={inputRef}
-                type="password"
-                autoComplete="current-password"
-                readOnly={busy}
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value);
-                  setError(null);
-                }}
-              />
-            )}
+            {(control) => <Input {...control} {...input} />}
           </Field>
           <div>
             <Button type="submit" disabled={busy}>

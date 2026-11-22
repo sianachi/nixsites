@@ -18,7 +18,7 @@ namespace Nix.Features.Charts;
 /// One entry per series, aligned with the response's <c>series</c>; empty when the chart is not
 /// split. The cells add up to the bucket.
 /// </param>
-internal sealed record ChartBucketResponse(
+public sealed record ChartBucketResponse(
     string? Value,
     long Children,
     decimal? Total,
@@ -27,7 +27,7 @@ internal sealed record ChartBucketResponse(
 /// <summary>One series' share of one bucket.</summary>
 /// <param name="Children">How many of the bucket's children carry the series' value.</param>
 /// <param name="Total">Their measured total, or <see langword="null"/>.</param>
-internal sealed record ChartCellResponse(long Children, decimal? Total);
+public sealed record ChartCellResponse(long Children, decimal? Total);
 
 /// <summary>One series of a split chart.</summary>
 /// <param name="Value">
@@ -37,7 +37,7 @@ internal sealed record ChartCellResponse(long Children, decimal? Total);
 /// <param name="Other">Whether this series stands for every value past the sixth.</param>
 /// <param name="Children">How many drawn children carry it.</param>
 /// <param name="Total">Their measured total, or <see langword="null"/>.</param>
-internal sealed record ChartSeriesResponse(string? Value, bool Other, long Children, decimal? Total);
+public sealed record ChartSeriesResponse(string? Value, bool Other, long Children, decimal? Total);
 
 /// <summary>
 /// A chart's data, and what it could not fit.

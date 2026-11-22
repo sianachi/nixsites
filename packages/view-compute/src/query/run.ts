@@ -90,15 +90,36 @@ function expiredGrant(item: MirrorItem, now: Date): boolean {
   );
 }
 
+// Per tree and target: whether a node, taken as a parent, is the target or sits under it. Rows
+// share ancestors, so each node is walked once instead of once per row.
+const insideMemo = new WeakMap<Map<string, MirrorItem>, Map<string, Map<string, boolean>>>();
+
 function isInside(row: Row, ancestorId: string, byId: Map<string, MirrorItem>): boolean {
   const target = ancestorId.toLowerCase();
-  const seen = new Set<string>();
-  for (let parent = row.item.parentId; parent !== null && !seen.has(parent);) {
-    if (parent.toLowerCase() === target) return true;
-    seen.add(parent);
+  let byTarget = insideMemo.get(byId);
+  if (byTarget === undefined)
+    insideMemo.set(byId, (byTarget = new Map<string, Map<string, boolean>>()));
+  let memo = byTarget.get(target);
+  if (memo === undefined) byTarget.set(target, (memo = new Map<string, boolean>()));
+  const path: string[] = [];
+  let found = false;
+  for (let parent = row.item.parentId; parent !== null;) {
+    const known = memo.get(parent);
+    if (known !== undefined) {
+      found = known; // a node met again on this walk is a cycle, memoised false while walking
+      break;
+    }
+    if (parent.toLowerCase() === target) {
+      found = true;
+      path.push(parent);
+      break;
+    }
+    memo.set(parent, false);
+    path.push(parent);
     parent = byId.get(parent)?.parentId ?? null;
   }
-  return false;
+  if (found) for (const id of path) memo.set(id, true);
+  return found;
 }
 
 const lastModified = (row: Row): Stamp => {

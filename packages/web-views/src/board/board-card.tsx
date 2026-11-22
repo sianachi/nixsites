@@ -14,9 +14,7 @@ import { useItemOpenProps } from '@nix/web-collections/core/item-open-click';
 import { useOptionalItemSelection } from '@nix/web-collections/core/item-selection-context';
 import { SelectCheckbox } from '../core/select-checkbox';
 import { useItemContextActions } from '@nix/web-collections/core/use-item-context-actions';
-import { CardPropertySummary } from '../core/card-property-summary';
-import { ValuePopover } from '@nix/web-collections/properties/value-popover';
-import { ListCell } from '../list/list-cell';
+import { CardFields } from '../core/card-property-summary';
 import { staleDismissalKey, type BoardColumn } from './board-grouping';
 import { StaleCardHint } from './stale-card-hint';
 
@@ -319,29 +317,13 @@ function BoardCard(props: BoardCardProps): ReactNode {
               />
             )}
 
-            {compact ? (
-              <CardPropertySummary item={item} fields={fields} />
-            ) : fields.length === 0 ? null : (
-              <div className="-mx-2 flex flex-col">
-                {fields.map((field) => (
-                  <ValuePopover
-                    key={field.key}
-                    item={item}
-                    property={field}
-                    density="chip"
-                    labelled
-                    className="max-w-full"
-                  >
-                    <ListCell
-                      item={item}
-                      property={field}
-                      density="card"
-                      onWrite={(value) => onWrite(item.id, field.key, value)}
-                    />
-                  </ValuePopover>
-                ))}
-              </div>
-            )}
+            <CardFields
+              item={item}
+              fields={fields}
+              compact={compact}
+              className="-mx-2 flex flex-col"
+              onWrite={onWrite}
+            />
           </Blueprint>
         </li>
       )}

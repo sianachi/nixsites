@@ -341,14 +341,7 @@ internal static class ChartMapping
             chart.GroupBy,
             chart.Measure,
             chart.MeasureProperty,
-            [
-                .. chart.Buckets.Select(bucket =>
-                    new ChartBucketResponse(
-                        bucket.Value,
-                        bucket.Children,
-                        bucket.Total,
-                        [.. bucket.Cells.Select(cell => new ChartCellResponse(cell.Children, cell.Total))])),
-            ],
+            chart.Buckets,
             chart.Children,
             chart.DistinctValues,
             chart.Truncated,
@@ -357,10 +350,7 @@ internal static class ChartMapping
             chart.SplitBy,
             chart.From,
             chart.To,
-            [
-                .. chart.Series.Select(series =>
-                    new ChartSeriesResponse(series.Value, series.Other, series.Children, series.Total)),
-            ],
+            chart.Series,
             chart.OtherSeries,
             chart.Unplaced,
             chart.OutsideWindow,

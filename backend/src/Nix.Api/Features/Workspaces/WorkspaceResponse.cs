@@ -56,7 +56,7 @@ internal sealed record SetWorkspaceSharingRequest(bool? MembershipLocked, bool? 
 /// <summary>The canonical dated note opened for a workspace day.</summary>
 /// <param name="ItemId">The note's identifier.</param>
 /// <param name="Created">True only for the request that inserted the note.</param>
-internal sealed record DailyNoteResponse(Guid ItemId, bool Created);
+public sealed record DailyNoteResponse(Guid ItemId, bool Created);
 
 /// <summary>A workspace's daily-note settings, as read and as replaced.</summary>
 /// <param name="Enabled">Whether daily notes are available in the workspace.</param>

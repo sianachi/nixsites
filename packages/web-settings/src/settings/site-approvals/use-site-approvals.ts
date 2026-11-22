@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { refusalMessage } from '@nix/web-sites/sites/site-copy';
+import { useLoadOnMount } from '@nix/web-foundation/lib/use-load-on-mount';
 
 export type SiteApprovalsStatus = 'loading' | 'ready' | 'not-configured' | 'error';
 
@@ -57,15 +58,7 @@ export function useSiteApprovals(): SiteApprovalsState {
     [client],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    queueMicrotask(() => {
-      void load(controller.signal);
-    });
-    return () => {
-      controller.abort();
-    };
-  }, [load]);
+  useLoadOnMount(load);
 
   const reload = useCallback(async (): Promise<void> => {
     setStatus('loading');

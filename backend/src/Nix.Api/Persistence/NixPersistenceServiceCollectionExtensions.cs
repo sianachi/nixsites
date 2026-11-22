@@ -552,7 +552,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<ICommandHandler<RemoveWorkspaceMember, bool>, RemoveWorkspaceMemberHandler>();
         services.AddScoped<ICommandHandler<LeaveWorkspace, bool>, LeaveWorkspaceHandler>();
         services.AddScoped<ICommandHandler<RecoverWorkspace, WorkspaceSnapshot>, RecoverWorkspaceHandler>();
-        services.AddScoped<ICommandHandler<OpenDailyNote, DailyNoteOpened>, OpenDailyNoteHandler>();
+        services.AddScoped<ICommandHandler<OpenDailyNote, DailyNoteResponse>, OpenDailyNoteHandler>();
         services.AddScoped<IQueryHandler<GetDailyNoteSettings, Nix.Domain.Tenancy.DailyNoteSettings?>, GetDailyNoteSettingsHandler>();
         services.AddScoped<ICommandHandler<SaveDailyNoteSettings, Nix.Domain.Tenancy.DailyNoteSettings>, SaveDailyNoteSettingsHandler>();
 

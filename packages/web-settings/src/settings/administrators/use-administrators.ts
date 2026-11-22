@@ -5,9 +5,10 @@ import {
   tenantRoles,
   type NixClient,
 } from '@nix/api-client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
+import { useLoadOnMount } from '@nix/web-foundation/lib/use-load-on-mount';
 
 export interface Person {
   readonly id: string;
@@ -102,15 +103,7 @@ export function usePeople(source: PeopleSource): PeopleState {
     [client, source],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    queueMicrotask(() => {
-      void load(controller.signal);
-    });
-    return () => {
-      controller.abort();
-    };
-  }, [load]);
+  useLoadOnMount(load);
 
   const reload = useCallback(async (): Promise<void> => {
     setStatus('loading');

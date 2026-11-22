@@ -41,3 +41,27 @@ export function browserSessionStorage(): Storage | undefined {
     return undefined;
   }
 }
+
+/**
+ * What `key` holds, parsed and checked by `schema`, or `fallback` when storage is missing, empty,
+ * unreadable or does not match: stored data is never trusted and never throws.
+ */
+export function readStoredJson<T>(
+  storage: Storage | undefined,
+  key: string,
+  schema: {
+    safeParse(
+      value: unknown,
+    ): { readonly success: true; readonly data: T } | { readonly success: false };
+  },
+  fallback: T,
+): T {
+  try {
+    const raw = storage?.getItem(key);
+    if (raw === null || raw === undefined) return fallback;
+    const parsed = schema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : fallback;
+  } catch {
+    return fallback;
+  }
+}
