@@ -6,8 +6,8 @@ using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Nix.Features.Properties;
-using Nix.Tests.Support;
 using Nix.Features.Views;
+using Nix.Tests.Support;
 
 namespace Nix.Tests.Features.Views;
 
