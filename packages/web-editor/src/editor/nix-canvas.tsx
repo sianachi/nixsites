@@ -17,7 +17,11 @@ import {
   restoreElements,
   viewportCoordsToSceneCoords,
 } from '@excalidraw/excalidraw';
-import type { FileId, OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types';
+import type {
+  ExcalidrawElement,
+  FileId,
+  OrderedExcalidrawElement,
+} from '@excalidraw/excalidraw/element/types';
 import type {
   AppState,
   BinaryFileData,
@@ -568,13 +572,7 @@ export function NixCanvas({
   const handlePaste = useCallback(
     async (data: CanvasClipboardData): Promise<boolean> => {
       if (api === null || data.elements === undefined) return true;
-      const referenced = new Set(
-        data.elements.flatMap((element) =>
-          !element.isDeleted && element.type === 'image' && element.fileId !== null
-            ? [element.fileId]
-            : [],
-        ),
-      );
+      const referenced = referencedImageFileIds(data.elements);
       if (referenced.size === 0) return true;
       if (
         readOnly ||
@@ -628,17 +626,7 @@ export function NixCanvas({
         }
 
         throwIfAborted(controller.signal);
-        data.elements = data.elements.map((element) => {
-          if (element.type !== 'image' || element.fileId === null) return element;
-          const replacement = replacements.get(element.fileId);
-          return replacement === undefined
-            ? element
-            : newElementWith(element, {
-                fileId: replacement,
-                status: 'saved',
-                customData: withNixFileMetadata(element, replacement),
-              });
-        });
+        data.elements = remapImageFiles(data.elements, replacements);
         data.files = filesById(remappedFiles);
         return true;
       } catch (cause) {
@@ -848,13 +836,7 @@ export function NixCanvas({
       try {
         const imported = loadedScene ?? (await loadFromBlob(file, api.getAppState(), null));
         throwIfAborted(controller.signal);
-        const referenced = new Set(
-          imported.elements.flatMap((element) =>
-            !element.isDeleted && element.type === 'image' && element.fileId !== null
-              ? [element.fileId]
-              : [],
-          ),
-        );
+        const referenced = referencedImageFileIds(imported.elements);
         if (
           referenced.size > 0 &&
           (!allowFileUploads || workspaceId === undefined || parentItemId === undefined)
@@ -900,17 +882,7 @@ export function NixCanvas({
           throw new Error('The imported scene contains an image without its image data.');
         }
 
-        const importedElements = imported.elements.map((element) => {
-          if (element.type !== 'image' || element.fileId === null) return element;
-          const replacement = replacements.get(element.fileId);
-          return replacement === undefined
-            ? element
-            : newElementWith(element, {
-                fileId: replacement,
-                status: 'saved',
-                customData: withNixFileMetadata(element, replacement),
-              });
-        });
+        const importedElements = remapImageFiles(imported.elements, replacements);
         const nextElements = replaceImportedScene(
           api.getSceneElementsIncludingDeleted(),
           importedElements,
@@ -1561,6 +1533,35 @@ function publishSavedImageStatuses(
   lastPublishedFingerprintRef.current = fingerprint;
   api.updateScene({ elements: saved.elements, captureUpdate: CaptureUpdateAction.NEVER });
   onChangeRef.current(saved.elements);
+}
+
+function referencedImageFileIds(elements: readonly ExcalidrawElement[]): Set<FileId> {
+  return new Set(
+    elements.flatMap((element) =>
+      !element.isDeleted && element.type === 'image' && element.fileId !== null
+        ? [element.fileId]
+        : [],
+    ),
+  );
+}
+
+/** Points each image element at the file item that replaced its pasted or imported file. */
+function remapImageFiles<T extends ExcalidrawElement>(
+  elements: readonly T[],
+  replacements: ReadonlyMap<FileId, FileId>,
+): T[] {
+  return elements.map((element) => {
+    const plain: ExcalidrawElement = element;
+    if (plain.type !== 'image' || plain.fileId === null) return element;
+    const replacement = replacements.get(plain.fileId);
+    return replacement === undefined
+      ? element
+      : (newElementWith(plain, {
+          fileId: replacement,
+          status: 'saved',
+          customData: withNixFileMetadata(plain, replacement),
+        }) as T);
+  });
 }
 
 function filesById(files: readonly BinaryFileData[]): BinaryFiles {

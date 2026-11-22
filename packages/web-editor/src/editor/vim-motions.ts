@@ -153,6 +153,12 @@ function current(state: EditorState): VimMotionState {
   return vimMotionsKey.getState(state) ?? INITIAL;
 }
 
+/** Vim basics is on and out of Insert mode: the editor takes keys as commands, not text. */
+function inCommandMode(state: EditorState): boolean {
+  const vim = current(state);
+  return vim.enabled && vim.mode !== 'insert';
+}
+
 function isVisual(mode: VimMode): boolean {
   return mode === 'visual' || mode === 'visual-line';
 }
@@ -1913,6 +1919,12 @@ function cursorDecorations(state: EditorState): DecorationSet | null {
   ]);
 }
 
+function swallowInCommandMode(view: EditorView, event: Event): boolean {
+  if (!inCommandMode(view.state) || !inTextControl(event)) return false;
+  event.preventDefault();
+  return true;
+}
+
 function vimPlugin(editor: Editor, isApplePlatform: boolean): Plugin<VimMotionState> {
   return new Plugin<VimMotionState>({
     key: vimMotionsKey,
@@ -1968,8 +1980,7 @@ function vimPlugin(editor: Editor, isApplePlatform: boolean): Plugin<VimMotionSt
     props: {
       decorations: cursorDecorations,
       attributes(state): Record<string, string> {
-        const vim = current(state);
-        return vim.enabled && vim.mode !== 'insert' ? { class: 'nix-vim-command' } : {};
+        return inCommandMode(state) ? { class: 'nix-vim-command' } : {};
       },
       handleKeyDown(view, event) {
         const vim = current(view.state);
@@ -2018,18 +2029,9 @@ function vimPlugin(editor: Editor, isApplePlatform: boolean): Plugin<VimMotionSt
         }
         return handleCommandKey(view, editor, event);
       },
-      handleTextInput(view) {
-        const vim = current(view.state);
-        return vim.enabled && vim.mode !== 'insert';
-      },
-      handlePaste(view) {
-        const vim = current(view.state);
-        return vim.enabled && vim.mode !== 'insert';
-      },
-      handleDrop(view, _event, _slice, moved) {
-        const vim = current(view.state);
-        return vim.enabled && vim.mode !== 'insert' && !moved;
-      },
+      handleTextInput: (view) => inCommandMode(view.state),
+      handlePaste: (view) => inCommandMode(view.state),
+      handleDrop: (view, _event, _slice, moved) => inCommandMode(view.state) && !moved,
       handleDOMEvents: {
         blur(view) {
           const vim = current(view.state);
@@ -2039,12 +2041,10 @@ function vimPlugin(editor: Editor, isApplePlatform: boolean): Plugin<VimMotionSt
           return false;
         },
         keydown(view, event) {
-          const vim = current(view.state);
           // Returning true from a raw DOM handler skips ProseMirror's rich-node keymaps. Leaving
           // the event uncancelled preserves native focus traversal and caret navigation.
           return (
-            vim.enabled &&
-            vim.mode !== 'insert' &&
+            inCommandMode(view.state) &&
             (event.key === 'Tab' ||
               (!event.metaKey &&
                 !event.ctrlKey &&
@@ -2053,22 +2053,8 @@ function vimPlugin(editor: Editor, isApplePlatform: boolean): Plugin<VimMotionSt
             inTextControl(event)
           );
         },
-        cut(view, event) {
-          const vim = current(view.state);
-          if (vim.enabled && vim.mode !== 'insert' && inTextControl(event)) {
-            event.preventDefault();
-            return true;
-          }
-          return false;
-        },
-        beforeinput(view, event) {
-          const vim = current(view.state);
-          if (vim.enabled && vim.mode !== 'insert' && inTextControl(event)) {
-            event.preventDefault();
-            return true;
-          }
-          return false;
-        },
+        cut: (view, event) => swallowInCommandMode(view, event),
+        beforeinput: (view, event) => swallowInCommandMode(view, event),
       },
     },
   });
