@@ -7,7 +7,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Identity;
 
@@ -70,7 +69,7 @@ public sealed class LocalAccountProvisioner(IServiceScopeFactory scopes, SelfIss
                 {
                     _ = await sql.ScalarAsync<int>(
                         "SELECT 1 FROM (SELECT pg_advisory_xact_lock(@key)) AS locked",
-                        [new NpgsqlParameter("key", NpgsqlDbType.Bigint) { Value = SetupLockKey }],
+                        [NixParameter.Int8("key", SetupLockKey)],
                         cancellationToken).ConfigureAwait(false);
                     // A second connection sees whatever the previous lock holder committed before releasing.
                     if (await services.GetRequiredService<ILocalAccounts>().AnyAsync(cancellationToken).ConfigureAwait(false))
@@ -88,9 +87,9 @@ public sealed class LocalAccountProvisioner(IServiceScopeFactory scopes, SelfIss
                 var created = await sql.ScalarAsync<bool>(
                     "SELECT nix_local_create_account(@principal, @email, @hash)",
                     [
-                        new NpgsqlParameter("principal", NpgsqlDbType.Uuid) { Value = principal.Id.Value },
-                        new NpgsqlParameter("email", NpgsqlDbType.Text) { Value = email },
-                        new NpgsqlParameter("hash", NpgsqlDbType.Text) { Value = (object?)passwordHash ?? DBNull.Value },
+                        NixParameter.Uuid("principal", principal.Id.Value),
+                        NixParameter.Text("email", email),
+                        NixParameter.Text("hash", passwordHash),
                     ],
                     cancellationToken).ConfigureAwait(false) ?? false;
                 if (!created)

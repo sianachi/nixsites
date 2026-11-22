@@ -7,7 +7,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Sync;
@@ -39,7 +38,7 @@ public sealed class WorkspaceSyncStore(
             return new WorkspaceSyncSnapshot(Decimal(head.Seq), null, false, [], now, Resync: true);
         }
         var rows = await ReadRowsAsync(WorkspaceSyncSql.Snapshot, Parameters(workspaceId, now,
-            Uuid("cursor", cursor), new NpgsqlParameter<int>("limit", limit + 1)), cancellationToken).ConfigureAwait(false);
+            Uuid("cursor", cursor), NixParameter.Integer("limit", limit + 1)), cancellationToken).ConfigureAwait(false);
         var savedBoundary = Math.Min(boundary ?? head.Seq, head.Seq);
         var finalHead = await ReadBoundaryAsync(workspaceId, savedBoundary, now, cancellationToken).ConfigureAwait(false);
         if (finalHead is null)
@@ -71,8 +70,8 @@ public sealed class WorkspaceSyncStore(
             return new WorkspaceSyncChanges(Decimal(head.Seq), false, true, [], now);
         }
         var rows = await ReadRowsAsync(WorkspaceSyncSql.Changes, Parameters(workspaceId, now,
-            new NpgsqlParameter<long>("after", after), new NpgsqlParameter<long>("boundary", head.Seq),
-            new NpgsqlParameter<int>("limit", limit + 1)), cancellationToken).ConfigureAwait(false);
+            NixParameter.Int8("after", after), NixParameter.Int8("boundary", head.Seq),
+            NixParameter.Integer("limit", limit + 1)), cancellationToken).ConfigureAwait(false);
         var hasMore = rows.Count > limit;
         return new WorkspaceSyncChanges(Decimal(hasMore ? rows[limit - 1].Seq : head.Seq), hasMore, false,
             rows.Take(limit).Select(static row => row.Item).ToArray(), now);
@@ -85,7 +84,7 @@ public sealed class WorkspaceSyncStore(
         ArgumentNullException.ThrowIfNull(itemIds);
         var now = clock.GetUtcNow();
         var rows = await ReadRowsAsync(WorkspaceSyncSql.Reconcile, Parameters(workspaceId, now,
-            new NpgsqlParameter<Guid[]>("item_ids", itemIds.Distinct().ToArray())), cancellationToken).ConfigureAwait(false);
+            NixParameter.UuidArray("item_ids", itemIds.Distinct().ToArray())), cancellationToken).ConfigureAwait(false);
         var items = rows.Select(static row => row.Item).ToArray();
         var visible = items.Select(static item => item.Id).ToHashSet();
         return new WorkspaceSyncReconciliation(items,
@@ -96,7 +95,7 @@ public sealed class WorkspaceSyncStore(
         WorkspaceId workspaceId, long after, DateTimeOffset now, CancellationToken cancellationToken)
     {
         await foreach (var row in sql.QueryAsync<BoundaryRow, BoundaryMapper>(WorkspaceSyncSql.Boundary, default,
-            Parameters(workspaceId, now, new NpgsqlParameter<long>("after", after)), cancellationToken).ConfigureAwait(false))
+            Parameters(workspaceId, now, NixParameter.Int8("after", after)), cancellationToken).ConfigureAwait(false))
         {
             return row;
         }
@@ -118,13 +117,13 @@ public sealed class WorkspaceSyncStore(
         var context = session.Current ?? throw new InvalidOperationException("A native mirror read requires a tenant unit of work.");
         var roles = Enum.GetValues<WorkspaceRole>();
         return [
-            new NpgsqlParameter<Guid>("tenant_id", context.TenantId.Value),
-            new NpgsqlParameter<Guid>("principal_id", context.PrincipalId.Value),
-            new NpgsqlParameter<Guid>("workspace_id", workspaceId.Value),
-            new NpgsqlParameter<string[]>("read_roles", roles.Select(WorkspaceRoles.ToText).ToArray()),
-            new NpgsqlParameter<string[]>("write_roles", roles.Where(static role => role.GrantsWrite()).Select(WorkspaceRoles.ToText).ToArray()),
-            new NpgsqlParameter<bool>("may_write", tokenScope.MayWrite),
-            new NpgsqlParameter<DateTimeOffset>("now", now), Uuid("credential_id", credential.CredentialId),
+            NixParameter.Uuid("tenant_id", context.TenantId.Value),
+            NixParameter.Uuid("principal_id", context.PrincipalId.Value),
+            NixParameter.Uuid("workspace_id", workspaceId.Value),
+            NixParameter.TextArray("read_roles", roles.Select(WorkspaceRoles.ToText).ToArray()),
+            NixParameter.TextArray("write_roles", roles.Where(static role => role.GrantsWrite()).Select(WorkspaceRoles.ToText).ToArray()),
+            NixParameter.Boolean("may_write", tokenScope.MayWrite),
+            NixParameter.Timestamp("now", now), Uuid("credential_id", credential.CredentialId),
             .. extras,
         ];
     }

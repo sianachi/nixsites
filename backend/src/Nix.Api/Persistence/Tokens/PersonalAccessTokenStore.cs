@@ -4,7 +4,7 @@ using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
+using Nix.Persistence.Sql;
 
 namespace Nix.Persistence.Tokens;
 
@@ -59,7 +59,7 @@ public sealed class PersonalAccessTokenStore(
             await using (command.ConfigureAwait(false))
             {
                 command.Parameters.Add(
-                    new NpgsqlParameter("lookup", NpgsqlDbType.Text) { Value = lookup });
+                    NixParameter.Text("lookup", lookup));
 
                 var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
                 await using (reader.ConfigureAwait(false))

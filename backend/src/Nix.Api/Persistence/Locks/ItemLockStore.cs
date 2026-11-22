@@ -73,7 +73,7 @@ public sealed class ItemLockStore(
     public async ValueTask<bool> AnyInWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
         await sql.ScalarAsync<bool>(
             ItemLockSql.AnyInWorkspace,
-            [TenantParameter(), new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid) { Value = workspaceId.Value }],
+            [TenantParameter(), NixParameter.Uuid("workspace_id", workspaceId.Value)],
             cancellationToken).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
@@ -100,7 +100,7 @@ public sealed class ItemLockStore(
             default,
             [
                 TenantParameter(),
-                new NpgsqlParameter("item_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers },
+                NixParameter.UuidArray("item_ids", identifiers),
             ],
             cancellationToken);
         await foreach (var row in rows.WithCancellation(cancellationToken).ConfigureAwait(false))
@@ -153,7 +153,7 @@ public sealed class ItemLockStore(
                 TenantParameter(),
                 ItemParameter(itemId),
                 VerifierParameter(verifier),
-                new NpgsqlParameter("expected_hash", NpgsqlDbType.Text) { Value = expected },
+                NixParameter.Text("expected_hash", expected),
                 PrincipalParameter(),
                 NowParameter(),
             ],
@@ -179,7 +179,7 @@ public sealed class ItemLockStore(
 
         var removed = await sql.ExecuteAsync(
             ItemLockSql.Remove,
-            [TenantParameter(), ItemParameter(itemId), new NpgsqlParameter("expected_hash", NpgsqlDbType.Text) { Value = expected }],
+            [TenantParameter(), ItemParameter(itemId), NixParameter.Text("expected_hash", expected)],
             cancellationToken).ConfigureAwait(false);
 
         return removed > 0;
@@ -205,10 +205,10 @@ public sealed class ItemLockStore(
             [
                 TenantParameter(),
                 ItemParameter(itemId),
-                new NpgsqlParameter("credential_id", NpgsqlDbType.Uuid) { Value = credential },
+                NixParameter.Uuid("credential_id", credential),
                 PrincipalParameter(),
                 VerifierParameter(verifier),
-                new NpgsqlParameter("expires_at", NpgsqlDbType.TimestampTz) { Value = expiresAt },
+                NixParameter.Timestamp("expires_at", expiresAt),
                 NowParameter(),
             ],
             cancellationToken).ConfigureAwait(false);

@@ -29,7 +29,7 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             NixParameter.Uuid("principal", principalId.Value),
             NixParameter.Text("purpose", purpose == LocalLinkPurpose.Setup ? "setup" : "reset"),
             NixParameter.Text("hash", tokenHash),
-            PooledSql.Instant("expires", expiresAt),
+            NixParameter.Instant("expires", expiresAt),
             NixParameter.Uuid("by", createdBy?.Value)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
@@ -67,7 +67,7 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             NixParameter.Text("state", state),
             NixParameter.Text("return", returnTo),
             NixParameter.Text("native", native),
-            PooledSql.Instant("expires", expiresAt)).ConfigureAwait(false) ?? false;
+            NixParameter.Instant("expires", expiresAt)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<LocalChallenge?> GetAsync(Guid id, LocalChallengeKind kind, CancellationToken cancellationToken) =>

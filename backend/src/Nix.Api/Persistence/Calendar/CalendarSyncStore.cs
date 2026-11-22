@@ -497,10 +497,7 @@ public sealed class CalendarSyncStore(NixDbContext database, INixSessionContextA
                 UuidArray("ids", rows.Select(row => (Guid?)row.Id)),
                 UuidArray("link_ids", rows.Select(row => (Guid?)row.LinkId)),
                 UuidArray("principal_ids", rows.Select(row => (Guid?)row.PrincipalId.Value)),
-                new NpgsqlParameter<DateTimeOffset[]>("ats", NpgsqlDbType.Array | NpgsqlDbType.TimestampTz)
-                {
-                    TypedValue = rows.Select(row => row.At.ToUniversalTime()).ToArray(),
-                },
+                NixParameter.TimestampArray("ats", rows.Select(row => row.At.ToUniversalTime()).ToArray()),
                 TextArray("directions", rows.Select(row => row.Direction)),
                 TextArray("actions", rows.Select(row => row.Action)),
                 UuidArray("item_ids", rows.Select(row => row.ItemId)),
@@ -518,16 +515,16 @@ public sealed class CalendarSyncStore(NixDbContext database, INixSessionContextA
         IQueryable<CalendarSyncLogEntry> query = beforeAt is { } at && beforeId is { } id
             ? database.Set<CalendarSyncLogEntry>().FromSqlRaw(
                 LogPageAfterSql,
-                new NpgsqlParameter<Guid>("tenant_id", NpgsqlDbType.Uuid) { TypedValue = context.TenantId.Value },
-                new NpgsqlParameter<Guid>("link_id", NpgsqlDbType.Uuid) { TypedValue = linkId },
-                new NpgsqlParameter<DateTimeOffset>("before_at", NpgsqlDbType.TimestampTz) { TypedValue = at.ToUniversalTime() },
-                new NpgsqlParameter<Guid>("before_id", NpgsqlDbType.Uuid) { TypedValue = id },
-                new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = bound })
+                NixParameter.Uuid("tenant_id", context.TenantId.Value),
+                NixParameter.Uuid("link_id", linkId),
+                NixParameter.Timestamp("before_at", at.ToUniversalTime()),
+                NixParameter.Uuid("before_id", id),
+                NixParameter.Integer("limit", bound))
             : database.Set<CalendarSyncLogEntry>().FromSqlRaw(
                 LogPageSql,
-                new NpgsqlParameter<Guid>("tenant_id", NpgsqlDbType.Uuid) { TypedValue = context.TenantId.Value },
-                new NpgsqlParameter<Guid>("link_id", NpgsqlDbType.Uuid) { TypedValue = linkId },
-                new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = bound });
+                NixParameter.Uuid("tenant_id", context.TenantId.Value),
+                NixParameter.Uuid("link_id", linkId),
+                NixParameter.Integer("limit", bound));
         var rows = await query.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
         return [.. rows.OrderByDescending(row => row.At).ThenByDescending(row => row.Id)];
     }
@@ -662,11 +659,11 @@ public sealed class CalendarSyncStore(NixDbContext database, INixSessionContextA
 
         var rows = await database.Database.SqlQueryRaw<PushCandidateRow>(
             PushCandidatesSql,
-            new NpgsqlParameter<Guid>("tenant_id", NpgsqlDbType.Uuid) { TypedValue = link.TenantId.Value },
-            new NpgsqlParameter<Guid>("workspace_id", NpgsqlDbType.Uuid) { TypedValue = link.WorkspaceId.Value },
-            new NpgsqlParameter<Guid>("link_id", NpgsqlDbType.Uuid) { TypedValue = link.Id },
-            new NpgsqlParameter<Guid>("container_id", NpgsqlDbType.Uuid) { TypedValue = link.ContainerItemId.Value },
-            new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = bound })
+            NixParameter.Uuid("tenant_id", link.TenantId.Value),
+            NixParameter.Uuid("workspace_id", link.WorkspaceId.Value),
+            NixParameter.Uuid("link_id", link.Id),
+            NixParameter.Uuid("container_id", link.ContainerItemId.Value),
+            NixParameter.Integer("limit", bound))
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var mapIds = rows.Where(row => row.MapId is not null).Select(row => row.MapId!.Value).ToArray();
@@ -690,11 +687,11 @@ public sealed class CalendarSyncStore(NixDbContext database, INixSessionContextA
         var bound = Math.Clamp(limit, 1, 100_000);
         var rows = await database.Database.SqlQueryRaw<MappedStartRow>(
             MappedStartsSql,
-            new NpgsqlParameter<Guid>("tenant_id", NpgsqlDbType.Uuid) { TypedValue = link.TenantId.Value },
-            new NpgsqlParameter<Guid>("link_id", NpgsqlDbType.Uuid) { TypedValue = link.Id },
-            new NpgsqlParameter<Guid>("container_id", NpgsqlDbType.Uuid) { TypedValue = link.ContainerItemId.Value },
-            new NpgsqlParameter<Guid>("workspace_id", NpgsqlDbType.Uuid) { TypedValue = link.WorkspaceId.Value },
-            new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = bound + 1 })
+            NixParameter.Uuid("tenant_id", link.TenantId.Value),
+            NixParameter.Uuid("link_id", link.Id),
+            NixParameter.Uuid("container_id", link.ContainerItemId.Value),
+            NixParameter.Uuid("workspace_id", link.WorkspaceId.Value),
+            NixParameter.Integer("limit", bound + 1))
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         return new CalendarMappedStarts(
             [.. rows.Take(bound).Select(row => new CalendarMappedStart(row.ToMap(), row.Start, row.ItemActive))],

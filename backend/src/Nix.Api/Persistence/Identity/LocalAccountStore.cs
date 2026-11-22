@@ -4,7 +4,6 @@ using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Identity;
 
@@ -82,7 +81,7 @@ public sealed class LocalAccountStore(
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
             NixParameter.Text("hash", hash),
-            new NpgsqlParameter("changed", NpgsqlDbType.Boolean) { Value = changed }).ConfigureAwait(false) ?? false;
+            NixParameter.Boolean("changed", changed)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<DateTimeOffset?> RegisterFailureAsync(PrincipalId principalId, CancellationToken cancellationToken)

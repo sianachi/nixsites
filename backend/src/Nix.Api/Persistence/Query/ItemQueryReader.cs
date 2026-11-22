@@ -8,7 +8,6 @@ using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Query;
 
@@ -136,7 +135,7 @@ public sealed class ItemQueryReader(
     private static async ValueTask SetTimeoutAsync(NixSqlExecutor sql, string value, CancellationToken cancellationToken) =>
         await sql.ExecuteAsync(
             "SELECT set_config('statement_timeout', @timeout, true)",
-            [new NpgsqlParameter("timeout", NpgsqlDbType.Text) { Value = value }],
+            [NixParameter.Text("timeout", value)],
             cancellationToken).ConfigureAwait(false);
 
     private async ValueTask<QueryResults> RunCoreAsync(
@@ -160,7 +159,7 @@ public sealed class ItemQueryReader(
         var parameters = await FixedParametersAsync(compiled, spec, readableWorkspaces, cancellationToken).ConfigureAwait(false);
 
         // One more than the ceiling: the extra row is the truncation flag, and is never returned.
-        parameters.Add(new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit + 1 });
+        parameters.Add(NixParameter.Integer("limit", limit + 1));
 
         var rows = _sql.QueryAsync<QueryRow, QueryRowMapper>(
             compiled.Sql,
@@ -222,7 +221,7 @@ public sealed class ItemQueryReader(
 
         var compiled = QuerySql.CompileAggregate(spec, aggregate);
         var parameters = await FixedParametersAsync(compiled, spec, readableWorkspaces, cancellationToken).ConfigureAwait(false);
-        parameters.Add(new NpgsqlParameter("group_limit", NpgsqlDbType.Integer) { Value = maximumGroups });
+        parameters.Add(NixParameter.Integer("group_limit", maximumGroups));
 
         var rows = _sql.QueryAsync<AggregateRow, AggregateRowMapper>(
             compiled.Sql,
@@ -262,17 +261,17 @@ public sealed class ItemQueryReader(
 
         var parameters = new List<NpgsqlParameter>(compiled.Parameters.Count + 7);
         parameters.AddRange(compiled.Parameters);
-        parameters.Add(new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value });
-        parameters.Add(new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers });
+        parameters.Add(NixParameter.Uuid("tenant_id", Tenant.Value));
+        parameters.Add(NixParameter.UuidArray("workspace_ids", identifiers));
 
         if (spec.ExcludedItemId is { } excluded)
         {
-            parameters.Add(new NpgsqlParameter("query_item_id", NpgsqlDbType.Uuid) { Value = excluded.Value });
+            parameters.Add(NixParameter.Uuid("query_item_id", excluded.Value));
         }
 
         if (spec.Scope is { } scope)
         {
-            parameters.Add(new NpgsqlParameter("scope_parent_id", NpgsqlDbType.Uuid) { Value = scope.ParentId.Value });
+            parameters.Add(NixParameter.Uuid("scope_parent_id", scope.ParentId.Value));
         }
 
         parameters.Add(await LockFilterParameters.ClosedLocksAsync(_sql, Tenant, credential, clock, cancellationToken).ConfigureAwait(false));

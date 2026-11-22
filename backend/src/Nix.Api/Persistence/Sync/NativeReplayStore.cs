@@ -5,7 +5,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Sync;
@@ -19,10 +18,7 @@ public sealed class NativeReplayStore(NixDbContext database, NixSqlExecutor sql,
     /// <inheritdoc />
     public async ValueTask LockOperationAsync(Guid operationId, CancellationToken cancellationToken) =>
         _ = await sql.ExecuteAsync(NativeReplaySql.LockOperation,
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text)
-            {
-                Value = $"native-replay:{Context.TenantId.Value:D}:{Context.PrincipalId.Value:D}:{operationId:D}",
-            }], cancellationToken).ConfigureAwait(false);
+            [NixParameter.Text("identity", $"native-replay:{Context.TenantId.Value:D}:{Context.PrincipalId.Value:D}:{operationId:D}")], cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<NativeReplayReceipt?> FindAsync(Guid operationId, CancellationToken cancellationToken)
@@ -57,8 +53,8 @@ public sealed class NativeReplayStore(NixDbContext database, NixSqlExecutor sql,
     public async ValueTask SaveAsync(Guid operationId, WorkspaceId workspaceId, string fingerprint, string response, CancellationToken cancellationToken) =>
         _ = await sql.ExecuteAsync(NativeReplaySql.SaveReceipt,
             [.. OperationParameters(operationId), Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("fingerprint", NpgsqlDbType.Text) { Value = fingerprint },
-                new NpgsqlParameter("response", NpgsqlDbType.Text) { Value = response }], cancellationToken).ConfigureAwait(false);
+                NixParameter.Text("fingerprint", fingerprint),
+                NixParameter.Text("response", response)], cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask BeginMutationAsync(CancellationToken cancellationToken) =>

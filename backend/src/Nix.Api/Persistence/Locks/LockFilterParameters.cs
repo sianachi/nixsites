@@ -46,11 +46,8 @@ internal static class LockFilterParameters
             ItemLockSql.ClosedLockIds,
             [
                 Tenant(tenant),
-                new NpgsqlParameter("credential_id", NpgsqlDbType.Uuid)
-                {
-                    Value = credential.CredentialId is { } id ? id : DBNull.Value,
-                },
-                new NpgsqlParameter("now", NpgsqlDbType.TimestampTz) { Value = clock.GetUtcNow() },
+                NixParameter.Uuid("credential_id", credential.CredentialId),
+                NixParameter.Timestamp("now", clock.GetUtcNow()),
             ],
             cancellationToken).ConfigureAwait(false);
 

@@ -6,7 +6,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Bookmarks;
 
@@ -54,12 +53,9 @@ public sealed class BookmarkShelfStore(
             BookmarkSql.ListShelf,
             default,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("principal_id", NpgsqlDbType.Uuid) { Value = Principal.Value },
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
-                {
-                    Value = Identifiers(readableWorkspaces),
-                },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("principal_id", Principal.Value),
+                NixParameter.UuidArray("workspace_ids", Identifiers(readableWorkspaces)),
             ],
             cancellationToken);
 
@@ -78,8 +74,8 @@ public sealed class BookmarkShelfStore(
         var kept = await sql.ScalarAsync<long>(
             BookmarkSql.CountShelf,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("principal_id", NpgsqlDbType.Uuid) { Value = Principal.Value },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("principal_id", Principal.Value),
             ],
             cancellationToken).ConfigureAwait(false) ?? 0L;
 
@@ -105,13 +101,10 @@ public sealed class BookmarkShelfStore(
         var written = await sql.ExecuteAsync(
             BookmarkSql.Keep,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("principal_id", NpgsqlDbType.Uuid) { Value = Principal.Value },
-                new NpgsqlParameter("item_id", NpgsqlDbType.Uuid) { Value = itemId.Value },
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
-                {
-                    Value = Identifiers(readableWorkspaces),
-                },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("principal_id", Principal.Value),
+                NixParameter.Uuid("item_id", itemId.Value),
+                NixParameter.UuidArray("workspace_ids", Identifiers(readableWorkspaces)),
             ],
             cancellationToken).ConfigureAwait(false);
 
@@ -124,9 +117,9 @@ public sealed class BookmarkShelfStore(
         var removed = await sql.ExecuteAsync(
             BookmarkSql.Release,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("principal_id", NpgsqlDbType.Uuid) { Value = Principal.Value },
-                new NpgsqlParameter("item_id", NpgsqlDbType.Uuid) { Value = itemId.Value },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("principal_id", Principal.Value),
+                NixParameter.Uuid("item_id", itemId.Value),
             ],
             cancellationToken).ConfigureAwait(false);
 

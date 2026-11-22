@@ -7,7 +7,6 @@ using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Items;
@@ -634,7 +633,7 @@ public sealed partial class ItemTree(
                 Uuid("item_id", itemId.Value),
                 Uuid("parent_id", newParentId?.Value),
                 Uuid("actor", actor.Value),
-                new NpgsqlParameter("at", NpgsqlDbType.TimestampTz) { Value = at },
+                NixParameter.Timestamp("at", at),
             ],
             cancellationToken).ConfigureAwait(false);
     }

@@ -7,7 +7,6 @@ using Nix.Domain.Items;
 using Nix.Domain.Templates;
 using Nix.Persistence.ObjectStorage;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Importing;
 

@@ -4,7 +4,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Records;
@@ -25,7 +24,7 @@ public sealed class RecordKeyStore(
             exclusive
                 ? "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));"
                 : "SELECT pg_advisory_xact_lock_shared(hashtextextended(@identity, 0));",
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = $"record-scope:{Tenant.Value:D}:{scope.Value:D}" }],
+            [NixParameter.Text("identity", $"record-scope:{Tenant.Value:D}:{scope.Value:D}")],
             cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
@@ -40,7 +39,7 @@ public sealed class RecordKeyStore(
         {
             _ = await sql.ExecuteAsync(
                 "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));",
-                [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = identity }],
+                [NixParameter.Text("identity", identity)],
                 cancellationToken).ConfigureAwait(false);
         }
     }
@@ -152,8 +151,8 @@ public sealed class RecordKeyStore(
                 Tenant_(),
                 Uuid("scope", scope.Value),
                 Text("field", field),
-                new NpgsqlParameter("items", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = keys.Select(key => key.ItemId.Value).ToArray() },
-                new NpgsqlParameter("values", NpgsqlDbType.Array | NpgsqlDbType.Text) { Value = keys.Select(key => key.Value).ToArray() },
+                NixParameter.UuidArray("items", keys.Select(key => key.ItemId.Value).ToArray()),
+                NixParameter.TextArray("values", keys.Select(key => key.Value).ToArray()),
             ],
             cancellationToken).ConfigureAwait(false);
     }
@@ -182,10 +181,10 @@ public sealed class RecordKeyStore(
             [
                 Tenant_(),
                 Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("parent", NpgsqlDbType.Uuid) { Value = parentId is { } p ? p.Value : DBNull.Value },
+                NixParameter.Uuid("parent", parentId?.Value),
                 Text("key", key),
-                new NpgsqlParameter("values", NpgsqlDbType.Array | NpgsqlDbType.Text) { Value = values.ToArray() },
-                new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit },
+                NixParameter.TextArray("values", values.ToArray()),
+                NixParameter.Integer("limit", limit),
             ],
             cancellationToken).ConfigureAwait(false))
         {
@@ -234,7 +233,7 @@ public sealed class RecordKeyStore(
             ORDER BY item.created_at, item.id
             """,
             default,
-            [Tenant_(), closed, new NpgsqlParameter("ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = ids.ToArray() }],
+            [Tenant_(), closed, NixParameter.UuidArray("ids", ids.ToArray())],
             cancellationToken).ConfigureAwait(false))
         {
             matches.Add(match);

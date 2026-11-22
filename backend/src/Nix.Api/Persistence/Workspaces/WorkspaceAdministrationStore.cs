@@ -6,7 +6,6 @@ using Nix.Persistence.ObjectStorage;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Workspaces;
@@ -335,8 +334,8 @@ public sealed partial class WorkspaceAdministrationStore(
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("membership_locked", NpgsqlDbType.Boolean) { Value = membershipLocked is { } locked ? locked : DBNull.Value },
-                new NpgsqlParameter("collaboration", NpgsqlDbType.Boolean) { Value = collaboration is { } on ? on : DBNull.Value },
+                NixParameter.Boolean("membership_locked", membershipLocked),
+                NixParameter.Boolean("collaboration", collaboration),
             ],
             cancellationToken).ConfigureAwait(false);
         return result is not null;
@@ -385,8 +384,8 @@ public sealed partial class WorkspaceAdministrationStore(
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("agents_may_approve", NpgsqlDbType.Boolean) { Value = agentsMayApprove is { } approve ? approve : DBNull.Value },
-                new NpgsqlParameter("agents_may_create_public_links", NpgsqlDbType.Boolean) { Value = agentsMayCreatePublicLinks is { } links ? links : DBNull.Value },
+                NixParameter.Boolean("agents_may_approve", agentsMayApprove),
+                NixParameter.Boolean("agents_may_create_public_links", agentsMayCreatePublicLinks),
             ],
             cancellationToken).ConfigureAwait(false);
         return result is not null;
@@ -833,7 +832,7 @@ public sealed partial class WorkspaceAdministrationStore(
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("credential_id", _credential.CredentialId),
                 Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("candidate_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = candidateIds },
+                NixParameter.UuidArray("candidate_ids", candidateIds),
             ],
             cancellationToken);
         await foreach (var row in contextRows.ConfigureAwait(false))
@@ -958,7 +957,7 @@ public sealed partial class WorkspaceAdministrationStore(
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("workspace_id", workspaceId.Value), Uuid("parent_id", parentId),
-                new NpgsqlParameter("candidate_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = candidateIds },
+                NixParameter.UuidArray("candidate_ids", candidateIds),
             ],
             cancellationToken);
         await foreach (var row in rows.ConfigureAwait(false))

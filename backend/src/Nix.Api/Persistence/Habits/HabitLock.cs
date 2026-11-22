@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
 using Nix.Domain.Items;
 using Npgsql;
-using NpgsqlTypes;
+using Nix.Persistence.Sql;
 
 namespace Nix.Persistence.Habits;
 
@@ -19,7 +19,7 @@ public sealed class HabitLock(NixDbContext database) : IHabitLock
         }
         await database.Database.ExecuteSqlRawAsync(
             "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));",
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = $"habit:{itemId.Value:D}" }],
+            [NixParameter.Text("identity", $"habit:{itemId.Value:D}")],
             cancellationToken).ConfigureAwait(false);
     }
 }

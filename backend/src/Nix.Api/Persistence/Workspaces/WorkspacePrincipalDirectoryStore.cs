@@ -3,7 +3,6 @@ using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Workspaces;

@@ -24,7 +24,7 @@ public sealed class OAuthCodeStore(NpgsqlDataSource dataSource) : IOAuthCodes
             NixParameter.Text("challenge", record.Challenge),
             NixParameter.Text("scopes", record.Scopes),
             NixParameter.Text("resource", record.Resource),
-            PooledSql.Instant("expires", record.ExpiresAt)).ConfigureAwait(false) is true;
+            NixParameter.Instant("expires", record.ExpiresAt)).ConfigureAwait(false) is true;
     }
 
     /// <inheritdoc />

@@ -8,7 +8,6 @@ using Nix.Domain.Workers;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Sites;
@@ -359,7 +358,7 @@ public sealed class SiteStore(NixDbContext database, NixSqlExecutor sql, INixSes
                 Uuid("workspace_id", site.WorkspaceId.Value),
                 Uuid("root_id", site.RootItemId.Value),
                 Uuid("site_id", site.Id),
-                new NpgsqlParameter("now", NpgsqlDbType.TimestampTz) { Value = now },
+                NixParameter.Timestamp("now", now),
             ],
             cancellationToken);
         await foreach (var row in rows.WithCancellation(cancellationToken).ConfigureAwait(false))
@@ -383,8 +382,8 @@ public sealed class SiteStore(NixDbContext database, NixSqlExecutor sql, INixSes
                 Uuid("workspace_id", site.WorkspaceId.Value),
                 Uuid("root_id", site.RootItemId.Value),
                 Uuid("site_id", site.Id),
-                new NpgsqlParameter("now", NpgsqlDbType.TimestampTz) { Value = now },
-                new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = SiteRules.MaximumLossEntries + 1 },
+                NixParameter.Timestamp("now", now),
+                NixParameter.Integer("limit", SiteRules.MaximumLossEntries + 1),
             ],
             cancellationToken);
         await foreach (var row in rows.WithCancellation(cancellationToken).ConfigureAwait(false))
@@ -436,7 +435,7 @@ public sealed class SiteStore(NixDbContext database, NixSqlExecutor sql, INixSes
                 Uuid("workspace_id", site.WorkspaceId.Value),
                 Uuid("root_id", site.RootItemId.Value),
                 Uuid("site_id", site.Id),
-                new NpgsqlParameter("now", NpgsqlDbType.TimestampTz) { Value = now },
+                NixParameter.Timestamp("now", now),
                 Uuid("file_item_id", fileItemId.Value),
             ],
             cancellationToken);

@@ -4,7 +4,6 @@ using Nix.Domain.Scheduling;
 using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Scheduling;
 
@@ -65,10 +64,7 @@ public sealed class ScheduledTriggerLeaseStore(NpgsqlDataSource dataSource) : IS
             NixParameter.Text("owner", owner),
             NixParameter.Integer("lease_seconds", leaseSeconds),
             NixParameter.Integer("max_attempts", maxAttempts),
-            new NpgsqlParameter("sources", NpgsqlDbType.Array | NpgsqlDbType.Text)
-            {
-                Value = sources is null ? DBNull.Value : sources.ToArray(),
-            }).ConfigureAwait(false);
+            NixParameter.TextArray("sources", sources?.ToArray())).ConfigureAwait(false);
     }
 
     public async Task<bool> FinishAsync(TenantId tenantId, Guid id, string owner, TriggerStatus status, string? detailJson, CancellationToken cancellationToken)

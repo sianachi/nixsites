@@ -35,7 +35,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
                 },
                 reader.GetString(8)),
             cancellationToken,
-            PooledSql.Bytes("id", credentialId)).ConfigureAwait(false);
+            NixParameter.Bytes("id", credentialId)).ConfigureAwait(false);
         return rows.FirstOrDefault();
     }
 
@@ -67,11 +67,11 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             cancellationToken,
             NixParameter.Uuid("id", passkey.Id),
             NixParameter.Uuid("principal", principalId.Value),
-            PooledSql.Bytes("credential", passkey.CredentialId),
-            PooledSql.Bytes("key", passkey.PublicKey),
-            PooledSql.Int8("count", passkey.SignCount),
+            NixParameter.Bytes("credential", passkey.CredentialId),
+            NixParameter.Bytes("key", passkey.PublicKey),
+            NixParameter.Int8("count", passkey.SignCount),
             NixParameter.Uuid("aaguid", passkey.Aaguid),
-            new NpgsqlParameter("transports", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = passkey.Transports.ToArray() },
+            NixParameter.TextArray("transports", passkey.Transports.ToArray()),
             NixParameter.Text("rp", passkey.RpId),
             NixParameter.Text("kind", passkey.Kind == LocalPasskeyKind.Passkey ? "passkey" : "security_key"),
             NixParameter.Text("name", passkey.Name)).ConfigureAwait(false) ?? false;
@@ -84,7 +84,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             static _ => 0,
             cancellationToken,
             NixParameter.Uuid("id", id),
-            PooledSql.Int8("count", signCount)).ConfigureAwait(false);
+            NixParameter.Int8("count", signCount)).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<bool> RenamePasskeyAsync(PrincipalId principalId, Guid id, string name, CancellationToken cancellationToken) =>
@@ -134,7 +134,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             "SELECT nix_local_confirm_totp(@principal, @step)",
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
-            PooledSql.Int8("step", timeStep)).ConfigureAwait(false) ?? false;
+            NixParameter.Int8("step", timeStep)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<bool> UseTotpStepAsync(PrincipalId principalId, long timeStep, CancellationToken cancellationToken) =>
@@ -142,7 +142,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             "SELECT nix_local_use_totp_step(@principal, @step)",
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
-            PooledSql.Int8("step", timeStep)).ConfigureAwait(false) ?? false;
+            NixParameter.Int8("step", timeStep)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<bool> RemoveTotpAsync(PrincipalId principalId, CancellationToken cancellationToken) =>

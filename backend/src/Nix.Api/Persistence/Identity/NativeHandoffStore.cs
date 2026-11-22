@@ -18,7 +18,7 @@ public sealed class NativeHandoffStore(NpgsqlDataSource dataSource) : INativeHan
             NixParameter.Uuid("principal", principalId),
             NixParameter.Text("challenge", challenge),
             NixParameter.Text("payload", payload),
-            PooledSql.Instant("expires", expiresAt)).ConfigureAwait(false) is true;
+            NixParameter.Instant("expires", expiresAt)).ConfigureAwait(false) is true;
 
     /// <inheritdoc />
     public async ValueTask<NativeHandoffRecord?> ConsumeAsync(string codeHash, CancellationToken cancellationToken) =>

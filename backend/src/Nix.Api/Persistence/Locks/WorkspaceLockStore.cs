@@ -49,10 +49,7 @@ public sealed class WorkspaceLockStore(
             default,
             [
                 Tenant(),
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
-                {
-                    Value = workspaceIds.Select(id => id.Value).ToArray(),
-                },
+                NixParameter.UuidArray("workspace_ids", workspaceIds.Select(id => id.Value).ToArray()),
                 Credential(),
                 Now(),
             ],
@@ -99,7 +96,7 @@ public sealed class WorkspaceLockStore(
                 Tenant(),
                 Workspace(workspaceId),
                 Verifier(verifier),
-                new NpgsqlParameter("expected_hash", NpgsqlDbType.Text) { Value = expected },
+                NixParameter.Text("expected_hash", expected),
                 Principal(),
                 Now(),
             ],
@@ -120,7 +117,7 @@ public sealed class WorkspaceLockStore(
         ArgumentException.ThrowIfNullOrEmpty(expected);
         return await sql.ExecuteAsync(
             WorkspaceLockSql.Remove,
-            [Tenant(), Workspace(workspaceId), new NpgsqlParameter("expected_hash", NpgsqlDbType.Text) { Value = expected }],
+            [Tenant(), Workspace(workspaceId), NixParameter.Text("expected_hash", expected)],
             cancellationToken).ConfigureAwait(false) > 0;
     }
 
@@ -145,7 +142,7 @@ public sealed class WorkspaceLockStore(
                 Credential(),
                 Principal(),
                 Verifier(verifier),
-                new NpgsqlParameter("expires_at", NpgsqlDbType.TimestampTz) { Value = expiresAt },
+                NixParameter.Timestamp("expires_at", expiresAt),
                 Now(),
             ],
             cancellationToken).ConfigureAwait(false);
@@ -188,7 +185,7 @@ public sealed class WorkspaceLockStore(
                 Tenant(),
                 Workspace(workspaceId),
                 Principal(),
-                new NpgsqlParameter("audit_action", NpgsqlDbType.Text) { Value = action },
+                NixParameter.Text("audit_action", action),
                 Now(),
             ],
             cancellationToken).ConfigureAwait(false);

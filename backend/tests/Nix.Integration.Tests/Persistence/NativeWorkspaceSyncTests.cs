@@ -45,7 +45,7 @@ public sealed class NativeWorkspaceSyncTests(NixPostgresFixture fixture, ITestOu
     {
         await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
         var failure = await Assert.ThrowsAsync<PostgresException>(() => work.Resolve<NixSqlExecutor>()
-            .ScalarOrDefaultAsync<long>("SELECT count(*) FROM workspace_sync_pending", cancellationToken: Cancellation).AsTask());
+            .ScalarAsync<long>("SELECT count(*) FROM workspace_sync_pending", cancellationToken: Cancellation).AsTask());
         Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, failure.SqlState);
     }
 

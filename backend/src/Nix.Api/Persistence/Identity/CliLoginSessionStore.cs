@@ -3,7 +3,6 @@ using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Identity;
@@ -26,7 +25,7 @@ public sealed class CliLoginSessionStore(NpgsqlDataSource dataSource) : ICliLogi
     public async ValueTask<bool> DecideAsync(string userHash, string browserHash, bool approve, CancellationToken cancellationToken) =>
         await _db.ScalarAsync<bool>("SELECT nix_decide_cli_login(@user, @browser, @approve)", cancellationToken,
             Text("user", userHash), Text("browser", browserHash),
-            new NpgsqlParameter("approve", NpgsqlDbType.Boolean) { Value = approve }).ConfigureAwait(false) is true;
+            NixParameter.Boolean("approve", approve)).ConfigureAwait(false) is true;
 
     /// <inheritdoc />
     public async ValueTask<CliLoginRedemption> RedeemAsync(
@@ -39,7 +38,7 @@ public sealed class CliLoginSessionStore(NpgsqlDataSource dataSource) : ICliLogi
             },
             cancellationToken,
             Text("device", deviceHash), Text("refresh", refreshHash),
-            new NpgsqlParameter("session", NpgsqlDbType.Uuid) { Value = sessionId.Value }).ConfigureAwait(false))
+            NixParameter.Uuid("session", sessionId.Value)).ConfigureAwait(false))
         .FirstOrDefault() ?? new CliLoginRedemption("expired", null);
 
     /// <inheritdoc />

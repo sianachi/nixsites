@@ -13,7 +13,7 @@ using Nix.Domain.Templates;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Npgsql;
-using NpgsqlTypes;
+using Nix.Persistence.Sql;
 
 namespace Nix.Persistence.Templates;
 
@@ -135,8 +135,8 @@ public sealed partial class TemplateStore
         await _database.Database.ExecuteSqlRawAsync(
             sql,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Context.TenantId.Value },
-                new NpgsqlParameter("item_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = ids },
+                NixParameter.Uuid("tenant_id", Context.TenantId.Value),
+                NixParameter.UuidArray("item_ids", ids),
             ],
             cancellationToken).ConfigureAwait(false);
     }
@@ -184,7 +184,7 @@ public sealed partial class TemplateStore
         const string sql = "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));";
         await _database.Database.ExecuteSqlRawAsync(
             sql,
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = identity }],
+            [NixParameter.Text("identity", identity)],
             cancellationToken).ConfigureAwait(false);
     }
 

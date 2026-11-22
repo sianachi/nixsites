@@ -3,7 +3,7 @@ using Nix.Abstractions;
 using Nix.Domain.Items;
 using Nix.Domain.Tenancy;
 using Npgsql;
-using NpgsqlTypes;
+using Nix.Persistence.Sql;
 
 namespace Nix.Persistence;
 
@@ -29,7 +29,7 @@ public sealed class StructuralLock(NixDbContext database) : IStructuralLock
 
         await database.Database.ExecuteSqlRawAsync(
             "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));",
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = identity }],
+            [NixParameter.Text("identity", identity)],
             cancellationToken).ConfigureAwait(false);
     }
 }
