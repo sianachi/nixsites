@@ -52,7 +52,7 @@ public sealed record SetItemProperties(ItemId ItemId, string Changes) : ICommand
 public sealed class SetItemPropertiesHandler(
     IItemTree tree,
     ISchemaResolver schemas,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     INixSessionContextAccessor session,
     TimeProvider clock,
     RecordKeys? recordKeys = null)
@@ -93,18 +93,13 @@ public sealed class SetItemPropertiesHandler(
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
 
-        if (item.LifecycleState != ItemLifecycleState.Active)
-        {
-            return Result.Failure<Item>(
-                ItemErrors.LifecycleConflict("A deleted item's properties cannot be changed."));
-        }
+        var item = lookup.Value;
 
         // An event the owner cannot edit at its source keeps its mirrored fields: the provider
         // would overwrite them on the next pull. Everything else on it, a reminder say, is the

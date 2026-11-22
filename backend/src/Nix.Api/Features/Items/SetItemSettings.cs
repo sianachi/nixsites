@@ -24,7 +24,7 @@ public sealed record SetItemSettings(ItemId ItemId, bool? Comments, bool? Sugges
     : ICommand<Item>;
 
 /// <summary>Handles <see cref="SetItemSettings"/>.</summary>
-public sealed class SetItemSettingsHandler(IItemTree tree, IPermissionResolver permissions)
+public sealed class SetItemSettingsHandler(IItemTree tree, IVisibleItems visible)
     : ICommandHandler<SetItemSettings, Item>
 {
     /// <inheritdoc />
@@ -32,12 +32,13 @@ public sealed class SetItemSettingsHandler(IItemTree tree, IPermissionResolver p
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(command.ItemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound($"No item {command.ItemId} is visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
+
+        var item = lookup.Value;
 
         if (command.Comments is null && command.Suggesting is null && command.ReviewStates is null && command.FullWidth is null)
         {

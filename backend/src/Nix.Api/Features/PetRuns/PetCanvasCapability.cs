@@ -15,7 +15,7 @@ internal sealed class PetCanvasCapability(
     HttpClient http,
     IConfiguration configuration,
     IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IItemLocks locks,
     SelfIssuedTokenService tokens) : IPetRunCapability
 {
@@ -203,10 +203,9 @@ internal sealed class PetCanvasCapability(
         {
             return null;
         }
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        return item is { Type: "canvas", LifecycleState: ItemLifecycleState.Active } && item.WorkspaceId == run.WorkspaceId
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        return lookup.IsSuccess && lookup.Value is { Type: "canvas" } item && item.WorkspaceId == run.WorkspaceId
             && !ItemSettings.Read(item.Settings).WithholdFromPets
-            && await permissions.CanWriteWorkspaceAsync(run.WorkspaceId, cancellationToken).ConfigureAwait(false)
             && (await locks.LockedAmongAsync([itemId], cancellationToken).ConfigureAwait(false)).Count == 0
             ? item
             : null;
@@ -332,10 +331,9 @@ internal sealed class PetCanvasCapability(
         {
             return false;
         }
-        var item = await tree.FindAsync(id, cancellationToken).ConfigureAwait(false);
-        return item is { Type: "canvas", LifecycleState: ItemLifecycleState.Active } && item.WorkspaceId == run.WorkspaceId
+        var lookup = await visible.FindAsync(id, ItemAccess.Read, cancellationToken).ConfigureAwait(false);
+        return lookup.IsSuccess && lookup.Value is { Type: "canvas" } item && item.WorkspaceId == run.WorkspaceId
             && !ItemSettings.Read(item.Settings).WithholdFromPets
-            && await permissions.CanReadWorkspaceAsync(run.WorkspaceId, cancellationToken).ConfigureAwait(false)
             && (await locks.LockedAmongAsync([id], cancellationToken).ConfigureAwait(false)).Count == 0;
     }
 

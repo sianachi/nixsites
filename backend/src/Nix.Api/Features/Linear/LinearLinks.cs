@@ -16,8 +16,8 @@ namespace Nix.Features.Linear;
 
 [SuppressMessage("Performance", "CA1812", Justification = "Created by ASP.NET Core dependency injection.")]
 internal sealed class LinearLinks(
-    ILinearStore store, IConnectorStore connections, ConnectorActions connector, IItemTree tree,
-    IPermissionResolver permissions, IItemLocks locks, ISchemaResolver schemas,
+    ILinearStore store, IConnectorStore connections, ConnectorActions connector,
+    IVisibleItems visible, IItemLocks locks, ISchemaResolver schemas,
     NixDispatcher dispatcher, IConfiguration configuration, TimeProvider clock,
     IIsolatedUnitOfWork isolated, INixSessionContextAccessor session, RecordKeys recordKeys) :
     IQueryHandler<ReadLinearLink, Result<LinearLinkResponse>>,
@@ -218,11 +218,9 @@ internal sealed class LinearLinks(
 
     private async ValueTask<Item?> FindTaskAsync(ItemId id, CancellationToken token)
     {
-        var item = await tree.FindAsync(id, token).ConfigureAwait(false);
-        return item is not null && ConnectorEndpoints.Enabled(configuration, item.WorkspaceId)
-            && await permissions.CanManageWorkspaceAsync(item.WorkspaceId, token).ConfigureAwait(false)
-            && (await locks.LockedAmongAsync([id], token).ConfigureAwait(false)).Count == 0
-            && await locks.MayReadBodyAsync(id, token).ConfigureAwait(false) ? item : null;
+        var lookup = await visible.FindAsync(id, ItemAccess.Manage, token, lockedDetail: "locked").ConfigureAwait(false);
+        return lookup.IsSuccess && ConnectorEndpoints.Enabled(configuration, lookup.Value.WorkspaceId)
+            && (await locks.LockedAmongAsync([id], token).ConfigureAwait(false)).Count == 0 ? lookup.Value : null;
     }
 
     private Task<Item?> FindCurrentTaskAsync(ItemId id, CancellationToken token)

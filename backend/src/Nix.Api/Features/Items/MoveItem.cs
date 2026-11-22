@@ -47,6 +47,7 @@ public sealed record MoveItem(ItemId ItemId, ItemId? NewParentId, ItemId? AfterI
 /// </remarks>
 public sealed class MoveItemHandler(
     IItemTree tree,
+    IVisibleItems visible,
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
     TimeProvider clock,
@@ -76,18 +77,14 @@ public sealed class MoveItemHandler(
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
-        var workspaceId = item.WorkspaceId;
 
-        if (item.LifecycleState == ItemLifecycleState.Purged)
-        {
-            return Result.Failure<Item>(ItemErrors.LifecycleConflict("A purged item cannot be moved."));
-        }
+        var item = lookup.Value;
+        var workspaceId = item.WorkspaceId;
 
         if (command.WorkspaceId is { } destinationWorkspace && destinationWorkspace != workspaceId)
         {

@@ -183,7 +183,7 @@ public sealed class CreateItemIdempotencyTests
     };
 
     private static CreateItemHandler Handler(RecordingTree tree, Permissions permissions) =>
-        new(tree, permissions, new EmptySchema(), new Session(), TimeProvider.System);
+        new(tree, permissions, new VisibleItems(tree, permissions, new OpenLocks()), new EmptySchema(), new Session(), TimeProvider.System);
 
     private sealed class Session : INixSessionContextAccessor
     {

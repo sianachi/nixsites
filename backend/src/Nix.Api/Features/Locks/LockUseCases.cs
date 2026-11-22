@@ -107,8 +107,7 @@ public static class LockErrors
 /// an item may see that its body is locked, since that is what they will meet when they open it.
 /// </remarks>
 public sealed class GetItemLockHandler(
-    IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IItemLocks locks)
     : IQueryHandler<GetItemLock, Result<ItemLockState>>
 {
@@ -122,7 +121,7 @@ public sealed class GetItemLockHandler(
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        if (!await LockAccess.MayReadAsync(tree, permissions, query.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayReadAsync(visible, query.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<ItemLockState>(LockErrors.NotFound(query.ItemId));
         }
@@ -147,7 +146,7 @@ public sealed class GetItemLockHandler(
 /// </remarks>
 public sealed class LockItemHandler(
     IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IItemLocks locks,
     LockPasswordGuard guard,
     INixSessionContextAccessor session,
@@ -164,7 +163,7 @@ public sealed class LockItemHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!await LockAccess.MayWriteAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayWriteAsync(visible, command.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
         }
@@ -186,7 +185,7 @@ public sealed class LockItemHandler(
             await topology.AcquireWorkspaceTopologyAsync(before.WorkspaceId, cancellationToken).ConfigureAwait(false);
             var current = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
             if (current is null || current.WorkspaceId != before.WorkspaceId
-                || !await LockAccess.MayWriteAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+                || !await LockAccess.MayWriteAsync(visible, command.ItemId, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
             }
@@ -243,8 +242,7 @@ public sealed class LockItemHandler(
 /// <summary>Removes an item's lock.</summary>
 /// <remarks>Needs write access and the password, for the reason <see cref="LockItemHandler"/> gives.</remarks>
 public sealed class RemoveItemLockHandler(
-    IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IItemLocks locks,
     LockPasswordGuard guard,
     INixSessionContextAccessor session)
@@ -258,7 +256,7 @@ public sealed class RemoveItemLockHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!await LockAccess.MayWriteAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayWriteAsync(visible, command.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
         }
@@ -290,8 +288,7 @@ public sealed class RemoveItemLockHandler(
 /// alone.
 /// </remarks>
 public sealed class UnlockItemHandler(
-    IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IItemLocks locks,
     LockPasswordGuard guard,
     INixSessionContextAccessor session,
@@ -309,7 +306,7 @@ public sealed class UnlockItemHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!await LockAccess.MayReadAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayReadAsync(visible, command.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<DateTimeOffset>(LockErrors.NotFound(command.ItemId));
         }
@@ -353,8 +350,7 @@ public sealed class UnlockItemHandler(
 /// open, and a "lock again" button that could fail would be the wrong way round.
 /// </remarks>
 public sealed class RelockItemHandler(
-    IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IItemLocks locks)
     : ICommandHandler<RelockItem, bool>
 {
@@ -366,7 +362,7 @@ public sealed class RelockItemHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!await LockAccess.MayReadAsync(tree, permissions, command.ItemId, cancellationToken).ConfigureAwait(false))
+        if (!await LockAccess.MayReadAsync(visible, command.ItemId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<bool>(LockErrors.NotFound(command.ItemId));
         }
@@ -398,27 +394,17 @@ internal static class LockAccess
     /// would be one that does not hold.
     /// </remarks>
     internal static async ValueTask<bool> MayReadAsync(
-        IItemTree tree,
-        IPermissionResolver permissions,
+        IVisibleItems visible,
         ItemId itemId,
-        CancellationToken cancellationToken)
-    {
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        return item is { LifecycleState: ItemLifecycleState.Active, TemplateId: null }
-            && await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false);
-    }
+        CancellationToken cancellationToken) =>
+        (await visible.FindAsync(itemId, ItemAccess.Read, cancellationToken).ConfigureAwait(false)).IsSuccess;
 
     /// <summary>Whether the caller may change the item, which setting or removing a lock needs.</summary>
     internal static async ValueTask<bool> MayWriteAsync(
-        IItemTree tree,
-        IPermissionResolver permissions,
+        IVisibleItems visible,
         ItemId itemId,
-        CancellationToken cancellationToken)
-    {
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        return item is { LifecycleState: ItemLifecycleState.Active, TemplateId: null }
-            && await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false);
-    }
+        CancellationToken cancellationToken) =>
+        (await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false)).IsSuccess;
 
     /// <summary>The tenant the request runs in, which keys the password backoff.</summary>
     internal static Nix.Domain.Tenancy.TenantId Tenant(INixSessionContextAccessor session) =>

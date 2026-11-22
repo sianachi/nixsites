@@ -209,6 +209,7 @@ public static class NixPersistenceServiceCollectionExtensions
         // Scoped, like everything else here: a store reads the scope's tenant and shares the
         // context's transaction, so it belongs to one unit of work and one tenant.
         services.AddScoped<IItemTree, ItemTree>();
+        services.AddScoped<IVisibleItems, Nix.Features.Items.VisibleItems>();
         services.AddScoped<IHabitLock, HabitLock>();
         services.AddScoped<ICommandHandler<SetHabitSettings, HabitTrackerResponse>, HabitTrackerHandler>();
         services.AddScoped<IQueryHandler<ReadHabitTracker, Result<HabitTrackerResponse>>, HabitTrackerHandler>();

@@ -20,18 +20,21 @@ public sealed record ListItemMoveWorkspaces(ItemId ItemId, DateTimeOffset? After
     WorkspaceId? AfterId, int Limit) : IQuery<Result<ItemMoveWorkspacePage>>;
 
 public sealed class ListItemMoveWorkspacesHandler(
-    IItemTree tree, IPermissionResolver permissions, WorkspaceAdministrationStore store)
+    IVisibleItems visible, WorkspaceAdministrationStore store)
     : IQueryHandler<ListItemMoveWorkspaces, Result<ItemMoveWorkspacePage>>
 {
     public async ValueTask<Result<ItemMoveWorkspacePage>> HandleAsync(
         ListItemMoveWorkspaces command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
-        if (item is null || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(
+            command.ItemId, ItemAccess.Write, cancellationToken, notFoundDetail: "No movable item is visible.").ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<ItemMoveWorkspacePage>(ItemErrors.NotFound("No movable item is visible."));
+            return Result.Failure<ItemMoveWorkspacePage>(lookup.Error);
         }
+
+        var item = lookup.Value;
         var rows = await store.ListTransferDestinationsAsync(item.WorkspaceId, command.AfterCreatedAt,
             command.AfterId, command.Limit + 1, cancellationToken).ConfigureAwait(false);
         var candidates = rows.Take(command.Limit).ToArray();

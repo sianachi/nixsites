@@ -34,7 +34,7 @@ public sealed record CompleteRecurrenceOccurrence(ItemId ItemId, DateOnly Occurr
 public sealed class CompleteRecurrenceOccurrenceHandler(
     IItemTree tree,
     IRecurrenceStore recurrence,
-    IPermissionResolver permissions)
+    IVisibleItems visible)
     : ICommandHandler<CompleteRecurrenceOccurrence, Item>
 {
     private readonly IRecurrenceStore _recurrence = recurrence;
@@ -51,18 +51,13 @@ public sealed class CompleteRecurrenceOccurrenceHandler(
 
         var itemId = command.ItemId;
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
 
-        if (item.LifecycleState != ItemLifecycleState.Active)
-        {
-            return Result.Failure<Item>(
-                ItemErrors.LifecycleConflict("A deleted item's occurrence cannot be completed."));
-        }
+        var item = lookup.Value;
 
         var storedJson = await _recurrence.ReadRuleAsync(itemId, cancellationToken).ConfigureAwait(false);
         if (storedJson is null)

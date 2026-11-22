@@ -1,3 +1,4 @@
+using Nix.Features.Items;
 using System.Collections.Immutable;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
@@ -55,7 +56,7 @@ public sealed class StructuredItemSetupTests
         var handler = new AppendViewSetupHandler(
             tree,
             new FixedSchemas(schema),
-            new WritablePermissions(),
+            new VisibleItems(tree, new WritablePermissions(), new OpenLocks()),
             new Session(),
             TimeProvider.System);
 
@@ -78,7 +79,7 @@ public sealed class StructuredItemSetupTests
         var handler = new AppendViewSetupHandler(
             tree,
             new FixedSchemas(schema),
-            new WritablePermissions(),
+            new VisibleItems(tree, new WritablePermissions(), new OpenLocks()),
             new Session(),
             TimeProvider.System);
 
@@ -104,7 +105,7 @@ public sealed class StructuredItemSetupTests
         var handler = new AppendViewSetupHandler(
             tree,
             new FixedSchemas(schema),
-            new WritablePermissions(),
+            new VisibleItems(tree, new WritablePermissions(), new OpenLocks()),
             new Session(),
             TimeProvider.System);
 
@@ -129,7 +130,7 @@ public sealed class StructuredItemSetupTests
         var handler = new AppendViewSetupHandler(
             tree,
             new FixedSchemas(schema),
-            new WritablePermissions(),
+            new VisibleItems(tree, new WritablePermissions(), new OpenLocks()),
             new Session(),
             TimeProvider.System);
 
@@ -152,7 +153,7 @@ public sealed class StructuredItemSetupTests
         var handler = new AppendViewSetupHandler(
             tree,
             new FixedSchemas(schema),
-            new WritablePermissions(),
+            new VisibleItems(tree, new WritablePermissions(), new OpenLocks()),
             new Session(),
             TimeProvider.System);
 
@@ -176,7 +177,7 @@ public sealed class StructuredItemSetupTests
         var handler = new ReplaceViewSetupHandler(
             tree,
             new FixedSchemas(currentSchema),
-            new WritablePermissions(),
+            new VisibleItems(tree, new WritablePermissions(), new OpenLocks()),
             new Session(),
             TimeProvider.System);
         var renamed = original with { Label = "Assignee" };
@@ -203,7 +204,7 @@ public sealed class StructuredItemSetupTests
         var handler = new ReplaceViewSetupHandler(
             tree,
             new FixedSchemas(effective),
-            new WritablePermissions(),
+            new VisibleItems(tree, new WritablePermissions(), new OpenLocks()),
             new Session(),
             TimeProvider.System);
 
@@ -258,7 +259,7 @@ public sealed class StructuredItemSetupTests
         var schema = compatible ? ChatFields() : PropertySchema.Empty;
         var item = Container(PropertySchema.Empty, [View("list")]);
         var tree = new RecordingTree(item);
-        var handler = new SetContainerViewsHandler(tree, new WritablePermissions(), new Session(), TimeProvider.System, new FixedSchemas(schema));
+        var handler = new SetContainerViewsHandler(tree, new VisibleItems(tree, new WritablePermissions(), new OpenLocks()), new Session(), TimeProvider.System, new FixedSchemas(schema));
         var result = await handler.HandleAsync(new SetContainerViews(item.Id, [View("chat") with { Kind = ViewKind.Chat }], "chat"), Cancellation);
         Assert.Equal(compatible, result.IsSuccess);
         Assert.Equal(compatible ? 1 : 0, tree.ViewsWrites);
@@ -276,7 +277,7 @@ public sealed class StructuredItemSetupTests
         var schema = compatible ? ChatFields() : PropertySchema.Empty;
         var item = Container(PropertySchema.Empty, [View("list")]);
         var tree = new RecordingTree(item);
-        var handler = new AppendViewSetupHandler(tree, new FixedSchemas(schema), new WritablePermissions(), new Session(), TimeProvider.System);
+        var handler = new AppendViewSetupHandler(tree, new FixedSchemas(schema), new VisibleItems(tree, new WritablePermissions(), new OpenLocks()), new Session(), TimeProvider.System);
         var result = await handler.HandleAsync(new AppendViewSetup(item.Id, [], [View("chat") with { Kind = ViewKind.Chat }], false), Cancellation);
         Assert.Equal(compatible, result.IsSuccess);
         if (!compatible)
@@ -293,7 +294,7 @@ public sealed class StructuredItemSetupTests
     {
         var item = Container(PropertySchema.Empty, [View("list")]);
         var tree = new RecordingTree(item);
-        var handler = new ReplaceViewSetupHandler(tree, new FixedSchemas(PropertySchema.Empty), new WritablePermissions(), new Session(), TimeProvider.System);
+        var handler = new ReplaceViewSetupHandler(tree, new FixedSchemas(PropertySchema.Empty), new VisibleItems(tree, new WritablePermissions(), new OpenLocks()), new Session(), TimeProvider.System);
         var result = await handler.HandleAsync(new ReplaceViewSetup(item.Id, "list", compatible ? ChatFields() : PropertySchema.Empty,
             [], [View("chat") with { Kind = ViewKind.Chat }]), Cancellation);
         Assert.Equal(compatible, result.IsSuccess);

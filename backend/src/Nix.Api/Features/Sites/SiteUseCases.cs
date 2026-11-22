@@ -86,7 +86,7 @@ public sealed record ListPages(Guid SiteId) : IQuery<Result<SitePageListResponse
 /// <summary>Creates sites.</summary>
 public sealed class CreateSiteHandler(
     ISiteStore sites,
-    IItemTree tree,
+    IVisibleItems visible,
     IItemLocks locks,
     IPermissionResolver permissions,
     INixSessionContextAccessor session,
@@ -111,11 +111,13 @@ public sealed class CreateSiteHandler(
                 "A site needs a root item, a slug of 2 to 40 lowercase letters, digits and single hyphens, and a docs, blog or custom layout."));
         }
 
-        var root = await tree.FindAsync(ItemId.From(request.RootItemId), cancellationToken).ConfigureAwait(false);
-        if (root is null || !await permissions.CanReadWorkspaceAsync(root.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var rootLookup = await visible.FindAsync(ItemId.From(request.RootItemId), ItemAccess.Read, cancellationToken).ConfigureAwait(false);
+        if (rootLookup.IsFailure)
         {
             return Result.Failure<SiteResponse>(SiteErrors.ItemNotFound());
         }
+
+        var root = rootLookup.Value;
 
         if (!await permissions.CanManageWorkspaceAsync(root.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
@@ -706,7 +708,7 @@ public sealed class DeleteSiteHandler(
 public sealed class SiteQueryHandlers(
     ISiteStore sites,
     SiteAccess access,
-    IItemTree tree,
+    IVisibleItems visible,
     IPermissionResolver permissions,
     SiteViews views) :
     IQueryHandler<GetSite, Result<SiteResponse>>,
@@ -730,11 +732,13 @@ public sealed class SiteQueryHandlers(
     public async ValueTask<Result<SiteResponse>> HandleAsync(GetItemSite query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var item = await tree.FindAsync(ItemId.From(query.ItemId), cancellationToken).ConfigureAwait(false);
-        if (item is null || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(ItemId.From(query.ItemId), ItemAccess.Read, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
             return Result.Failure<SiteResponse>(SiteErrors.ItemNotFound());
         }
+
+        var item = lookup.Value;
 
         var site = await sites.FindByRootAsync(item.Id, cancellationToken).ConfigureAwait(false);
         return site is null

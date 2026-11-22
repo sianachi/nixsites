@@ -28,7 +28,7 @@ public sealed record TouchItem(ItemId ItemId) : ICommand<ItemId>;
 /// </remarks>
 public sealed class TouchItemHandler(
     IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     INixSessionContextAccessor session,
     TimeProvider clock)
     : ICommandHandler<TouchItem, ItemId>
@@ -46,17 +46,8 @@ public sealed class TouchItemHandler(
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await tree.FindAsync(command.ItemId, cancellationToken).ConfigureAwait(false);
-        if (item is null)
-        {
-            return Result.Failure<ItemId>(
-                InternalErrors.NotFound($"No item {command.ItemId} is visible."));
-        }
-
-        var mayWrite = await permissions
-            .CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken)
-            .ConfigureAwait(false);
-        if (!mayWrite)
+        var lookup = await visible.FindAsync(command.ItemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
             return Result.Failure<ItemId>(
                 InternalErrors.NotFound($"No item {command.ItemId} is visible."));

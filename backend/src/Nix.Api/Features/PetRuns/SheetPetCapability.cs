@@ -16,9 +16,8 @@ namespace Nix.Features.PetRuns;
 internal sealed class SheetPetCapability(
     IHttpClientFactory clients,
     IConfiguration configuration,
-    IItemTree tree,
     IItemLocks locks,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     SelfIssuedTokenService tokens) : IPetRunCapability
 {
     private static readonly JsonElement Schema = ReadSchema();
@@ -115,10 +114,9 @@ internal sealed class SheetPetCapability(
         {
             return null;
         }
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        return item is { Type: "spreadsheet" } && item.WorkspaceId == run.WorkspaceId
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        return lookup.IsSuccess && lookup.Value is { Type: "spreadsheet" } item && item.WorkspaceId == run.WorkspaceId
             && !ItemSettings.Read(item.Settings).WithholdFromPets
-            && await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
             && (await locks.LockedAmongAsync([itemId], cancellationToken).ConfigureAwait(false)).Count == 0
             ? item : null;
     }

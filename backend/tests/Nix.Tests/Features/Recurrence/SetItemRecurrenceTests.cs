@@ -1,3 +1,5 @@
+using Nix.Tests.Support;
+using Nix.Features.Items;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
@@ -219,7 +221,7 @@ public sealed class SetItemRecurrenceTests
     };
 
     private static SetItemRecurrenceHandler Handler(FakeItemRow row, FakeRecurrenceStore store) =>
-        new(new FakeItemTree(row), store, new AllowWrite());
+        new(new FakeItemTree(row), store, new VisibleItems(new FakeItemTree(row), new AllowWrite(), new OpenLocks()));
 
     private sealed class FakeRecurrenceStore(FakeItemRow? row) : IRecurrenceStore
     {

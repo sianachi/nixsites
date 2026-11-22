@@ -79,10 +79,8 @@ public sealed class ChartFixtureReplayTests : IAsyncLifetime
         }
 
         var handler = new RunItemChartHandler(
-            work.Resolve<IItemTree>(),
-            work.Resolve<IPermissionResolver>(),
+            work.Resolve<IVisibleItems>(),
             work.Resolve<IChildAggregates>(),
-            work.Resolve<IItemLocks>(),
             new FixedClock(now),
             work.Resolve<IPrincipalPreferencesStore>(),
             work.Resolve<INixSessionContextAccessor>());

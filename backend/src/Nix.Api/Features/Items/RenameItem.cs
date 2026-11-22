@@ -31,7 +31,7 @@ public sealed record RenameItem(ItemId ItemId, string Title) : ICommand<Item>
 public sealed class RenameItemHandler(
     IItemTree tree,
     IFileStore files,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     INixSessionContextAccessor session,
     TimeProvider clock)
     : ICommandHandler<RenameItem, Item>
@@ -53,18 +53,13 @@ public sealed class RenameItemHandler(
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await _tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
 
-        if (item.LifecycleState == ItemLifecycleState.Purged)
-        {
-            return Result.Failure<Item>(
-                ItemErrors.LifecycleConflict("A purged item cannot be renamed."));
-        }
+        var item = lookup.Value;
 
         // An event the owner cannot edit at its source is not editable here either: the provider
         // would overwrite the change on the next pull, and until then the mirror would lie.

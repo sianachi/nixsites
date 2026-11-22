@@ -20,7 +20,7 @@ internal static class ItemPetProtectionEndpoints
         HttpContext http,
         [FromServices] NixDispatcher dispatcher,
         [FromServices] IItemTree tree,
-        [FromServices] IPermissionResolver permissions,
+        [FromServices] IVisibleItems visible,
         [FromServices] AccessTokenSessionContext credential)
     {
         if (!credential.IsInteractive)
@@ -39,10 +39,9 @@ internal static class ItemPetProtectionEndpoints
 
         var id = ItemId.From(itemId);
         var cancellationToken = http.RequestAborted;
-        var item = await tree.FindAsync(id, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanManageWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || !await tree.SetItemPetProtectionAsync(id, item.WorkspaceId, withhold, cancellationToken).ConfigureAwait(false)
+        var lookup = await visible.FindAsync(id, ItemAccess.Manage, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure
+            || !await tree.SetItemPetProtectionAsync(id, lookup.Value.WorkspaceId, withhold, cancellationToken).ConfigureAwait(false)
             || await tree.FindAsync(id, cancellationToken).ConfigureAwait(false) is not { } updated)
         {
             return TypedResults.Problem(ItemEndpoints.Problem(http, ItemErrors.NotFound($"No item {id} is visible.")));

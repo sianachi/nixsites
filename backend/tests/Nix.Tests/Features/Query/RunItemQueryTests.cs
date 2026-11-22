@@ -1,3 +1,5 @@
+using Nix.Tests.Support;
+using Nix.Features.Items;
 using System.Collections.Immutable;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
@@ -46,11 +48,11 @@ public sealed class RunItemQueryTests
     {
         var query = new RecordingQuery();
         var handler = new RunItemQueryHandler(
-            new StubTree(null),
+            new VisibleItems(new StubTree(null), new StubPermissions([Readable]), new StubLocks(open: true)),
             new StubPermissions([Readable]),
             query,
             new StubSession(SessionFor(Caller)),
-            new StubLocks(open: true), new StubPreferences());
+            new StubPreferences());
 
         var result = await handler.HandleAsync(new RunItemQuery(SmartList, "overdue", "2026-08-15"), Cancellation);
 
@@ -152,11 +154,11 @@ public sealed class RunItemQueryTests
         // A lock withholds an item's views along with its body; a saved query is one of them.
         var query = new RecordingQuery();
         var handler = new RunItemQueryHandler(
-            new StubTree(ItemWithViews(OverdueViews())),
+            new VisibleItems(new StubTree(ItemWithViews(OverdueViews())), new StubPermissions([Readable]), new StubLocks(open: false)),
             new StubPermissions([Readable]),
             query,
             new StubSession(SessionFor(Caller)),
-            new StubLocks(open: false), new StubPreferences());
+            new StubPreferences());
 
         var result = await handler.HandleAsync(new RunItemQuery(SmartList, "overdue", "2026-08-15"), Cancellation);
 
@@ -172,11 +174,11 @@ public sealed class RunItemQueryTests
         // authorization code path produced is the set the query filters with.
         var query = new RecordingQuery();
         var handler = new RunItemQueryHandler(
-            new StubTree(ItemWithViews(OverdueViews())),
+            new VisibleItems(new StubTree(ItemWithViews(OverdueViews())), new StubPermissions([Readable, AlsoReadable]), new StubLocks(open: true)),
             new StubPermissions([Readable, AlsoReadable]),
             query,
             new StubSession(SessionFor(Caller)),
-            new StubLocks(open: true), new StubPreferences());
+            new StubPreferences());
 
         var result = await handler.HandleAsync(new RunItemQuery(SmartList, "overdue", "2026-08-15"), Cancellation);
 
@@ -245,11 +247,11 @@ public sealed class RunItemQueryTests
         var query = new RecordingQuery();
         var views = MineView("equals");
         var handler = new RunItemQueryHandler(
-            new StubTree(ItemWithViews(views)),
+            new VisibleItems(new StubTree(ItemWithViews(views)), new StubPermissions([Readable]), new StubLocks(open: true)),
             new StubPermissions([Readable]),
             query,
             new StubSession(SessionFor(Caller)),
-            new StubLocks(open: true), new StubPreferences());
+            new StubPreferences());
 
         var result = await handler.HandleAsync(new RunItemQuery(SmartList, "mine", "2026-08-15"), Cancellation);
 
@@ -267,11 +269,11 @@ public sealed class RunItemQueryTests
         var query = new RecordingQuery();
         var views = MineView("not-equals");
         var handler = new RunItemQueryHandler(
-            new StubTree(ItemWithViews(views)),
+            new VisibleItems(new StubTree(ItemWithViews(views)), new StubPermissions([Readable]), new StubLocks(open: true)),
             new StubPermissions([Readable]),
             query,
             new StubSession(SessionFor(Caller)),
-            new StubLocks(open: true), new StubPreferences());
+            new StubPreferences());
 
         await handler.HandleAsync(new RunItemQuery(SmartList, "mine", "2026-08-15"), Cancellation);
 
@@ -289,20 +291,20 @@ public sealed class RunItemQueryTests
 
         var firstCallerQuery = new RecordingQuery();
         await new RunItemQueryHandler(
-                new StubTree(ItemWithViews(views)),
-                new StubPermissions([Readable]),
-                firstCallerQuery,
-                new StubSession(SessionFor(Caller)),
-                new StubLocks(open: true), new StubPreferences())
+            new VisibleItems(new StubTree(ItemWithViews(views)), new StubPermissions([Readable]), new StubLocks(open: true)),
+            new StubPermissions([Readable]),
+            firstCallerQuery,
+            new StubSession(SessionFor(Caller)),
+            new StubPreferences())
             .HandleAsync(new RunItemQuery(SmartList, "mine", "2026-08-15"), Cancellation);
 
         var secondCallerQuery = new RecordingQuery();
         await new RunItemQueryHandler(
-                new StubTree(ItemWithViews(views)),
-                new StubPermissions([Readable]),
-                secondCallerQuery,
-                new StubSession(SessionFor(OtherCaller)),
-                new StubLocks(open: true), new StubPreferences())
+            new VisibleItems(new StubTree(ItemWithViews(views)), new StubPermissions([Readable]), new StubLocks(open: true)),
+            new StubPermissions([Readable]),
+            secondCallerQuery,
+            new StubSession(SessionFor(OtherCaller)),
+            new StubPreferences())
             .HandleAsync(new RunItemQuery(SmartList, "mine", "2026-08-15"), Cancellation);
 
         var firstValue = Assert.Single(firstCallerQuery.LastRules).Value;
@@ -321,11 +323,11 @@ public sealed class RunItemQueryTests
         // items, or everybody's, would both be the quiet kind of wrong.
         var query = new RecordingQuery();
         var handler = new RunItemQueryHandler(
-            new StubTree(ItemWithViews(OverdueViews())),
+            new VisibleItems(new StubTree(ItemWithViews(OverdueViews())), new StubPermissions([Readable]), new StubLocks(open: true)),
             new StubPermissions([Readable]),
             query,
             new StubSession(null),
-            new StubLocks(open: true), new StubPreferences());
+            new StubPreferences());
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => handler.HandleAsync(new RunItemQuery(SmartList, "overdue", "2026-08-15"), Cancellation).AsTask());
@@ -366,7 +368,9 @@ public sealed class RunItemQueryTests
                 ])]);
 
     private static RunItemQueryHandler Handler(IItemQuery query, Item? item) =>
-        new(new StubTree(item), new StubPermissions([Readable]), query, new StubSession(SessionFor(Caller)), new StubLocks(open: true), new StubPreferences());
+        new(new VisibleItems(new StubTree(item), new StubPermissions([Readable]), new StubLocks(open: true)),
+            new StubPermissions([Readable]), query, new StubSession(SessionFor(Caller)),
+            new StubPreferences());
 
     private static NixSessionContext SessionFor(PrincipalId principal) => NixSessionContext.ForTenant(Tenant, principal);
 

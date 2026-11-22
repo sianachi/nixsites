@@ -26,7 +26,7 @@ public sealed record ProtectionBase(bool NoDelete, bool NoChildren);
 public sealed class SetItemProtectionHandler(
     IItemTree tree,
     IItemProtections protections,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     IStructuralLock? topology = null) : ICommandHandler<SetItemProtection, Item>
 {
     /// <inheritdoc />
@@ -35,29 +35,25 @@ public sealed class SetItemProtectionHandler(
         ArgumentNullException.ThrowIfNull(command);
 
         var itemId = command.ItemId;
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<Item>(lookup.Error);
         }
+
+        var item = lookup.Value;
 
         if (topology is not null)
         {
             var workspace = item.WorkspaceId;
             await topology.AcquireWorkspaceTopologyAsync(workspace, cancellationToken).ConfigureAwait(false);
-            item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.WorkspaceId != workspace
-                || !await permissions.CanWriteWorkspaceAsync(workspace, cancellationToken).ConfigureAwait(false))
+            var again = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+            if (again.IsFailure || again.Value.WorkspaceId != workspace)
             {
                 return Result.Failure<Item>(ItemErrors.NotFound($"No item {itemId} is visible."));
             }
-        }
 
-        if (item.LifecycleState != ItemLifecycleState.Active)
-        {
-            return Result.Failure<Item>(
-                ItemErrors.LifecycleConflict("A deleted item's protection cannot be changed."));
+            item = again.Value;
         }
 
         // Compared after the topology lock, which every protection write takes, so no other write

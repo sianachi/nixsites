@@ -12,7 +12,7 @@ namespace Nix.Features.PetPeers;
 
 [SuppressMessage("Performance", "CA1812", Justification = "Created by ASP.NET Core dependency injection.")]
 internal sealed class PetPeerAccess(
-    IItemTree items, IPermissionResolver permissions, IItemLocks locks, IWorkspaceLocks workspaceLocks,
+    IVisibleItems visible, IItemLocks locks, IWorkspaceLocks workspaceLocks,
     ITenantSettingsStore tenant, NixDispatcher dispatcher, TimeProvider clock, IIdentityDirectory identity,
     INixSessionContextAccessor session, IConfiguration configuration)
 {
@@ -31,10 +31,8 @@ internal sealed class PetPeerAccess(
 
     internal async Task<Item?> GetOwnedTaskAsync(ItemId itemId, CancellationToken cancellationToken)
     {
-        var item = await items.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        return item is not null
-            && await permissions.CanManageWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            ? item : null;
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Manage, cancellationToken).ConfigureAwait(false);
+        return lookup.IsSuccess ? lookup.Value : null;
     }
 
     internal async Task<Guid?> ActivePetAsync(CancellationToken cancellationToken)

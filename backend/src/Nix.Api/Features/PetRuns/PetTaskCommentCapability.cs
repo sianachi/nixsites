@@ -11,7 +11,7 @@ using Nix.Messaging;
 namespace Nix.Features.PetRuns;
 
 [SuppressMessage("Performance", "CA1812", Justification = "Created by ASP.NET Core dependency injection.")]
-internal sealed class PetTaskCommentCapability(IItemTree items, IPermissionResolver permissions, NixDispatcher dispatcher) : IPetRunCapability
+internal sealed class PetTaskCommentCapability(IVisibleItems visible, NixDispatcher dispatcher) : IPetRunCapability
 {
     internal const string Id = "task.comment";
     internal static readonly NixError CommentsDisabled = new("comments.disabled",
@@ -88,11 +88,9 @@ internal sealed class PetTaskCommentCapability(IItemTree items, IPermissionResol
 
     private async Task<Item?> FindNoteWithCommentPermissionAsync(PetRunRecord run, CancellationToken cancellationToken)
     {
-        var item = await items.FindAsync(run.ItemId, cancellationToken).ConfigureAwait(false);
-        return item?.WorkspaceId == run.WorkspaceId
-            && item.Type == "note"
-            && await permissions.CanCommentWorkspaceAsync(run.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            ? item
+        var lookup = await visible.FindAsync(run.ItemId, ItemAccess.Comment, cancellationToken).ConfigureAwait(false);
+        return lookup.IsSuccess && lookup.Value.WorkspaceId == run.WorkspaceId && lookup.Value.Type == "note"
+            ? lookup.Value
             : null;
     }
 

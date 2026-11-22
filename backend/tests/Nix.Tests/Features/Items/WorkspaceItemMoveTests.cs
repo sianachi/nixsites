@@ -23,8 +23,7 @@ public sealed class WorkspaceItemMoveTests
     public async Task Transfer_requires_write_permission_on_both_workspaces(bool sourceWritable)
     {
         var tree = new RecordingTree(MakeItem(Source));
-        var handler = new MoveItemHandler(tree, new Permissions(sourceWritable ? Destination : Source),
-            new Session(), TimeProvider.System, new Locks(null));
+        var handler = Handler(tree, new Permissions(sourceWritable ? Destination : Source), new Locks(null));
         var result = await handler.HandleAsync(new MoveItem(TheItem, null, null, Destination), Cancellation);
         Assert.True(result.IsFailure);
         Assert.Equal(0, tree.TransferCalls);
@@ -34,7 +33,7 @@ public sealed class WorkspaceItemMoveTests
     public async Task Transfer_to_workspace_root_preserves_identity_and_the_items_own_lock()
     {
         var tree = new RecordingTree(MakeItem(Source));
-        var handler = new MoveItemHandler(tree, new Permissions(null), new Session(), TimeProvider.System, new Locks(TheItem));
+        var handler = Handler(tree, new Permissions(null), new Locks(TheItem));
         var result = await handler.HandleAsync(new MoveItem(TheItem, null, null, Destination), Cancellation);
         Assert.True(result.IsSuccess);
         Assert.Equal(TheItem, result.Value.Id);
@@ -47,21 +46,25 @@ public sealed class WorkspaceItemMoveTests
     public async Task Transfer_cannot_leave_a_closed_ancestor_lock()
     {
         var tree = new RecordingTree(MakeItem(Source, Parent));
-        var handler = new MoveItemHandler(tree, new Permissions(null), new Session(), TimeProvider.System, new Locks(Parent));
+        var handler = Handler(tree, new Permissions(null), new Locks(Parent));
         var result = await handler.HandleAsync(new MoveItem(TheItem, null, null, Destination), Cancellation);
         Assert.Equal("items.locked", result.Error.Code);
         Assert.Equal(0, tree.TransferCalls);
     }
 
     [Fact]
-    public async Task A_purged_item_cannot_be_transferred()
+    public async Task An_item_the_tree_does_not_return_is_not_found_and_not_transferred()
     {
-        var tree = new RecordingTree(MakeItem(Source, state: ItemLifecycleState.Purged));
-        var handler = new MoveItemHandler(tree, new Permissions(null), new Session(), TimeProvider.System, new Locks(null));
+        // The tree never returns a deleted or purged item, so to the handler it is simply not there.
+        var tree = new RecordingTree(null);
+        var handler = Handler(tree, new Permissions(null), new Locks(null));
         var result = await handler.HandleAsync(new MoveItem(TheItem, null, null, Destination), Cancellation);
-        Assert.Equal("items.lifecycle_conflict", result.Error.Code);
+        Assert.Equal("items.not_found", result.Error.Code);
         Assert.Equal(0, tree.TransferCalls);
     }
+
+    private static MoveItemHandler Handler(RecordingTree tree, Permissions permissions, Locks locks) =>
+        new(tree, new VisibleItems(tree, permissions, locks), permissions, new Session(), TimeProvider.System, locks);
 
     private static Item MakeItem(WorkspaceId workspace, ItemId? parent = null, ItemLifecycleState state = ItemLifecycleState.Active) => new()
     {

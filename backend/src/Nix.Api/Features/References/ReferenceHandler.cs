@@ -31,6 +31,7 @@ public sealed record ListReferencedBy(ItemId TargetId, string? Cursor, int Limit
 public sealed class ReferenceHandler(
     IItemTree tree,
     IPermissionResolver permissions,
+    IVisibleItems visible,
     IItemLocks locks,
     IItemReferenceStore store,
     IStructuralLock topology,
@@ -54,11 +55,13 @@ public sealed class ReferenceHandler(
             return Invalid<ItemReferenceResponse>("references.role_invalid", $"A role is at most {MaxRole} characters.");
         }
 
-        var holder = await tree.FindAsync(command.HolderId, cancellationToken).ConfigureAwait(false);
-        if (holder is null || !await permissions.CanWriteWorkspaceAsync(holder.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var holderLookup = await visible.FindAsync(command.HolderId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (holderLookup.IsFailure)
         {
             return NotFound<ItemReferenceResponse>();
         }
+
+        Item? holder = holderLookup.Value;
 
         // Pin creation and trash both run under this lock, so a pin cannot slip in between the
         // delete's pin check and its flag write. Both ends are re-read inside it.
@@ -220,10 +223,8 @@ public sealed class ReferenceHandler(
 
     private async ValueTask<Item?> ReadableAsync(ItemId id, CancellationToken cancellationToken)
     {
-        var item = await tree.FindAsync(id, cancellationToken).ConfigureAwait(false);
-        return item is not null && await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            ? item
-            : null;
+        var lookup = await visible.FindAsync(id, ItemAccess.Read, cancellationToken).ConfigureAwait(false);
+        return lookup.IsSuccess ? lookup.Value : null;
     }
 
     private async ValueTask<IReadOnlyDictionary<FileVersionId, string>> StatesAsync(IReadOnlyList<ItemReference> rows, CancellationToken cancellationToken)

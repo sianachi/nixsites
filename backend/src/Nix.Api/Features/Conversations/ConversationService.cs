@@ -17,7 +17,7 @@ using Nix.Messaging;
 namespace Nix.Features.Conversations;
 
 /// <summary>Durable conversation state is ordinary item data; private provider sessions are replaceable.</summary>
-public sealed class ConversationService(IItemTree tree, IPermissionResolver permissions,
+public sealed class ConversationService(IItemTree tree, IVisibleItems visible, IPermissionResolver permissions,
     INixSessionContextAccessor session, IStructuralLock gate, TimeProvider clock, NixDispatcher dispatcher, ISchemaResolver schemas, IIdentityDirectory identities, IItemLocks locks)
 {
     internal const string ConfigurationKey = "$chat_config";
@@ -43,10 +43,14 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
             return Result.Failure<Item>(Missing);
         }
 
-        var item = await tree.FindAsync(new ItemId(id), cancellationToken).ConfigureAwait(false);
-        if (item is null || Configuration(item) is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || write && !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(new ItemId(id), ItemAccess.Read, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure || Configuration(lookup.Value) is null)
+        {
+            return Result.Failure<Item>(Missing);
+        }
+
+        var item = lookup.Value;
+        if (write && !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<Item>(Missing);
         }
@@ -169,11 +173,13 @@ public sealed class ConversationService(IItemTree tree, IPermissionResolver perm
     internal async Task<Result<ConversationResponse>> Configure(Guid id, ConfigureConversationRequest request, CancellationToken cancellationToken)
     {
         await gate.AcquireAsync(new ItemId(id), cancellationToken).ConfigureAwait(false);
-        var item = await tree.FindAsync(new ItemId(id), cancellationToken).ConfigureAwait(false);
-        if (item is null || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(new ItemId(id), ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
             return Result.Failure<ConversationResponse>(Missing);
         }
+
+        var item = lookup.Value;
         if (Configuration(item) is { } existing)
         {
             return Result.Success(await Response(item, existing, cancellationToken).ConfigureAwait(false));

@@ -45,9 +45,8 @@ public sealed record GetContainerViews(ItemId ItemId) : IQuery<Result<ContainerV
 
 /// <summary>Handles <see cref="GetContainerViews"/>.</summary>
 public sealed class GetContainerViewsHandler(
-    IItemTree tree,
     ISchemaResolver schemas,
-    IPermissionResolver permissions)
+    IVisibleItems visible)
     : IQueryHandler<GetContainerViews, Result<ContainerViewSet>>
 {
     /// <summary>Reads the views.</summary>
@@ -62,12 +61,13 @@ public sealed class GetContainerViewsHandler(
 
         var itemId = query.ItemId;
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanReadWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Read, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<ContainerViewSet>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<ContainerViewSet>(lookup.Error);
         }
+
+        var item = lookup.Value;
 
         var stored = ViewDefinitionsJson.Read(item.Views);
         var views = stored.Views;
@@ -117,7 +117,7 @@ public sealed record SetContainerViews(
 /// <summary>Handles <see cref="SetContainerViews"/>.</summary>
 public sealed class SetContainerViewsHandler(
     IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     INixSessionContextAccessor session,
     TimeProvider clock,
     ISchemaResolver schemas)
@@ -142,19 +142,13 @@ public sealed class SetContainerViewsHandler(
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<ImmutableArray<ViewDefinition>>(
-                ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<ImmutableArray<ViewDefinition>>(lookup.Error);
         }
 
-        if (item.LifecycleState != ItemLifecycleState.Active)
-        {
-            return Result.Failure<ImmutableArray<ViewDefinition>>(
-                ItemErrors.LifecycleConflict("A deleted container's views cannot be changed."));
-        }
+        var item = lookup.Value;
 
         if (command.ExpectedVersion is not null
             && !string.Equals(command.ExpectedVersion, ViewConfigurationVersion.FromStored(item.Views), StringComparison.Ordinal))

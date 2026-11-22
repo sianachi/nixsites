@@ -68,6 +68,7 @@ public sealed record CreateItem(
 public sealed class CreateItemHandler(
     IItemTree tree,
     IPermissionResolver permissions,
+    IVisibleItems visible,
     ISchemaResolver schemas,
     INixSessionContextAccessor session,
     TimeProvider clock,
@@ -162,11 +163,11 @@ public sealed class CreateItemHandler(
                     return Result.Failure<Item>(new NixError("items.idempotency_conflict", "This request UUID belongs to a different creation."));
                 }
 
-                var created = await tree.FindAsync(receipt.ItemId, cancellationToken).ConfigureAwait(false);
-                return created is not null
-                    && await permissions.CanWriteWorkspaceAsync(created.WorkspaceId, cancellationToken).ConfigureAwait(false)
-                    ? Result.Success(created)
-                    : Result.Failure<Item>(ItemErrors.NotFound("The previously created item is no longer available."));
+                return await visible.FindAsync(
+                    receipt.ItemId,
+                    ItemAccess.Write,
+                    cancellationToken,
+                    notFoundDetail: "The previously created item is no longer available.").ConfigureAwait(false);
             }
         }
 

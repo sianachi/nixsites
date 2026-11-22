@@ -1,3 +1,4 @@
+using Nix.Tests.Support;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -391,9 +392,11 @@ public sealed class ItemBodyTests
             }
 
             return new ItemBodyHandlers(
-                new StubTree(item, Workspace),
+                new VisibleItems(
+                    new StubTree(item, Workspace),
+                    new Gate(canRead ? [Workspace] : [], canWrite ? [Workspace] : []),
+                    new StubLocks(open)),
                 new Gate(canRead ? [Workspace] : [], canWrite ? [Workspace] : []),
-                new StubLocks(open),
                 new StubSession(session ? NixSessionContext.ForTenant(Tenant, Principal) : null),
                 new ItemBodyClient(http, new ConfigurationBuilder().AddInMemoryCollection(values).Build()));
         }

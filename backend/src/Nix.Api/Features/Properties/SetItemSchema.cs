@@ -35,7 +35,7 @@ public sealed record SchemaBase(PropertySchema Schema);
 /// <summary>Handles <see cref="SetItemSchema"/>.</summary>
 public sealed class SetItemSchemaHandler(
     IItemTree tree,
-    IPermissionResolver permissions,
+    IVisibleItems visible,
     INixSessionContextAccessor session,
     TimeProvider clock,
     Nix.Features.Records.RecordKeys? recordKeys = null)
@@ -59,18 +59,13 @@ public sealed class SetItemSchemaHandler(
         var context = _session.Current
             ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
 
-        var item = await tree.FindAsync(itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null
-            || !await permissions.CanWriteWorkspaceAsync(item.WorkspaceId, cancellationToken).ConfigureAwait(false))
+        var lookup = await visible.FindAsync(itemId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
         {
-            return Result.Failure<PropertySchema>(ItemErrors.NotFound($"No item {itemId} is visible."));
+            return Result.Failure<PropertySchema>(lookup.Error);
         }
 
-        if (item.LifecycleState != ItemLifecycleState.Active)
-        {
-            return Result.Failure<PropertySchema>(
-                ItemErrors.LifecycleConflict("A deleted item's schema cannot be changed."));
-        }
+        var item = lookup.Value;
 
         // Compared by meaning (both through the typed form), then written only while the row still holds
         // exactly the text compared, so a write in between is a conflict instead of being overwritten.
