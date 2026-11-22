@@ -130,7 +130,7 @@ public sealed class PersistenceRegistrationTests
                 var sql = scope.ServiceProvider.GetRequiredService<NixSqlExecutor>();
 
                 var failure = await Assert.ThrowsAsync<InvalidOperationException>(
-                    async () => await sql.ScalarOrDefaultAsync<int>("SELECT 1", cancellationToken: Cancellation));
+                    async () => await sql.ScalarAsync<int>("SELECT 1", cancellationToken: Cancellation));
 
                 Assert.Contains("outside a transaction", failure.Message, StringComparison.Ordinal);
             }

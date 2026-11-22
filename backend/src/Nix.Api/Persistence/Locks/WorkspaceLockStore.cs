@@ -49,10 +49,7 @@ public sealed class WorkspaceLockStore(
             default,
             [
                 Tenant(),
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
-                {
-                    Value = workspaceIds.Select(id => id.Value).ToArray(),
-                },
+                NixParameter.UuidArray("workspace_ids", workspaceIds.Select(id => id.Value).ToArray()),
                 Credential(),
                 Now(),
             ],
@@ -67,11 +64,11 @@ public sealed class WorkspaceLockStore(
 
     /// <inheritdoc />
     public ValueTask<string?> FindVerifierAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-        sql.ScalarOrDefaultAsync<string>(WorkspaceLockSql.Verifier, [Tenant(), Workspace(workspaceId)], cancellationToken);
+        sql.ScalarRefAsync<string>(WorkspaceLockSql.Verifier, [Tenant(), Workspace(workspaceId)], cancellationToken);
 
     /// <inheritdoc />
     public ValueTask<string?> FindJoinVerifierAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-        sql.ScalarOrDefaultAsync<string>(WorkspaceLockSql.JoinVerifier, [Tenant(), Workspace(workspaceId)], cancellationToken);
+        sql.ScalarRefAsync<string>(WorkspaceLockSql.JoinVerifier, [Tenant(), Workspace(workspaceId)], cancellationToken);
 
     /// <inheritdoc />
     public async ValueTask<bool> LockAsync(WorkspaceId workspaceId, string verifier, CancellationToken cancellationToken)
@@ -99,7 +96,7 @@ public sealed class WorkspaceLockStore(
                 Tenant(),
                 Workspace(workspaceId),
                 Verifier(verifier),
-                new NpgsqlParameter("expected_hash", NpgsqlDbType.Text) { Value = expected },
+                NixParameter.Text("expected_hash", expected),
                 Principal(),
                 Now(),
             ],
@@ -120,7 +117,7 @@ public sealed class WorkspaceLockStore(
         ArgumentException.ThrowIfNullOrEmpty(expected);
         return await sql.ExecuteAsync(
             WorkspaceLockSql.Remove,
-            [Tenant(), Workspace(workspaceId), new NpgsqlParameter("expected_hash", NpgsqlDbType.Text) { Value = expected }],
+            [Tenant(), Workspace(workspaceId), NixParameter.Text("expected_hash", expected)],
             cancellationToken).ConfigureAwait(false) > 0;
     }
 
@@ -145,15 +142,15 @@ public sealed class WorkspaceLockStore(
                 Credential(),
                 Principal(),
                 Verifier(verifier),
-                new NpgsqlParameter("expires_at", NpgsqlDbType.TimestampTz) { Value = expiresAt },
+                NixParameter.Timestamp("expires_at", expiresAt),
                 Now(),
             ],
             cancellationToken).ConfigureAwait(false);
 
-        return await sql.ScalarOrDefaultAsync<bool>(
+        return await sql.ScalarAsync<bool>(
             WorkspaceLockSql.HoldsGrant,
             [Tenant(), Workspace(workspaceId), Credential(), Now()],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
     }
 
     /// <inheritdoc />
@@ -174,10 +171,10 @@ public sealed class WorkspaceLockStore(
     public async ValueTask<bool> JoinAsync(WorkspaceId workspaceId, string verifier, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(verifier);
-        return await sql.ScalarOrDefaultAsync<bool>(
+        return await sql.ScalarAsync<bool>(
             WorkspaceLockSql.Join,
             [Tenant(), Workspace(workspaceId), Verifier(verifier), Principal(), Now()],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
     }
 
     /// <inheritdoc />
@@ -188,7 +185,7 @@ public sealed class WorkspaceLockStore(
                 Tenant(),
                 Workspace(workspaceId),
                 Principal(),
-                new NpgsqlParameter("audit_action", NpgsqlDbType.Text) { Value = action },
+                NixParameter.Text("audit_action", action),
                 Now(),
             ],
             cancellationToken).ConfigureAwait(false);

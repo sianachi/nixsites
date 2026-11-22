@@ -114,7 +114,7 @@ public sealed class NixSqlExecutorTests : IAsyncLifetime
         var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
         await using (work.ConfigureAwait(false))
         {
-            var label = await work.Sql.ScalarOrDefaultAsync<string>(
+            var label = await work.Sql.ScalarRefAsync<string>(
                 $"SELECT label FROM {RlsProbeSchema.TableName} WHERE id = @id",
                 [new NpgsqlParameter<Guid>("id", Guid.NewGuid())],
                 TestContext.Current.CancellationToken);

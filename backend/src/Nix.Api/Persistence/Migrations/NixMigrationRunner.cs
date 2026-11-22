@@ -115,13 +115,13 @@ public static class NixMigrationRunner
             var executor = new NixSqlExecutor(context);
 
             var role = await executor
-                .ScalarOrDefaultAsync<string>(RoleSql.CurrentRoleName, cancellationToken: cancellationToken)
+                .ScalarRefAsync<string>(RoleSql.CurrentRoleName, cancellationToken: cancellationToken)
                 .ConfigureAwait(false)
                 ?? throw new InvalidOperationException("The database did not report a current role.");
 
             var canBypass = await executor
-                .ScalarOrDefaultAsync<bool>(RoleSql.CurrentRoleBypassesRls, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                .ScalarAsync<bool>(RoleSql.CurrentRoleBypassesRls, cancellationToken: cancellationToken)
+                .ConfigureAwait(false) ?? false;
 
             if (!canBypass)
             {
@@ -150,8 +150,8 @@ public static class NixMigrationRunner
         var parameters = new[] { new NpgsqlParameter<string>("role_name", applicationRoleName) };
 
         var applicationCanBypass = await executor
-            .ScalarOrDefaultAsync<bool>(RoleSql.RoleBypassesRlsByName, parameters, cancellationToken)
-            .ConfigureAwait(false);
+            .ScalarAsync<bool>(RoleSql.RoleBypassesRlsByName, parameters, cancellationToken)
+            .ConfigureAwait(false) ?? false;
 
         if (applicationCanBypass)
         {

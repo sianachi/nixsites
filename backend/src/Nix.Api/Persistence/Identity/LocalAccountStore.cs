@@ -4,7 +4,6 @@ using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Identity;
 
@@ -21,7 +20,7 @@ public sealed class LocalAccountStore(
 
     /// <inheritdoc />
     public async ValueTask<bool> AnyAsync(CancellationToken cancellationToken) =>
-        await _db.ScalarAsync<bool>("SELECT nix_local_any_account()", cancellationToken).ConfigureAwait(false);
+        await _db.ScalarAsync<bool>("SELECT nix_local_any_account()", cancellationToken).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<LocalAccountRecord?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
@@ -64,14 +63,14 @@ public sealed class LocalAccountStore(
             Guid.CreateVersion7().ToString("D"),
             new UserInfoProfile(displayName.Trim(), normalizedEmail, EmailVerified: true),
             cancellationToken).ConfigureAwait(false);
-        var created = await sql.ScalarOrDefaultAsync<bool>(
+        var created = await sql.ScalarAsync<bool>(
             "SELECT nix_local_create_account(@principal, @email, @hash)",
             [
                 NixParameter.Uuid("principal", principal.Id.Value),
                 NixParameter.Text("email", normalizedEmail),
                 NixParameter.Text("hash", passwordHash),
             ],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
         return created ? principal : null;
     }
 
@@ -82,7 +81,7 @@ public sealed class LocalAccountStore(
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
             NixParameter.Text("hash", hash),
-            new NpgsqlParameter("changed", NpgsqlDbType.Boolean) { Value = changed }).ConfigureAwait(false);
+            NixParameter.Boolean("changed", changed)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<DateTimeOffset?> RegisterFailureAsync(PrincipalId principalId, CancellationToken cancellationToken)
@@ -109,11 +108,11 @@ public sealed class LocalAccountStore(
             "SELECT nix_local_revoke_sessions(@principal, @except)",
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
-            NixParameter.Uuid("except", except?.Value)).ConfigureAwait(false);
+            NixParameter.Uuid("except", except?.Value)).ConfigureAwait(false) ?? 0;
 
     /// <inheritdoc />
     public async ValueTask<TenantId?> SetupTenantAsync(CancellationToken cancellationToken) =>
-        await _db.ScalarAsync<Guid>("SELECT nix_local_setup_tenant()", cancellationToken).ConfigureAwait(false) is var id && id != Guid.Empty
+        await _db.ScalarAsync<Guid>("SELECT nix_local_setup_tenant()", cancellationToken).ConfigureAwait(false) is { } id
             ? TenantId.From(id)
             : null;
 

@@ -2,8 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
 using Nix.Domain.Items;
 using Nix.Domain.Tenancy;
-using Npgsql;
-using NpgsqlTypes;
+using Nix.Persistence.Sql;
 
 namespace Nix.Persistence;
 
@@ -76,7 +75,7 @@ public sealed class AdvisoryLocks(NixDbContext database) : IStructuralLock, IHab
         RequireTransaction();
         await database.Database.ExecuteSqlRawAsync(
             "SELECT pg_advisory_xact_lock(@key);",
-            [new NpgsqlParameter("key", NpgsqlDbType.Bigint) { Value = SetupKey }],
+            [NixParameter.Int8("key", SetupKey)],
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -146,7 +145,7 @@ public sealed class AdvisoryLocks(NixDbContext database) : IStructuralLock, IHab
             shared
                 ? "SELECT pg_advisory_xact_lock_shared(hashtextextended(@identity, 0));"
                 : "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));",
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = identity }],
+            [NixParameter.Text("identity", identity)],
             cancellationToken).ConfigureAwait(false);
     }
 }

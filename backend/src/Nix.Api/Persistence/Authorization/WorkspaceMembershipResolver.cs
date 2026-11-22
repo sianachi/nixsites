@@ -157,13 +157,13 @@ public sealed class WorkspaceMembershipResolver(
         }
 
         var context = Session;
-        var answer = await sql.ScalarOrDefaultAsync<bool>(
+        var answer = await sql.ScalarAsync<bool>(
             AuthorizationSql.PrincipalIsTenantAdministrator,
             [
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
             ],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
 
         _isAdministrator = answer;
         return answer;

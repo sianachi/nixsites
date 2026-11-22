@@ -1,5 +1,4 @@
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Sql;
 
@@ -9,32 +8,31 @@ namespace Nix.Persistence.Sql;
 /// candidate finders) that run before a tenant is known and so sit outside the unit of work; every
 /// value is bound.
 /// </summary>
-internal sealed class PooledSql(NpgsqlDataSource dataSource)
+public sealed class PooledSql(NpgsqlDataSource dataSource)
 {
-    internal static NpgsqlParameter Bytes(string name, ReadOnlyMemory<byte> value) =>
-        new(name, NpgsqlDbType.Bytea) { Value = value.ToArray() };
-
-    internal static NpgsqlParameter Int8(string name, long value) =>
-        new(name, NpgsqlDbType.Bigint) { Value = value };
-
-    internal static NpgsqlParameter Instant(string name, DateTimeOffset value) =>
-        new(name, NpgsqlDbType.TimestampTz) { Value = value.UtcDateTime };
-
-    /// <summary>Runs a statement and returns the first column of the first row, or default.</summary>
-    internal async ValueTask<T?> ScalarAsync<T>(string sql, CancellationToken cancellationToken, params NpgsqlParameter[] parameters)
+    /// <summary>
+    /// Runs a statement and returns the first column of the first row; no row and SQL NULL both
+    /// yield <see langword="null"/>, never a default.
+    /// </summary>
+    public async ValueTask<T?> ScalarAsync<T>(string sql, CancellationToken cancellationToken, params NpgsqlParameter[] parameters)
+        where T : struct
     {
-        var rows = await RowsAsync(sql, static reader => reader.IsDBNull(0) ? default : reader.GetFieldValue<T>(0), cancellationToken, parameters)
+        var rows = await RowsAsync(sql, static reader => reader.IsDBNull(0) ? (T?)null : reader.GetFieldValue<T>(0), cancellationToken, parameters)
             .ConfigureAwait(false);
-        return rows.Count == 0 ? default : rows[0];
+        return rows.Count == 0 ? null : rows[0];
     }
 
     /// <summary>Runs a statement and maps every row.</summary>
-    internal async ValueTask<List<T>> RowsAsync<T>(
+    public async ValueTask<List<T>> RowsAsync<T>(
         string sql,
         Func<NpgsqlDataReader, T> map,
         CancellationToken cancellationToken,
         params NpgsqlParameter[] parameters)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sql);
+        ArgumentNullException.ThrowIfNull(map);
+        ArgumentNullException.ThrowIfNull(parameters);
+
         var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using (connection.ConfigureAwait(false))
         {

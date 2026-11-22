@@ -161,11 +161,11 @@ public sealed class RlsIsolationTests : IAsyncLifetime
         var work = await _fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
         await using (work.ConfigureAwait(false))
         {
-            var tenant = await work.Sql.ScalarOrDefaultAsync<string>(
+            var tenant = await work.Sql.ScalarRefAsync<string>(
                 "SELECT NULLIF(current_setting('nix.tenant_id', true), '')",
                 cancellationToken: Cancellation);
 
-            var principal = await work.Sql.ScalarOrDefaultAsync<string>(
+            var principal = await work.Sql.ScalarRefAsync<string>(
                 "SELECT NULLIF(current_setting('nix.principal_id', true), '')",
                 cancellationToken: Cancellation);
 
@@ -186,10 +186,10 @@ public sealed class RlsIsolationTests : IAsyncLifetime
         {
             // Column 0 of the session-context statement is the tenant, folded through NULLIF the
             // way a policy reads it.
-            var tenant = await work.Sql.ScalarOrDefaultAsync<string>(
+            var tenant = await work.Sql.ScalarRefAsync<string>(
                 SessionSql.CurrentSessionContext,
                 cancellationToken: Cancellation);
-            var rawWorkspace = await work.Sql.ScalarOrDefaultAsync<string>(
+            var rawWorkspace = await work.Sql.ScalarRefAsync<string>(
                 "SELECT current_setting('nix.workspace_id', true)",
                 cancellationToken: Cancellation);
 

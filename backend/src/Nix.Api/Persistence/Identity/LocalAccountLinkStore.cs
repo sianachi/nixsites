@@ -29,8 +29,8 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             NixParameter.Uuid("principal", principalId.Value),
             NixParameter.Text("purpose", purpose == LocalLinkPurpose.Setup ? "setup" : "reset"),
             NixParameter.Text("hash", tokenHash),
-            PooledSql.Instant("expires", expiresAt),
-            NixParameter.Uuid("by", createdBy?.Value)).ConfigureAwait(false);
+            NixParameter.Instant("expires", expiresAt),
+            NixParameter.Uuid("by", createdBy?.Value)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<LocalLinkRecord?> FindAsync(string tokenHash, CancellationToken cancellationToken) =>
@@ -67,7 +67,7 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             NixParameter.Text("state", state),
             NixParameter.Text("return", returnTo),
             NixParameter.Text("native", native),
-            PooledSql.Instant("expires", expiresAt)).ConfigureAwait(false);
+            NixParameter.Instant("expires", expiresAt)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<LocalChallenge?> GetAsync(Guid id, LocalChallengeKind kind, CancellationToken cancellationToken) =>
@@ -83,7 +83,7 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
         await _db.ScalarAsync<int>(
             "SELECT nix_local_bump_challenge(@id)",
             cancellationToken,
-            NixParameter.Uuid("id", id)).ConfigureAwait(false);
+            NixParameter.Uuid("id", id)).ConfigureAwait(false) ?? 0;
 
     /// <inheritdoc />
     public async ValueTask<bool> SetStateAsync(Guid id, string state, CancellationToken cancellationToken) =>
@@ -91,7 +91,7 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             "SELECT nix_local_set_challenge_state(@id, @state)",
             cancellationToken,
             NixParameter.Uuid("id", id),
-            NixParameter.Text("state", state)).ConfigureAwait(false);
+            NixParameter.Text("state", state)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<LocalChallenge?> TakeAsync(Guid id, LocalChallengeKind kind, CancellationToken cancellationToken) =>

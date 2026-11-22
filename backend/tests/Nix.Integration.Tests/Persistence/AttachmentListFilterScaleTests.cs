@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using Nix.Features.Attachments;
+using Nix.Persistence.Attachments;
 using Nix.Integration.Tests.Harness;
 using Npgsql;
 using NpgsqlTypes;
@@ -40,10 +40,10 @@ public sealed class AttachmentListFilterScaleTests : IAsyncLifetime
     [InlineData("revoked")]
     public async Task A_selective_state_reads_the_state_index_instead_of_resolving_every_file(string state)
     {
-        var plan = await ExplainAsync(state, expiring: false, ListAttachmentsHandler.Statement);
-        var start = ListAttachmentsHandler.Statement.IndexOf("AND (@state::text IS NULL OR EXISTS", StringComparison.Ordinal);
-        var end = ListAttachmentsHandler.Statement.IndexOf("AND (@state::text IS NULL OR shown", StringComparison.Ordinal);
-        var before = await ExplainAsync(state, expiring: false, ListAttachmentsHandler.Statement.Remove(start, end - start));
+        var plan = await ExplainAsync(state, expiring: false, AttachmentStore.Statement);
+        var start = AttachmentStore.Statement.IndexOf("AND (@state::text IS NULL OR EXISTS", StringComparison.Ordinal);
+        var end = AttachmentStore.Statement.IndexOf("AND (@state::text IS NULL OR shown", StringComparison.Ordinal);
+        var before = await ExplainAsync(state, expiring: false, AttachmentStore.Statement.Remove(start, end - start));
         _output.WriteLine("Without the prefilter:");
         _output.WriteLine(before);
         _output.WriteLine($"Attachments, {Files} files, state={state}, runtime role:");
@@ -56,14 +56,14 @@ public sealed class AttachmentListFilterScaleTests : IAsyncLifetime
     [Fact]
     public async Task The_state_prefilter_returns_the_same_files_as_the_shown_version_check_alone()
     {
-        var withoutPrefilter = ListAttachmentsHandler.Statement.Replace(
+        var withoutPrefilter = AttachmentStore.Statement.Replace(
             "wanted.state = @state::text))", "wanted.state = wanted.state))", StringComparison.Ordinal);
-        Assert.NotEqual(ListAttachmentsHandler.Statement, withoutPrefilter);
+        Assert.NotEqual(AttachmentStore.Statement, withoutPrefilter);
 
         foreach (var state in new[] { "draft", "in_review", "approved", "revoked" })
         {
             var expected = await ListAsync(withoutPrefilter, state, limit: 100000);
-            var actual = await ListAsync(ListAttachmentsHandler.Statement, state, limit: 100000);
+            var actual = await ListAsync(AttachmentStore.Statement, state, limit: 100000);
             Assert.NotEmpty(expected);
             Assert.Equal(expected, actual);
         }

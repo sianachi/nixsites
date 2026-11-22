@@ -34,5 +34,5 @@ public sealed class PeopleStore(NpgsqlDataSource dataSource) : IPeopleStore
             cancellationToken,
             NixParameter.Uuid("tenant", tenantId),
             NixParameter.Uuid("principal", principalId),
-            NixParameter.Text("status", disabled ? "suspended" : "active")).ConfigureAwait(false);
+            NixParameter.Text("status", disabled ? "suspended" : "active")).ConfigureAwait(false) ?? false;
 }

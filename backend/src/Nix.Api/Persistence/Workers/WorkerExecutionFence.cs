@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Nix.Abstractions.Workers;
 using Npgsql;
-using NpgsqlTypes;
+using Nix.Persistence.Sql;
 
 namespace Nix.Persistence.Workers;
 
@@ -37,30 +37,12 @@ public sealed class WorkerExecutionFence(NixDbContext database) : IWorkerExecuti
         var command = new NpgsqlCommand(FenceSql, connection, transaction);
         await using (command.ConfigureAwait(false))
         {
-            command.Parameters.Add(new NpgsqlParameter<Guid>("job_id", NpgsqlDbType.Uuid)
-            {
-                TypedValue = jobId,
-            });
-            command.Parameters.Add(new NpgsqlParameter<string>("owner", NpgsqlDbType.Text)
-            {
-                TypedValue = owner,
-            });
-            command.Parameters.Add(new NpgsqlParameter<string>("kind", NpgsqlDbType.Text)
-            {
-                TypedValue = authorization.Kind,
-            });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("tenant_id", NpgsqlDbType.Uuid)
-            {
-                TypedValue = authorization.TenantId,
-            });
-            command.Parameters.Add(new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid)
-            {
-                Value = authorization.WorkspaceId is { } workspaceId ? workspaceId : DBNull.Value,
-            });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("actor_id", NpgsqlDbType.Uuid)
-            {
-                TypedValue = authorization.ActorId,
-            });
+            command.Parameters.Add(NixParameter.Uuid("job_id", jobId));
+            command.Parameters.Add(NixParameter.Text("owner", owner));
+            command.Parameters.Add(NixParameter.Text("kind", authorization.Kind));
+            command.Parameters.Add(NixParameter.Uuid("tenant_id", authorization.TenantId));
+            command.Parameters.Add(NixParameter.Uuid("workspace_id", authorization.WorkspaceId));
+            command.Parameters.Add(NixParameter.Uuid("actor_id", authorization.ActorId));
             return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) is true;
         }
     }

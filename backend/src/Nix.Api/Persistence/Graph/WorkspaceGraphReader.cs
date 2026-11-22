@@ -6,7 +6,6 @@ using Nix.Persistence.Locks;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Graph;
 
@@ -71,11 +70,11 @@ public sealed class WorkspaceGraphReader(
             GraphSql.WorkspaceGraph,
             default,
             [
-                new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
-                new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid) { Value = workspaceId.Value },
-                new NpgsqlParameter("workspace_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = identifiers },
-                new NpgsqlParameter("node_limit", NpgsqlDbType.Integer) { Value = nodeLimit },
-                new NpgsqlParameter("link_limit", NpgsqlDbType.Integer) { Value = linkLimit },
+                NixParameter.Uuid("tenant_id", Tenant.Value),
+                NixParameter.Uuid("workspace_id", workspaceId.Value),
+                NixParameter.UuidArray("workspace_ids", identifiers),
+                NixParameter.Integer("node_limit", nodeLimit),
+                NixParameter.Integer("link_limit", linkLimit),
                 await LockFilterParameters.AllLocksAsync(sql, Tenant, cancellationToken).ConfigureAwait(false),
                 await LockFilterParameters
                     .ClosedLocksAsync(sql, Tenant, credential, clock, cancellationToken)

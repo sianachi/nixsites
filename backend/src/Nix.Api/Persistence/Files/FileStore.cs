@@ -471,7 +471,7 @@ public sealed class FileStore(
     /// The one shown-version rule: the highest-numbered approved version, else the current upload
     /// unless it is revoked, else the newest non-revoked version. A revoked version is never shown,
     /// so the sequence is empty when every version is revoked. The first element is the shown one.
-    /// <c>ListAttachmentsHandler.Statement</c> restates it in SQL and a test holds the two to the
+    /// <c>AttachmentStore.Statement</c> restates it in SQL and a test holds the two to the
     /// same answer.
     /// </summary>
     public static IOrderedQueryable<FileVersion> ShownFirst(IQueryable<FileVersion> versions, FileVersionId currentVersionId) =>

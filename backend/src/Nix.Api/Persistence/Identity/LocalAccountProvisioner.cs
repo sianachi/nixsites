@@ -7,7 +7,6 @@ using Nix.Domain.Tenancy;
 using Nix.Persistence;
 using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Identity;
 
@@ -80,14 +79,14 @@ public sealed class LocalAccountProvisioner(IServiceScopeFactory scopes, SelfIss
                     subject,
                     new UserInfoProfile(name, email, EmailVerified: true),
                     cancellationToken).ConfigureAwait(false);
-                var created = await sql.ScalarOrDefaultAsync<bool>(
+                var created = await sql.ScalarAsync<bool>(
                     "SELECT nix_local_create_account(@principal, @email, @hash)",
                     [
-                        new NpgsqlParameter("principal", NpgsqlDbType.Uuid) { Value = principal.Id.Value },
-                        new NpgsqlParameter("email", NpgsqlDbType.Text) { Value = email },
-                        new NpgsqlParameter("hash", NpgsqlDbType.Text) { Value = (object?)passwordHash ?? DBNull.Value },
+                        NixParameter.Uuid("principal", principal.Id.Value),
+                        NixParameter.Text("email", email),
+                        NixParameter.Text("hash", passwordHash),
                     ],
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken).ConfigureAwait(false) ?? false;
                 if (!created)
                 {
                     await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);

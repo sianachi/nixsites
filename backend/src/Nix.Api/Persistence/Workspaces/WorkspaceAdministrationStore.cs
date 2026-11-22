@@ -6,7 +6,6 @@ using Nix.Persistence.ObjectStorage;
 using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Workspaces;
@@ -278,7 +277,7 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        return await _sql.ScalarOrDefaultAsync<bool>(
+        return await _sql.ScalarAsync<bool>(
             WorkspaceAdministrationSql.Create,
             [
                 Uuid("tenant_id", context.TenantId.Value),
@@ -287,7 +286,7 @@ public sealed partial class WorkspaceAdministrationStore(
                 Text("name", name),
                 Timestamp("now", now),
             ],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
     }
 
     /// <summary>Creates the shipped template catalog and hidden roots for one new workspace.</summary>
@@ -331,24 +330,24 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var result = await _sql.ScalarOrDefaultAsync<Guid>(
+        var result = await _sql.ScalarAsync<Guid>(
             WorkspaceAdministrationSql.SetSharing,
             [
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("membership_locked", NpgsqlDbType.Boolean) { Value = membershipLocked is { } locked ? locked : DBNull.Value },
-                new NpgsqlParameter("collaboration", NpgsqlDbType.Boolean) { Value = collaboration is { } on ? on : DBNull.Value },
+                NixParameter.Boolean("membership_locked", membershipLocked),
+                NixParameter.Boolean("collaboration", collaboration),
             ],
             cancellationToken).ConfigureAwait(false);
-        return result != Guid.Empty;
+        return result is not null;
     }
 
     /// <summary>The item settings new items in the workspace start with, as stored JSON; null when the workspace is not visible.</summary>
     public async ValueTask<string?> ReadItemDefaultsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken)
     {
         var context = Session;
-        return await _sql.ScalarOrDefaultAsync<string>(
+        return await _sql.ScalarRefAsync<string>(
             WorkspaceAdministrationSql.ReadItemDefaults,
             [
                 Uuid("tenant_id", context.TenantId.Value),
@@ -362,7 +361,7 @@ public sealed partial class WorkspaceAdministrationStore(
     public async ValueTask<string?> SetItemDefaultsAsync(WorkspaceId workspaceId, string patch, CancellationToken cancellationToken)
     {
         var context = Session;
-        return await _sql.ScalarOrDefaultAsync<string>(
+        return await _sql.ScalarRefAsync<string>(
             WorkspaceAdministrationSql.SetItemDefaults,
             [
                 Uuid("tenant_id", context.TenantId.Value),
@@ -381,17 +380,17 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var result = await _sql.ScalarOrDefaultAsync<Guid>(
+        var result = await _sql.ScalarAsync<Guid>(
             WorkspaceAdministrationSql.SetAgentPolicy,
             [
                 Uuid("tenant_id", context.TenantId.Value),
                 Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("agents_may_approve", NpgsqlDbType.Boolean) { Value = agentsMayApprove is { } approve ? approve : DBNull.Value },
-                new NpgsqlParameter("agents_may_create_public_links", NpgsqlDbType.Boolean) { Value = agentsMayCreatePublicLinks is { } links ? links : DBNull.Value },
+                NixParameter.Boolean("agents_may_approve", agentsMayApprove),
+                NixParameter.Boolean("agents_may_create_public_links", agentsMayCreatePublicLinks),
             ],
             cancellationToken).ConfigureAwait(false);
-        return result != Guid.Empty;
+        return result is not null;
     }
 
     public async ValueTask<bool> RenameAsync(
@@ -400,7 +399,7 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var result = await _sql.ScalarOrDefaultAsync<Guid>(
+        var result = await _sql.ScalarAsync<Guid>(
             WorkspaceAdministrationSql.Rename,
             [
                 Uuid("tenant_id", context.TenantId.Value),
@@ -409,7 +408,7 @@ public sealed partial class WorkspaceAdministrationStore(
                 Text("name", name),
             ],
             cancellationToken).ConfigureAwait(false);
-        return result != Guid.Empty;
+        return result is not null;
     }
 
     /// <summary>Archives an owner- or tenant-admin-managed workspace without changing its grants.</summary>
@@ -419,11 +418,11 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(WorkspaceAdministrationSql.Archive,
+        var id = await _sql.ScalarAsync<Guid>(WorkspaceAdministrationSql.Archive,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
              Uuid("workspace_id", workspaceId.Value), Timestamp("now", now)], cancellationToken)
             .ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>Restores an archived workspace to ordinary use.</summary>
@@ -432,10 +431,10 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(WorkspaceAdministrationSql.Restore,
+        var id = await _sql.ScalarAsync<Guid>(WorkspaceAdministrationSql.Restore,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
              Uuid("workspace_id", workspaceId.Value)], cancellationToken).ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>Starts the irreversible purge only after an authorized archive.</summary>
@@ -444,10 +443,10 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(WorkspaceAdministrationSql.BeginPurge,
+        var id = await _sql.ScalarAsync<Guid>(WorkspaceAdministrationSql.BeginPurge,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
              Uuid("workspace_id", workspaceId.Value)], cancellationToken).ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>Lists private workspace-owned objects after its purge has been authorized.</summary>
@@ -486,10 +485,10 @@ public sealed partial class WorkspaceAdministrationStore(
         await _sql.ExecuteAsync(WorkspaceAdministrationSql.DeletePurgingWorkspaceSites,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("workspace_id", workspaceId.Value),
              Uuid("job_id", jobId)], cancellationToken).ConfigureAwait(false);
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(WorkspaceAdministrationSql.FinalizePurge,
+        var id = await _sql.ScalarAsync<Guid>(WorkspaceAdministrationSql.FinalizePurge,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("workspace_id", workspaceId.Value),
              Uuid("job_id", jobId)], cancellationToken).ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>Lists principal and group grants visible to a workspace member or administrator.</summary>
@@ -658,12 +657,12 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(
+        var id = await _sql.ScalarAsync<Guid>(
             WorkspaceAdministrationSql.AcceptInvitation,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
              Uuid("workspace_id", workspaceId.Value), Uuid("invitation_id", invitationId), Timestamp("now", now)],
             cancellationToken).ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>Declines the caller's pending invitation.</summary>
@@ -674,12 +673,12 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(
+        var id = await _sql.ScalarAsync<Guid>(
             WorkspaceAdministrationSql.DeclineInvitation,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
              Uuid("workspace_id", workspaceId.Value), Uuid("invitation_id", invitationId), Timestamp("now", now)],
             cancellationToken).ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>Revokes a pending invitation, retaining its row.</summary>
@@ -705,11 +704,11 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(WorkspaceAdministrationSql.ChangeMemberRole,
+        var id = await _sql.ScalarAsync<Guid>(WorkspaceAdministrationSql.ChangeMemberRole,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
              Uuid("workspace_id", workspaceId.Value), Uuid("target_principal_id", target.Value),
              Text("role", role), Timestamp("now", now)], cancellationToken).ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>Removes a direct member or lets the caller leave, preserving recoverable ownership.</summary>
@@ -720,11 +719,11 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(WorkspaceAdministrationSql.RemoveMember,
+        var id = await _sql.ScalarAsync<Guid>(WorkspaceAdministrationSql.RemoveMember,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
              Uuid("workspace_id", workspaceId.Value), Uuid("target_principal_id", target.Value),
              Boolean("self", self)], cancellationToken).ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>Converts an owned personal workspace to shared and assigns a replacement owner.</summary>
@@ -735,11 +734,11 @@ public sealed partial class WorkspaceAdministrationStore(
         CancellationToken cancellationToken)
     {
         var context = Session;
-        var id = await _sql.ScalarOrDefaultAsync<Guid>(WorkspaceAdministrationSql.Recover,
+        var id = await _sql.ScalarAsync<Guid>(WorkspaceAdministrationSql.Recover,
             [Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
              Uuid("workspace_id", workspaceId.Value), Uuid("target_principal_id", replacement.Value),
              Timestamp("now", now)], cancellationToken).ConfigureAwait(false);
-        return id != Guid.Empty;
+        return id is not null;
     }
 
     /// <summary>
@@ -781,7 +780,7 @@ public sealed partial class WorkspaceAdministrationStore(
     {
         ArgumentNullException.ThrowIfNull(settings);
         var context = Session;
-        var result = await _sql.ScalarOrDefaultAsync<Guid>(
+        var result = await _sql.ScalarAsync<Guid>(
             WorkspaceAdministrationSql.SaveDailyNoteSettings,
             [
                 Uuid("tenant_id", context.TenantId.Value),
@@ -790,7 +789,7 @@ public sealed partial class WorkspaceAdministrationStore(
                 Text("settings", settings.Write()),
             ],
             cancellationToken).ConfigureAwait(false);
-        return result != Guid.Empty;
+        return result is not null;
     }
 
     /// <summary>
@@ -832,7 +831,7 @@ public sealed partial class WorkspaceAdministrationStore(
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("credential_id", _credential.CredentialId),
                 Uuid("workspace_id", workspaceId.Value),
-                new NpgsqlParameter("candidate_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = candidateIds },
+                NixParameter.UuidArray("candidate_ids", candidateIds),
             ],
             cancellationToken);
         await foreach (var row in contextRows.ConfigureAwait(false))
@@ -957,7 +956,7 @@ public sealed partial class WorkspaceAdministrationStore(
             [
                 Uuid("tenant_id", context.TenantId.Value), Uuid("principal_id", context.PrincipalId.Value),
                 Uuid("workspace_id", workspaceId.Value), Uuid("parent_id", parentId),
-                new NpgsqlParameter("candidate_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = candidateIds },
+                NixParameter.UuidArray("candidate_ids", candidateIds),
             ],
             cancellationToken);
         await foreach (var row in rows.ConfigureAwait(false))

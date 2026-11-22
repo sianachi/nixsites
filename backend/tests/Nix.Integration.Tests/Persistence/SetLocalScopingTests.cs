@@ -164,7 +164,7 @@ public sealed class SetLocalScopingTests : IAsyncLifetime
 
                 try
                 {
-                    var inside = await work.Sql.ScalarOrDefaultAsync<string>(
+                    var inside = await work.Sql.ScalarRefAsync<string>(
                         "SELECT current_setting('nix.tenant_id', true)",
                         cancellationToken: Cancellation);
                     Assert.Equal(TestTenants.Alpha.ToString("D"), inside);
@@ -354,8 +354,8 @@ public sealed class SetLocalScopingTests : IAsyncLifetime
             var work = await host.BeginUnitOfWorkAsync(context, Cancellation);
             await using (work.ConfigureAwait(false))
             {
-                backendProcessId = await work.Sql.ScalarOrDefaultAsync<int>(
-                    SessionSql.BackendProcessId, cancellationToken: Cancellation);
+                backendProcessId = await work.Sql.ScalarAsync<int>(
+                    SessionSql.BackendProcessId, cancellationToken: Cancellation) ?? throw new InvalidOperationException("pg_backend_pid returned no value.");
                 await work.CommitAsync(Cancellation);
             }
         }
@@ -400,7 +400,7 @@ public sealed class SetLocalScopingTests : IAsyncLifetime
         var work = await host.BeginUnitOfWorkAsync(context, Cancellation);
         await using (work.ConfigureAwait(false))
         {
-            var backendProcessId = await work.Sql.ScalarOrDefaultAsync<int>(SessionSql.BackendProcessId);
+            var backendProcessId = await work.Sql.ScalarAsync<int>(SessionSql.BackendProcessId) ?? throw new InvalidOperationException("pg_backend_pid returned no value.");
 
             var rows = await RlsProbe.ReadVisibleAsync(work);
             await work.CommitAsync(Cancellation);

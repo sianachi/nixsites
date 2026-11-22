@@ -32,6 +32,6 @@ public sealed class RetentionStore(NpgsqlDataSource dataSource) : IRetentionStor
             throw new ArgumentOutOfRangeException(nameof(limit));
         }
 
-        return await _db.ScalarAsync<int?>(sql, cancellationToken, NixParameter.Integer("limit", limit)).ConfigureAwait(false) ?? 0;
+        return await _db.ScalarAsync<int>(sql, cancellationToken, NixParameter.Integer("limit", limit)).ConfigureAwait(false) ?? 0;
     }
 }
