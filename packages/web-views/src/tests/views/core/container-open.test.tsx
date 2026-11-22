@@ -106,7 +106,7 @@ it('opens a none-mode row on Enter and from the context menu', async () => {
 it('selects on a click and opens on a double-click in a none-mode checklist', async () => {
   const onOpen = renderNone('checklist');
   const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: 'Open First' }));
+  await user.click(await screen.findByRole('button', { name: 'Open First' }));
   expect(onOpen).not.toHaveBeenCalled();
   expect(screen.getByText('1 selected')).toBeVisible();
 

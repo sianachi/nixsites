@@ -1,4 +1,12 @@
-import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  Suspense,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Button, Text } from '@nix/ui';
 import {
   useCoarsePointer,
@@ -346,5 +354,9 @@ function renderContent(
     );
   }
 
-  return descriptor.render({ container, view, onOpen, onOpenWithRows });
+  return (
+    <Suspense fallback={null}>
+      {descriptor.render({ container, view, onOpen, onOpenWithRows })}
+    </Suspense>
+  );
 }

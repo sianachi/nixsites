@@ -214,7 +214,7 @@ describe('drawing the axis', () => {
     const data = aContainer({ schema: SCHEMA, views: views([view]), children: [ROLLOUT] });
     renderAt(<ContainerView container={data} view={view} onOpen={vi.fn()} />);
 
-    await user.click(screen.getByRole('checkbox', { name: 'Select Rollout' }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Select Rollout' }));
     expect(screen.getByRole('toolbar', { name: 'Selected items' })).toHaveTextContent('1 selected');
   });
 

@@ -87,7 +87,7 @@ describe('the guided creation studio', () => {
     await screen.findByRole('heading', { name: /new interactive form/i });
     await user.click(screen.getByRole('button', { name: 'Customize' }));
     await user.click(screen.getByRole('button', { name: /continue/i }));
-    await user.click(screen.getByRole('button', { name: 'Add paragraph' }));
+    await user.click(await screen.findByRole('button', { name: 'Add paragraph' }));
     for (const label of ['Introduction', 'Confirmation message', 'Text']) {
       const input = screen.getByRole('textbox', { name: label });
       await user.clear(input);
