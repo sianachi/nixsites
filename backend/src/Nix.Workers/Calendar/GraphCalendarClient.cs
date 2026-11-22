@@ -156,13 +156,8 @@ public sealed class GraphCalendarClient(CalendarTransport transport, Action<stri
     {
         ArgumentNullException.ThrowIfNull(push);
         var body = JsonSerializer.Serialize(Body(push), CalendarProviderJsonContext.Default.GraphEventBody);
-        var headers = CalendarTransport.BearerHeaders(accessToken, json: true);
-        if (!string.IsNullOrEmpty(version))
-        {
-            headers["If-Match"] = version;
-        }
         var path = "/v1.0/me/calendars/" + CalendarWire.PathEscape(calendarId) + "/events/" + CalendarWire.PathEscape(externalId);
-        var (status, response) = await transport.SendAsync(HttpMethod.Patch, path, headers, body, cancellationToken).ConfigureAwait(false);
+        var (status, response) = await transport.SendAsync(HttpMethod.Patch, path, CalendarTransport.BearerHeaders(accessToken, json: true, version: version), body, cancellationToken).ConfigureAwait(false);
         return status switch
         {
             200 => Decode(response, CalendarProviderJsonContext.Default.GraphEvent, "update response").ChangeKey ?? string.Empty,
@@ -172,25 +167,8 @@ public sealed class GraphCalendarClient(CalendarTransport transport, Action<stri
         };
     }
 
-    public async Task DeleteEventAsync(string accessToken, string calendarId, string externalId, string version, CancellationToken cancellationToken)
-    {
-        var headers = CalendarTransport.BearerHeaders(accessToken);
-        if (!string.IsNullOrEmpty(version))
-        {
-            headers["If-Match"] = version;
-        }
-        var path = "/v1.0/me/calendars/" + CalendarWire.PathEscape(calendarId) + "/events/" + CalendarWire.PathEscape(externalId);
-        var (status, response) = await transport.SendAsync(HttpMethod.Delete, path, headers, null, cancellationToken).ConfigureAwait(false);
-        switch (status)
-        {
-            case 200 or 204 or 404 or 410:
-                return;
-            case 412:
-                throw new ProviderWriteException(ProviderWriteFailure.Conflict);
-            default:
-                throw ApiError(status, response);
-        }
-    }
+    public Task DeleteEventAsync(string accessToken, string calendarId, string externalId, string version, CancellationToken cancellationToken) =>
+        transport.DeleteGuardedAsync("/v1.0/me/calendars/" + CalendarWire.PathEscape(calendarId) + "/events/" + CalendarWire.PathEscape(externalId), accessToken, version, ApiError, cancellationToken);
 
     private static GraphEventBody Body(PushEvent push) => new(
         push.Title,

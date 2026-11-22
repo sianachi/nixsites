@@ -139,13 +139,8 @@ public sealed class GoogleCalendarClient(CalendarTransport transport) : ICalenda
     {
         ArgumentNullException.ThrowIfNull(push);
         var body = JsonSerializer.Serialize(Body(push, id: null, status: null), CalendarProviderJsonContext.Default.GoogleEventBody);
-        var headers = CalendarTransport.BearerHeaders(accessToken, json: true);
-        if (!string.IsNullOrEmpty(version))
-        {
-            headers["If-Match"] = version;
-        }
         var path = "/calendar/v3/calendars/" + CalendarWire.PathEscape(calendarId) + "/events/" + CalendarWire.PathEscape(externalId);
-        var (status, response) = await transport.SendAsync(HttpMethod.Patch, path, headers, body, cancellationToken).ConfigureAwait(false);
+        var (status, response) = await transport.SendAsync(HttpMethod.Patch, path, CalendarTransport.BearerHeaders(accessToken, json: true, version: version), body, cancellationToken).ConfigureAwait(false);
         return status switch
         {
             200 => Decode(response, CalendarProviderJsonContext.Default.GoogleEvent, "update response").ETag ?? string.Empty,
@@ -155,25 +150,8 @@ public sealed class GoogleCalendarClient(CalendarTransport transport) : ICalenda
         };
     }
 
-    public async Task DeleteEventAsync(string accessToken, string calendarId, string externalId, string version, CancellationToken cancellationToken)
-    {
-        var headers = CalendarTransport.BearerHeaders(accessToken);
-        if (!string.IsNullOrEmpty(version))
-        {
-            headers["If-Match"] = version;
-        }
-        var path = "/calendar/v3/calendars/" + CalendarWire.PathEscape(calendarId) + "/events/" + CalendarWire.PathEscape(externalId);
-        var (status, response) = await transport.SendAsync(HttpMethod.Delete, path, headers, null, cancellationToken).ConfigureAwait(false);
-        switch (status)
-        {
-            case 200 or 204 or 404 or 410:
-                return;
-            case 412:
-                throw new ProviderWriteException(ProviderWriteFailure.Conflict);
-            default:
-                throw ApiError(status, response);
-        }
-    }
+    public Task DeleteEventAsync(string accessToken, string calendarId, string externalId, string version, CancellationToken cancellationToken) =>
+        transport.DeleteGuardedAsync("/calendar/v3/calendars/" + CalendarWire.PathEscape(calendarId) + "/events/" + CalendarWire.PathEscape(externalId), accessToken, version, ApiError, cancellationToken);
 
     /// <summary>The client-supplied event id for an item: its UUID without dashes, or null when there is nothing to stamp.</summary>
     public static string? EventId(string? itemId) => itemId is not null && CalendarWire.IsCanonicalUuid(itemId) ? itemId.Replace("-", "", StringComparison.Ordinal) : null;
