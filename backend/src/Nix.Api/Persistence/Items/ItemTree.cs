@@ -299,7 +299,21 @@ public sealed partial class ItemTree(
             }
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            // A clash inside one tenant breaks both; Postgres names whichever index it checks first.
+            ConstraintName: "PK_item" or "AK_item_tenant_id_id",
+        })
+        {
+            // Only a caller-chosen identifier gets here. The failed insert is still tracked, so the
+            // caller must clear the change tracker (native replay rolls back to its savepoint).
+            throw new ItemIdTakenException(exception);
+        }
 
         // The row has to exist before its edges do: item_closure references it both ways, and the
         // composite foreign keys are checked immediately.

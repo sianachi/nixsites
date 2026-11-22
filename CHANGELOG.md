@@ -7,6 +7,12 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- `Nix:Sync:DeviceItemIds` (off by default). With it on, an item created offline keeps the
+  identifier its device chose when the change reaches Core, so installs that exchange changes
+  without a shared server agree on what each item is called. A create whose identifier is already
+  in use is refused (`items.id_taken`). Only version 7 identifiers are kept; any other still gets
+  one Core mints. It lets a writer learn whether an identifier is in use
+  anywhere on the install, so turn it on only where everyone with write access is trusted with that.
 - Each GitHub release carries the build as plain files, for running Nix without containers: the
   web app (`nix-web-<tag>.tar.gz`), Core and the migrator as self-contained programs for Linux
   (x64, arm64), macOS (arm64) and Windows (x64) (`nix-core-<tag>-<platform>.tar.gz`), the
@@ -181,6 +187,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- An upload aimed at a file item that has no version yet becomes its first version. It was refused
+  before, which left a file item created without bytes unusable.
 - A note edited offline in the native apps no longer replays the same edits when reopened after they have synced: the
   device clears its draft journal entries once the server has them.
 - The desktop app signs in when the server adds a parameter to the sign-in callback, as the iOS app

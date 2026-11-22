@@ -130,6 +130,42 @@ public sealed class FileStoreTests(NixPostgresFixture fixture) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task An_upload_aimed_at_a_file_item_with_no_version_becomes_its_first_version()
+    {
+        await using var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation);
+        var created = await work.Resolve<Nix.Messaging.NixDispatcher>().SendAsync<Nix.Features.Items.CreateItem, Nix.Domain.Items.Item>(
+            new Nix.Features.Items.CreateItem(WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId), "file", "scan.pdf", null, null), Cancellation);
+        Assert.True(created.IsSuccess, created.IsFailure ? created.Error.Message : string.Empty);
+        var files = work.Resolve<IFileStore>();
+        Assert.Null(await files.GetAsync(created.Value.Id, Cancellation));
+
+        var upload = Assert.IsType<FileUploadRecord>(await files.BeginAsync(
+            new BeginFileUpload(
+                WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId),
+                ParentId: null,
+                TargetItemId: created.Value.Id,
+                "scan.pdf",
+                "application/pdf",
+                12,
+                "file-first-version"),
+            Cancellation));
+        Assert.NotNull(await files.QueueInspectionAsync(FileUploadId.From(upload.Id), Cancellation));
+        var published = Assert.IsType<FileRecord>(await files.CompleteAsync(
+            new CompleteFileUpload(
+                FileUploadId.From(upload.Id),
+                "application/pdf",
+                12,
+                new string('c', 64),
+                Previewable: false,
+                PixelWidth: null,
+                PixelHeight: null),
+            Cancellation));
+
+        Assert.Equal(created.Value.Id.Value, published.ItemId);
+        Assert.Equal(1, Assert.Single(published.Versions).Version);
+    }
+
+    [Fact]
     public async Task An_upload_publishes_one_file_item_and_replacement_preserves_history()
     {
         Guid itemId;

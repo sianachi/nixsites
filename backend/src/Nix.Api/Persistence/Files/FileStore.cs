@@ -200,13 +200,10 @@ public sealed class FileStore(
         var nextVersion = 1;
         if (upload.TargetItemId is { } target)
         {
-            var body = await database.FileBodies.AsTracking().SingleOrDefaultAsync(candidate => candidate.TenantId == context.TenantId && candidate.ItemId == target, cancellationToken).ConfigureAwait(false);
-            if (body is null)
-            {
-                return null;
-            }
+            // A file item with no version yet (created as an item first, as a change arriving from
+            // another device is) takes this upload as its first.
             itemId = target;
-            nextVersion = 1 + await database.FileVersions.Where(version => version.TenantId == context.TenantId && version.ItemId == target).MaxAsync(version => version.Version, cancellationToken).ConfigureAwait(false);
+            nextVersion = 1 + (await database.FileVersions.Where(version => version.TenantId == context.TenantId && version.ItemId == target).MaxAsync(version => (int?)version.Version, cancellationToken).ConfigureAwait(false) ?? 0);
         }
         else
         {

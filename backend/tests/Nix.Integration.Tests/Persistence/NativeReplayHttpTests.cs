@@ -34,6 +34,11 @@ public sealed class NativeReplayHttpTests(NixPostgresFixture fixture) : IAsyncLi
         await fixture.ResetAsync();
         await M0SchemaSeed.SeedBothTenantsAsync(fixture);
         await ExecuteAsync("DELETE FROM tenant_role");
+        Start(deviceItemIds: false);
+    }
+
+    private void Start(bool deviceItemIds)
+    {
         string signingKey;
         using (var key = ECDsa.Create(ECCurve.NamedCurves.nistP256))
         {
@@ -43,12 +48,92 @@ public sealed class NativeReplayHttpTests(NixPostgresFixture fixture) : IAsyncLi
         {
             ["ConnectionStrings:Nix"] = fixture.ApplicationConnectionString,
             ["Nix:Scheduling:Enabled"] = "false",
+            ["Nix:Sync:DeviceItemIds"] = deviceItemIds ? "true" : "false",
             [SelfIssuedTokenService.IssuerConfigurationKey] = "https://core.native-replay.test",
             [SelfIssuedTokenService.AudienceConfigurationKey] = "nix",
             [SelfIssuedTokenService.KeyIdConfigurationKey] = "native-replay-key",
             [SelfIssuedTokenService.SigningKeyConfigurationKey] = signingKey,
         });
         _client = _factory.CreateClient();
+    }
+
+    private async Task RestartWithDeviceItemIdsAsync()
+    {
+        _client.Dispose();
+        await _factory.DisposeAsync();
+        Start(deviceItemIds: true);
+    }
+
+    [Fact]
+    public async Task With_device_item_ids_on_a_replayed_create_keeps_the_identifier_its_device_chose()
+    {
+        await RestartWithDeviceItemIdsAsync();
+        var bearer = await AccessTokenAsync();
+        var deviceId = Guid.CreateVersion7();
+        var request = Operation("create", deviceId, null,
+            new { type = "note", title = "From another device", parentId = M0SchemaSeed.Alpha.ItemId });
+
+        using var first = await SendAsync(HttpMethod.Post, ReplayPath, bearer, request);
+        var applied = await ReadAsync(first);
+        Assert.Equal("applied", applied["status"]!.GetValue<string>());
+        Assert.Equal(deviceId, applied["itemId"]!.GetValue<Guid>());
+        Assert.Equal("From another device", (await ItemAsync(deviceId, bearer))["title"]!.GetValue<string>());
+
+        // A lost acknowledgement replays the receipt; a new operation for the same identifier is refused.
+        using var retry = await SendAsync(HttpMethod.Post, ReplayPath, bearer, request);
+        Assert.Equal(deviceId, (await ReadAsync(retry))["itemId"]!.GetValue<Guid>());
+        using var again = await SendAsync(HttpMethod.Post, ReplayPath, bearer, Operation("create", deviceId, null,
+            new { type = "note", title = "Second claim", parentId = M0SchemaSeed.Alpha.ItemId }));
+        AssertRefused(await ReadAsync(again), "items.id_taken");
+        Assert.Equal("From another device", (await ItemAsync(deviceId, bearer))["title"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task With_device_item_ids_on_an_identifier_held_by_another_tenant_is_refused_and_the_next_create_still_works()
+    {
+        await RestartWithDeviceItemIdsAsync();
+        Guid foreign;
+        await using (var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.BetaContext, Cancellation))
+        {
+            var created = await work.Resolve<NixDispatcher>().SendAsync<Nix.Features.Items.CreateItem, Nix.Domain.Items.Item>(
+                new Nix.Features.Items.CreateItem(WorkspaceId.From(M0SchemaSeed.Beta.WorkspaceId), "note", "Beta's own", null, null), Cancellation);
+            Assert.True(created.IsSuccess, created.IsFailure ? created.Error.Message : string.Empty);
+            await work.CommitAsync(Cancellation);
+            foreign = created.Value.Id.Value;
+        }
+        var bearer = await AccessTokenAsync();
+
+        var claim = Operation("create", foreign, null,
+            new { type = "note", title = "Claim", parentId = M0SchemaSeed.Alpha.ItemId });
+        using var taken = await SendAsync(HttpMethod.Post, ReplayPath, bearer, claim);
+        Assert.Equal(HttpStatusCode.OK, taken.StatusCode);
+        AssertRefused(await ReadAsync(taken), "items.id_taken");
+        using var takenAgain = await SendAsync(HttpMethod.Post, ReplayPath, bearer, claim);
+        AssertRefused(await ReadAsync(takenAgain), "items.id_taken");
+
+        var free = Guid.CreateVersion7();
+        using var next = await SendAsync(HttpMethod.Post, ReplayPath, bearer, Operation("create", free, null,
+            new { type = "note", title = "Free", parentId = M0SchemaSeed.Alpha.ItemId }));
+        Assert.Equal(free, (await ReadAsync(next))["itemId"]!.GetValue<Guid>());
+
+        await using var connection = await fixture.OpenMigratorConnectionAsync();
+        await using var owner = new NpgsqlCommand("SELECT properties->>'title' FROM item WHERE id = @id", connection);
+        owner.Parameters.AddWithValue("id", foreign);
+        Assert.Equal("Beta's own", await owner.ExecuteScalarAsync(Cancellation));
+    }
+
+    [Fact]
+    public async Task With_device_item_ids_on_a_random_placeholder_identifier_still_gets_one_Core_mints()
+    {
+        await RestartWithDeviceItemIdsAsync();
+        var bearer = await AccessTokenAsync();
+        var placeholder = Guid.NewGuid();
+        using var replay = await SendAsync(HttpMethod.Post, ReplayPath, bearer, Operation("create", placeholder, null,
+            new { type = "note", title = "From a shipped client", parentId = M0SchemaSeed.Alpha.ItemId }));
+
+        var applied = await ReadAsync(replay);
+        Assert.Equal("applied", applied["status"]!.GetValue<string>());
+        Assert.NotEqual(placeholder, applied["itemId"]!.GetValue<Guid>());
     }
 
     public async ValueTask DisposeAsync()

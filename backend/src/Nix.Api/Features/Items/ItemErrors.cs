@@ -23,6 +23,9 @@ public static class ItemErrors
     /// <summary>No such item, or the caller cannot see it.</summary>
     public static NixError NotFound(string detail) => new("items.not_found", detail);
 
+    /// <summary>A device-chosen identifier (see <c>Nix:Sync:DeviceItemIds</c>) already names an item, visible or not.</summary>
+    public static NixError IdTaken() => new("items.id_taken", "This item identifier is already in use.");
+
     /// <summary>The requested parent does not exist or is not visible.</summary>
     public static NixError ParentNotFound(string detail) => new("items.parent_not_found", detail);
 

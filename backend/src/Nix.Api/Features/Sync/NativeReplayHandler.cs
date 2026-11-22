@@ -23,8 +23,19 @@ public sealed class NativeReplayHandler(
     IPermissionResolver permissions,
     AccessTokenSessionContext tokenScope,
     IStructuralLock topology,
-    NixDispatcher dispatcher) : ICommandHandler<NativeReplay, NativeReplayResponse>
+    NixDispatcher dispatcher,
+    IConfiguration configuration) : ICommandHandler<NativeReplay, NativeReplayResponse>
 {
+    /// <summary>
+    /// Off by default. On, a replayed create keeps the identifier its device chose, so installs
+    /// that exchange changes without a shared server agree on what an item is called. It lets a
+    /// writer learn whether an identifier is in use anywhere on the install, so it is for an
+    /// install whose people all trust each other with that.
+    /// </summary>
+    internal const string DeviceItemIdsKey = "Nix:Sync:DeviceItemIds";
+
+    private readonly bool _deviceItemIds = configuration.GetValue<bool>(DeviceItemIdsKey);
+
     internal const string InvalidCode = "sync.invalid_replay";
     internal const string ReuseCode = "sync.idempotency_conflict";
     internal const string RefusedCode = "sync.refused";
@@ -186,7 +197,7 @@ public sealed class NativeReplayHandler(
         {
             "create" => await dispatcher.SendAsync<CreateItem, Item>(new CreateItem(command.WorkspaceId, payload.Type!,
                 payload.Title!, payload.ParentId is { } parent ? ItemId.From(parent) : null, payload.Properties)
-            { IdempotencyKey = command.Request.OperationId }, cancellationToken).ConfigureAwait(false),
+            { IdempotencyKey = command.Request.OperationId, Id = KeepsDeviceId(command.Request) ? itemId : null }, cancellationToken).ConfigureAwait(false),
             "rename" => await dispatcher.SendAsync<RenameItem, Item>(new RenameItem(itemId, payload.Title!), cancellationToken).ConfigureAwait(false),
             "move" => await dispatcher.SendAsync<MoveItem, Item>(new MoveItem(itemId,
                 payload.ParentId is { } parent ? ItemId.From(parent) : null,
@@ -196,6 +207,11 @@ public sealed class NativeReplayHandler(
         };
         return result.IsSuccess ? Result.Success(result.Value.Id) : Result.Failure<ItemId>(result.Error);
     }
+
+    // Only a version 7 identifier, the kind Core mints, is kept: the shipped clients queue creates
+    // under a random placeholder and expect Core's identifier back. A pet turn is not a device.
+    private bool KeepsDeviceId(NativeReplayRequest request) =>
+        _deviceItemIds && request.Kind == "create" && request.ItemId.Version == 7 && !tokenScope.IsPetTurn;
 
     private static NativeReplayResponse Refused(NativeReplayRequest request, string code = RefusedCode) =>
         new(request.OperationId, "refused", request.ItemId, null, null, code);

@@ -39,6 +39,13 @@ public sealed record CreateItem(
     public Guid? IdempotencyKey { get; init; }
 
     /// <summary>
+    /// Internal capability for native replay on an install with <c>Nix:Sync:DeviceItemIds</c> on: the
+    /// item keeps the identifier its device chose. Never request-bound otherwise, for the reason
+    /// in the remarks above. The caller must hold a savepoint: a taken identifier fails the insert.
+    /// </summary>
+    internal ItemId? Id { get; init; }
+
+    /// <summary>
     /// Internal capability for validated habit feature dispatches, allowing <c>$habit_</c> keys;
     /// never request-bound, and never a way to write a scheduler set-by key.
     /// </summary>
@@ -244,7 +251,7 @@ public sealed class CreateItemHandler(
         var now = clock.GetUtcNow();
         var item = new Item
         {
-            Id = ItemId.Create(),
+            Id = command.Id ?? ItemId.Create(),
             TenantId = context.TenantId,
             WorkspaceId = workspaceId,
             Type = type,
@@ -265,7 +272,15 @@ public sealed class CreateItemHandler(
             return Result.Failure<Item>(conflict);
         }
 
-        await tree.InsertAsync(item, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await tree.InsertAsync(item, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ItemIdTakenException) when (command.Id is not null)
+        {
+            return Result.Failure<Item>(ItemErrors.IdTaken());
+        }
+
         if (recordKeys is not null && await recordKeys.ApplyAsync(collection, item.Id, claims, cancellationToken).ConfigureAwait(false) is { } backstop)
         {
             return Result.Failure<Item>(backstop);
