@@ -90,7 +90,7 @@ public sealed class ItemQueryReader(
     internal static async ValueTask<T> GuardedAsync<T>(NixSqlExecutor sql, Func<ValueTask<T>> run, CancellationToken cancellationToken)
     {
         await sql.ExecuteAsync($"SAVEPOINT {Savepoint}", cancellationToken: cancellationToken).ConfigureAwait(false);
-        var previous = await sql.ScalarOrDefaultAsync<string>(
+        var previous = await sql.ScalarRefAsync<string>(
             "SELECT current_setting('statement_timeout')",
             cancellationToken: cancellationToken).ConfigureAwait(false) ?? "0";
         await SetTimeoutAsync(sql, StatementTimeout, cancellationToken).ConfigureAwait(false);

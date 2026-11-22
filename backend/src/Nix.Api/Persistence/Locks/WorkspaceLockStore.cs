@@ -67,11 +67,11 @@ public sealed class WorkspaceLockStore(
 
     /// <inheritdoc />
     public ValueTask<string?> FindVerifierAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-        sql.ScalarOrDefaultAsync<string>(WorkspaceLockSql.Verifier, [Tenant(), Workspace(workspaceId)], cancellationToken);
+        sql.ScalarRefAsync<string>(WorkspaceLockSql.Verifier, [Tenant(), Workspace(workspaceId)], cancellationToken);
 
     /// <inheritdoc />
     public ValueTask<string?> FindJoinVerifierAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-        sql.ScalarOrDefaultAsync<string>(WorkspaceLockSql.JoinVerifier, [Tenant(), Workspace(workspaceId)], cancellationToken);
+        sql.ScalarRefAsync<string>(WorkspaceLockSql.JoinVerifier, [Tenant(), Workspace(workspaceId)], cancellationToken);
 
     /// <inheritdoc />
     public async ValueTask<bool> LockAsync(WorkspaceId workspaceId, string verifier, CancellationToken cancellationToken)
@@ -150,10 +150,10 @@ public sealed class WorkspaceLockStore(
             ],
             cancellationToken).ConfigureAwait(false);
 
-        return await sql.ScalarOrDefaultAsync<bool>(
+        return await sql.ScalarAsync<bool>(
             WorkspaceLockSql.HoldsGrant,
             [Tenant(), Workspace(workspaceId), Credential(), Now()],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
     }
 
     /// <inheritdoc />
@@ -174,10 +174,10 @@ public sealed class WorkspaceLockStore(
     public async ValueTask<bool> JoinAsync(WorkspaceId workspaceId, string verifier, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(verifier);
-        return await sql.ScalarOrDefaultAsync<bool>(
+        return await sql.ScalarAsync<bool>(
             WorkspaceLockSql.Join,
             [Tenant(), Workspace(workspaceId), Verifier(verifier), Principal(), Now()],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
     }
 
     /// <inheritdoc />

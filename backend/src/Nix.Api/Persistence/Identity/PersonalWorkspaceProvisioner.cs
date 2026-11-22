@@ -41,7 +41,7 @@ public sealed class PersonalWorkspaceProvisioner(
         var normalizedEmail = NormalizeVerifiedEmail(profile);
         var now = clock.GetUtcNow();
 
-        var inserted = await sql.ScalarOrDefaultAsync<bool>(
+        var inserted = await sql.ScalarAsync<bool>(
             ProvisioningSql.InsertPrincipal,
             [
                 Uuid("principal_id", principalId.Value),
@@ -53,14 +53,14 @@ public sealed class PersonalWorkspaceProvisioner(
                 Text("email_normalized", normalizedEmail),
                 Boolean("email_verified", normalizedEmail is not null),
             ],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
 
         if (!inserted)
         {
             return await ReadWinnerAsync(tenantId, issuer, subject, cancellationToken).ConfigureAwait(false);
         }
 
-        var actualWorkspaceId = await sql.ScalarOrDefaultAsync<Guid>(
+        var actualWorkspaceId = await sql.ScalarAsync<Guid>(
             ProvisioningSql.InsertWorkspace,
             [
                 Uuid("workspace_id", workspaceId.Value),
@@ -70,12 +70,12 @@ public sealed class PersonalWorkspaceProvisioner(
                 Timestamp("now", now),
             ],
             cancellationToken).ConfigureAwait(false);
-        if (actualWorkspaceId == Guid.Empty)
+        if (actualWorkspaceId is not { } actual)
         {
             throw new PersonalWorkspaceProvisioningInvariantException();
         }
 
-        workspaceId = WorkspaceId.From(actualWorkspaceId);
+        workspaceId = WorkspaceId.From(actual);
         await sql.ExecuteAsync(
             ProvisioningSql.SeedWorkspace,
             [

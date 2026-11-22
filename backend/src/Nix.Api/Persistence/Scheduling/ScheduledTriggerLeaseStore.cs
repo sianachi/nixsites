@@ -74,7 +74,7 @@ public sealed class ScheduledTriggerLeaseStore(NpgsqlDataSource dataSource) : IS
     public async Task<bool> FinishAsync(TenantId tenantId, Guid id, string owner, TriggerStatus status, string? detailJson, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(owner);
-        return await _db.ScalarAsync<bool?>(
+        return await _db.ScalarAsync<bool>(
             FinishSql,
             cancellationToken,
             NixParameter.Uuid("tenant_id", tenantId.Value),

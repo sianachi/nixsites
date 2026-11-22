@@ -42,7 +42,7 @@ internal static class LockFilterParameters
         ArgumentNullException.ThrowIfNull(credential);
         ArgumentNullException.ThrowIfNull(clock);
 
-        var ids = await sql.ScalarOrDefaultAsync<Guid[]>(
+        var ids = await sql.ScalarRefAsync<Guid[]>(
             ItemLockSql.ClosedLockIds,
             [
                 Tenant(tenant),
@@ -69,7 +69,7 @@ internal static class LockFilterParameters
     {
         ArgumentNullException.ThrowIfNull(sql);
 
-        var ids = await sql.ScalarOrDefaultAsync<Guid[]>(
+        var ids = await sql.ScalarRefAsync<Guid[]>(
             ItemLockSql.AllLockIds,
             [Tenant(tenant)],
             cancellationToken).ConfigureAwait(false);

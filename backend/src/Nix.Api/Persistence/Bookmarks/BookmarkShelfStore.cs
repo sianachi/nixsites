@@ -75,13 +75,13 @@ public sealed class BookmarkShelfStore(
     /// <inheritdoc />
     public async ValueTask<int> CountAsync(CancellationToken cancellationToken)
     {
-        var kept = await sql.ScalarOrDefaultAsync<long>(
+        var kept = await sql.ScalarAsync<long>(
             BookmarkSql.CountShelf,
             [
                 new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = Tenant.Value },
                 new NpgsqlParameter("principal_id", NpgsqlDbType.Uuid) { Value = Principal.Value },
             ],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? 0L;
 
         // The shelf is bounded at five hundred by a database trigger, so this cannot overflow an
         // int - and if the bound is ever raised, the checked conversion is the thing that says so

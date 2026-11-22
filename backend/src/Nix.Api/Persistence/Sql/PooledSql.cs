@@ -20,12 +20,16 @@ internal sealed class PooledSql(NpgsqlDataSource dataSource)
     internal static NpgsqlParameter Instant(string name, DateTimeOffset value) =>
         new(name, NpgsqlDbType.TimestampTz) { Value = value.UtcDateTime };
 
-    /// <summary>Runs a statement and returns the first column of the first row, or default.</summary>
+    /// <summary>
+    /// Runs a statement and returns the first column of the first row; no row and SQL NULL both
+    /// yield <see langword="null"/>, never a default.
+    /// </summary>
     internal async ValueTask<T?> ScalarAsync<T>(string sql, CancellationToken cancellationToken, params NpgsqlParameter[] parameters)
+        where T : struct
     {
-        var rows = await RowsAsync(sql, static reader => reader.IsDBNull(0) ? default : reader.GetFieldValue<T>(0), cancellationToken, parameters)
+        var rows = await RowsAsync(sql, static reader => reader.IsDBNull(0) ? (T?)null : reader.GetFieldValue<T>(0), cancellationToken, parameters)
             .ConfigureAwait(false);
-        return rows.Count == 0 ? default : rows[0];
+        return rows.Count == 0 ? null : rows[0];
     }
 
     /// <summary>Runs a statement and maps every row.</summary>

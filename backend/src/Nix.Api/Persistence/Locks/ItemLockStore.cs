@@ -50,31 +50,31 @@ public sealed class ItemLockStore(
 
     /// <inheritdoc />
     public async ValueTask<bool> MayReadBodyAsync(ItemId itemId, CancellationToken cancellationToken) =>
-        await sql.ScalarOrDefaultAsync<bool>(
+        await sql.ScalarAsync<bool>(
             ItemLockSql.MayReadBody,
             [TenantParameter(), ItemParameter(itemId), CredentialParameter(), NowParameter()],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<bool> MayReadBodyIgnoringWorkspaceLockAsync(ItemId itemId, CancellationToken cancellationToken) =>
-        await sql.ScalarOrDefaultAsync<bool>(
+        await sql.ScalarAsync<bool>(
             ItemLockSql.MayReadBodyItemLocksOnly,
             [TenantParameter(), ItemParameter(itemId), CredentialParameter(), NowParameter()],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<bool> AnyInSubtreeAsync(ItemId itemId, CancellationToken cancellationToken) =>
-        await sql.ScalarOrDefaultAsync<bool>(
+        await sql.ScalarAsync<bool>(
             ItemLockSql.AnyInSubtree,
             [TenantParameter(), ItemParameter(itemId)],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<bool> AnyInWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-        await sql.ScalarOrDefaultAsync<bool>(
+        await sql.ScalarAsync<bool>(
             ItemLockSql.AnyInWorkspace,
             [TenantParameter(), new NpgsqlParameter("workspace_id", NpgsqlDbType.Uuid) { Value = workspaceId.Value }],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<IReadOnlySet<ItemId>> LockedAmongAsync(
@@ -113,7 +113,7 @@ public sealed class ItemLockStore(
 
     /// <inheritdoc />
     public ValueTask<string?> FindVerifierAsync(ItemId itemId, CancellationToken cancellationToken) =>
-        sql.ScalarOrDefaultAsync<string>(
+        sql.ScalarRefAsync<string>(
             ItemLockSql.Verifier,
             [TenantParameter(), ItemParameter(itemId)],
             cancellationToken);
@@ -213,10 +213,10 @@ public sealed class ItemLockStore(
             ],
             cancellationToken).ConfigureAwait(false);
 
-        return await sql.ScalarOrDefaultAsync<bool>(
+        return await sql.ScalarAsync<bool>(
             ItemLockSql.HoldsGrant,
             [TenantParameter(), ItemParameter(itemId), CredentialParameter(), NowParameter()],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
     }
 
     /// <inheritdoc />

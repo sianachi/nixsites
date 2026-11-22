@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using Nix.Features.Attachments;
+using Nix.Persistence.Attachments;
 using Nix.Integration.Tests.Harness;
 using Npgsql;
 using NpgsqlTypes;
@@ -118,7 +118,7 @@ public sealed class AttachmentListPlanEvidenceTests(NixPostgresFixture fixture, 
                 await SetTenantAsync(connection, transaction);
 
 #pragma warning disable CA2100 // Justification: the production statement; values reach it only as bound parameters.
-                var command = new NpgsqlCommand("EXPLAIN (ANALYZE, BUFFERS) " + ListAttachmentsHandler.Statement, connection, transaction);
+                var command = new NpgsqlCommand("EXPLAIN (ANALYZE, BUFFERS) " + AttachmentStore.Statement, connection, transaction);
 #pragma warning restore CA2100
                 await using (command.ConfigureAwait(false))
                 {

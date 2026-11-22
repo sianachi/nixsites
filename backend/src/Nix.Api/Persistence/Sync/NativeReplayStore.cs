@@ -38,20 +38,20 @@ public sealed class NativeReplayStore(NixDbContext database, NixSqlExecutor sql,
     /// <inheritdoc />
     public async ValueTask<long?> LockItemRevisionAsync(WorkspaceId workspaceId, ItemId itemId, CancellationToken cancellationToken)
     {
-        var found = await sql.ScalarOrDefaultAsync<Guid>(NativeReplaySql.LockItem,
+        var found = await sql.ScalarAsync<Guid>(NativeReplaySql.LockItem,
             ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false);
-        if (found == Guid.Empty)
+        if (found is null)
         {
             return null;
         }
-        return await sql.ScalarOrDefaultAsync<long>(NativeReplaySql.ItemRevision,
+        return await sql.ScalarAsync<long>(NativeReplaySql.ItemRevision,
             ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async ValueTask<bool> ItemExistsAsync(WorkspaceId workspaceId, ItemId itemId, CancellationToken cancellationToken) =>
-        await sql.ScalarOrDefaultAsync<Guid>(NativeReplaySql.ItemExists,
-            ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false) != Guid.Empty;
+        await sql.ScalarAsync<Guid>(NativeReplaySql.ItemExists,
+            ItemParameters(workspaceId, itemId), cancellationToken).ConfigureAwait(false) is not null;
 
     /// <inheritdoc />
     public async ValueTask SaveAsync(Guid operationId, WorkspaceId workspaceId, string fingerprint, string response, CancellationToken cancellationToken) =>

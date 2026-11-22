@@ -69,7 +69,7 @@ public sealed class SiteHostnameStore(NixDbContext database, Nix.Persistence.Sql
 
     /// <inheritdoc />
     public async ValueTask LockAsync(CancellationToken cancellationToken) =>
-        _ = await sql.ScalarOrDefaultAsync<int>(
+        _ = await sql.ScalarAsync<int>(
             "SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended('site.tunnel_config', 0))) AS held",
             [],
             cancellationToken).ConfigureAwait(false);

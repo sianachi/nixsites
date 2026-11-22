@@ -117,7 +117,7 @@ public sealed class RecurrenceStore(
 
     /// <summary>
     /// Reads one item's recurrence row, distinguishing "no such row" from "a row with no rule" -
-    /// a distinction <see cref="NixSqlExecutor"/>'s <c>ScalarOrDefaultAsync</c> cannot make on its
+    /// a distinction <see cref="NixSqlExecutor"/>'s <c>ScalarAsync</c> cannot make on its
     /// own, since both come back as <see langword="null"/>.
     /// </summary>
     /// <param name="itemId">The item to read.</param>

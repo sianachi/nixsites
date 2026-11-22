@@ -74,7 +74,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             new NpgsqlParameter("transports", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = passkey.Transports.ToArray() },
             NixParameter.Text("rp", passkey.RpId),
             NixParameter.Text("kind", passkey.Kind == LocalPasskeyKind.Passkey ? "passkey" : "security_key"),
-            NixParameter.Text("name", passkey.Name)).ConfigureAwait(false);
+            NixParameter.Text("name", passkey.Name)).ConfigureAwait(false) ?? false;
     }
 
     /// <inheritdoc />
@@ -93,7 +93,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
             NixParameter.Uuid("id", id),
-            NixParameter.Text("name", name)).ConfigureAwait(false);
+            NixParameter.Text("name", name)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<bool> RemovePasskeyAsync(PrincipalId principalId, Guid id, CancellationToken cancellationToken) =>
@@ -101,7 +101,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             "SELECT nix_local_remove_passkey(@principal, @id)",
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
-            NixParameter.Uuid("id", id)).ConfigureAwait(false);
+            NixParameter.Uuid("id", id)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<LocalTotpRecord?> GetTotpAsync(PrincipalId principalId, CancellationToken cancellationToken)
@@ -125,7 +125,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             "SELECT nix_local_set_totp(@principal, @secret)",
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
-            NixParameter.Text("secret", _totp.Protect(Convert.ToBase64String(secret)))).ConfigureAwait(false);
+            NixParameter.Text("secret", _totp.Protect(Convert.ToBase64String(secret)))).ConfigureAwait(false) ?? false;
     }
 
     /// <inheritdoc />
@@ -134,7 +134,7 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             "SELECT nix_local_confirm_totp(@principal, @step)",
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
-            PooledSql.Int8("step", timeStep)).ConfigureAwait(false);
+            PooledSql.Int8("step", timeStep)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<bool> UseTotpStepAsync(PrincipalId principalId, long timeStep, CancellationToken cancellationToken) =>
@@ -142,14 +142,14 @@ public sealed class LocalCredentialStore(NpgsqlDataSource dataSource, IDataProte
             "SELECT nix_local_use_totp_step(@principal, @step)",
             cancellationToken,
             NixParameter.Uuid("principal", principalId.Value),
-            PooledSql.Int8("step", timeStep)).ConfigureAwait(false);
+            PooledSql.Int8("step", timeStep)).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask<bool> RemoveTotpAsync(PrincipalId principalId, CancellationToken cancellationToken) =>
         await _db.ScalarAsync<bool>(
             "SELECT nix_local_remove_totp(@principal)",
             cancellationToken,
-            NixParameter.Uuid("principal", principalId.Value)).ConfigureAwait(false);
+            NixParameter.Uuid("principal", principalId.Value)).ConfigureAwait(false) ?? false;
 
     private static LocalPasskeyKind Kind(string value) =>
         value == "security_key" ? LocalPasskeyKind.SecurityKey : LocalPasskeyKind.Passkey;

@@ -220,14 +220,14 @@ public sealed partial class ItemTree(
         WorkspaceId workspaceId,
         ItemId? parentId,
         CancellationToken cancellationToken) =>
-        await _sql.ScalarOrDefaultAsync<long>(
+        await _sql.ScalarAsync<long>(
             ClosureSql.NextSiblingSequence,
             [
                 Uuid("tenant_id", Tenant.Value),
                 Uuid("workspace_id", workspaceId.Value),
                 Uuid("parent_id", parentId?.Value),
             ],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? 0L;
 
     /// <inheritdoc />
     public async ValueTask<long> AllocateSiblingSequenceAsync(
@@ -538,14 +538,14 @@ public sealed partial class ItemTree(
         ItemId id,
         ItemId parentId,
         CancellationToken cancellationToken) =>
-        await _sql.ScalarOrDefaultAsync<bool>(
+        await _sql.ScalarAsync<bool>(
             ClosureSql.WouldCreateCycle,
             [
                 Uuid("tenant_id", Tenant.Value),
                 Uuid("item_id", id.Value),
                 Uuid("parent_id", parentId.Value),
             ],
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false) ?? false;
 
     /// <inheritdoc />
     public async ValueTask ReparentAsync(
@@ -673,14 +673,16 @@ public sealed partial class ItemTree(
     /// a gap and halving a positive minimum stops at one. The alternative - a nullable scalar -
     /// boxes on every call to say something the value range already says.
     /// </remarks>
-    private ValueTask<long> SlotAsync(
+    private async ValueTask<long> SlotAsync(
         WorkspaceId workspaceId,
         ItemId? parentId,
         ItemId movingId,
         ItemId? afterId,
-        CancellationToken cancellationToken) =>
-        afterId is { } anchor
-            ? _sql.ScalarOrDefaultAsync<long>(
+        CancellationToken cancellationToken)
+    {
+        if (afterId is { } anchor)
+        {
+            return await _sql.ScalarAsync<long>(
                 ClosureSql.SequenceSlotAfter,
                 [
                     Uuid("tenant_id", Tenant.Value),
@@ -689,16 +691,19 @@ public sealed partial class ItemTree(
                     Uuid("item_id", movingId.Value),
                     Uuid("after_id", anchor.Value),
                 ],
-                cancellationToken)
-            : _sql.ScalarOrDefaultAsync<long>(
-                ClosureSql.SequenceSlotFirst,
-                [
-                    Uuid("tenant_id", Tenant.Value),
-                    Uuid("workspace_id", workspaceId.Value),
-                    Uuid("parent_id", parentId?.Value),
-                    Uuid("item_id", movingId.Value),
-                ],
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false) ?? 0L;
+        }
+
+        return await _sql.ScalarAsync<long>(
+            ClosureSql.SequenceSlotFirst,
+            [
+                Uuid("tenant_id", Tenant.Value),
+                Uuid("workspace_id", workspaceId.Value),
+                Uuid("parent_id", parentId?.Value),
+                Uuid("item_id", movingId.Value),
+            ],
+            cancellationToken).ConfigureAwait(false) ?? 0L;
+    }
 
     /// <summary>Reads a single uuid column.</summary>
     private readonly struct ItemIdMapper : INixRowMapper<Guid>

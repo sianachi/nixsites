@@ -30,14 +30,14 @@ public sealed class SiteStore(NixDbContext database, NixSqlExecutor sql, INixSes
 
     /// <inheritdoc />
     public async ValueTask LockSiteAsync(Guid siteId, CancellationToken cancellationToken) =>
-        _ = await sql.ScalarOrDefaultAsync<int>(
+        _ = await sql.ScalarAsync<int>(
             "SELECT 1 FROM site WHERE tenant_id = @tenant_id AND id = @site_id FOR UPDATE",
             [TenantParameter(), Uuid("site_id", siteId)],
             cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask LockTenantCreatesAsync(CancellationToken cancellationToken) =>
-        _ = await sql.ScalarOrDefaultAsync<int>(
+        _ = await sql.ScalarAsync<int>(
             "SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended('site.create:' || @tenant_id::text, 0))) AS held",
             [TenantParameter()],
             cancellationToken).ConfigureAwait(false);
@@ -228,7 +228,7 @@ public sealed class SiteStore(NixDbContext database, NixSqlExecutor sql, INixSes
             return true;
         }
 
-        var counted = await sql.ScalarOrDefaultAsync<long>(
+        var counted = await sql.ScalarAsync<long>(
             SiteEligibilitySql.CountInSubtree,
             [TenantParameter(), Uuid("root_id", rootItemId.Value), UuidArray("item_ids", distinct)],
             cancellationToken).ConfigureAwait(false);

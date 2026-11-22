@@ -79,21 +79,45 @@ public sealed class NixSqlExecutor(NixDbContext dbContext)
     }
 
     /// <summary>
-    /// Reads the first column of the first row, or <see langword="default"/> when the statement
-    /// returns no row or a null.
+    /// Reads the first column of the first row as a value type. A statement that returns no row and
+    /// one that returns SQL NULL both yield <see langword="null"/>, so callers can tell "absent"
+    /// from a real <c>false</c>, <c>0</c> or <see cref="Guid.Empty"/>.
     /// </summary>
-    /// <typeparam name="TValue">The column's CLR type.</typeparam>
+    /// <typeparam name="TValue">The column's CLR value type.</typeparam>
     /// <param name="sql">A statement from <c>Persistence/Sql/Statements</c>.</param>
     /// <param name="parameters">Values bound to the statement, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
-    /// <returns>The value, or <see langword="default"/>.</returns>
-    /// <remarks>
-    /// Uses a reader rather than <c>ExecuteScalar</c> so value types are not boxed on the way out.
-    /// </remarks>
-    public async ValueTask<TValue?> ScalarOrDefaultAsync<TValue>(
+    /// <returns>The value, or <see langword="null"/> for no row or NULL.</returns>
+    public async ValueTask<TValue?> ScalarAsync<TValue>(
         string sql,
         NpgsqlParameter[]? parameters = null,
         CancellationToken cancellationToken = default)
+        where TValue : struct =>
+        await ReadFirstAsync<TValue>(sql, parameters, cancellationToken).ConfigureAwait(false) is { Found: true } hit
+            ? hit.Value
+            : null;
+
+    /// <summary>
+    /// Reads the first column of the first row as a reference type (text, arrays); no row and SQL
+    /// NULL both yield <see langword="null"/>.
+    /// </summary>
+    /// <typeparam name="TValue">The column's CLR reference type.</typeparam>
+    /// <param name="sql">A statement from <c>Persistence/Sql/Statements</c>.</param>
+    /// <param name="parameters">Values bound to the statement, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <returns>The value, or <see langword="null"/>.</returns>
+    public async ValueTask<TValue?> ScalarRefAsync<TValue>(
+        string sql,
+        NpgsqlParameter[]? parameters = null,
+        CancellationToken cancellationToken = default)
+        where TValue : class =>
+        (await ReadFirstAsync<TValue>(sql, parameters, cancellationToken).ConfigureAwait(false)).Value;
+
+    // Uses a reader rather than ExecuteScalar so value types are not boxed on the way out.
+    private async ValueTask<(bool Found, TValue? Value)> ReadFirstAsync<TValue>(
+        string sql,
+        NpgsqlParameter[]? parameters,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sql);
 
@@ -108,17 +132,13 @@ public sealed class NixSqlExecutor(NixDbContext dbContext)
 
             await using (reader.ConfigureAwait(false))
             {
-                if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false)
+                    || await reader.IsDBNullAsync(0, cancellationToken).ConfigureAwait(false))
                 {
-                    return default;
+                    return (false, default);
                 }
 
-                if (await reader.IsDBNullAsync(0, cancellationToken).ConfigureAwait(false))
-                {
-                    return default;
-                }
-
-                return await reader.GetFieldValueAsync<TValue>(0, cancellationToken).ConfigureAwait(false);
+                return (true, await reader.GetFieldValueAsync<TValue>(0, cancellationToken).ConfigureAwait(false));
             }
         }
     }
