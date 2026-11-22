@@ -308,8 +308,10 @@ public sealed class WorkspaceGraphAuthorizationTests : IAsyncLifetime
                 await RawSql.ExecuteAsync(runtime, transaction,
                     $"SELECT set_config('nix.tenant_id', '{M0SchemaSeed.Alpha.TenantId:D}', true), "
                     + $"set_config('nix.principal_id', '{Member:D}', true)");
+#pragma warning disable CA2100 // Justification: the production-owned graph statement; input reaches it only as bound parameters.
                 var command = new NpgsqlCommand("EXPLAIN (ANALYZE, BUFFERS) " + GraphSql.WorkspaceGraph,
                     runtime, transaction);
+#pragma warning restore CA2100
                 await using (command.ConfigureAwait(false))
                 {
                     command.Parameters.Add(new NpgsqlParameter("tenant_id", NpgsqlDbType.Uuid) { Value = M0SchemaSeed.Alpha.TenantId });

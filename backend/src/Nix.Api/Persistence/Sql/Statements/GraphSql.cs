@@ -112,7 +112,7 @@ public static class GraphSql
     /// of the tree rather than an arbitrary sample of it.
     /// </para>
     /// </remarks>
-    public const string WorkspaceGraph = $$"""
+    public static readonly string WorkspaceGraph = $$"""
         WITH {{ItemLockSql.ClosedLockDescendants}},
         body_locked_nodes AS MATERIALIZED (
             SELECT lock_edge.descendant_id
@@ -152,24 +152,7 @@ public static class GraphSql
             ) AS item
             CROSS JOIN LATERAL (
                 SELECT 1
-                WHERE NOT EXISTS (
-                  SELECT 1
-                  FROM item_closure AS visibility_edge
-                  LEFT JOIN LATERAL (
-                      SELECT visibility_ancestor.template_id,
-                             visibility_ancestor.lifecycle_state
-                      FROM item AS visibility_ancestor
-                      WHERE visibility_ancestor.tenant_id = @tenant_id
-                        AND visibility_ancestor.id = visibility_edge.ancestor_id
-                      LIMIT 1
-                  ) AS stored_ancestor ON TRUE
-                  WHERE visibility_edge.tenant_id = @tenant_id
-                    AND visibility_edge.descendant_id = item.id
-                    AND visibility_edge.depth > 0
-                    AND (stored_ancestor.template_id IS NOT NULL
-                         OR stored_ancestor.lifecycle_state IS DISTINCT FROM 'active')
-                  OFFSET 0
-              )
+                WHERE {{ItemVisibilitySql.NoHiddenStoredAncestor("item.id")}}
                 OFFSET 0
             ) AS allowed
             ORDER BY item.seq, item.id
