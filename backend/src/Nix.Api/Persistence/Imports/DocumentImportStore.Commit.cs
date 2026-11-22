@@ -8,8 +8,8 @@ using Nix.Domain.Importing;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Persistence.ObjectStorage;
-using Npgsql;
 using Nix.Persistence.Sql;
+using Npgsql;
 
 namespace Nix.Persistence.Importing;
 

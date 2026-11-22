@@ -1,4 +1,3 @@
-using Nix.Features.Items;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
@@ -8,6 +7,7 @@ using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Nix.Features.Charts;
+using Nix.Features.Items;
 using Nix.Tests.Features.Query;
 using Nix.Tests.Support;
 

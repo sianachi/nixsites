@@ -13,8 +13,8 @@ using Nix.Domain.Properties;
 using Nix.Domain.Templates;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
-using Npgsql;
 using Nix.Persistence.Sql;
+using Npgsql;
 
 namespace Nix.Persistence.Templates;
 

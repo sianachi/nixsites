@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Nix.Abstractions.Workers;
-using Npgsql;
 using Nix.Persistence.Sql;
+using Npgsql;
 
 namespace Nix.Persistence.Workers;
 

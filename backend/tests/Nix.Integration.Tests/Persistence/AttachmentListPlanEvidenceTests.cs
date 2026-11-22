@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
-using Nix.Persistence.Attachments;
 using Nix.Integration.Tests.Harness;
+using Nix.Persistence.Attachments;
 using Npgsql;
 using NpgsqlTypes;
 

@@ -1,5 +1,3 @@
-using Nix.Tests.Support;
-using Nix.Features.Items;
 using System.Collections.Immutable;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
@@ -8,7 +6,9 @@ using Nix.Domain.Primitives;
 using Nix.Domain.Query;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
+using Nix.Features.Items;
 using Nix.Features.Query;
+using Nix.Tests.Support;
 
 namespace Nix.Tests.Features.Query;
 

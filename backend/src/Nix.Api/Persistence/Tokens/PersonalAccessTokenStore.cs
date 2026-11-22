@@ -2,9 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
-using Nix.Persistence.Sql;
 
 namespace Nix.Persistence.Tokens;
 

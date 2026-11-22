@@ -3,9 +3,9 @@ using Nix.Abstractions.Scheduling;
 using Nix.Domain.Identity;
 using Nix.Domain.Scheduling;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Npgsql;
 using NpgsqlTypes;
-using Nix.Persistence.Sql;
 
 namespace Nix.Persistence.Scheduling;
 

@@ -1,4 +1,3 @@
-using Nix.Tests.Support;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -10,6 +9,7 @@ using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Features.Items;
 using Nix.Tests.Features.Query;
+using Nix.Tests.Support;
 
 namespace Nix.Tests.Features.Items;
 
