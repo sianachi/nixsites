@@ -106,8 +106,9 @@ follows semantic versioning (`0.x` pre-1.0).
   recent change. Upgrading adds one database index, built without blocking writes.
 - After a long quiet period, clearing old offline-sync records no longer blocks edits to that
   workspace: they are cleared in small batches over the next saves.
-- The web app's first load is about 6% smaller: Settings, Trash, Attachments, the template screens,
-  the creation studio and pet activity load the first time they are opened.
+- The web app's first load is about 14% smaller: Settings, Trash, Attachments, the template screens,
+  the creation studio, pet activity, the import dialog and the companion conversation load the first
+  time they are opened.
 - When a session ends on its own in the iOS or desktop app, changes that were not sent yet are no
   longer deleted. The offline copy stays on the device, closed, and the changes are sent when the
   same account signs in again. Signing out, signing in with another account, or the account being
