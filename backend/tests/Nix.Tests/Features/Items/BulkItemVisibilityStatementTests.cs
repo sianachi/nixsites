@@ -132,6 +132,14 @@ public sealed class BulkItemVisibilityStatementTests
         Assert.Equal(1, Count(SearchSql.MatchingItems, "LEFT JOIN LATERAL"));
     }
 
+    [Fact]
+    public void Matching_search_results_are_ordered_before_the_visibility_probe_so_it_runs_for_the_page_only()
+    {
+        var sorted = SearchSql.MatchingItems.IndexOf("item_id OFFSET 0) AS ranked", StringComparison.Ordinal);
+        var probe = SearchSql.MatchingItems.IndexOf("LEFT JOIN LATERAL", StringComparison.Ordinal);
+        Assert.InRange(sorted, 0, probe - 1);
+    }
+
     private static int Count(string text, string value)
     {
         var count = 0;
