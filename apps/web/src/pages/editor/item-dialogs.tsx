@@ -1,11 +1,15 @@
-import { Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 
 import { ExportDialog } from '@nix/web-platform/export/export-dialog';
 import { MobileItemMove } from '../../items/mobile-item-move';
 import { LockDialog } from '../../locks/lock-dialog';
 import type { useItemLock } from '../../locks/use-item-lock';
-import { ImportDialog } from '../../shell/lazy-screens';
 import type { ShellContext } from '../../shell/shell-context';
+
+// Loaded when opened, as in the shell; defined here because features may not import the shell for a value.
+const ImportDialog = lazy(async () => ({
+  default: (await import('@nix/web-workspaces/import/import-dialog')).ImportDialog,
+}));
 
 export type ItemDialogName = 'move' | 'export' | 'lock' | 'import';
 
