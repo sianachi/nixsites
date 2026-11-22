@@ -52,7 +52,11 @@ import { useCurrentPrincipal } from '@nix/web-platform/session/use-current-princ
 import { paneClip } from '@nix/web-foundation/layout/regions';
 import { NavRail } from './nav-rail';
 import { useIconStripPreference } from '@nix/web-foundation/lib/icon-strip-preference';
-import { useDrawerNavigation, useLayoutKind } from '@nix/web-foundation/layout/viewport';
+import {
+  useDrawerNavigation,
+  useLayoutKind,
+  useNarrowViewport,
+} from '@nix/web-foundation/layout/viewport';
 import { readCollapsed, useSidebar } from '@nix/web-foundation/layout/use-sidebar';
 import { browserStorage } from '@nix/web-foundation/lib/browser-storage';
 import { ZenPresentationContext } from '@nix/web-foundation/layout/zen-presentation';
@@ -65,7 +69,6 @@ import { PhoneNavbar } from './phone/phone-navbar';
 import { PhoneTopRow } from './phone/phone-top-row';
 import { SettingsNavigationContext } from '../pages/settings-navigation-context';
 import { TabSwitcher } from './phone/tab-switcher';
-import { usePhone } from './phone/use-phone';
 import { usePhoneTabs } from './phone/use-phone-tabs';
 import { RouteDialog } from './route-dialog';
 import { useRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
@@ -243,7 +246,8 @@ export function AppShell({
   }, [launchState, location.pathname, location.search, navigate]);
   const [workspaceImportOpen, setWorkspaceImportOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
-  const phone = usePhone();
+  // The Obsidian-style phone chrome: phones, and portrait tablets (which add a tab strip).
+  const phone = useNarrowViewport();
   const [phoneNavHidden, setPhoneNavHidden] = useState(false);
   const routeDialogOpen = useRouteDialog() !== null;
   const [tabsOpen, setTabsOpen] = useState(false);
