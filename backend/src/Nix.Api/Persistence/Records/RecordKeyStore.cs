@@ -11,6 +11,7 @@ namespace Nix.Persistence.Records;
 
 /// <summary>The <c>record_key</c> table and the exact-value lookups, on the request's connection and transaction.</summary>
 public sealed class RecordKeyStore(
+    NixDbContext database,
     NixSqlExecutor sql,
     INixSessionContextAccessor session,
     CredentialSessionContext credential,
@@ -20,30 +21,12 @@ public sealed class RecordKeyStore(
         ?? throw new InvalidOperationException("Record keys require an authenticated unit of work.")).TenantId;
 
     /// <inheritdoc />
-    public async ValueTask LockScopeAsync(ItemId scope, bool exclusive, CancellationToken cancellationToken) =>
-        _ = await sql.ExecuteAsync(
-            exclusive
-                ? "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));"
-                : "SELECT pg_advisory_xact_lock_shared(hashtextextended(@identity, 0));",
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = $"record-scope:{Tenant.Value:D}:{scope.Value:D}" }],
-            cancellationToken).ConfigureAwait(false);
+    public ValueTask LockScopeAsync(ItemId scope, bool exclusive, CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockRecordScopeAsync(Tenant.Value, scope.Value, exclusive, cancellationToken);
 
     /// <inheritdoc />
-    public async ValueTask LockAsync(ItemId scope, IEnumerable<(string Field, string Value)> keys, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(keys);
-        var identities = keys
-            .Select(key => $"record-key:{Tenant.Value:D}:{scope.Value:D}:{key.Field}:{key.Value}")
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal);
-        foreach (var identity in identities)
-        {
-            _ = await sql.ExecuteAsync(
-                "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));",
-                [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = identity }],
-                cancellationToken).ConfigureAwait(false);
-        }
-    }
+    public ValueTask LockAsync(ItemId scope, IEnumerable<(string Field, string Value)> keys, CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockRecordKeysAsync(Tenant.Value, scope.Value, keys, cancellationToken);
 
     /// <inheritdoc />
     public async ValueTask<RecordKeyHolder?> FindHolderAsync(ItemId scope, string field, string value, CancellationToken cancellationToken)

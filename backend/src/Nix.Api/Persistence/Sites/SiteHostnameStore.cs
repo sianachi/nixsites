@@ -6,7 +6,7 @@ using Npgsql;
 namespace Nix.Persistence.Sites;
 
 /// <summary>EF-backed hostname and approval storage, under the unit of work's tenant.</summary>
-public sealed class SiteHostnameStore(NixDbContext database, Nix.Persistence.Sql.NixSqlExecutor sql) : ISiteHostnameStore, ISiteTunnelLock
+public sealed class SiteHostnameStore(NixDbContext database) : ISiteHostnameStore, ISiteTunnelLock
 {
     private const string Savepoint = "site_hostname_guard";
     private const string Mark = "site_hostname_mark";
@@ -68,11 +68,8 @@ public sealed class SiteHostnameStore(NixDbContext database, Nix.Persistence.Sql
     }
 
     /// <inheritdoc />
-    public async ValueTask LockAsync(CancellationToken cancellationToken) =>
-        _ = await sql.ScalarOrDefaultAsync<int>(
-            "SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended('site.tunnel_config', 0))) AS held",
-            [],
-            cancellationToken).ConfigureAwait(false);
+    public ValueTask LockAsync(CancellationToken cancellationToken) =>
+        new AdvisoryLocks(database).LockSiteTunnelConfigAsync(cancellationToken);
 
     private Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction Transaction() =>
         database.Database.CurrentTransaction ?? throw new InvalidOperationException("Hostname writes run inside a unit of work.");

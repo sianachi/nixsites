@@ -22,9 +22,8 @@ public sealed class WorkerStore(NixDbContext database, Nix.Workers.Queue.IJobQue
         ArgumentNullException.ThrowIfNull(kind);
         ArgumentNullException.ThrowIfNull(idempotencyKey);
         ArgumentNullException.ThrowIfNull(payload);
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({$"worker-job-key:{tenantId.Value:N}:{actorId.Value:N}:{idempotencyKey}"}, 0))",
-            cancellationToken).ConfigureAwait(false);
+        await new AdvisoryLocks(database).LockWorkerJobKeyAsync(
+            tenantId.Value, actorId.Value, idempotencyKey, cancellationToken).ConfigureAwait(false);
         var existing = await database.WorkerJobs.AsNoTracking()
             .SingleOrDefaultAsync(job => job.TenantId == tenantId && job.ActorId == actorId && job.IdempotencyKey == idempotencyKey, cancellationToken)
             .ConfigureAwait(false);

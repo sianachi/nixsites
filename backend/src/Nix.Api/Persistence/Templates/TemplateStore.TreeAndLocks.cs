@@ -141,29 +141,27 @@ public sealed partial class TemplateStore
             cancellationToken).ConfigureAwait(false);
     }
 
+    private AdvisoryLocks Locks => new(_database);
+
     private ValueTask LockWorkspaceTemplatesAsync(
         WorkspaceId workspaceId,
         CancellationToken cancellationToken) =>
-        LockAsync($"template-workspace:{Context.TenantId.Value:N}:{workspaceId.Value:N}", cancellationToken);
+        Locks.LockTemplateWorkspaceAsync(Context.TenantId.Value, workspaceId.Value, cancellationToken);
 
     private ValueTask LockTemplateStagesAsync(CancellationToken cancellationToken) =>
-        LockAsync($"template-stages:{Context.TenantId.Value:N}", cancellationToken);
+        Locks.LockTemplateStagesAsync(Context.TenantId.Value, cancellationToken);
 
     private ValueTask LockTemplateAsync(TemplateId templateId, CancellationToken cancellationToken) =>
-        LockAsync($"template:{Context.TenantId.Value:N}:{templateId.Value:N}", cancellationToken);
+        Locks.LockTemplateAsync(Context.TenantId.Value, templateId.Value, cancellationToken);
 
     private ValueTask LockTemplateApplicationAsync(
         TemplateId templateId,
         ItemId targetItemId,
         CancellationToken cancellationToken) =>
-        LockAsync(
-            $"template-application:{Context.TenantId.Value:N}:{templateId.Value:N}:{targetItemId.Value:N}",
-            cancellationToken);
+        Locks.LockTemplateApplicationAsync(Context.TenantId.Value, templateId.Value, targetItemId.Value, cancellationToken);
 
     private ValueTask LockIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken) =>
-        LockAsync(
-            $"template-idempotency:{Context.TenantId.Value:N}:{Context.PrincipalId.Value:N}:{idempotencyKey}",
-            cancellationToken);
+        Locks.LockTemplateIdempotencyAsync(Context.TenantId.Value, Context.PrincipalId.Value, idempotencyKey, cancellationToken);
 
     private async ValueTask<bool> IdempotencyKeyBelongsElsewhereAsync(
         TemplateOperationKind expectedKind,
@@ -178,14 +176,5 @@ public sealed partial class TemplateStore
                 && operation.IdempotencyKey == idempotencyKey
                 && operation.Kind != expectedKind,
             cancellationToken).ConfigureAwait(false);
-
-    private async ValueTask LockAsync(string identity, CancellationToken cancellationToken)
-    {
-        const string sql = "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));";
-        await _database.Database.ExecuteSqlRawAsync(
-            sql,
-            [new NpgsqlParameter("identity", NpgsqlDbType.Text) { Value = identity }],
-            cancellationToken).ConfigureAwait(false);
-    }
 
 }
