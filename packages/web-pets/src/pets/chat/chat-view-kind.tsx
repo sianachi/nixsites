@@ -1,21 +1,26 @@
 import { MessagesSquare } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 
 import { Text } from '@nix/ui';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import type { ViewKindDescriptor, ViewRendererProps } from '@nix/web-views/core/view-kinds';
-import { ChatView } from './chat-view';
+
+// The chat view carries the message renderer and its generated-UI runtime, so it loads when a
+// chat note is opened, as the custom view does.
+const ChatView = lazy(async () => ({ default: (await import('./chat-view')).ChatView }));
 
 function ChatRenderer({ container }: ViewRendererProps): ReactNode {
   const { workspaceId } = useWorkspace();
   return container.itemId === null ? (
     <Text role="status">Create a chat note to start a conversation.</Text>
   ) : (
-    <ChatView
-      key={`${workspaceId}:${container.itemId}`}
-      itemId={container.itemId}
-      workspaceId={workspaceId}
-    />
+    <Suspense fallback={<Text role="status">Loading the chat…</Text>}>
+      <ChatView
+        key={`${workspaceId}:${container.itemId}`}
+        itemId={container.itemId}
+        workspaceId={workspaceId}
+      />
+    </Suspense>
   );
 }
 

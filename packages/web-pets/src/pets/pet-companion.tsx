@@ -2,6 +2,8 @@ import { memoryModeOf } from './memory-mode';
 import { type PetProfile, type PetSettings } from '@nix/api-client';
 import { Button } from '@nix/ui';
 import {
+  Suspense,
+  lazy,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -31,8 +33,19 @@ import {
 import { chatOpensAsPage, launcherFloats, pageIsAvailable } from './pet-surface';
 import { useZenActive } from '@nix/web-foundation/lib/zen-mode';
 import { usePetSurface } from './use-pet-surface';
-import { PetWorkTools } from './work-tools/pet-work-tools';
-import { Conversation, type ConversationProps } from './conversation/conversation';
+import type { ConversationProps } from './conversation/conversation';
+
+// The tools runner and the conversation carry the approval cards and the generated-UI runtime,
+// so both load after the shell. A closed panel mounts the runner once a turn exists, which is
+// all it ever needed the runtime for.
+const PetWorkTools = lazy(async () => ({
+  default: (await import('./work-tools/pet-work-tools')).PetWorkTools,
+}));
+
+// Drawn only once the panel is opened, so its code loads then, not with the shell.
+const Conversation = lazy(async () => ({
+  default: (await import('./conversation/conversation')).Conversation,
+}));
 
 /** The shell and note dock publish their bottom clearance so every launcher position stays
  * above whichever control reaches further into the viewport. */
@@ -471,23 +484,29 @@ function Companion({
       }
     >
       {open ? (
-        (dialog?.(conversationProps) ?? <Conversation {...conversationProps} />)
+        (dialog?.(conversationProps) ?? (
+          <Suspense fallback={null}>
+            <Conversation {...conversationProps} />
+          </Suspense>
+        ))
       ) : runtimeApi.runtime ? (
         // Auto-run reads (READ_ONLY_OPERATIONS under readWithoutAsking)
         // must still run while the panel is closed, so a closed panel never stalls a turn on a
         // read - see `ReadActivityRow`'s own auto-run effect. `hidden` keeps this out of both
         // the visual layout and the accessibility tree while the panel is closed.
         <div className="hidden">
-          <PetWorkTools
-            client={client}
-            runtime={runtimeApi.runtime}
-            workspaceId={workspaceId}
-            petId={pet.id}
-            petName={pet.name}
-            onChange={runtimeApi.setRuntime}
-            onNeedsDecisionChange={setNeedsDecisionIds}
-            memoryMode={memoryModeOf(settings)}
-          />
+          <Suspense fallback={null}>
+            <PetWorkTools
+              client={client}
+              runtime={runtimeApi.runtime}
+              workspaceId={workspaceId}
+              petId={pet.id}
+              petName={pet.name}
+              onChange={runtimeApi.setRuntime}
+              onNeedsDecisionChange={setNeedsDecisionIds}
+              memoryMode={memoryModeOf(settings)}
+            />
+          </Suspense>
         </div>
       ) : null}
       {dock ? dock(launcherButton) : docked ? null : launcherButton}
