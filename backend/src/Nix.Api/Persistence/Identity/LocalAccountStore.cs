@@ -17,7 +17,7 @@ public sealed class LocalAccountStore(
 {
     private const string Columns = "principal_id, tenant_id, email, display_name, status, password_hash, password_changed_at, paused_until, totp_enabled, passkey_count, security_key_count";
 
-    private readonly LocalSignInDb _db = new(dataSource);
+    private readonly PooledSql _db = new(dataSource);
 
     /// <inheritdoc />
     public async ValueTask<bool> AnyAsync(CancellationToken cancellationToken) =>
@@ -31,7 +31,7 @@ public sealed class LocalAccountStore(
             $"SELECT {Columns} FROM nix_local_find_account(@email, NULL::uuid)",
             Read,
             cancellationToken,
-            LocalSignInDb.Text("email", normalizedEmail)).ConfigureAwait(false);
+            NixParameter.Text("email", normalizedEmail)).ConfigureAwait(false);
         return rows.FirstOrDefault();
     }
 
@@ -42,7 +42,7 @@ public sealed class LocalAccountStore(
             $"SELECT {Columns} FROM nix_local_find_account(NULL::text, @principal)",
             Read,
             cancellationToken,
-            LocalSignInDb.Uuid("principal", principalId.Value)).ConfigureAwait(false);
+            NixParameter.Uuid("principal", principalId.Value)).ConfigureAwait(false);
         return rows.FirstOrDefault();
     }
 
@@ -67,9 +67,9 @@ public sealed class LocalAccountStore(
         var created = await sql.ScalarOrDefaultAsync<bool>(
             "SELECT nix_local_create_account(@principal, @email, @hash)",
             [
-                LocalSignInDb.Uuid("principal", principal.Id.Value),
-                LocalSignInDb.Text("email", normalizedEmail),
-                LocalSignInDb.Text("hash", passwordHash),
+                NixParameter.Uuid("principal", principal.Id.Value),
+                NixParameter.Text("email", normalizedEmail),
+                NixParameter.Text("hash", passwordHash),
             ],
             cancellationToken).ConfigureAwait(false);
         return created ? principal : null;
@@ -80,8 +80,8 @@ public sealed class LocalAccountStore(
         await _db.ScalarAsync<bool>(
             "SELECT nix_local_set_password(@principal, @hash, @changed)",
             cancellationToken,
-            LocalSignInDb.Uuid("principal", principalId.Value),
-            LocalSignInDb.Text("hash", hash),
+            NixParameter.Uuid("principal", principalId.Value),
+            NixParameter.Text("hash", hash),
             new NpgsqlParameter("changed", NpgsqlDbType.Boolean) { Value = changed }).ConfigureAwait(false);
 
     /// <inheritdoc />
@@ -91,7 +91,7 @@ public sealed class LocalAccountStore(
             "SELECT nix_local_register_failure(@principal)",
             static reader => reader.IsDBNull(0) ? (DateTimeOffset?)null : new DateTimeOffset(reader.GetDateTime(0), TimeSpan.Zero),
             cancellationToken,
-            LocalSignInDb.Uuid("principal", principalId.Value)).ConfigureAwait(false);
+            NixParameter.Uuid("principal", principalId.Value)).ConfigureAwait(false);
         return rows.FirstOrDefault();
     }
 
@@ -101,15 +101,15 @@ public sealed class LocalAccountStore(
             "SELECT nix_local_clear_failures(@principal)",
             static _ => 0,
             cancellationToken,
-            LocalSignInDb.Uuid("principal", principalId.Value)).ConfigureAwait(false);
+            NixParameter.Uuid("principal", principalId.Value)).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<int> RevokeSessionsAsync(PrincipalId principalId, BrowserSessionId? except, CancellationToken cancellationToken) =>
         await _db.ScalarAsync<int>(
             "SELECT nix_local_revoke_sessions(@principal, @except)",
             cancellationToken,
-            LocalSignInDb.Uuid("principal", principalId.Value),
-            LocalSignInDb.Uuid("except", except?.Value)).ConfigureAwait(false);
+            NixParameter.Uuid("principal", principalId.Value),
+            NixParameter.Uuid("except", except?.Value)).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<TenantId?> SetupTenantAsync(CancellationToken cancellationToken) =>
@@ -123,7 +123,7 @@ public sealed class LocalAccountStore(
             "SELECT is_cli, created_at FROM nix_local_session(@session)",
             static reader => new LocalSessionFacts(reader.GetBoolean(0), new DateTimeOffset(reader.GetDateTime(1), TimeSpan.Zero)),
             cancellationToken,
-            LocalSignInDb.Uuid("session", sessionId.Value)).ConfigureAwait(false)).FirstOrDefault();
+            NixParameter.Uuid("session", sessionId.Value)).ConfigureAwait(false)).FirstOrDefault();
 
     /// <inheritdoc />
     public async ValueTask<LocalHashMix> HashMixAsync(CancellationToken cancellationToken) =>

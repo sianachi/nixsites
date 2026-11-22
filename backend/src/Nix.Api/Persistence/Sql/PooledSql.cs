@@ -1,21 +1,16 @@
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Nix.Persistence.Identity;
+namespace Nix.Persistence.Sql;
 
 /// <summary>
-/// Calls the <c>nix_local_*</c> security-definer functions on their own short connection. They run before a
-/// tenant is known (an email, a link token, a credential id), so like the identity directory they sit
-/// outside the unit of work; each statement is a constant and every value is bound.
+/// Runs a constant statement on its own short pooled connection, with no transaction and no session
+/// context. It serves the security-definer functions (<c>nix_local_*</c>, the worker queue, the
+/// candidate finders) that run before a tenant is known and so sit outside the unit of work; every
+/// value is bound.
 /// </summary>
-internal sealed class LocalSignInDb(NpgsqlDataSource dataSource)
+internal sealed class PooledSql(NpgsqlDataSource dataSource)
 {
-    internal static NpgsqlParameter Uuid(string name, Guid? value) =>
-        new(name, NpgsqlDbType.Uuid) { Value = value is { } v ? v : DBNull.Value };
-
-    internal static NpgsqlParameter Text(string name, string? value) =>
-        new(name, NpgsqlDbType.Text) { Value = value is null ? DBNull.Value : value };
-
     internal static NpgsqlParameter Bytes(string name, ReadOnlyMemory<byte> value) =>
         new(name, NpgsqlDbType.Bytea) { Value = value.ToArray() };
 

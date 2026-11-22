@@ -1,4 +1,5 @@
 using Nix.Features.People;
+using Nix.Persistence.Sql;
 using Npgsql;
 
 namespace Nix.Persistence.Identity;
@@ -6,7 +7,7 @@ namespace Nix.Persistence.Identity;
 /// <summary>Calls <c>nix_local_list_people</c> and <c>nix_local_set_person_status</c>.</summary>
 public sealed class PeopleStore(NpgsqlDataSource dataSource) : IPeopleStore
 {
-    private readonly LocalSignInDb _db = new(dataSource);
+    private readonly PooledSql _db = new(dataSource);
 
     /// <inheritdoc />
     public async ValueTask<IReadOnlyList<PersonResponse>> ListAsync(Guid tenantId, CancellationToken cancellationToken) =>
@@ -24,14 +25,14 @@ public sealed class PeopleStore(NpgsqlDataSource dataSource) : IPeopleStore
                 reader.GetBoolean(7),
                 reader.GetFieldValue<DateTimeOffset>(8)),
             cancellationToken,
-            LocalSignInDb.Uuid("tenant", tenantId)).ConfigureAwait(false);
+            NixParameter.Uuid("tenant", tenantId)).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<bool> SetDisabledAsync(Guid tenantId, Guid principalId, bool disabled, CancellationToken cancellationToken) =>
         await _db.ScalarAsync<bool>(
             "SELECT nix_local_set_person_status(@tenant, @principal, @status)",
             cancellationToken,
-            LocalSignInDb.Uuid("tenant", tenantId),
-            LocalSignInDb.Uuid("principal", principalId),
-            LocalSignInDb.Text("status", disabled ? "suspended" : "active")).ConfigureAwait(false);
+            NixParameter.Uuid("tenant", tenantId),
+            NixParameter.Uuid("principal", principalId),
+            NixParameter.Text("status", disabled ? "suspended" : "active")).ConfigureAwait(false);
 }
