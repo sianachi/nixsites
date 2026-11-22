@@ -45,7 +45,6 @@ export function ApprovalFrame({
 export function ApprovalActions({
   headingId,
   approveLabel = 'Approve request',
-  declineLabel = 'Decline request',
   approveDisabled,
   busy = false,
   editLabel = 'Edit',
@@ -57,7 +56,6 @@ export function ApprovalActions({
 }: {
   readonly headingId: string;
   readonly approveLabel?: string | undefined;
-  readonly declineLabel?: string;
   readonly approveDisabled: boolean;
   /** Something else is already running: every action waits. */
   readonly busy?: boolean;
@@ -165,7 +163,7 @@ export function ApprovalActions({
         </Button>
       ) : null}
       <Button variant="ghost" aria-describedby={headingId} disabled={busy} onClick={onDecline}>
-        {declineLabel}
+        Decline request
       </Button>
       {onUndo ? (
         <Button variant="ghost" aria-describedby={headingId} disabled={busy} onClick={onUndo}>

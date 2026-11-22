@@ -8,10 +8,6 @@ import { inNativeShell, switchServer } from '@nix/web-platform/pwa/install-nix';
 export interface LoginPageProps {
   /** Starts the redirect to the identity provider. */
   readonly onSignIn: () => void;
-  /** Whether the API answered its liveness probe. */
-  readonly serverReachable?: boolean;
-  /** The host the client is configured against. */
-  readonly host?: string;
   /** Why the last attempt failed, when one did. */
   readonly error?: string | null;
 }
