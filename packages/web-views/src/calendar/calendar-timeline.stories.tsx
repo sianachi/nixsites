@@ -109,7 +109,8 @@ export const CalendarSelection = {
   },
   play: async ({ canvasElement }: { readonly canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
-    const checkbox = canvas.getByRole('checkbox', { name: 'Select Today' });
+    // find, not get: the calendar and timeline views load on first draw.
+    const checkbox = await canvas.findByRole('checkbox', { name: 'Select Today' });
     await userEvent.hover(checkbox);
     assertCheckboxReveals(checkbox);
     await userEvent.click(checkbox);
@@ -158,7 +159,8 @@ export const TimelineSelection = {
   },
   play: async ({ canvasElement }: { readonly canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
-    const checkbox = canvas.getByRole('checkbox', { name: 'Select Today' });
+    // find, not get: the calendar and timeline views load on first draw.
+    const checkbox = await canvas.findByRole('checkbox', { name: 'Select Today' });
     await userEvent.hover(checkbox);
     assertCheckboxReveals(checkbox);
     await userEvent.click(checkbox);
