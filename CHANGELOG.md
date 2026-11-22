@@ -102,6 +102,8 @@ follows semantic versioning (`0.x` pre-1.0).
   adds two database indexes, built without blocking writes.
 - Filtering attachments by review state is faster in workspaces with many files. Upgrading adds one
   database index, built without blocking writes.
+- Offline sync in the apps checks for permission changes from an index instead of reading every
+  recent change. Upgrading adds one database index, built without blocking writes.
 - When a session ends on its own in the iOS or desktop app, changes that were not sent yet are no
   longer deleted. The offline copy stays on the device, closed, and the changes are sent when the
   same account signs in again. Signing out, signing in with another account, or the account being
