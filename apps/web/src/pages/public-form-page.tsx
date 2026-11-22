@@ -7,6 +7,7 @@ import { isCanceledError, isNixApiError } from '@nix/api-client';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { PropertyInput, isKnownPropertyType } from '@nix/web-collections/properties/property-input';
 import { type PropertyValue } from '@nix/web-collections/core/container-model';
+import { isEmpty, isVisible, resolveFlow } from '@nix/web-views/form/form-flow';
 import { reportFormValidity } from '@nix/web-views/form/form-validity';
 import { ErrorPanel, LoadingPanel } from '@nix/web-foundation/components/states/status-panels';
 import { claimZenSurface, toggleZenMode, useZenActive } from '@nix/web-foundation/lib/zen-mode';
@@ -14,64 +15,10 @@ import {
   publicFormByToken,
   submitPublicForm,
   type PublicForm,
-  type PublicFormCondition,
   type PublicFormPage as PublicFormPageContract,
 } from './public-form-api';
 
 const SENT_GRID = 'm-0 grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-[minmax(0,14rem)_1fr]'; // design-token-exempt: the question column's cap in the sent summary, so long questions wrap instead of crowding answers.
-
-function matches(
-  condition: PublicFormCondition,
-  answers: Readonly<Record<string, PropertyValue>>,
-): boolean {
-  const answer = answers[condition.fieldBlockId];
-  const expected = condition.value ?? '';
-  if (condition.operator === 'checked') return answer === true;
-  if (condition.operator === 'not_checked') return answer !== true;
-  if (condition.operator === 'not_equals') return String(answer ?? '') !== expected;
-  if (condition.operator === 'contains') {
-    return Array.isArray(answer)
-      ? answer.includes(expected)
-      : String(answer ?? '').includes(expected);
-  }
-  return String(answer ?? '') === expected;
-}
-
-function visible(
-  block: { readonly visibleWhen: readonly PublicFormCondition[] },
-  answers: Readonly<Record<string, PropertyValue>>,
-): boolean {
-  return block.visibleWhen.every((condition) => matches(condition, answers));
-}
-
-function empty(value: PropertyValue | undefined): boolean {
-  return (
-    value === undefined ||
-    value === null ||
-    value === '' ||
-    (Array.isArray(value) && value.length === 0)
-  );
-}
-
-function resolveFlow(
-  pages: readonly PublicFormPageContract[],
-  answers: Readonly<Record<string, PropertyValue>>,
-): { pages: PublicFormPageContract[]; answers: Record<string, PropertyValue> } {
-  const effective: Record<string, PropertyValue> = {};
-  const shown: PublicFormPageContract[] = [];
-  for (const page of pages) {
-    if (!visible(page, effective)) continue;
-    const blocks = page.blocks.filter((block) => {
-      if (!visible(block, effective)) return false;
-      if (block.kind === 'field' && answers[block.id] !== undefined) {
-        effective[block.id] = answers[block.id] ?? null;
-      }
-      return true;
-    });
-    shown.push({ ...page, blocks });
-  }
-  return { pages: shown, answers: effective };
-}
 
 const WIDE_TYPES = ['long_text', 'multi_select', 'checkbox'];
 
@@ -257,7 +204,7 @@ export function PublicFormPage(): ReactNode {
         </Text>
       </PublicFrame>
     );
-  const blocks = page.blocks.filter((block) => visible(block, answers));
+  const blocks = page.blocks.filter((block) => isVisible(block, answers));
   const current = pages.indexOf(page);
   const last = current >= pages.length - 1;
   const missingHere = blocks.filter((block) => block.id in errors);
@@ -280,7 +227,7 @@ export function PublicFormPage(): ReactNode {
     const next = Object.fromEntries(
       candidates
         .filter(
-          (block) => block.kind === 'field' && block.required && empty(currentAnswers[block.id]),
+          (block) => block.kind === 'field' && block.required && isEmpty(currentAnswers[block.id]),
         )
         .map((block) => [block.id, 'This answer is required.']),
     );
@@ -312,7 +259,7 @@ export function PublicFormPage(): ReactNode {
         at: new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
         rows: shown.flatMap((block) => {
           const value = flow.answers[block.id];
-          return block.kind !== 'field' || empty(value) || value === false || value === undefined
+          return block.kind !== 'field' || isEmpty(value) || value === false || value === undefined
             ? []
             : [[block.text, showAnswer(value)] as const];
         }),
