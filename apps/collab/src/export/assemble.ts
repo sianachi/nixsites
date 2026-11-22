@@ -152,6 +152,7 @@ export async function enumerateSubtree(
     });
   }
 
+  // A function, not the bare flag: the compiler would otherwise narrow it as false across `visit`.
   function hasReachedItemLimit(): boolean {
     return limitReported;
   }
@@ -235,6 +236,20 @@ export interface ViewRows {
  */
 export const VIEW_ROW_LIMIT = 200;
 
+/** Runs `task` over `list` with at most {@link EXPORT_LIMITS}.concurrency calls in flight. */
+async function forEachConcurrently<T>(
+  list: readonly T[],
+  task: (entry: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(EXPORT_LIMITS.concurrency, list.length) }, async () => {
+      for (let entry = list[cursor++]; entry !== undefined; entry = list[cursor++])
+        await task(entry);
+    }),
+  );
+}
+
 /**
  * Reads every exported item's declared schema and view set.
  *
@@ -252,34 +267,18 @@ export async function gatherMetadata(
   const views = new Map<string, ViewsSnapshot | null>();
   const comments = new Map<string, readonly CommentThreadSnapshot[]>();
 
-  let cursor = 0;
+  await forEachConcurrently(items, async (item) => {
+    const [schema, viewSet, threads] = await Promise.all([
+      core.getSchema(token, item.id),
+      core.getViews(token, item.id),
+      // Read as the caller: a note they cannot comment-read, or that is locked, has none.
+      includeComments && item.type === 'note' ? core.listComments(token, item.id) : null,
+    ]);
 
-  async function worker(): Promise<void> {
-    for (;;) {
-      const index = cursor;
-      cursor += 1;
-
-      const item = items[index];
-      if (item === undefined) {
-        return;
-      }
-
-      const [schema, viewSet, threads] = await Promise.all([
-        core.getSchema(token, item.id),
-        core.getViews(token, item.id),
-        // Read as the caller: a note they cannot comment-read, or that is locked, has none.
-        includeComments && item.type === 'note' ? core.listComments(token, item.id) : null,
-      ]);
-
-      schemas.set(item.id, schema);
-      views.set(item.id, viewSet);
-      if (threads !== null && threads.length > 0) comments.set(item.id, threads);
-    }
-  }
-
-  await Promise.all(
-    Array.from({ length: Math.min(EXPORT_LIMITS.concurrency, items.length) }, () => worker()),
-  );
+    schemas.set(item.id, schema);
+    views.set(item.id, viewSet);
+    if (threads !== null && threads.length > 0) comments.set(item.id, threads);
+  });
 
   const viewRows = await gatherViewRows(core, token, items, views);
 
@@ -306,25 +305,9 @@ export async function gatherViewRows(
   const drawn = items.filter((item) => (views.get(item.id)?.views.length ?? 0) > 0);
   const rows = new Map<string, ViewRows>();
 
-  let cursor = 0;
-
-  async function worker(): Promise<void> {
-    for (;;) {
-      const index = cursor;
-      cursor += 1;
-
-      const item = drawn[index];
-      if (item === undefined) {
-        return;
-      }
-
-      rows.set(item.id, await readRows(core, token, item));
-    }
-  }
-
-  await Promise.all(
-    Array.from({ length: Math.min(EXPORT_LIMITS.concurrency, drawn.length) }, () => worker()),
-  );
+  await forEachConcurrently(drawn, async (item) => {
+    rows.set(item.id, await readRows(core, token, item));
+  });
 
   return rows;
 }

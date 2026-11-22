@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { SCHEMA_VERSION, nixSchema } from '@nix/editor-schema';
+import { SCHEMA_VERSION, isRecord, nixSchema } from '@nix/editor-schema';
 import type { ItemBody } from '@nix/export';
 import { SHEET_CELLS_KEY, SHEET_ITEM_TYPE, SHEET_META_KEY } from '@nix/sheet';
 import type { Pool } from 'pg';
@@ -15,7 +15,6 @@ import { CANVAS_ELEMENTS, FRAGMENT_NAME, strategyFor } from '../documents/body-k
 import { checkMergedDocument } from '../documents/service.ts';
 import { LIMITS } from '../documents/limits.ts';
 import { boundSearchText } from '../documents/links.ts';
-import { isRecord } from '@nix/editor-schema';
 
 export interface OperationItemAuthorization {
   readonly tenantId: string;
@@ -115,18 +114,7 @@ export async function copyBodies(
     try {
       for (const copy of copies) {
         const staged = sourceStates.get(copy.targetItemId);
-        if (staged !== undefined) {
-          const stagedBody = strategyFor(copy.itemType).materialize(staged).json;
-          options.onReferenceInventory?.({
-            sourceItemId: copy.sourceItemId,
-            targetItemId: copy.targetItemId,
-            externalTargetIds: inventoryItemReferences(stagedBody).filter(
-              (targetId) => !isMappedItem(targetId, itemMappings),
-            ),
-          });
-          continue;
-        }
-        const source = sourceStates.get(copy.sourceItemId);
+        const source = staged ?? sourceStates.get(copy.sourceItemId);
         if (source === undefined) {
           throw new TemplateBodyError(
             'template.source_body_missing',
@@ -141,6 +129,7 @@ export async function copyBodies(
             (targetId) => !isMappedItem(targetId, itemMappings),
           ),
         });
+        if (staged !== undefined) continue;
         fresh.push({
           targetItemId: copy.targetItemId,
           itemType: copy.itemType,
@@ -564,16 +553,11 @@ export function remapItemReferences(
   for (const [key, child] of Object.entries(value)) {
     if (key === 'marks' && Array.isArray(child)) {
       mapped[key] = child.flatMap((mark) => {
-        if (!isRecord(mark) || mark.type !== 'link' || !isRecord(mark.attrs)) {
+        const href = isRecord(mark) && mark.type === 'link' ? record(mark.attrs).href : null;
+        const itemId = isNixItemLink(href) ? nixItemId(href) : null;
+        if (!isRecord(mark) || !isRecord(mark.attrs) || itemId === null) {
           return [remapItemReferences(mark, mappings, stubUnknown, referenceMappings)];
         }
-        const href = mark.attrs.href;
-        if (!isNixItemLink(href)) {
-          return [remapItemReferences(mark, mappings, stubUnknown, referenceMappings)];
-        }
-        const itemId = nixItemId(href);
-        if (itemId === null)
-          return [remapItemReferences(mark, mappings, stubUnknown, referenceMappings)];
         const hasMapping = mappings.has(itemId) || referenceMappings.has(itemId);
         const replacement = mappings.has(itemId)
           ? mappings.get(itemId)

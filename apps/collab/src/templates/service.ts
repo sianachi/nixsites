@@ -112,14 +112,7 @@ export function createTemplateService(options: {
 }): TemplateService {
   return {
     async validateImport(token, request) {
-      const authorization = await options.core.authorizeImport(token, request.workspaceId);
-      if (!authorization.canWrite) {
-        throw new CoreTemplateError(
-          403,
-          'template.import_forbidden',
-          'This workspace is read-only.',
-        );
-      }
+      await authorizeWritableImport(token, request.workspaceId);
       validateArchiveBodies(request.bundles);
       return {
         itemCount: request.bundles.length,
@@ -143,14 +136,8 @@ export function createTemplateService(options: {
         'captures',
         begun.operationId,
         async () => {
-          if (begun.bodyCopies.length === 0) return [];
-          const first = begun.bodyCopies[0];
-          if (first === undefined) return [];
-          const authorization = await options.core.authorizeOperationItem(
-            token,
-            begun.operationId,
-            first.targetItemId,
-          );
+          const authorization = await authorizeFirst(token, begun.operationId, begun.bodyCopies);
+          if (authorization === null) return [];
           return await copyBodies(
             options.pool,
             authorization,
@@ -211,30 +198,14 @@ export function createTemplateService(options: {
       await options.invalidateItems?.(swept.itemIds);
       return swept;
     },
-    async authorizeImport(token, workspaceId) {
-      const authorization = await options.core.authorizeImport(token, workspaceId);
-      if (!authorization.canWrite) {
-        throw new CoreTemplateError(
-          403,
-          'template.import_forbidden',
-          'This workspace is read-only.',
-        );
-      }
-      return authorization;
-    },
+    authorizeImport: (token, workspaceId) => authorizeWritableImport(token, workspaceId),
 
     async beginDraft(token, templateId, idempotencyKey) {
       const begun = await options.core.beginDraft(token, templateId, idempotencyKey);
       if (begun.fileTransferPending) return begun;
       try {
-        if (begun.bodyCopies.length > 0) {
-          const first = begun.bodyCopies[0];
-          if (first === undefined) throw new Error('The draft body plan is empty.');
-          const authorization = await options.core.authorizeOperationItem(
-            token,
-            begun.operationId,
-            first.targetItemId,
-          );
+        const authorization = await authorizeFirst(token, begun.operationId, begun.bodyCopies);
+        if (authorization !== null) {
           await copyBodies(
             options.pool,
             authorization,
@@ -310,14 +281,8 @@ export function createTemplateService(options: {
         'applications',
         begun.applicationId,
         async () => {
-          if (begun.bodyCopies.length === 0) return [];
-          const first = begun.bodyCopies[0];
-          if (first === undefined) return [];
-          const authorization = await options.core.authorizeOperationItem(
-            token,
-            begun.applicationId,
-            first.targetItemId,
-          );
+          const authorization = await authorizeFirst(token, begun.applicationId, begun.bodyCopies);
+          if (authorization === null) return [];
           return await copyBodies(
             options.pool,
             authorization,
@@ -344,6 +309,26 @@ export function createTemplateService(options: {
         ...(signal === undefined ? {} : { signal }),
       }),
   };
+
+  async function authorizeWritableImport(token: string, workspaceId: string) {
+    const authorization = await options.core.authorizeImport(token, workspaceId);
+    if (!authorization.canWrite) {
+      throw new CoreTemplateError(403, 'template.import_forbidden', 'This workspace is read-only.');
+    }
+    return authorization;
+  }
+
+  /** Core scopes a staged operation's body writes by its first target item; null when none. */
+  async function authorizeFirst(
+    token: string,
+    operationId: string,
+    plan: readonly { targetItemId: string }[],
+  ) {
+    const first = plan[0];
+    return first === undefined
+      ? null
+      : await options.core.authorizeOperationItem(token, operationId, first.targetItemId);
+  }
 
   async function stage<TResult extends object>(
     token: string,

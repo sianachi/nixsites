@@ -123,13 +123,9 @@ export function createDocumentRegistry(deps: {
     }
   }
 
-  function totalEstimatedBytes(): number {
-    return residentBytes;
-  }
-
   function publishGauges(): void {
     deps.metrics?.loadedDocuments.set(sessions.size);
-    deps.metrics?.residentBytes.set(totalEstimatedBytes());
+    deps.metrics?.residentBytes.set(residentBytes);
   }
 
   function addResident(session: DocumentSession): void {
@@ -138,7 +134,10 @@ export function createDocumentRegistry(deps: {
     accountedBytes.set(session.itemId, bytes);
   }
 
-  function removeResident(itemId: string): void {
+  /** Takes a document out of the registry and its byte accounting. */
+  function forget(itemId: string): void {
+    sessions.delete(itemId);
+    sessionGenerations.delete(itemId);
     residentBytes -= accountedBytes.get(itemId) ?? 0;
     accountedBytes.delete(itemId);
   }
@@ -184,9 +183,7 @@ export function createDocumentRegistry(deps: {
       try {
         const unloaded = await session.drain();
         if (unloaded) {
-          sessions.delete(itemId);
-          sessionGenerations.delete(itemId);
-          removeResident(itemId);
+          forget(itemId);
           await deps.locks.release(session.docRow.doc_id);
         }
       } catch (cause) {
@@ -228,7 +225,7 @@ export function createDocumentRegistry(deps: {
       }
       if (
         byteReservation <= 0 ||
-        totalEstimatedBytes() + reservedBytes + byteReservation > deps.config.maxResidentBytes
+        residentBytes + reservedBytes + byteReservation > deps.config.maxResidentBytes
       ) {
         return memoryCapacity();
       }
@@ -278,7 +275,7 @@ export function createDocumentRegistry(deps: {
             throw new AtCapacity('documents');
           }
           if (
-            totalEstimatedBytes() + reservedBytes - byteReservation + session.estimatedBytes >
+            residentBytes + reservedBytes - byteReservation + session.estimatedBytes >
             deps.config.maxResidentBytes
           ) {
             session.invalidate();
@@ -391,9 +388,7 @@ export function createDocumentRegistry(deps: {
           // still on its clients, which re-send it to whichever instance they reach next.
           deps.log?.(`Could not drain item ${itemId} at shutdown: ${describe(cause)}`);
         }
-        sessions.delete(itemId);
-        sessionGenerations.delete(itemId);
-        removeResident(itemId);
+        forget(itemId);
         await deps.locks.release(session.docRow.doc_id).catch(() => undefined);
       }
       publishGauges();
@@ -403,9 +398,7 @@ export function createDocumentRegistry(deps: {
       clearInterval(sweeper);
       clearInterval(backlogSweeper);
       for (const [itemId, session] of [...sessions]) {
-        sessions.delete(itemId);
-        sessionGenerations.delete(itemId);
-        removeResident(itemId);
+        forget(itemId);
         // Flushing is still safe - sequence allocation serialises on the head_seq row
         // lock whoever owns the document - and it is the last chance these updates get.
         await session.flush().catch(() => undefined);
@@ -436,9 +429,7 @@ export function createDocumentRegistry(deps: {
         if (session === undefined || (sessionGenerations.get(itemId) ?? 0) >= generation) continue;
         // Remove the dispatch target first: a frame already queued behind this request cannot
         // enter the document while the close handshake and final drain are in progress.
-        sessions.delete(itemId);
-        sessionGenerations.delete(itemId);
-        removeResident(itemId);
+        forget(itemId);
         session.closeSockets(CLOSE_CODES.revoked, 'This template draft is being saved.');
         try {
           await session.drain();
@@ -465,9 +456,7 @@ export function createDocumentRegistry(deps: {
         }
         const session = sessions.get(itemId);
         if (session === undefined) continue;
-        sessions.delete(itemId);
-        sessionGenerations.delete(itemId);
-        removeResident(itemId);
+        forget(itemId);
         session.closeSockets(CLOSE_CODES.revoked, 'This template draft expired.');
         session.invalidate();
         await deps.locks.release(session.docRow.doc_id);
