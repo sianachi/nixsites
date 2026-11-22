@@ -327,7 +327,13 @@ export function AppShell({
         ...(initialTitle ? { initialTitle } : {}),
       },
     });
-    if (narrow && sidebar.visible) sidebar.toggle();
+    closeWorkspaceDrawer();
+  }
+
+  /** A passing refusal or result: a toast for sighted readers and the live region for the rest. */
+  function notify(key: string, message: string): void {
+    announce(message);
+    shellToasts.push({ key, message });
   }
 
   const startStructured = (parentId: string | null, recipe: StructuredRecipeId): void => {
@@ -554,8 +560,7 @@ export function AppShell({
       // Both at once: the live region alone spoke only to a screen reader, and the palette has
       // already closed by the time this lands, so a sighted reader saw a command fire and then
       // nothing - the same silent-failure shape `requestDelete` above exists to avoid.
-      announce(message);
-      shellToasts.push({ key: 'new-note-failed', message });
+      notify('new-note-failed', message);
     });
   }
 
@@ -1112,13 +1117,10 @@ export function AppShell({
                     : uploaded === 1
                       ? 'File uploaded.'
                       : `${String(uploaded)} files uploaded.`;
-                shellToasts.push({ key: 'structured-upload', message });
-                announce(message);
+                notify('structured-upload', message);
               },
               (error: unknown) => {
-                const message = uploadErrorText(error);
-                shellToasts.push({ key: 'structured-upload', message });
-                announce(message);
+                notify('structured-upload', uploadErrorText(error));
               },
             )
             .finally(() => {
@@ -1169,9 +1171,7 @@ export function AppShell({
           onCreate={(parentId, title, type) => {
             void tree.create(parentId, title, type).then(({ id, refusal }) => {
               if (id === null) {
-                const message = refusal ?? 'The item could not be created.';
-                announce(message);
-                shellToasts.push({ key: 'structured-create', message });
+                notify('structured-create', refusal ?? 'The item could not be created.');
                 return;
               }
               openInNewTab(id);
