@@ -21,6 +21,9 @@ internal static class NixParameter
     internal static NpgsqlParameter Timestamp(string name, DateTimeOffset? value) =>
         new(name, NpgsqlDbType.TimestampTz) { Value = value is { } actual ? actual : DBNull.Value };
 
+    internal static NpgsqlParameter Date(string name, DateOnly value) =>
+        new(name, NpgsqlDbType.Date) { Value = value };
+
     internal static NpgsqlParameter Json(string name, string? value) =>
         new(name, NpgsqlDbType.Jsonb) { Value = value is null ? DBNull.Value : value };
 

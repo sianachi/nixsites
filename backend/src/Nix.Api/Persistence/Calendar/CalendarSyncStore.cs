@@ -5,6 +5,7 @@ using Nix.Domain.Calendar;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -783,6 +784,8 @@ public sealed class CalendarSyncStore(NixDbContext database, INixSessionContextA
 /// </summary>
 public sealed class CalendarLinkFinder(NpgsqlDataSource dataSource) : ICalendarLinkFinder
 {
+    private readonly PooledSql _db = new(dataSource);
+
     public async Task<IReadOnlyList<ActiveCalendarLink>> FindActiveAsync(int limit, Guid afterId, CancellationToken cancellationToken)
     {
         if (limit is < 1 or > 500)
@@ -790,27 +793,16 @@ public sealed class CalendarLinkFinder(NpgsqlDataSource dataSource) : ICalendarL
             throw new ArgumentOutOfRangeException(nameof(limit));
         }
 
-        var results = new List<ActiveCalendarLink>(limit);
-        var command = dataSource.CreateCommand("SELECT * FROM nix_find_active_calendar_links(@limit, @after_id)");
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("after_id", NpgsqlDbType.Uuid) { TypedValue = afterId });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    results.Add(new ActiveCalendarLink(
-                        TenantId.From(reader.GetGuid(0)),
-                        reader.GetGuid(1),
-                        WorkspaceId.From(reader.GetGuid(2)),
-                        PrincipalId.From(reader.GetGuid(3)),
-                        reader.GetGuid(4)));
-                }
-            }
-        }
-
-        return results;
+        return await _db.RowsAsync(
+            "SELECT * FROM nix_find_active_calendar_links(@limit, @after_id)",
+            static reader => new ActiveCalendarLink(
+                TenantId.From(reader.GetGuid(0)),
+                reader.GetGuid(1),
+                WorkspaceId.From(reader.GetGuid(2)),
+                PrincipalId.From(reader.GetGuid(3)),
+                reader.GetGuid(4)),
+            cancellationToken,
+            NixParameter.Integer("limit", limit),
+            NixParameter.Uuid("after_id", afterId)).ConfigureAwait(false);
     }
 }

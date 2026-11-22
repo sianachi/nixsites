@@ -1,8 +1,9 @@
 using Nix.Abstractions.Scheduling;
 using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Scheduling;
 
@@ -14,6 +15,8 @@ namespace Nix.Persistence.Scheduling;
 /// </summary>
 public sealed class ReminderCandidateFinder(NpgsqlDataSource dataSource) : IReminderCandidateFinder
 {
+    private readonly PooledSql _db = new(dataSource);
+
     // nix_reminder_preferences_for refuses more than 500 recipients per call.
     private const int PreferencesBatchSize = 500;
 
@@ -25,36 +28,21 @@ public sealed class ReminderCandidateFinder(NpgsqlDataSource dataSource) : IRemi
         Guid afterId,
         CancellationToken cancellationToken)
     {
-        if (limit is < 1 or > 500)
-        {
-            throw new ArgumentOutOfRangeException(nameof(limit));
-        }
-
-        var results = new List<ExplicitReminderCandidate>(limit);
-        var command = dataSource.CreateCommand(
-            "SELECT * FROM nix_find_explicit_reminder_candidates(@from, @to, @limit, @after_at, @after_id)");
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("from", NpgsqlDbType.TimestampTz) { TypedValue = from });
-            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("to", NpgsqlDbType.TimestampTz) { TypedValue = until });
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("after_at", NpgsqlDbType.TimestampTz) { TypedValue = afterInstant });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("after_id", NpgsqlDbType.Uuid) { TypedValue = afterId });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    results.Add(new ExplicitReminderCandidate(
-                        TenantId.From(reader.GetGuid(0)),
-                        reader.GetGuid(1),
-                        WorkspaceId.From(reader.GetGuid(2)),
-                        PrincipalId.From(reader.GetGuid(3)),
-                        await reader.GetFieldValueAsync<DateTimeOffset>(4, cancellationToken).ConfigureAwait(false)));
-                }
-            }
-        }
-        return results;
+        CheckLimit(limit);
+        return await _db.RowsAsync(
+            "SELECT * FROM nix_find_explicit_reminder_candidates(@from, @to, @limit, @after_at, @after_id)",
+            static reader => new ExplicitReminderCandidate(
+                TenantId.From(reader.GetGuid(0)),
+                reader.GetGuid(1),
+                WorkspaceId.From(reader.GetGuid(2)),
+                PrincipalId.From(reader.GetGuid(3)),
+                reader.GetFieldValue<DateTimeOffset>(4)),
+            cancellationToken,
+            Timestamp("from", from),
+            Timestamp("to", until),
+            Integer("limit", limit),
+            Timestamp("after_at", afterInstant),
+            Uuid("after_id", afterId)).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<ExpiryCandidate>> FindExpiringAsync(
@@ -64,35 +52,20 @@ public sealed class ReminderCandidateFinder(NpgsqlDataSource dataSource) : IRemi
         Guid afterId,
         CancellationToken cancellationToken)
     {
-        if (limit is < 1 or > 500)
-        {
-            throw new ArgumentOutOfRangeException(nameof(limit));
-        }
-
-        var results = new List<ExpiryCandidate>(limit);
-        var command = dataSource.CreateCommand(
-            "SELECT * FROM nix_find_expiry_candidates(@to, @limit, @after_at, @after_id)");
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("to", NpgsqlDbType.TimestampTz) { TypedValue = until });
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("after_at", NpgsqlDbType.TimestampTz) { TypedValue = afterInstant });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("after_id", NpgsqlDbType.Uuid) { TypedValue = afterId });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    results.Add(new ExpiryCandidate(
-                        TenantId.From(reader.GetGuid(0)),
-                        reader.GetGuid(1),
-                        WorkspaceId.From(reader.GetGuid(2)),
-                        PrincipalId.From(reader.GetGuid(3)),
-                        await reader.GetFieldValueAsync<DateTimeOffset>(4, cancellationToken).ConfigureAwait(false)));
-                }
-            }
-        }
-        return results;
+        CheckLimit(limit);
+        return await _db.RowsAsync(
+            "SELECT * FROM nix_find_expiry_candidates(@to, @limit, @after_at, @after_id)",
+            static reader => new ExpiryCandidate(
+                TenantId.From(reader.GetGuid(0)),
+                reader.GetGuid(1),
+                WorkspaceId.From(reader.GetGuid(2)),
+                PrincipalId.From(reader.GetGuid(3)),
+                reader.GetFieldValue<DateTimeOffset>(4)),
+            cancellationToken,
+            Timestamp("to", until),
+            Integer("limit", limit),
+            Timestamp("after_at", afterInstant),
+            Uuid("after_id", afterId)).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<DueReminderCandidate>> FindDueAsync(
@@ -104,40 +77,22 @@ public sealed class ReminderCandidateFinder(NpgsqlDataSource dataSource) : IRemi
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(afterDayText);
-        if (limit is < 1 or > 500)
-        {
-            throw new ArgumentOutOfRangeException(nameof(limit));
-        }
-
-        var results = new List<DueReminderCandidate>(limit);
-        var command = dataSource.CreateCommand(
-            "SELECT * FROM nix_find_due_reminder_candidates(@from, @to, @limit, @after_day, @after_id)");
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<DateOnly>("from", NpgsqlDbType.Date) { TypedValue = from });
-            command.Parameters.Add(new NpgsqlParameter<DateOnly>("to", NpgsqlDbType.Date) { TypedValue = until });
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            command.Parameters.Add(new NpgsqlParameter<string>("after_day", NpgsqlDbType.Text) { TypedValue = afterDayText });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("after_id", NpgsqlDbType.Uuid) { TypedValue = afterId });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    var dueDay = await reader.IsDBNullAsync(5, cancellationToken).ConfigureAwait(false)
-                        ? (DateOnly?)null
-                        : await reader.GetFieldValueAsync<DateOnly>(5, cancellationToken).ConfigureAwait(false);
-                    results.Add(new DueReminderCandidate(
-                        TenantId.From(reader.GetGuid(0)),
-                        reader.GetGuid(1),
-                        WorkspaceId.From(reader.GetGuid(2)),
-                        PrincipalId.From(reader.GetGuid(3)),
-                        reader.GetString(4),
-                        dueDay));
-                }
-            }
-        }
-        return results;
+        CheckLimit(limit);
+        return await _db.RowsAsync(
+            "SELECT * FROM nix_find_due_reminder_candidates(@from, @to, @limit, @after_day, @after_id)",
+            static reader => new DueReminderCandidate(
+                TenantId.From(reader.GetGuid(0)),
+                reader.GetGuid(1),
+                WorkspaceId.From(reader.GetGuid(2)),
+                PrincipalId.From(reader.GetGuid(3)),
+                reader.GetString(4),
+                reader.IsDBNull(5) ? null : reader.GetFieldValue<DateOnly>(5)),
+            cancellationToken,
+            Date("from", from),
+            Date("to", until),
+            Integer("limit", limit),
+            Text("after_day", afterDayText),
+            Uuid("after_id", afterId)).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<RecurringDueReminderCandidate>> FindRecurringDueAsync(
@@ -147,70 +102,38 @@ public sealed class ReminderCandidateFinder(NpgsqlDataSource dataSource) : IRemi
         Guid afterId,
         CancellationToken cancellationToken)
     {
-        if (limit is < 1 or > 500)
-        {
-            throw new ArgumentOutOfRangeException(nameof(limit));
-        }
-
-        var results = new List<RecurringDueReminderCandidate>(limit);
-        var command = dataSource.CreateCommand(
-            "SELECT * FROM nix_find_recurring_due_reminder_candidates(@from, @to, @limit, @after_id)");
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<DateOnly>("from", NpgsqlDbType.Date) { TypedValue = from });
-            command.Parameters.Add(new NpgsqlParameter<DateOnly>("to", NpgsqlDbType.Date) { TypedValue = until });
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("after_id", NpgsqlDbType.Uuid) { TypedValue = afterId });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    var anchorDay = await reader.IsDBNullAsync(4, cancellationToken).ConfigureAwait(false)
-                        ? (DateOnly?)null
-                        : await reader.GetFieldValueAsync<DateOnly>(4, cancellationToken).ConfigureAwait(false);
-                    results.Add(new RecurringDueReminderCandidate(
-                        TenantId.From(reader.GetGuid(0)),
-                        reader.GetGuid(1),
-                        WorkspaceId.From(reader.GetGuid(2)),
-                        PrincipalId.From(reader.GetGuid(3)),
-                        anchorDay,
-                        reader.GetString(5)));
-                }
-            }
-        }
-        return results;
+        CheckLimit(limit);
+        return await _db.RowsAsync(
+            "SELECT * FROM nix_find_recurring_due_reminder_candidates(@from, @to, @limit, @after_id)",
+            static reader => new RecurringDueReminderCandidate(
+                TenantId.From(reader.GetGuid(0)),
+                reader.GetGuid(1),
+                WorkspaceId.From(reader.GetGuid(2)),
+                PrincipalId.From(reader.GetGuid(3)),
+                reader.IsDBNull(4) ? null : reader.GetFieldValue<DateOnly>(4),
+                reader.GetString(5)),
+            cancellationToken,
+            Date("from", from),
+            Date("to", until),
+            Integer("limit", limit),
+            Uuid("after_id", afterId)).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<HabitReminderCandidate>> FindHabitsAsync(
         int limit, Guid afterId, CancellationToken cancellationToken)
     {
-        if (limit is < 1 or > 500)
-        {
-            throw new ArgumentOutOfRangeException(nameof(limit));
-        }
-
-        var results = new List<HabitReminderCandidate>(limit);
-        var command = dataSource.CreateCommand("SELECT * FROM nix_find_habit_reminder_candidates(@limit, @after_id)");
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            command.Parameters.Add(new NpgsqlParameter<Guid>("after_id", NpgsqlDbType.Uuid) { TypedValue = afterId });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    results.Add(new HabitReminderCandidate(
-                        TenantId.From(reader.GetGuid(0)),
-                        reader.GetGuid(1),
-                        WorkspaceId.From(reader.GetGuid(2)),
-                        PrincipalId.From(reader.GetGuid(3)),
-                        reader.GetString(4)));
-                }
-            }
-        }
-        return results;
+        CheckLimit(limit);
+        return await _db.RowsAsync(
+            "SELECT * FROM nix_find_habit_reminder_candidates(@limit, @after_id)",
+            static reader => new HabitReminderCandidate(
+                TenantId.From(reader.GetGuid(0)),
+                reader.GetGuid(1),
+                WorkspaceId.From(reader.GetGuid(2)),
+                PrincipalId.From(reader.GetGuid(3)),
+                reader.GetString(4)),
+            cancellationToken,
+            Integer("limit", limit),
+            Uuid("after_id", afterId)).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<ReminderPreferences>> PreferencesForAsync(
@@ -225,48 +148,30 @@ public sealed class ReminderCandidateFinder(NpgsqlDataSource dataSource) : IRemi
         var results = new List<ReminderPreferences>(recipients.Count);
         foreach (var batch in recipients.Distinct().Chunk(PreferencesBatchSize))
         {
-            await ReadPreferencesAsync(batch, results, cancellationToken).ConfigureAwait(false);
+            results.AddRange(await _db.RowsAsync(
+                "SELECT * FROM nix_reminder_preferences_for(@tenant_ids, @principal_ids)",
+                static reader => new ReminderPreferences(
+                    TenantId.From(reader.GetGuid(0)),
+                    PrincipalId.From(reader.GetGuid(1)),
+                    reader.GetString(2),
+                    reader.IsDBNull(3) ? null : reader.GetFieldValue<TimeOnly>(3),
+                    reader.IsDBNull(4) ? null : reader.GetFieldValue<TimeOnly>(4),
+                    reader.GetFieldValue<TimeOnly>(5),
+                    reader.GetBoolean(6),
+                    reader.GetBoolean(7),
+                    reader.GetFieldValue<Guid[]>(8)),
+                cancellationToken,
+                UuidArray("tenant_ids", batch.Select(recipient => recipient.TenantId.Value).ToArray()),
+                UuidArray("principal_ids", batch.Select(recipient => recipient.PrincipalId.Value).ToArray())).ConfigureAwait(false));
         }
         return results;
     }
 
-    private async Task ReadPreferencesAsync(
-        ReminderRecipient[] batch, List<ReminderPreferences> results, CancellationToken cancellationToken)
+    private static void CheckLimit(int limit)
     {
-        var command = dataSource.CreateCommand("SELECT * FROM nix_reminder_preferences_for(@tenant_ids, @principal_ids)");
-        await using (command.ConfigureAwait(false))
+        if (limit is < 1 or > 500)
         {
-            command.Parameters.Add(new NpgsqlParameter<Guid[]>("tenant_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
-            {
-                TypedValue = batch.Select(recipient => recipient.TenantId.Value).ToArray(),
-            });
-            command.Parameters.Add(new NpgsqlParameter<Guid[]>("principal_ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
-            {
-                TypedValue = batch.Select(recipient => recipient.PrincipalId.Value).ToArray(),
-            });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    var quietStart = await reader.IsDBNullAsync(3, cancellationToken).ConfigureAwait(false)
-                        ? (TimeOnly?)null
-                        : await reader.GetFieldValueAsync<TimeOnly>(3, cancellationToken).ConfigureAwait(false);
-                    var quietEnd = await reader.IsDBNullAsync(4, cancellationToken).ConfigureAwait(false)
-                        ? (TimeOnly?)null
-                        : await reader.GetFieldValueAsync<TimeOnly>(4, cancellationToken).ConfigureAwait(false);
-                    results.Add(new ReminderPreferences(
-                        TenantId.From(reader.GetGuid(0)),
-                        PrincipalId.From(reader.GetGuid(1)),
-                        reader.GetString(2),
-                        quietStart,
-                        quietEnd,
-                        await reader.GetFieldValueAsync<TimeOnly>(5, cancellationToken).ConfigureAwait(false),
-                        reader.GetBoolean(6),
-                        reader.GetBoolean(7),
-                        await reader.GetFieldValueAsync<Guid[]>(8, cancellationToken).ConfigureAwait(false)));
-                }
-            }
+            throw new ArgumentOutOfRangeException(nameof(limit));
         }
     }
 }
