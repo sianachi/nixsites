@@ -186,49 +186,31 @@ export class Manager {
       sendError(res, 400, 'Invalid companion request');
       return;
     }
+    // The streaming operations answer on their own when the runtime cannot start.
+    const runtime = async (signal: AbortSignal): Promise<Account | undefined> => {
+      try {
+        return await this.account(signal, request);
+      } catch (error) {
+        this.logger.log('error', 'companion runtime unavailable', {
+          operation: request.operation,
+          error: logSafeError(error),
+        });
+        return undefined;
+      }
+    };
     if (request.operation === 'inline' || request.operation === TASK_PLAN_OPERATION) {
       if (!UUID.test(request.tenantId) || !UUID.test(request.principalId)) {
         sendError(res, 400, 'Invalid companion request');
         return;
       }
-      return serveInline(
-        async (signal) => {
-          try {
-            return await this.account(signal, request);
-          } catch (error) {
-            this.logger.log('error', 'companion runtime unavailable', {
-              operation: request.operation,
-              error: logSafeError(error),
-            });
-            return undefined;
-          }
-        },
-        res,
-        request,
-        client.signal,
-      );
+      return serveInline(runtime, res, request, client.signal);
     }
     if (!validRequest(request)) {
       sendError(res, 400, 'Invalid companion request');
       return;
     }
     if (request.operation === 'watch_stream') {
-      return serveWatchStream(
-        async (signal) => {
-          try {
-            return await this.account(signal, request);
-          } catch (error) {
-            this.logger.log('error', 'companion runtime unavailable', {
-              operation: request.operation,
-              error: logSafeError(error),
-            });
-            return undefined;
-          }
-        },
-        res,
-        request,
-        client.signal,
-      );
+      return serveWatchStream(runtime, res, request, client.signal);
     }
     const signal = AbortSignal.any([client.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
     let account: Account;
