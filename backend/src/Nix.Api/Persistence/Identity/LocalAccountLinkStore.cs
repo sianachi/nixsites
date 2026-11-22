@@ -1,6 +1,7 @@
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Npgsql;
 
 namespace Nix.Persistence.Identity;
@@ -11,7 +12,7 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
     private const string LinkColumns = "id, principal_id, tenant_id, purpose, email, display_name";
     private const string ChallengeColumns = "id, kind, principal_id, tenant_id, state, return_to, native, attempts";
 
-    private readonly LocalSignInDb _db = new(dataSource);
+    private readonly PooledSql _db = new(dataSource);
 
     /// <inheritdoc />
     public async ValueTask<bool> CreateAsync(
@@ -24,12 +25,12 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
         await _db.ScalarAsync<bool>(
             "SELECT nix_local_create_link(@id, @principal, @purpose, @hash, @expires, @by)",
             cancellationToken,
-            LocalSignInDb.Uuid("id", Guid.CreateVersion7()),
-            LocalSignInDb.Uuid("principal", principalId.Value),
-            LocalSignInDb.Text("purpose", purpose == LocalLinkPurpose.Setup ? "setup" : "reset"),
-            LocalSignInDb.Text("hash", tokenHash),
-            LocalSignInDb.Instant("expires", expiresAt),
-            LocalSignInDb.Uuid("by", createdBy?.Value)).ConfigureAwait(false);
+            NixParameter.Uuid("id", Guid.CreateVersion7()),
+            NixParameter.Uuid("principal", principalId.Value),
+            NixParameter.Text("purpose", purpose == LocalLinkPurpose.Setup ? "setup" : "reset"),
+            NixParameter.Text("hash", tokenHash),
+            PooledSql.Instant("expires", expiresAt),
+            NixParameter.Uuid("by", createdBy?.Value)).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<LocalLinkRecord?> FindAsync(string tokenHash, CancellationToken cancellationToken) =>
@@ -37,7 +38,7 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             $"SELECT {LinkColumns} FROM nix_local_find_link(@hash)",
             ReadLink,
             cancellationToken,
-            LocalSignInDb.Text("hash", tokenHash)).ConfigureAwait(false)).FirstOrDefault();
+            NixParameter.Text("hash", tokenHash)).ConfigureAwait(false)).FirstOrDefault();
 
     /// <inheritdoc />
     public async ValueTask<LocalLinkRecord?> ConsumeAsync(string tokenHash, CancellationToken cancellationToken) =>
@@ -45,7 +46,7 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             $"SELECT {LinkColumns} FROM nix_local_consume_link(@hash)",
             ReadLink,
             cancellationToken,
-            LocalSignInDb.Text("hash", tokenHash)).ConfigureAwait(false)).FirstOrDefault();
+            NixParameter.Text("hash", tokenHash)).ConfigureAwait(false)).FirstOrDefault();
 
     /// <inheritdoc />
     public async ValueTask<bool> CreateAsync(
@@ -60,13 +61,13 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
         await _db.ScalarAsync<bool>(
             "SELECT nix_local_create_challenge(@id, @kind, @principal, @state, @return, @native, @expires)",
             cancellationToken,
-            LocalSignInDb.Uuid("id", id),
-            LocalSignInDb.Text("kind", KindName(kind)),
-            LocalSignInDb.Uuid("principal", principalId?.Value),
-            LocalSignInDb.Text("state", state),
-            LocalSignInDb.Text("return", returnTo),
-            LocalSignInDb.Text("native", native),
-            LocalSignInDb.Instant("expires", expiresAt)).ConfigureAwait(false);
+            NixParameter.Uuid("id", id),
+            NixParameter.Text("kind", KindName(kind)),
+            NixParameter.Uuid("principal", principalId?.Value),
+            NixParameter.Text("state", state),
+            NixParameter.Text("return", returnTo),
+            NixParameter.Text("native", native),
+            PooledSql.Instant("expires", expiresAt)).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<LocalChallenge?> GetAsync(Guid id, LocalChallengeKind kind, CancellationToken cancellationToken) =>
@@ -74,23 +75,23 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             $"SELECT {ChallengeColumns} FROM nix_local_get_challenge(@id, @kind)",
             ReadChallenge,
             cancellationToken,
-            LocalSignInDb.Uuid("id", id),
-            LocalSignInDb.Text("kind", KindName(kind))).ConfigureAwait(false)).FirstOrDefault();
+            NixParameter.Uuid("id", id),
+            NixParameter.Text("kind", KindName(kind))).ConfigureAwait(false)).FirstOrDefault();
 
     /// <inheritdoc />
     public async ValueTask<int> BumpAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.ScalarAsync<int>(
             "SELECT nix_local_bump_challenge(@id)",
             cancellationToken,
-            LocalSignInDb.Uuid("id", id)).ConfigureAwait(false);
+            NixParameter.Uuid("id", id)).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<bool> SetStateAsync(Guid id, string state, CancellationToken cancellationToken) =>
         await _db.ScalarAsync<bool>(
             "SELECT nix_local_set_challenge_state(@id, @state)",
             cancellationToken,
-            LocalSignInDb.Uuid("id", id),
-            LocalSignInDb.Text("state", state)).ConfigureAwait(false);
+            NixParameter.Uuid("id", id),
+            NixParameter.Text("state", state)).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async ValueTask<LocalChallenge?> TakeAsync(Guid id, LocalChallengeKind kind, CancellationToken cancellationToken) =>
@@ -98,8 +99,8 @@ public sealed class LocalAccountLinkStore(NpgsqlDataSource dataSource) : ILocalA
             $"SELECT {ChallengeColumns} FROM nix_local_take_challenge(@id, @kind)",
             ReadChallenge,
             cancellationToken,
-            LocalSignInDb.Uuid("id", id),
-            LocalSignInDb.Text("kind", KindName(kind))).ConfigureAwait(false)).FirstOrDefault();
+            NixParameter.Uuid("id", id),
+            NixParameter.Text("kind", KindName(kind))).ConfigureAwait(false)).FirstOrDefault();
 
     private static string KindName(LocalChallengeKind kind) => kind switch
     {

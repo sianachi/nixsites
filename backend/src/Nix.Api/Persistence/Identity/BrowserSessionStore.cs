@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
@@ -14,7 +15,7 @@ public sealed class BrowserSessionStore(
     NixDbContext context,
     INixSessionContextAccessor sessionContext) : IBrowserSessions
 {
-    private readonly LocalSignInDb _db = new(dataSource);
+    private readonly PooledSql _db = new(dataSource);
 
     /// <inheritdoc />
     public ValueTask<AuthenticatedBrowserSession?> FindByTokenHashAsync(

@@ -1,8 +1,9 @@
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
+using static Nix.Persistence.Sql.NixParameter;
 
 namespace Nix.Persistence.Sites;
 
@@ -13,6 +14,8 @@ namespace Nix.Persistence.Sites;
 /// </summary>
 public sealed class SiteHostnameCheckFinder(NpgsqlDataSource dataSource) : ISiteHostnameCheckCandidates
 {
+    private readonly PooledSql _db = new(dataSource);
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<SiteHostnameCheckCandidate>> FindAsync(int limit, CancellationToken cancellationToken)
     {
@@ -21,30 +24,19 @@ public sealed class SiteHostnameCheckFinder(NpgsqlDataSource dataSource) : ISite
             throw new ArgumentOutOfRangeException(nameof(limit));
         }
 
-        var found = new List<SiteHostnameCheckCandidate>(limit);
-        var command = dataSource.CreateCommand("SELECT * FROM nix_site_hostname_checks(@limit)");
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    found.Add(new SiteHostnameCheckCandidate(
-                        TenantId.From(reader.GetGuid(0)),
-                        WorkspaceId.From(reader.GetGuid(1)),
-                        reader.GetGuid(2),
-                        PrincipalId.From(reader.GetGuid(3)),
-                        reader.GetString(4),
-                        await reader.GetFieldValueAsync<DateTimeOffset>(5, cancellationToken).ConfigureAwait(false),
-                        await reader.IsDBNullAsync(6, cancellationToken).ConfigureAwait(false) ? null : await reader.GetFieldValueAsync<DateTimeOffset>(6, cancellationToken).ConfigureAwait(false),
-                        await reader.IsDBNullAsync(7, cancellationToken).ConfigureAwait(false) ? null : await reader.GetFieldValueAsync<DateTimeOffset>(7, cancellationToken).ConfigureAwait(false),
-                        reader.GetInt32(8)));
-                }
-            }
-        }
-
-        return found;
+        return await _db.RowsAsync(
+            "SELECT * FROM nix_site_hostname_checks(@limit)",
+            static reader => new SiteHostnameCheckCandidate(
+                TenantId.From(reader.GetGuid(0)),
+                WorkspaceId.From(reader.GetGuid(1)),
+                reader.GetGuid(2),
+                PrincipalId.From(reader.GetGuid(3)),
+                reader.GetString(4),
+                reader.GetFieldValue<DateTimeOffset>(5),
+                reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTimeOffset>(6),
+                reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
+                reader.GetInt32(8)),
+            cancellationToken,
+            Integer("limit", limit)).ConfigureAwait(false);
     }
 }

@@ -1,6 +1,7 @@
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Nix.Persistence.Sql.Statements;
 using Npgsql;
 using NpgsqlTypes;
@@ -25,7 +26,7 @@ namespace Nix.Persistence.Identity;
 /// </remarks>
 public sealed class IdentityDirectory(NpgsqlDataSource dataSource) : IIdentityDirectory
 {
-    private readonly LocalSignInDb _db = new(dataSource);
+    private readonly PooledSql _db = new(dataSource);
 
     /// <inheritdoc />
     public async ValueTask<IdentityProviderRegistration?> ResolveProviderAsync(

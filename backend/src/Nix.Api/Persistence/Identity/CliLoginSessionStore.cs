@@ -1,6 +1,7 @@
 using Nix.Abstractions;
 using Nix.Domain.Identity;
 using Nix.Domain.Tenancy;
+using Nix.Persistence.Sql;
 using Npgsql;
 using NpgsqlTypes;
 using static Nix.Persistence.Sql.NixParameter;
@@ -10,7 +11,7 @@ namespace Nix.Persistence.Identity;
 /// <summary>Capability-only Postgres I/O; identity always comes from a standing server session.</summary>
 public sealed class CliLoginSessionStore(NpgsqlDataSource dataSource) : ICliLoginSessions
 {
-    private readonly LocalSignInDb _db = new(dataSource);
+    private readonly PooledSql _db = new(dataSource);
 
     /// <inheritdoc />
     public async ValueTask<bool> StartAsync(string deviceHash, string userHash, CancellationToken cancellationToken) =>

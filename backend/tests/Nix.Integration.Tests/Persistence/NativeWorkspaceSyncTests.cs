@@ -352,6 +352,30 @@ public sealed class NativeWorkspaceSyncTests(NixPostgresFixture fixture, ITestOu
     }
 
     [Fact]
+    public async Task A_flush_expires_at_most_twenty_thousand_markers_and_later_flushes_finish_the_cleanup()
+    {
+        var item = await CreateAsync("Expiry", null);
+        await ExecuteAsync(
+            """
+            UPDATE workspace_sync_revision SET seq = seq + 20050 WHERE workspace_id = @workspace;
+            INSERT INTO workspace_sync_change (tenant_id, workspace_id, seq, item_id, metadata_revision, created_at)
+            SELECT r.tenant_id, r.workspace_id, r.seq - 20050 + g, NULL, false, now() - interval '31 days'
+            FROM workspace_sync_revision r, generate_series(1, 20050) g WHERE r.workspace_id = @workspace;
+            """,
+            new NpgsqlParameter("workspace", Workspace.Value));
+        var oldest = Sequence((await SnapshotAsync()).Boundary) - 20050;
+
+        await RenameAsync(item.Value, "First flush");
+        Assert.Equal(50, await ExpiredMarkersAsync());
+        Assert.Equal(oldest + 20000, await RetainedFloorAsync());
+
+        await RenameAsync(item.Value, "Second flush");
+        Assert.Equal(0, await ExpiredMarkersAsync());
+        Assert.Equal(oldest + 20050, await RetainedFloorAsync());
+        Assert.True(await ChangeMarkersAsync() > 0);
+    }
+
+    [Fact]
     public async Task A_cursor_older_than_retention_requires_a_new_snapshot()
     {
         var boundary = Sequence((await SnapshotAsync()).Boundary);
@@ -688,6 +712,23 @@ public sealed class NativeWorkspaceSyncTests(NixPostgresFixture fixture, ITestOu
         command.Parameters.AddRange(parameters);
         await command.ExecuteNonQueryAsync(Cancellation);
     }
+
+    private async Task<long> ScalarAsync(string sql)
+    {
+        await using var connection = await fixture.OpenMigratorConnectionAsync();
+#pragma warning disable CA2100 // SQL is static test text.
+        await using var command = new NpgsqlCommand(sql, connection);
+#pragma warning restore CA2100
+        command.Parameters.AddWithValue("workspace", Workspace.Value);
+        return Convert.ToInt64(await command.ExecuteScalarAsync(Cancellation), CultureInfo.InvariantCulture);
+    }
+
+    private Task<long> ExpiredMarkersAsync() => ScalarAsync(
+        "SELECT count(*) FROM workspace_sync_change WHERE workspace_id = @workspace AND created_at < now() - interval '30 days'");
+
+    private Task<long> ChangeMarkersAsync() => ScalarAsync("SELECT count(*) FROM workspace_sync_change WHERE workspace_id = @workspace");
+
+    private Task<long> RetainedFloorAsync() => ScalarAsync("SELECT retained_floor FROM workspace_sync_revision WHERE workspace_id = @workspace");
 
     private static long Sequence(string value) => long.Parse(value, CultureInfo.InvariantCulture);
 

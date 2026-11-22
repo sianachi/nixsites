@@ -1,4 +1,5 @@
 using Nix.Abstractions;
+using Nix.Persistence.Sql;
 using Npgsql;
 
 namespace Nix.Persistence.Identity;
@@ -6,7 +7,7 @@ namespace Nix.Persistence.Identity;
 /// <summary>Capability-only Postgres I/O for <see cref="IOAuthCodes"/>.</summary>
 public sealed class OAuthCodeStore(NpgsqlDataSource dataSource) : IOAuthCodes
 {
-    private readonly LocalSignInDb _db = new(dataSource);
+    private readonly PooledSql _db = new(dataSource);
 
     /// <inheritdoc />
     public async ValueTask<bool> CreateAsync(OAuthCodeRecord record, CancellationToken cancellationToken)
@@ -15,15 +16,15 @@ public sealed class OAuthCodeStore(NpgsqlDataSource dataSource) : IOAuthCodes
         return await _db.ScalarAsync<bool>(
             "SELECT nix_create_oauth_code(@hash, @tenant, @principal, @client, @redirect, @challenge, @scopes, @resource, @expires)",
             cancellationToken,
-            LocalSignInDb.Text("hash", record.CodeHash),
-            LocalSignInDb.Uuid("tenant", record.TenantId),
-            LocalSignInDb.Uuid("principal", record.PrincipalId),
-            LocalSignInDb.Text("client", record.ClientId),
-            LocalSignInDb.Text("redirect", record.RedirectUri),
-            LocalSignInDb.Text("challenge", record.Challenge),
-            LocalSignInDb.Text("scopes", record.Scopes),
-            LocalSignInDb.Text("resource", record.Resource),
-            LocalSignInDb.Instant("expires", record.ExpiresAt)).ConfigureAwait(false) is true;
+            NixParameter.Text("hash", record.CodeHash),
+            NixParameter.Uuid("tenant", record.TenantId),
+            NixParameter.Uuid("principal", record.PrincipalId),
+            NixParameter.Text("client", record.ClientId),
+            NixParameter.Text("redirect", record.RedirectUri),
+            NixParameter.Text("challenge", record.Challenge),
+            NixParameter.Text("scopes", record.Scopes),
+            NixParameter.Text("resource", record.Resource),
+            PooledSql.Instant("expires", record.ExpiresAt)).ConfigureAwait(false) is true;
     }
 
     /// <inheritdoc />
@@ -41,5 +42,5 @@ public sealed class OAuthCodeStore(NpgsqlDataSource dataSource) : IOAuthCodes
                 reader.IsDBNull(6) ? null : reader.GetString(6),
                 reader.GetFieldValue<DateTimeOffset>(7)),
             cancellationToken,
-            LocalSignInDb.Text("hash", codeHash)).ConfigureAwait(false)).FirstOrDefault();
+            NixParameter.Text("hash", codeHash)).ConfigureAwait(false)).FirstOrDefault();
 }

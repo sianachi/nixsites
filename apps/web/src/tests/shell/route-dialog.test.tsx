@@ -99,7 +99,7 @@ describe('workspace screens as dialogs', () => {
     renderAt(<App />, `${WORKSPACE}/settings`);
 
     const dialog = await screen.findByRole('dialog', { name: 'Settings' });
-    const sections = within(dialog).getAllByRole('link');
+    const sections = await within(dialog).findAllByRole('link');
     const other = sections.find((link) => link.getAttribute('aria-current') !== 'page');
     if (other === undefined) throw new Error('expected a second settings section');
     await user.click(other);
