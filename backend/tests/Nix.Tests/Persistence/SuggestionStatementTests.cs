@@ -114,7 +114,7 @@ public sealed class SuggestionStatementTests
     }
 
     [Theory]
-    [InlineData(nameof(SearchSql.MatchingItems), "matches AS (", "UNION ALL", "item.id")]
+    [InlineData(nameof(SearchSql.MatchingItems), "title AS MATERIALIZED (", "-- Matched and ranked", "item.id")]
     [InlineData(nameof(SearchSql.ItemsTitledAs), "matches AS MATERIALIZED (", "ranked AS", "candidate.id")]
     [InlineData(nameof(SearchSql.CoCitedItems), "co_cited AS MATERIALIZED (", "GROUP BY", "candidate.id")]
     public void Every_title_scan_drops_what_sits_under_a_closed_lock_before_any_cap(
@@ -169,8 +169,8 @@ public sealed class SuggestionStatementTests
     [Fact]
     public void The_title_arm_of_search_takes_the_closed_lock_rule_and_the_body_arm_every_lock()
     {
-        var titleArm = Stage(SearchSql.MatchingItems, "matches AS (", "UNION ALL");
-        var bodyArm = Stage(SearchSql.MatchingItems, "UNION ALL", "ranked AS");
+        var titleArm = Stage(SearchSql.MatchingItems, "title AS MATERIALIZED (", "-- Matched and ranked");
+        var bodyArm = Stage(SearchSql.MatchingItems, "hits AS MATERIALIZED (", "ranked AS");
 
         Assert.Contains("closed_lock_descendants AS hidden", titleArm, StringComparison.Ordinal);
         Assert.DoesNotContain("closed_lock_descendants", bodyArm, StringComparison.Ordinal);
