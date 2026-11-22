@@ -7,6 +7,7 @@ using Nix.Domain.Properties;
 using Nix.Domain.Tenancy;
 using Nix.Domain.Views;
 using Nix.Features.Charts;
+using Nix.Tests.Features.Query;
 using Nix.Tests.Support;
 
 namespace Nix.Tests.Features.Charts;
@@ -339,32 +340,6 @@ public sealed class RunItemChartTests
         internal StubSession(NixSessionContext? current) => Current = current;
 
         public NixSessionContext? Current { get; }
-    }
-
-    /// <summary>Answers with a fixed readable set, the way the resolver does for one principal.</summary>
-    private sealed class StubPermissions : IPermissionResolver
-    {
-        private readonly IReadOnlyList<WorkspaceId> _readable;
-
-        internal StubPermissions(IReadOnlyList<WorkspaceId> readable) => _readable = readable;
-
-        public ValueTask<bool> CanReadWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable.Contains(workspaceId));
-
-        public ValueTask<bool> CanWriteWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable.Contains(workspaceId));
-
-        public ValueTask<bool> CanCommentWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => ValueTask.FromResult(false);
-
-
-        public ValueTask<bool> CanManageWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(false);
-
-        public ValueTask<IReadOnlyList<WorkspaceId>> ReadableWorkspacesAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable);
-
-        public ValueTask<bool> IsTenantAdministratorAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult(false);
     }
 
 }

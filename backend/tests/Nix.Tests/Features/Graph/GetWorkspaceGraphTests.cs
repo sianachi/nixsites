@@ -4,6 +4,7 @@ using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Features.Graph;
+using Nix.Tests.Features.Query;
 
 namespace Nix.Tests.Features.Graph;
 
@@ -182,32 +183,6 @@ public sealed class GetWorkspaceGraphTests
         var hash = seed.GetHashCode(StringComparison.Ordinal);
         BitConverter.TryWriteBytes(bytes, hash);
         return new Guid(bytes);
-    }
-
-    /// <summary>Answers with a fixed readable set, the way the resolver does for one principal.</summary>
-    private sealed class StubPermissions : IPermissionResolver
-    {
-        private readonly IReadOnlyList<WorkspaceId> _readable;
-
-        internal StubPermissions(IReadOnlyList<WorkspaceId> readable) => _readable = readable;
-
-        public ValueTask<bool> CanReadWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable.Contains(workspaceId));
-
-        public ValueTask<bool> CanWriteWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable.Contains(workspaceId));
-
-        public ValueTask<bool> CanCommentWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) => ValueTask.FromResult(false);
-
-
-        public ValueTask<bool> CanManageWorkspaceAsync(WorkspaceId workspaceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(false);
-
-        public ValueTask<IReadOnlyList<WorkspaceId>> ReadableWorkspacesAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult(_readable);
-
-        public ValueTask<bool> IsTenantAdministratorAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult(false);
     }
 
     /// <summary>
