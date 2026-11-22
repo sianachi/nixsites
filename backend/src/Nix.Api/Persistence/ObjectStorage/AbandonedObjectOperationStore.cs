@@ -1,5 +1,5 @@
+using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.ObjectStorage;
 
@@ -17,6 +17,8 @@ public sealed class AbandonedObjectOperationStore(NpgsqlDataSource dataSource)
 {
     private const string FindSql = "SELECT * FROM nix_find_abandoned_object_operations(@limit)";
 
+    private readonly PooledSql _db = new(dataSource);
+
     public async ValueTask<IReadOnlyList<AbandonedObjectOperation>> FindAsync(
         int limit,
         CancellationToken cancellationToken)
@@ -26,30 +28,16 @@ public sealed class AbandonedObjectOperationStore(NpgsqlDataSource dataSource)
             throw new ArgumentOutOfRangeException(nameof(limit));
         }
 
-        var results = new List<AbandonedObjectOperation>(limit);
-        var command = dataSource.CreateCommand(FindSql);
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer)
-            {
-                TypedValue = limit,
-            });
-            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    results.Add(new AbandonedObjectOperation(
-                        reader.GetString(0),
-                        reader.GetGuid(1),
-                        reader.GetGuid(2),
-                        reader.GetGuid(3),
-                        reader.GetGuid(4),
-                        await reader.GetFieldValueAsync<DateTimeOffset>(5, cancellationToken)
-                            .ConfigureAwait(false)));
-                }
-            }
-        }
-        return results;
+        return await _db.RowsAsync(
+            FindSql,
+            static reader => new AbandonedObjectOperation(
+                reader.GetString(0),
+                reader.GetGuid(1),
+                reader.GetGuid(2),
+                reader.GetGuid(3),
+                reader.GetGuid(4),
+                reader.GetFieldValue<DateTimeOffset>(5)),
+            cancellationToken,
+            NixParameter.Integer("limit", limit)).ConfigureAwait(false);
     }
 }

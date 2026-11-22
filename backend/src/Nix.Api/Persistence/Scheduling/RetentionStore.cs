@@ -1,6 +1,6 @@
 using Nix.Abstractions.Scheduling;
+using Nix.Persistence.Sql;
 using Npgsql;
-using NpgsqlTypes;
 
 namespace Nix.Persistence.Scheduling;
 
@@ -11,6 +11,8 @@ namespace Nix.Persistence.Scheduling;
 /// </summary>
 public sealed class RetentionStore(NpgsqlDataSource dataSource) : IRetentionStore
 {
+    private readonly PooledSql _db = new(dataSource);
+
     public Task<int> PurgeOldNotificationsAsync(int limit, CancellationToken cancellationToken) =>
         PurgeAsync("SELECT nix_purge_old_notifications(@limit)", limit, cancellationToken);
 
@@ -30,12 +32,6 @@ public sealed class RetentionStore(NpgsqlDataSource dataSource) : IRetentionStor
             throw new ArgumentOutOfRangeException(nameof(limit));
         }
 
-        var command = dataSource.CreateCommand(sql);
-        await using (command.ConfigureAwait(false))
-        {
-            command.Parameters.Add(new NpgsqlParameter<int>("limit", NpgsqlDbType.Integer) { TypedValue = limit });
-            var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            return result is int deleted ? deleted : 0;
-        }
+        return await _db.ScalarAsync<int?>(sql, cancellationToken, NixParameter.Integer("limit", limit)).ConfigureAwait(false) ?? 0;
     }
 }
