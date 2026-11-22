@@ -160,16 +160,17 @@ export function CaretMenu({
     width,
     readViewportBounds(),
   );
+  const position = {
+    left: placement.left,
+    top: placement.top,
+    width: placement.maxWidth,
+    maxHeight: placement.maxHeight,
+  };
   return (
     <div
       // Positioned against the caret in viewport coordinates, so it follows the text rather than
       // the scroller - which the editor does under it.
-      style={{
-        left: placement.left,
-        top: placement.top,
-        width: placement.maxWidth,
-        maxHeight: placement.maxHeight,
-      }} // design-token-exempt: a caret's position is a runtime measurement, not a scale step.
+      style={position} // design-token-exempt: a caret's position is a runtime measurement, not a scale step.
       className={[
         'fixed z-20 flex flex-col overflow-y-auto rounded-md border border-divider bg-background shadow-md',
         placement.above ? '-mb-1 -translate-y-full' : 'mt-1',
