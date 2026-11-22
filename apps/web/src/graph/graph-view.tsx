@@ -258,13 +258,6 @@ const DIMMED = 'group-data-[dimming]/graph:opacity-25';
 const SHAPE = `origin-center fill-surface [transform-box:fill-box] transition-transform group-hover:scale-125 motion-reduce:transition-none`;
 
 /**
- * A node's disc, in the shape of its body kind.
- *
- * Shape rather than colour because the palette has one accent and no categorical set, and because
- * shape survives colour blindness and a greyscale print. A kind this build does not know is a
- * dashed circle: still a node, visibly not one of the named kinds.
- */
-/**
  * The outline, by how recently the item was touched.
  *
  * Three discrete states rather than a fade: a reader can tell "today" from "this week" from
@@ -277,6 +270,13 @@ const RECENCY_STROKE: Record<Recency, { readonly className: string; readonly wid
   older: { className: NODE_STROKE, width: 1 },
 };
 
+/**
+ * A node's disc, in the shape of its body kind.
+ *
+ * Shape rather than colour because the palette has one accent and no categorical set, and because
+ * shape survives colour blindness and a greyscale print. A kind this build does not know is a
+ * dashed circle: still a node, visibly not one of the named kinds.
+ */
 function NodeShape({
   type,
   x,
@@ -1419,6 +1419,16 @@ function GraphDrawing({
     [moveTargetAt, toGraph, representation],
   );
 
+  // Puts a dragged node back where it was picked up.
+  const restoreOffset = useCallback((drag: Drag): void => {
+    setOffsets((current) => {
+      const next = new Map(current);
+      if (drag.from.dx === 0 && drag.from.dy === 0) next.delete(drag.id);
+      else next.set(drag.id, drag.from);
+      return next;
+    });
+  }, []);
+
   const onNodePointerUp = useCallback(
     (event: PointerEvent<SVGGElement>, node: PositionedNode): void => {
       const drag = dragRef.current;
@@ -1437,15 +1447,7 @@ function GraphDrawing({
           ? moveTargetAt(toGraph(event.clientX, event.clientY), drag.id)
           : undefined;
       if (drag !== null && landed !== undefined) {
-        setOffsets((current) => {
-          const next = new Map(current);
-          if (drag.from.dx === 0 && drag.from.dy === 0) {
-            next.delete(drag.id);
-          } else {
-            next.set(drag.id, drag.from);
-          }
-          return next;
-        });
+        restoreOffset(drag);
         live.current.onMove?.(drag.id, landed.id);
         return;
       }
@@ -1461,7 +1463,7 @@ function GraphDrawing({
       // move into, link to) are offered below, so nothing needs a drag, a hover or a right-click.
       setSelectedId(node.id);
     },
-    [moveTargetAt, toGraph, representation],
+    [moveTargetAt, toGraph, representation, restoreOffset],
   );
 
   // Presses on the pane itself, as opposed to on a node. Kept by pointer id because a pinch is
@@ -1676,14 +1678,7 @@ function GraphDrawing({
           dragRef.current = null;
           setPull(null);
           setDropTargetId(null);
-          if (drag?.moved) {
-            setOffsets((current) => {
-              const next = new Map(current);
-              if (drag.from.dx === 0 && drag.from.dy === 0) next.delete(drag.id);
-              else next.set(drag.id, drag.from);
-              return next;
-            });
-          }
+          if (drag?.moved) restoreOffset(drag);
           return [
             {
               label: `Open ${nodeTitle(node)}`,
