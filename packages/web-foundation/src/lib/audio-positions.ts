@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { browserStorage } from './browser-storage';
+import { browserStorage, readStoredJson } from './browser-storage';
 
 /**
  * Where each audio file was left, remembered per browser so a long recording resumes instead of
@@ -29,20 +29,7 @@ type Entry = z.infer<typeof entrySchema>;
 
 /** Most recent first. */
 function read(): Entry[] {
-  const storage = browserStorage();
-  if (storage === undefined) {
-    return [];
-  }
-  try {
-    const raw = storage.getItem(STORAGE_KEY);
-    if (raw === null) {
-      return [];
-    }
-    const parsed = storeSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : [];
-  } catch {
-    return [];
-  }
+  return readStoredJson(browserStorage(), STORAGE_KEY, storeSchema, []);
 }
 
 function write(entries: readonly Entry[]): void {

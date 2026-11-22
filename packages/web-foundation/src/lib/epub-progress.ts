@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { readStoredJson } from './browser-storage';
+
 /**
  * Where somebody was in each book, on this device.
  *
@@ -29,14 +31,7 @@ export interface EpubProgress {
 
 /** Most recent last, so appending is recording and trimming the front is forgetting the oldest. */
 function readAll(storage: Storage | undefined): z.infer<typeof recordSchema> {
-  try {
-    const raw = storage?.getItem(STORAGE_KEY);
-    if (raw === null || raw === undefined) return [];
-    const parsed = recordSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : [];
-  } catch {
-    return [];
-  }
+  return readStoredJson(storage, STORAGE_KEY, recordSchema, []);
 }
 
 export function readEpubProgress(storage: Storage | undefined, id: string): EpubProgress | null {

@@ -17,6 +17,10 @@
       "types": "./src/workspaces/archived-workspaces-page.tsx",
       "default": "./src/workspaces/archived-workspaces-page.tsx"
     },
+    "./workspaces/use-password-prompt": {
+      "types": "./src/workspaces/use-password-prompt.ts",
+      "default": "./src/workspaces/use-password-prompt.ts"
+    },
     "./workspaces/settings/confirmation-dialog": {
       "types": "./src/workspaces/settings/confirmation-dialog.tsx",
       "default": "./src/workspaces/settings/confirmation-dialog.tsx"

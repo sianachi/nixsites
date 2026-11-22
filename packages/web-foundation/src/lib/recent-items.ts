@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { browserStorage } from './browser-storage';
+import { browserStorage, readStoredJson } from './browser-storage';
 
 /**
  * The items somebody opened most recently, per workspace and per browser, for Homebase.
@@ -30,14 +30,7 @@ export type RecentItem = z.infer<typeof entrySchema>;
 
 /** Most recent first. */
 function read(): RecentItem[] {
-  try {
-    const raw = browserStorage()?.getItem(STORAGE_KEY);
-    if (raw == null) return [];
-    const parsed = storeSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : [];
-  } catch {
-    return [];
-  }
+  return readStoredJson(browserStorage(), STORAGE_KEY, storeSchema, []);
 }
 
 /** The workspace's recent items, most recent first. */

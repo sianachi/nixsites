@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { browserStorage } from './browser-storage';
+import { browserStorage, readStoredJson } from './browser-storage';
 
 /**
  * Suggestions somebody waved away, remembered per browser so they do not come straight back.
@@ -30,20 +30,7 @@ export const MAXIMUM_DISMISSALS = 500;
 const storeSchema = z.array(z.string().min(1).max(512)).max(MAXIMUM_DISMISSALS);
 
 function read(): string[] {
-  const storage = browserStorage();
-  if (storage === undefined) {
-    return [];
-  }
-  try {
-    const raw = storage.getItem(STORAGE_KEY);
-    if (raw === null) {
-      return [];
-    }
-    const parsed = storeSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : [];
-  } catch {
-    return [];
-  }
+  return readStoredJson(browserStorage(), STORAGE_KEY, storeSchema, []);
 }
 
 /** Every remembered dismissal, as a set for lookups. */
