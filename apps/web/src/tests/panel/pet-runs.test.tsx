@@ -603,16 +603,61 @@ it('shows a registered tool call as proposed and approves that exact proposal', 
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
   const dialog = within(await screen.findByRole('dialog'));
-  const draft = within(
-    await dialog.findByRole('group', { name: `remote.invoke in ${call.destination}` }),
-  );
-  expect(draft.getByText(/"issueId": "NIX-37"/u)).toBeVisible();
+  const group = await dialog.findByRole('group', { name: 'Call lookup' });
+  const draft = within(group);
+  expect(draft.getByText('Server')).toBeVisible();
+  expect(draft.getByText('https://mcp.test/mcp')).toBeVisible();
+  expect(draft.getByText('issueId')).toBeVisible();
+  expect(draft.getByText('NIX-37')).toBeVisible();
+  const text = group.textContent;
+  expect(text).not.toContain('{');
+  expect(text).not.toContain(call.schemaHash);
+  expect(text).not.toContain(call.connectionId);
   expect(calls).toEqual([]);
 
   await user.click(draft.getByRole('button', { name: 'Approve request' }));
   expect(calls).toEqual([
     { path: `${route}/${runId}/proposals/${proposalId}/decision`, body: { approve: true } },
   ]);
+});
+
+it('shows every input of a registered tool call and keeps raw JSON for other previews', async () => {
+  const destination = 'https://mcp.test/mcp#search';
+  showTask({
+    ...firstRun,
+    status: 'waiting_for_approval',
+    question: null,
+    proposals: [
+      {
+        id: proposalId,
+        capability: 'connection.action',
+        description: `remote.invoke in ${destination}`,
+        preview: {
+          action: 'remote.invoke',
+          destination,
+          arguments: { filter: { state: 'open' }, limit: 5, cursor: null },
+        },
+        status: 'pending',
+      },
+      {
+        id: routineId,
+        capability: 'connection.action',
+        description: 'something.else in x',
+        preview: { action: 'something.else', destination: 'x' },
+        status: 'pending',
+      },
+    ],
+  });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  const plain = within(await dialog.findByRole('group', { name: 'Call search' }));
+  expect(plain.getByText('limit')).toBeVisible();
+  expect(plain.getByText('5')).toBeVisible();
+  expect(plain.getByText('Empty')).toBeVisible();
+  expect(plain.getByText(/"state": "open"/u)).toBeVisible();
+  const raw = within(await dialog.findByRole('group', { name: 'something.else in x' }));
+  expect(raw.getByText(/"action": "something.else"/u)).toBeVisible();
 });
 
 it('reviews an exact note append as literal text and retains other Nix action previews', async () => {

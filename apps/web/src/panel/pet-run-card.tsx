@@ -75,6 +75,21 @@ const browserVisitSchema = z
     ({ connectionId, connectionRevision }) =>
       (connectionId == null) === (connectionRevision == null),
   );
+const remoteCallSchema = z.object({
+  action: z.literal('remote.invoke'),
+  destination: z.string(),
+  arguments: z.record(z.string(), z.unknown()),
+});
+// Plain view of a registered tool call; undefined keeps the raw preview.
+function remoteCall({ capability, preview }: PetRunProposal) {
+  if (capability !== 'connection.action') return undefined;
+  const call = remoteCallSchema.safeParse(preview);
+  if (!call.success) return undefined;
+  const at = call.data.destination.lastIndexOf('#');
+  const server = call.data.destination.slice(0, at);
+  const tool = call.data.destination.slice(at + 1);
+  return at > 0 && tool !== '' ? { server, tool, inputs: call.data.arguments } : undefined;
+}
 const appendOperation = z.literal('AppendItemBody');
 const appendNoteSchema = z
   .object({
@@ -257,7 +272,13 @@ export function PetRunCard({
           proposal.capability === 'nix.action'
             ? appendNoteSchema.safeParse(proposal.preview).data
             : undefined;
-        const heading = appendNote === undefined ? proposal.description : 'Add to end of note';
+        const call = remoteCall(proposal);
+        const heading =
+          call !== undefined
+            ? `Call ${call.tool}`
+            : appendNote === undefined
+              ? proposal.description
+              : 'Add to end of note';
         const preview =
           appendNote === undefined ? (
             <ProposalPreview proposal={proposal} />
@@ -666,6 +687,51 @@ const sheetColumns: readonly TableColumn<SheetEditChange>[] = [
 
 function ProposalPreview({ proposal }: { readonly proposal: PetRunProposal }): ReactElement {
   const { capability, preview } = proposal;
+  const call = remoteCall(proposal);
+  if (call !== undefined) {
+    const inputs = Object.entries(call.inputs);
+    return (
+      <dl className="flex flex-col gap-2">
+        <div>
+          <Text as="dt" variant="note" tone="muted">
+            Server
+          </Text>
+          <Text as="dd" variant="bodySmall" className="whitespace-pre-wrap wrap-anywhere">
+            {call.server}
+          </Text>
+        </div>
+        {inputs.map(([name, value]) => (
+          <div key={name}>
+            <Text as="dt" variant="note" tone="muted">
+              {name}
+            </Text>
+            <Text
+              as="dd"
+              variant="bodySmall"
+              {...(value === null ? { tone: 'muted' as const } : {})}
+              className="whitespace-pre-wrap wrap-anywhere"
+            >
+              {value === null
+                ? 'Empty'
+                : typeof value === 'object'
+                  ? JSON.stringify(value, null, 2)
+                  : String(value as string | number | boolean)}
+            </Text>
+          </div>
+        ))}
+        {inputs.length === 0 ? (
+          <div>
+            <Text as="dt" variant="note" tone="muted">
+              Inputs
+            </Text>
+            <Text as="dd" variant="bodySmall" tone="muted">
+              No inputs
+            </Text>
+          </div>
+        ) : null}
+      </dl>
+    );
+  }
   if (capability === 'browser.browse') {
     const visit = browserVisitSchema.safeParse(preview);
     if (visit.success) {
