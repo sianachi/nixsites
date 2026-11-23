@@ -102,6 +102,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Pet job statuses use the same words in the job list, the job card and the pet activity page
+  ("Needs an answer", "Needs review", "Waiting for the other agent", "Needs attention").
 - The Trash page and the workspace list's storage totals load faster in large workspaces. Upgrading
   adds two database indexes, built without blocking writes.
 - Filtering attachments by review state is faster in workspaces with many files. Upgrading adds one

@@ -566,6 +566,15 @@ it('keeps the generic failure and exact retry for an older job response', async 
   expect(calls).toEqual([{ path: `${route}/${runId}/retry`, body: undefined }]);
 });
 
+it('labels a job that waits on an answer with the shared status words', async () => {
+  showTask(firstRun);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  expect(await dialog.findByText('Needs an answer', { selector: 'span' })).toBeVisible();
+  expect(screen.queryByText('Waiting for your answer')).not.toBeInTheDocument();
+});
+
 it('shows a registered tool call as proposed and approves that exact proposal', async () => {
   const call = {
     connectionId: petId,

@@ -102,14 +102,12 @@ it('lists jobs by status and opens the exact pending decision in the task', asyn
   openActivity();
 
   const waiting = within(await screen.findByRole('region', { name: 'Needs attention' }));
-  const review = waiting.getByRole('link', { name: 'Draw the handoff flow Waiting for approval' });
+  const review = waiting.getByRole('link', { name: 'Draw the handoff flow Needs review' });
   expect(review).toHaveAttribute(
     'href',
     `/w/${workspaceId}?item=${itemId}&petRun=${reviewRunId}&petDecision=${proposalId}`,
   );
-  expect(
-    waiting.getByRole('link', { name: 'Check the estimate Waiting for your answer' }),
-  ).toHaveAttribute(
+  expect(waiting.getByRole('link', { name: 'Check the estimate Needs an answer' })).toHaveAttribute(
     'href',
     `/w/${workspaceId}?item=${itemId}&petRun=${answerRunId}&petDecision=${questionId}`,
   );

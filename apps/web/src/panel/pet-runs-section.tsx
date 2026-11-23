@@ -17,7 +17,7 @@ import type {
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { isPetJobMessage } from './pet-job-message';
 import { PetPeerSection } from './pet-peer-section';
-import { PetRunCard } from './pet-run-card';
+import { PetRunCard, petRunStatusText } from './pet-run-card';
 import { PetRoutines, RoutineFields, routineDraft } from './pet-routines';
 import { usePetRunFeed } from './use-pet-run-feed';
 
@@ -295,18 +295,6 @@ export function usePetDialogJobs({
   };
 }
 
-const runLabels = {
-  queued: 'Queued',
-  running: 'Working',
-  waiting_for_input: 'Needs an answer',
-  waiting_for_approval: 'Needs review',
-  waiting_for_handoff: 'Waiting for the other agent',
-  review_required: 'Needs attention',
-  completed: 'Completed',
-  failed: 'Job failed',
-  cancelled: 'Cancelled',
-} satisfies Record<PetRunResponse['status'], string>;
-
 function JobEntry({
   client,
   run,
@@ -349,7 +337,7 @@ function JobEntry({
           {run.brief}
         </Text>
         <Text as="span" variant="note" tone="muted" className="ms-2">
-          {runLabels[run.status]}
+          {petRunStatusText(run.status)}
         </Text>
       </summary>
       <PetRunCard
