@@ -26,7 +26,6 @@ using Nix.Features.Habits;
 using Nix.Features.Health;
 using Nix.Features.Internal;
 using Nix.Features.Items;
-using Nix.Features.Linear;
 using Nix.Features.Locks;
 using Nix.Features.Notifications;
 using Nix.Features.Operations;
@@ -93,7 +92,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Add(PetRunJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(PetPeerJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(PetBrowserJson.Default);
-    options.SerializerOptions.TypeInfoResolverChain.Add(LinearJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(ConnectorJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(ConversationJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(NotificationsJsonContext.Default);
@@ -522,7 +520,7 @@ if (persistenceConfigured)
     });
     builder.Services.AddScoped<BrowserAuthCoordinator>();
     builder.Services.AddScoped<CliLoginCoordinator>();
-    builder.Services.AddScoped<LinearBrowserAccess>();
+    builder.Services.AddScoped<BrowserAccess>();
     builder.Services.AddPetPeers();
     builder.Services.AddScoped<NativeHandoffCoordinator>();
     builder.Services.AddSingleton<Nix.Features.OAuth.OAuthClients>();
@@ -644,7 +642,6 @@ if (persistenceConfigured)
 {
     app.MapBrowserAuthEndpoints();
     app.MapCliLoginEndpoints();
-    app.MapLinearOAuthCallback();
     Nix.Features.LocalAuth.LocalAuthEndpoints.MapLocalAuthEndpoints(app);
     Nix.Features.LocalAuth.LocalPasskeyEndpoints.MapLocalPasskeySignInEndpoints(app);
     Nix.Features.LocalAuth.LocalTotpEndpoints.MapLocalTotpSignInEndpoints(app);
@@ -739,7 +736,6 @@ app.MapCanvasEndpoints();
 app.MapPetEndpoints();
 app.MapPetRunEndpoints();
 app.MapPetPeers();
-app.MapLinearEndpoints();
 app.MapPetConnections();
 app.MapPetBrowserConnections();
 app.MapConversationEndpoints();

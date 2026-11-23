@@ -10,7 +10,7 @@ const workCommand =
 const conversationObject =
   /^(?:not|how|why|what|when|where|who|whether|if|is|are|was|were|can|could|should|would|means|out\s+(?:how|why|what|when|where|who|whether|if))\b/iu;
 const specificObject =
-  /^(?:an?|the|this|that|these|those|my|our|it|them|linear\s+issue|[a-z]+-\d+)\b|\b(?:by|into|from|named|called|to)\s+\S/iu;
+  /^(?:an?|the|this|that|these|those|my|our|it|them|issue|[a-z]+-\d+)\b|\b(?:by|into|from|named|called|to)\s+\S/iu;
 
 // shortcut: local routing recognizes clear English requests, ambiguous phrasing stays in chat.
 export function isPetJobMessage(text: string): boolean {

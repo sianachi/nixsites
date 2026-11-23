@@ -11,11 +11,6 @@ import {
 import type { CompanionConfig } from '../core/config.ts';
 import { CoreClient } from '../core/core-client.ts';
 import { Manager, type ManagerDeps } from '../providers/manager.ts';
-import { createConnectorRouter } from '../sani/connector.ts';
-import { googleActions } from '../sani/google.ts';
-import { runLinear } from '../sani/linear.ts';
-import { microsoftActions } from '../sani/microsoft.ts';
-import { opsActions } from '../sani/ops.ts';
 import { runRegisteredMcp } from '../sani/registered-mcp.ts';
 import { readBody } from '../shared/http.ts';
 import { runPetCanvas } from '../tools/pet-canvas.ts';
@@ -71,19 +66,10 @@ async function readSaniRequest(req: IncomingMessage, limit: number): Promise<unk
 }
 
 export function createCompanion(config: CompanionConfig, deps: CompanionDeps = {}): Companion {
-  const runConnector = createConnectorRouter(
-    [...googleActions, ...microsoftActions, ...opsActions],
-    deps.fetch,
-  );
   const saniRoutes = new Map<
     string,
     { run: (value: unknown) => Promise<unknown>; limit: number; invalid: string }
   >([
-    ['/v1/sani/linear', { run: runLinear, limit: 64 << 10, invalid: 'invalid_linear_request' }],
-    [
-      '/v1/sani/connectors',
-      { run: runConnector, limit: 64 << 10, invalid: 'invalid_sani_request' },
-    ],
     [
       '/v1/sani/registered-mcp',
       { run: runRegisteredMcp, limit: 64 << 10, invalid: 'invalid_registered_mcp_request' },

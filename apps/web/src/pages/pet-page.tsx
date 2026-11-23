@@ -95,7 +95,6 @@ function ChatTabRedirect({
 interface ActivePetJob {
   readonly activeRunId?: string | undefined;
   readonly activeDecisionId?: string | undefined;
-  readonly onViewComment?: ((threadId: string) => void) | undefined;
   readonly onItemRefresh?: ((item: Item) => void) | undefined;
 }
 
@@ -105,7 +104,6 @@ export function NoteChatDrawer({
   itemNoun = 'note',
   activeRunId,
   activeDecisionId,
-  onViewComment,
   onItemRefresh,
   onClose,
 }: ActivePetJob & {
@@ -143,7 +141,6 @@ export function NoteChatDrawer({
                   rootItemId={rootItemId}
                   activeRunId={activeRunId}
                   activeDecisionId={activeDecisionId}
-                  onViewComment={onViewComment}
                   onItemRefresh={onItemRefresh}
                   inDialog
                 />
@@ -466,7 +463,6 @@ function PetJobConversation({
   targetType,
   activeRunId,
   activeDecisionId,
-  onViewComment,
   onItemChanged,
   workspaceJobsEnabled = false,
   ...props
@@ -491,7 +487,6 @@ function PetJobConversation({
     itemType: targetType ?? targetItem?.type,
     activeRunId,
     activeDecisionId,
-    onViewComment,
     onItemChanged,
     ...(itemDialog
       ? {}

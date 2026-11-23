@@ -835,18 +835,6 @@ export function OpenItem({
           activeDecisionId={petJob?.decisionId}
           onClose={closeNoteChat}
           onItemRefresh={tree.updateLoadedItem}
-          onViewComment={
-            commentsOn && bodyKind === 'note'
-              ? (threadId) => {
-                  closeNoteChat();
-                  readComments(itemId).refresh();
-                  setHistoryOpen(false);
-                  setPanelPane('comments');
-                  setCommentThreadId(threadId);
-                  setPanelOpen(true);
-                }
-              : undefined
-          }
         />
       ) : null}
     </>

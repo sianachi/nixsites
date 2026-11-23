@@ -55,15 +55,10 @@ describe('operation catalog', () => {
       'UnlockWorkspace',
       'RelockWorkspace',
       'JoinWorkspace',
-      'AuthorizeLinearConnection',
-      'DisconnectLinearConnection',
       'ListPetConnections',
-      'AuthorizePetConnection',
       'RegisterPetMcpConnection',
       'SavePetBrowserSite',
       'DisconnectPetConnection',
-      'DecideLinearIssueRequest',
-      'HandToPet',
       'CreatePetRun',
       'DecidePetRunProposal',
     ])
@@ -71,8 +66,6 @@ describe('operation catalog', () => {
     expect(isHumanOnlyOperation(entry('GetPreferences'))).toBe(false);
     expect(isHumanOnlyOperation(entry('MoveItem'))).toBe(false);
     expect(isHumanOnlyOperation(entry('KeepItem'))).toBe(false);
-    expect(isHumanOnlyOperation(entry('RequestLinearIssue'))).toBe(false);
-    expect(isHumanOnlyOperation(entry('GetLinearIssueRequest'))).toBe(false);
     // Approving a version is gated by Core and the workspace setting, not by the catalog.
     expect(isHumanOnlyOperation(entry('SetFileVersionState'))).toBe(false);
   });

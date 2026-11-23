@@ -17,8 +17,6 @@ import { BacklinksPane } from '../links/backlinks-panel';
 import { useItemComments } from '@nix/web-editor/editor/comment-anchors';
 import { CommentsPane } from './comments-pane';
 import { ItemSettingsPane } from './item-settings-pane';
-import { LinearLinkSection } from './linear-link-section';
-import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { OutlinePane } from './outline-pane';
 import { PropertyPanel } from '@nix/web-collections/properties/property-panel';
 import { useCanPublishSites } from '@nix/web-settings/settings/publishing/publishing-preference';
@@ -222,7 +220,6 @@ function DetailsPane({
   readonly container: ContainerData;
   readonly details: ItemPanelProps['details'];
 }): ReactNode {
-  const client = useOptionalApiClient();
   const properties = container.schema?.properties ?? [];
 
   if (details.error !== null) {
@@ -269,7 +266,6 @@ function DetailsPane({
           onChange={details.write}
         />
       )}
-      {client ? <LinearLinkSection key={item.id} itemId={item.id} client={client} /> : null}
     </>
   );
 }

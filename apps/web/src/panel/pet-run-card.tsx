@@ -65,20 +65,6 @@ const sheetChanges = z.array(sheetChange).min(1).max(MAX_SHEET_EDITS);
 const renameSchema = z.object({ from: z.string(), to: z.string() });
 const commentSchema = z.object({ title: z.string(), audience: z.string(), body: z.string() });
 const legacyCommentSchema = z.object({ text: z.string() });
-const linearIssueSchema = z
-  .strictObject({
-    connectionId: z.uuid(),
-    connectionRevision: z.uuid(),
-    action: z.literal('linear.read_issue'),
-    kind: z.literal('read'),
-    resourceId: z.uuid(),
-    destination: z.string(),
-    schemaHash: z.string().regex(/^[a-f0-9]{64}$/u),
-    arguments: z.strictObject({
-      issueId: z.union([z.uuid(), z.string().regex(/^[A-Z][A-Z0-9_-]{0,30}-[1-9][0-9]{0,11}$/iu)]),
-    }),
-  })
-  .refine(({ resourceId, destination }) => destination === `linear team ${resourceId}`);
 const browserVisitSchema = z
   .strictObject({
     url: z.url({ protocol: /^https?$/u }),
@@ -267,26 +253,17 @@ export function PetRunCard({
         const waiting = run.status === 'waiting_for_approval';
         const canDecide = waiting && proposal.status === 'pending';
         const stale = waiting && proposal.status === 'stale';
-        const linearIssue =
-          proposal.capability === 'connection.action'
-            ? linearIssueSchema.safeParse(proposal.preview).data
-            : undefined;
         const appendNote =
           proposal.capability === 'nix.action'
             ? appendNoteSchema.safeParse(proposal.preview).data
             : undefined;
-        const heading = linearIssue
-          ? `Look up Linear issue ${linearIssue.arguments.issueId}`
-          : appendNote === undefined
-            ? proposal.description
-            : 'Add to end of note';
-        const preview = linearIssue ? (
-          <LinearIssuePreview teamId={linearIssue.resourceId} />
-        ) : appendNote === undefined ? (
-          <ProposalPreview proposal={proposal} />
-        ) : (
-          <AppendNotePreview workspaceId={run.workspaceId} {...appendNote} />
-        );
+        const heading = appendNote === undefined ? proposal.description : 'Add to end of note';
+        const preview =
+          appendNote === undefined ? (
+            <ProposalPreview proposal={proposal} />
+          ) : (
+            <AppendNotePreview workspaceId={run.workspaceId} {...appendNote} />
+          );
         const approve = () =>
           apply(proposal.id, petRuns.decide(run.itemId, run.id, proposal.id, true));
         const decline = () =>
@@ -322,11 +299,7 @@ export function PetRunCard({
                   <ApprovalActions
                     headingId={headingId}
                     approveLabel={
-                      linearIssue
-                        ? 'Look up issue'
-                        : appendNote === undefined
-                          ? approvalLabel(proposal.capability)
-                          : 'Add to note'
+                      appendNote === undefined ? approvalLabel(proposal.capability) : 'Add to note'
                     }
                     approveDisabled={false}
                     busy={busy !== null}
@@ -612,32 +585,6 @@ function approvalLabel(capability: string): string {
     default:
       return 'Approve request';
   }
-}
-
-function LinearIssuePreview({ teamId }: { readonly teamId: string }): ReactElement {
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <Text variant="bodySmall">Read-only lookup of the issue’s details.</Text>
-      <dl className="flex min-w-0 flex-col gap-2">
-        <div>
-          <Text as="dt" variant="note" tone="muted">
-            Destination
-          </Text>
-          <Text as="dd" variant="bodySmall">
-            Linear
-          </Text>
-        </div>
-        <div>
-          <Text as="dt" variant="note" tone="muted">
-            Authorized team
-          </Text>
-          <Text as="dd" variant="note" className="wrap-anywhere">
-            {teamId}
-          </Text>
-        </div>
-      </dl>
-    </div>
-  );
 }
 
 function AppendNotePreview({

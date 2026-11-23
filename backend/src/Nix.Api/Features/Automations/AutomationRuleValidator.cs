@@ -48,7 +48,7 @@ public static class AutomationRuleValidator
             violations.Add(new AutomationViolation("scopeItemId", "must be an item id or null"));
         }
 
-        if (actions.Value.Any(action => action is StartPetRunAction or PollPetMailboxAction)
+        if (actions.Value.Any(action => action is StartPetRunAction)
             && (actions.Value.Length != 1 || trigger.Value is not ScheduleTrigger || input.ScopeItemId is null))
         {
             violations.Add(new AutomationViolation("actions", "a pet routine must be the only action on a schedule with a scoped task"));

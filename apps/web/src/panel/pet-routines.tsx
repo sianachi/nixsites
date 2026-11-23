@@ -108,10 +108,8 @@ type RoutineFeed =
   | { readonly status: 'loading' | 'error' }
   | { readonly status: 'ready'; readonly rules: readonly AutomationRuleResponse[] };
 
-function readRoutine(rule: AutomationRuleResponse) {
-  const task = automations.petRoutineRuleInputSchema.safeParse(rule);
-  return task.success ? task : automations.petMailboxRoutineRuleInputSchema.safeParse(rule);
-}
+const readRoutine = (rule: AutomationRuleResponse) =>
+  automations.petRoutineRuleInputSchema.safeParse(rule);
 
 export function PetRoutines({
   client,

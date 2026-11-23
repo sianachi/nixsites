@@ -58,7 +58,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
         get
         {
             var tables = new TheoryData<string>();
-            foreach (var table in NixTables.TenantScoped.Concat(NixTables.ParentScoped))
+            foreach (var table in NixTables.TenantScoped)
             {
                 tables.Add(table);
             }
@@ -204,7 +204,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
                 """);
 
             Assert.Empty(NixTables.TenantScoped.Intersect(NixTables.CapabilityOnly, StringComparer.Ordinal));
-            var classified = NixTables.TenantScoped.Concat(NixTables.ParentScoped).Concat(NixTables.CapabilityOnly).ToArray();
+            var classified = NixTables.TenantScoped.Concat(NixTables.CapabilityOnly).ToArray();
             Assert.Equal(classified.Length, classified.Distinct(StringComparer.Ordinal).Count());
             Assert.Equal(classified.Order(StringComparer.Ordinal), actual);
         }
@@ -363,7 +363,7 @@ public sealed class M0SchemaIsolationTests : IAsyncLifetime
     {
         // The theory above indexes into the matrix, so a table missing from it would throw rather
         // than fail readably. This says which one.
-        var classified = NixTables.TenantScoped.Concat(NixTables.ParentScoped).Concat(NixTables.CapabilityOnly).Order(StringComparer.Ordinal);
+        var classified = NixTables.TenantScoped.Concat(NixTables.CapabilityOnly).Order(StringComparer.Ordinal);
         Assert.Equal(classified, NixTables.ExpectedApplicationPrivileges.Keys.Order(StringComparer.Ordinal));
     }
 

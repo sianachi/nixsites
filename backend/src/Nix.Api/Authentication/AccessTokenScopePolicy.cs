@@ -105,22 +105,7 @@ public static class AccessTokenScopePolicy
         if (value.StartsWith("/api/v1/items/", StringComparison.OrdinalIgnoreCase)
             && (value.EndsWith("/pet-peers", StringComparison.OrdinalIgnoreCase)
                 || value.Contains("/pet-peers/", StringComparison.OrdinalIgnoreCase)
-                || value.EndsWith("/pet-protection", StringComparison.OrdinalIgnoreCase)
-                || value.EndsWith("/linear-link", StringComparison.OrdinalIgnoreCase)
-                || value.Contains("/linear-link/", StringComparison.OrdinalIgnoreCase)))
-        {
-            return Requirement.InteractiveOnly;
-        }
-
-        // Provider links, pet assignments, and approval decisions require a browser.
-        if (!IsRead(method)
-            && ((value.StartsWith("/api/v1/workspaces/", StringComparison.OrdinalIgnoreCase)
-                    && (value.EndsWith("/linear", StringComparison.OrdinalIgnoreCase)
-                        || value.EndsWith("/linear/authorize", StringComparison.OrdinalIgnoreCase)))
-                || (value.StartsWith("/api/v1/items/", StringComparison.OrdinalIgnoreCase)
-                    && value.Contains("/linear-requests/", StringComparison.OrdinalIgnoreCase)
-                    && (value.EndsWith("/decision", StringComparison.OrdinalIgnoreCase)
-                        || value.EndsWith("/hand-to-pet", StringComparison.OrdinalIgnoreCase)))))
+                || value.EndsWith("/pet-protection", StringComparison.OrdinalIgnoreCase)))
         {
             return Requirement.InteractiveOnly;
         }

@@ -31,21 +31,6 @@ test('health, exchange, and public forms are not bearer scopes', () => {
   assert.equal(tokenScope('PATCH', '/api/v1/items/{itemId}'), 'write');
 });
 
-test('Linear connections, pet assignments, and decisions require a browser session', () => {
-  const connection = '/api/v1/workspaces/{workspaceId}/linear';
-  const request = '/api/v1/items/{itemId}/linear-requests';
-  const link = '/api/v1/items/{itemId}/linear-link';
-  assert.equal(classify('GET', connection), 'read');
-  assert.equal(classify('GET', link), 'interactive');
-  assert.equal(classify('POST', `${link}/copy-status`), 'interactive');
-  assert.equal(classify('POST', `${connection}/authorize`), 'interactive');
-  assert.equal(classify('DELETE', `${connection}/`), 'interactive');
-  assert.equal(classify('POST', request), 'write');
-  assert.equal(classify('GET', `${request}/{requestId}`), 'read');
-  assert.equal(classify('POST', `${request}/{requestId}/decision`), 'interactive');
-  assert.equal(classify('POST', `${request}/hand-to-pet`), 'interactive');
-});
-
 test('pet-run reads and decisions require a browser session', () => {
   const itemRuns = '/api/v1/items/{itemId}/pet-runs';
   assert.equal(classify('GET', '/api/v1/workspaces/{workspaceId}/pet-runs'), 'interactive');

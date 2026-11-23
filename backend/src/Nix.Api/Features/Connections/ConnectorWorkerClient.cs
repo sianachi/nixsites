@@ -7,13 +7,7 @@ namespace Nix.Features.Connections;
 [SuppressMessage("Performance", "CA1812", Justification = "Created by the typed HTTP client factory.")]
 internal sealed class ConnectorWorkerClient(HttpClient http, IConfiguration configuration)
 {
-    internal Task<ConnectorWorkerResponse?> SendAsync(ConnectorWorkerRequest request, CancellationToken token) =>
-        SendAsync("/v1/sani/connectors", request, token);
-
-    internal Task<ConnectorWorkerResponse?> SendMcpAsync(ConnectorWorkerRequest request, CancellationToken token) =>
-        SendAsync("/v1/sani/registered-mcp", request, token);
-
-    private async Task<ConnectorWorkerResponse?> SendAsync(string path, ConnectorWorkerRequest request, CancellationToken token)
+    internal async Task<ConnectorWorkerResponse?> SendAsync(ConnectorWorkerRequest request, CancellationToken token)
     {
         var secret = configuration["Nix:InternalSecret"];
         if (string.IsNullOrWhiteSpace(secret)
@@ -24,7 +18,7 @@ internal sealed class ConnectorWorkerClient(HttpClient http, IConfiguration conf
             return null;
         }
 
-        using var outgoing = new HttpRequestMessage(HttpMethod.Post, new Uri(origin, path));
+        using var outgoing = new HttpRequestMessage(HttpMethod.Post, new Uri(origin, "/v1/sani/registered-mcp"));
         outgoing.Headers.Add("X-Nix-Internal-Secret", secret);
         outgoing.Content = JsonContent.Create(request, ConnectorJsonContext.Default.ConnectorWorkerRequest);
         try

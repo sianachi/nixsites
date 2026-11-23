@@ -252,8 +252,8 @@ under the kubelet seccomp root on the nodes where the worker can run. The worker
 passes after a sandboxed browser starts. [Playwright sandbox setup](https://playwright.dev/docs/docker#crawling-and-scraping)
 
 On a confirmed disclosure, set `NIX_PET_RUNS_ENABLED=false`, keep the pilot workspace ID configured,
-and roll out the config to Core. This pauses durable jobs and legacy Linear pet assignments in the
-pilot. Revoke affected connections and peer grants from workspace and task settings.
+and roll out the config to Core. This pauses durable jobs in the pilot. Revoke affected
+connections and peer grants from workspace and task settings.
 
 ### Off-host backups
 

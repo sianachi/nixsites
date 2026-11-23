@@ -18,7 +18,7 @@ export function registerActionTools(server: McpServer, { session }: McpToolDeps)
       description:
         'Find Nix operations for anything the typed tools do not cover, by plain-language query. ' +
         'Returns each operation with its path, query and body shape; run one with run_nix_action. ' +
-        'Manage credentials, pet settings, push subscriptions, connected accounts and Linear approvals in Nix.',
+        'Manage credentials, pet settings, push subscriptions and connected accounts in Nix.',
       inputSchema: {
         query: z.string().min(1).max(300),
         limit: z.number().int().min(1).max(20).optional(),

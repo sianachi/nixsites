@@ -5,7 +5,7 @@ using Nix.Domain.Automations;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Errors;
-using Nix.Features.Linear;
+using Nix.Features.BrowserAuth;
 using Nix.Http;
 using Nix.Messaging;
 
@@ -42,7 +42,7 @@ internal static class AutomationEndpoints
 
     private static async Task<Results<Created<AutomationRuleResponse>, ProblemHttpResult>> Create(
         Guid workspaceId, AutomationRuleInput request, HttpContext context, [FromServices] NixDispatcher dispatcher,
-        [FromServices] LinearBrowserAccess browser)
+        [FromServices] BrowserAccess browser)
     {
         var result = await dispatcher.SendAsync<CreateAutomation, AutomationRuleResponse>(
             new(WorkspaceId.From(workspaceId), request)
@@ -60,17 +60,17 @@ internal static class AutomationEndpoints
 
     private static async Task<Results<Ok<AutomationRuleResponse>, ProblemHttpResult>> Update(
         Guid ruleId, UpdateAutomationRequest request, HttpContext context, [FromServices] NixDispatcher dispatcher,
-        [FromServices] LinearBrowserAccess browser) =>
+        [FromServices] BrowserAccess browser) =>
         Map(context, await dispatcher.SendAsync<UpdateAutomation, AutomationRuleResponse>(
             new(ruleId, request.ExpectedRevision, request.Rule)
             {
                 VerifiedBrowserOwner = await VerifyRoutineOwnerAsync(request.Rule, context, browser).ConfigureAwait(false),
             }, context.RequestAborted).ConfigureAwait(false));
 
-    private static async ValueTask<bool> VerifyRoutineOwnerAsync(AutomationRuleInput request, HttpContext context, LinearBrowserAccess browser) =>
+    private static async ValueTask<bool> VerifyRoutineOwnerAsync(AutomationRuleInput request, HttpContext context, BrowserAccess browser) =>
         request.Actions is JsonArray actions && actions.OfType<JsonObject>().Any(action =>
             action["type"] is JsonValue field && field.TryGetValue<string>(out var type)
-            && type is StartPetRunAction.Type or PollPetMailboxAction.Type)
+            && type is StartPetRunAction.Type)
         && await browser.VerifyAsync(context, requireOrigin: true).ConfigureAwait(false) is not null;
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Delete(

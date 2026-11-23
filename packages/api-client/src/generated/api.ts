@@ -2309,163 +2309,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/workspaces/{workspaceId}/linear': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Read the Linear connection status for this workspace. */
-    get: operations['GetLinearConnection'];
-    put?: never;
-    post?: never;
-    /** Remove this workspace's Linear connection. */
-    delete: operations['DisconnectLinearConnection'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/workspaces/{workspaceId}/linear/authorize': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Start a browser OAuth connection to read-only Linear. */
-    post: operations['AuthorizeLinearConnection'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/linear-requests': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List visible Linear issue requests for a Nix task. */
-    get: operations['ListLinearRequests'];
-    put?: never;
-    /** Queue a one-issue lookup for approval on a Nix task. */
-    post: operations['RequestLinearIssue'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/linear-requests/{requestId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Read the status of a Linear issue request on a Nix task. */
-    get: operations['GetLinearIssueRequest'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/linear-requests/hand-to-pet': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Hand a pet a single Linear issue lookup for approval on the task. */
-    post: operations['HandToPet'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/linear-requests/{requestId}/decision': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Approve or decline a single pending Linear issue lookup in the browser. */
-    post: operations['DecideLinearIssueRequest'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/linear-link': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Read an owner's linked Linear issue and observed status. */
-    get: operations['GetLinearLink'];
-    /** Link one exact issue from an authorized Linear team. */
-    put: operations['LinkLinearIssue'];
-    post?: never;
-    /** Remove the exact linked issue without changing Linear. */
-    delete: operations['UnlinkLinearIssue'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/linear-link/refresh': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Refresh the linked issue status in Nix without changing Linear. */
-    post: operations['RefreshLinearLink'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/items/{itemId}/linear-link/copy-status': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Copy an observed Linear status into the selected Nix task. */
-    post: operations['CopyLinkedLinearStatus'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/workspaces/{workspaceId}/pet-connections': {
     parameters: {
       query?: never;
@@ -2473,27 +2316,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List the owner’s scoped pet connections and provider actions. */
+    /** List the owner’s scoped pet connections. */
     get: operations['ListPetConnections'];
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/workspaces/{workspaceId}/pet-connections/authorize': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Begin browser consent for a scoped pet connection. */
-    post: operations['AuthorizePetConnection'];
     delete?: never;
     options?: never;
     head?: never;
@@ -4300,21 +4126,6 @@ export interface components {
     AuthorizeCalendarResponse: {
       authorizationUrl: string;
     };
-    AuthorizeLinearConnectionRequest: {
-      returnTo: null | string;
-    };
-    AuthorizePetConnectionRequest: {
-      provider: string;
-      resourceKind: string;
-      resourceId: string;
-      actions: string[];
-      returnTo: null | string;
-      /** Format: uuid */
-      calendarLinkId?: null | string;
-    };
-    AuthorizePetConnectionResponse: {
-      authorizationUrl: string;
-    };
     AutomationActionPreview: {
       /** Format: int32 */
       index: number | string;
@@ -4737,24 +4548,6 @@ export interface components {
       /** Format: uuid */
       petId: string;
     };
-    ConnectorActionDefinition: {
-      id: string;
-      provider: string;
-      resourceKind: string;
-      kind: string;
-      description: string;
-      schema: components['schemas']['JsonElement'];
-      schemaHash: string;
-      configured: boolean;
-    };
-    ConnectorCalendarLink: {
-      /** Format: uuid */
-      linkId: string;
-      provider: string;
-      resourceId: string;
-      name: string;
-      writable: boolean;
-    };
     ConnectorConnection: {
       /** Format: uuid */
       id: string;
@@ -4768,8 +4561,6 @@ export interface components {
     ConnectorList: {
       enabled: boolean;
       connections: components['schemas']['ConnectorConnection'][];
-      actions: components['schemas']['ConnectorActionDefinition'][];
-      calendars: components['schemas']['ConnectorCalendarLink'][];
     };
     ContainerViewsResponse: {
       views: components['schemas']['ViewResponse'][];
@@ -4831,11 +4622,6 @@ export interface components {
       error: null | string;
       /** @default  */
       text: string;
-    };
-    CopyLinearStatusRequest: {
-      /** Format: uuid */
-      revision: string;
-      localStatus: null | string;
     };
     CreateAccessTokenRequest: {
       name: null | string;
@@ -4977,9 +4763,6 @@ export interface components {
       /** Format: int32 */
       rolloverHour: number | string;
       showOnCalendar: boolean;
-    };
-    DecideLinearIssueRequest: {
-      approve: boolean;
     };
     DecidePetProposalRequest: {
       approve: boolean;
@@ -5375,11 +5158,6 @@ export interface components {
       /** Format: date */
       to: string;
     };
-    HandToPetRequest: {
-      /** Format: uuid */
-      petId: string;
-      issueId: string;
-    };
     HealthCheckResponse: {
       name: string;
       status: string;
@@ -5541,68 +5319,6 @@ export interface components {
       workspaceId: string;
       /** Format: date-time */
       keptAt: string;
-    };
-    LinearAuthorizationResponse: {
-      authorizationUrl: string;
-    };
-    LinearConnectionResponse: {
-      connected: boolean;
-    };
-    LinearIssueResponse: {
-      id: string;
-      title: string;
-      status: string;
-      url: string;
-    };
-    LinearLinkConnection: {
-      /** Format: uuid */
-      id: string;
-      teamId: string;
-    };
-    LinearLinkedIssue: {
-      /** Format: uuid */
-      revision: string;
-      connected: boolean;
-      identifier: null | string;
-      url: null | string;
-      remoteStatus: null | string;
-      /** Format: date-time */
-      checkedAt: null | string;
-      localStatus: null | string;
-      change: null | string;
-      canCopyStatus: boolean;
-    };
-    LinearLinkResponse: {
-      link: null | components['schemas']['LinearLinkedIssue'];
-      connections: components['schemas']['LinearLinkConnection'][];
-    };
-    LinearRequestResponse: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      itemId: string;
-      issueId: string;
-      status: string;
-      requestedBy: string;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      expiresAt: string;
-      canDecide: boolean;
-      result: null | components['schemas']['LinearIssueResponse'];
-      /** Format: uuid */
-      petId: null | string;
-      /** Format: uuid */
-      commentId: null | string;
-    };
-    LinearRequestsResponse: {
-      requests: components['schemas']['LinearRequestResponse'][];
-      canHandToPet: boolean;
-    };
-    LinkLinearIssueRequest: {
-      /** Format: uuid */
-      connectionId: string;
-      issue: string;
     };
     LivenessResponse: {
       status: string;
@@ -6388,9 +6104,6 @@ export interface components {
     ReplyCommentRequest: {
       body: string;
       mentionIds: null | string[];
-    };
-    RequestLinearIssueRequest: {
-      issueId: string;
     };
     RequestSiteApprovalRequest: {
       acknowledgeDisclosure: boolean;
@@ -13417,316 +13130,6 @@ export interface operations {
       };
     };
   };
-  GetLinearConnection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearConnectionResponse'];
-        };
-      };
-    };
-  };
-  DisconnectLinearConnection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorizeLinearConnection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: {
-      content: {
-        'application/json': null | components['schemas']['AuthorizeLinearConnectionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearAuthorizationResponse'];
-        };
-      };
-    };
-  };
-  ListLinearRequests: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearRequestsResponse'];
-        };
-      };
-    };
-  };
-  RequestLinearIssue: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RequestLinearIssueRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearRequestResponse'];
-        };
-      };
-    };
-  };
-  GetLinearIssueRequest: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-        requestId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearRequestResponse'];
-        };
-      };
-    };
-  };
-  HandToPet: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['HandToPetRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearRequestResponse'];
-        };
-      };
-    };
-  };
-  DecideLinearIssueRequest: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-        requestId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['DecideLinearIssueRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearRequestResponse'];
-        };
-      };
-    };
-  };
-  GetLinearLink: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearLinkResponse'];
-        };
-      };
-    };
-  };
-  LinkLinearIssue: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['LinkLinearIssueRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearLinkResponse'];
-        };
-      };
-    };
-  };
-  UnlinkLinearIssue: {
-    parameters: {
-      query: {
-        revision: string;
-      };
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  RefreshLinearLink: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearLinkResponse'];
-        };
-      };
-    };
-  };
-  CopyLinkedLinearStatus: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CopyLinearStatusRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LinearLinkResponse'];
-        };
-      };
-    };
-  };
   ListPetConnections: {
     parameters: {
       query?: never;
@@ -13745,32 +13148,6 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ConnectorList'];
-        };
-      };
-    };
-  };
-  AuthorizePetConnection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['AuthorizePetConnectionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AuthorizePetConnectionResponse'];
         };
       };
     };

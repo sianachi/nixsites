@@ -52,10 +52,10 @@ import {
   useSettingsTab,
   type SettingsTab,
 } from './settings-tab';
+import { ConnectionsSection } from './pet-connections-section';
 import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 import { EmptyPanel } from '@nix/web-foundation/components/states/status-panels';
 import { SettingsNavigationContext } from './settings-navigation-context';
-import { LinearConnectionsSection } from './linear-connections-section';
 
 const fromState = z.object({ from: z.string() });
 const drilledState = z.object({ drilled: z.literal(true) });
@@ -105,7 +105,7 @@ const settingsSections: readonly {
     id: 'connections',
     label: 'Connections',
     group: 'Workspace',
-    keywords: 'linear integrations oauth',
+    keywords: 'integrations mcp tools websites',
   },
   { id: 'access-tokens', label: 'Access tokens', group: 'Workspace' },
   { id: 'mcp', label: 'MCP', group: 'Workspace' },
@@ -172,7 +172,7 @@ function SectionBody(props: { readonly id: SettingsTab }): ReactElement | null {
     case 'integrations':
       return <CalendarsSection />;
     case 'connections':
-      return <LinearConnectionsSection />;
+      return <ConnectionsSection />;
     case 'access-tokens':
       return <AccessTokensSection />;
     case 'mcp':

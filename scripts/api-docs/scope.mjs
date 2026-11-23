@@ -71,20 +71,8 @@ export function classify(method, path) {
 
   if (/^\/api\/v1\/(items|workspaces)\/[^/]+\/pet-runs(\/|$)/.test(value)) return 'interactive';
 
-  if (/^\/api\/v1\/items\/[^/]+\/linear-link(\/|$)/.test(value)) return 'interactive';
   if (/^\/api\/v1\/items\/[^/]+\/pet-peers(\/|$)/.test(value)) return 'interactive';
   if (/^\/api\/v1\/items\/[^/]+\/pet-protection$/.test(value)) return 'interactive';
-
-  if (
-    !isRead(verb) &&
-    ((value.startsWith('/api/v1/workspaces/') &&
-      (value.endsWith('/linear') || value.endsWith('/linear/authorize'))) ||
-      (value.startsWith('/api/v1/items/') &&
-        value.includes('/linear-requests/') &&
-        (value.endsWith('/decision') || value.endsWith('/hand-to-pet'))))
-  ) {
-    return 'interactive';
-  }
 
   if (
     !isRead(verb) &&

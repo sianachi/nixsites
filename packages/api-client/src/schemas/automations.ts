@@ -84,24 +84,6 @@ export const petRoutineRuleInputSchema = scheduledPetRuleInputSchema.extend({
   ]),
 });
 
-export const petMailboxRoutineRuleInputSchema = scheduledPetRuleInputSchema.extend({
-  actions: z.tuple([
-    z.strictObject({
-      type: z.literal('poll_pet_mailbox'),
-      provider: z.enum(['gmail', 'outlook-mail']),
-      connectionId: nonNilUuidSchema,
-      connectionRevision: nonNilUuidSchema,
-      resourceId: z
-        .string()
-        .min(1)
-        .max(512)
-        .refine((id) => !/\p{Cc}/u.test(id), 'Choose a mailbox label or folder.'),
-      brief: petBriefSchema.max(2_000),
-      includeTargetText: z.boolean().optional(),
-    }),
-  ]),
-});
-
 export const automationRuleResponseSchema = z.object({
   id: z.uuid(),
   workspaceId: z.uuid(),
@@ -156,7 +138,6 @@ export const automationTestResponseSchema = z.object({
 
 export type AutomationRuleInput = z.infer<typeof automationRuleInputSchema>;
 export type PetRoutineRuleInput = z.infer<typeof petRoutineRuleInputSchema>;
-export type PetMailboxRoutineRuleInput = z.infer<typeof petMailboxRoutineRuleInputSchema>;
 export type AutomationRuleResponse = z.infer<typeof automationRuleResponseSchema>;
 export type AutomationListResponse = z.infer<typeof automationListResponseSchema>;
 export type AutomationRunResponse = z.infer<typeof automationRunResponseSchema>;

@@ -95,7 +95,7 @@ public sealed class AutomationRuleSupport(
         {
             var item = await tree.FindAsync(ItemId.From(id), cancellationToken).ConfigureAwait(false);
             if (item is null || item.WorkspaceId != workspaceId || item.LifecycleState != ItemLifecycleState.Active
-                || (id == definition.ScopeItemId && definition.Actions.Any(action => action is StartPetRunAction or PollPetMailboxAction) && item.Type != "note"))
+                || (id == definition.ScopeItemId && definition.Actions.Any(action => action is StartPetRunAction) && item.Type != "note"))
             {
                 return AutomationErrors.Invalid(id == definition.ScopeItemId
                     ? "scopeItemId: must name a visible item in this workspace"
@@ -264,7 +264,7 @@ public sealed class CreateAutomationHandler(AutomationRuleSupport support, IPerm
             return Result.Failure<AutomationRuleResponse>(validated.Error);
         }
 
-        if (!command.VerifiedBrowserOwner && validated.Value.Actions.Any(action => action is StartPetRunAction or PollPetMailboxAction))
+        if (!command.VerifiedBrowserOwner && validated.Value.Actions.Any(action => action is StartPetRunAction))
         {
             return Result.Failure<AutomationRuleResponse>(AutomationErrors.PetRoutineOwnerRequired);
         }
@@ -338,7 +338,7 @@ public sealed class UpdateAutomationHandler(AutomationRuleSupport support, IPerm
             return Result.Failure<AutomationRuleResponse>(validated.Error);
         }
 
-        if (!command.VerifiedBrowserOwner && validated.Value.Actions.Any(action => action is StartPetRunAction or PollPetMailboxAction))
+        if (!command.VerifiedBrowserOwner && validated.Value.Actions.Any(action => action is StartPetRunAction))
         {
             return Result.Failure<AutomationRuleResponse>(AutomationErrors.PetRoutineOwnerRequired);
         }

@@ -174,17 +174,6 @@ services:
       Nix__PetRuns__AllowedWorkspaces__0: ${NIX_PET_RUNS_PILOT_WORKSPACE:-}
       Nix__PetBrowser__Url: ${NIX_PET_BROWSER_URL:-}
       Nix__PetBrowser__InternalSecret: ${NIX_PET_BROWSER_INTERNAL_SECRET:-}
-      Nix__Connectors__google__ClientId: ${NIX_PET_GOOGLE_CLIENT_ID:-}
-      Nix__Connectors__google__ClientSecret: ${NIX_PET_GOOGLE_CLIENT_SECRET:-}
-      Nix__Connectors__microsoft__ClientId: ${NIX_PET_MICROSOFT_CLIENT_ID:-}
-      Nix__Connectors__microsoft__ClientSecret: ${NIX_PET_MICROSOFT_CLIENT_SECRET:-}
-      Nix__Connectors__slack__ClientId: ${NIX_PET_SLACK_CLIENT_ID:-}
-      Nix__Connectors__slack__ClientSecret: ${NIX_PET_SLACK_CLIENT_SECRET:-}
-      Nix__Connectors__github__ClientId: ${NIX_PET_GITHUB_CLIENT_ID:-}
-      Nix__Connectors__github__ClientSecret: ${NIX_PET_GITHUB_CLIENT_SECRET:-}
-      Nix__Connectors__linear__ClientId: ${NIX_PET_LINEAR_CLIENT_ID:-}
-      Nix__Connectors__linear__ClientSecret: ${NIX_PET_LINEAR_CLIENT_SECRET:-}
-      Nix__Connectors__microsoft__Tenant: ${NIX_PET_MICROSOFT_TENANT:-organizations}
       Nix__Collaboration__BaseUrl: http://nix-node:8100
       Nix__ObjectStorage__Endpoint: ${NIX_OBJECT_STORE_ENDPOINT:?set NIX_OBJECT_STORE_ENDPOINT}
       Nix__ObjectStorage__PublicOrigin: ${NIX_OBJECT_STORE_PUBLIC_ORIGIN:?set NIX_OBJECT_STORE_PUBLIC_ORIGIN}

@@ -6,8 +6,8 @@ using Nix.Abstractions;
 using Nix.Abstractions.Connections;
 using Nix.Domain.Tenancy;
 using Nix.Errors;
+using Nix.Features.BrowserAuth;
 using Nix.Features.Connections;
-using Nix.Features.Linear;
 using Nix.Http;
 
 namespace Nix.Features.PetRuns;
@@ -27,7 +27,7 @@ internal static class PetBrowserSiteEndpoints
 
     private static async Task<Results<Ok<ConnectorConnection>, ProblemHttpResult>> Save(
         Guid workspaceId, SavePetBrowserSiteRequest request, HttpContext http,
-        [FromServices] LinearBrowserAccess browser, [FromServices] IPermissionResolver permissions,
+        [FromServices] BrowserAccess browser, [FromServices] IPermissionResolver permissions,
         [FromServices] IConnectorStore connections, [FromServices] IDataProtectionProvider protection,
         [FromServices] IConfiguration configuration)
     {

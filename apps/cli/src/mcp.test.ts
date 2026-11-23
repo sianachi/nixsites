@@ -101,8 +101,6 @@ describe('nixctl mcp workspace tools', () => {
         'create_item',
         'search_items',
         'read_note',
-        'request_linear_issue',
-        'get_linear_issue_request',
         'write_note',
         'move_item',
         'rename_item',
@@ -1140,83 +1138,6 @@ describe('nixctl mcp item and generic action tools', () => {
   };
   const text = (result: unknown) =>
     (result as { content: { text: string }[] }).content.map((part) => part.text).join('');
-
-  it('requests a task lookup, reads the approved result and leaves the decision to Nix', async () => {
-    const path = `/api/v1/items/${ITEM}/linear-requests`;
-    const pending = {
-      id: OTHER,
-      itemId: ITEM,
-      issueId: 'APP-42',
-      status: 'pending',
-      requestedBy: 'Claude',
-      createdAt: '2026-11-16T21:00:00Z',
-      expiresAt: '2026-11-16T21:15:00Z',
-      canDecide: false,
-    };
-    const completed = {
-      ...pending,
-      status: 'succeeded',
-      result: {
-        id: 'APP-42',
-        title: 'Review login',
-        status: 'Done',
-        url: 'https://linear.app/example/issue/APP-42',
-      },
-    };
-    const { fetchImpl, calls } = stub((method) =>
-      Response.json(
-        method === 'POST'
-          ? { ...pending, petId: null, commentId: null }
-          : { ...completed, petId: OTHER, commentId: ITEM },
-      ),
-    );
-    const connected = await connect('owner', fetchImpl);
-    try {
-      const requested = await connected.client.callTool({
-        name: 'request_linear_issue',
-        arguments: { itemId: ITEM, issueId: ' APP-42 ' },
-      });
-      expect(requested.isError, text(requested)).toBeFalsy();
-      expect(JSON.parse(text(requested))).toEqual({ ...pending, result: null });
-
-      const refused = await connected.client.callTool({
-        name: 'run_nix_action',
-        arguments: {
-          operationId: 'DecideLinearIssueRequest',
-          path: { itemId: ITEM, requestId: OTHER },
-          body: { approve: true },
-          confirm: true,
-        },
-      });
-      expect(refused.isError).toBe(true);
-      expect(text(refused)).toContain('do this yourself in Nix');
-
-      const handoffRefused = await connected.client.callTool({
-        name: 'run_nix_action',
-        arguments: {
-          operationId: 'HandToPet',
-          path: { itemId: ITEM },
-          body: { petId: OTHER, issueId: 'APP-42' },
-          confirm: true,
-        },
-      });
-      expect(handoffRefused.isError).toBe(true);
-      expect(text(handoffRefused)).toContain('do this yourself in Nix');
-
-      const checked = await connected.client.callTool({
-        name: 'get_linear_issue_request',
-        arguments: { itemId: ITEM, requestId: OTHER },
-      });
-      expect(checked.isError, text(checked)).toBeFalsy();
-      expect(JSON.parse(text(checked))).toEqual(completed);
-      expect(calls).toEqual([
-        { method: 'POST', path, body: { issueId: 'APP-42' } },
-        { method: 'GET', path: `${path}/${OTHER}`, body: null },
-      ]);
-    } finally {
-      await connected.close();
-    }
-  });
 
   it('finds actions without offering credential operations', async () => {
     const connected = await connect('owner', async () => unexpectedRequest());

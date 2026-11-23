@@ -4,20 +4,11 @@ using Nix.Domain.Primitives;
 
 namespace Nix.Features.Connections;
 
-internal sealed record ConnectorActionDefinition(
-    string Id, string Provider, string ResourceKind, string Kind, string Description,
-    JsonElement Schema, string SchemaHash, bool Configured);
 internal sealed record ConnectorConnection(
     Guid Id, string Provider, string ResourceKind, string ResourceId, IReadOnlyList<string> Actions, Guid Revision);
-internal sealed record ConnectorCalendarLink(Guid LinkId, string Provider, string ResourceId, string Name, bool Writable);
 internal sealed record ConnectorAvailableAction(
     Guid ConnectionId, Guid ConnectionRevision, string Provider, string Resource, string Action, string Kind, JsonElement? Schema);
-internal sealed record ConnectorList(
-    bool Enabled, IReadOnlyList<ConnectorConnection> Connections, IReadOnlyList<ConnectorActionDefinition> Actions,
-    IReadOnlyList<ConnectorCalendarLink> Calendars);
-internal sealed record AuthorizePetConnectionRequest(
-    string Provider, string ResourceKind, string ResourceId, string[] Actions, string? ReturnTo, Guid? CalendarLinkId = null);
-internal sealed record AuthorizePetConnectionResponse(string AuthorizationUrl);
+internal sealed record ConnectorList(bool Enabled, IReadOnlyList<ConnectorConnection> Connections);
 internal sealed record RegisterPetMcpConnectionRequest(string Url, string Tool, string Token);
 internal sealed record RegisteredMcpTool(string Url, string Tool, JsonElement Schema, string SchemaHash);
 
@@ -28,12 +19,8 @@ internal sealed record PreparedConnectorAction(
 internal sealed record ConnectorWorkerRequest(
     string Operation, string? Action = null, string? ResourceId = null,
     JsonElement? Args = null, string? SchemaHash = null, string? AccessToken = null, Guid? ExecutionId = null);
-internal sealed record ConnectorWorkerResponse(
-    ConnectorActionDefinition[]? Actions, JsonElement? Arguments, string? SchemaHash, JsonElement? Result, string? Failure);
-internal sealed record ConnectorCredential(
-    string AccessToken, string? RefreshToken, DateTimeOffset? ExpiresAt,
-    Guid? CalendarLinkId = null, RegisteredMcpTool? RemoteMcp = null);
-internal sealed record PendingConnectorConsent(string[] Actions, string Verifier, string ReturnTo, string ClientId);
+internal sealed record ConnectorWorkerResponse(JsonElement? Arguments, string? SchemaHash, JsonElement? Result, string? Failure);
+internal sealed record ConnectorCredential(string AccessToken, RegisteredMcpTool? RemoteMcp = null);
 
 internal static class ConnectorErrors
 {
@@ -47,13 +34,10 @@ internal static class ConnectorErrors
 
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(ConnectorList))]
-[JsonSerializable(typeof(AuthorizePetConnectionRequest))]
-[JsonSerializable(typeof(AuthorizePetConnectionResponse))]
 [JsonSerializable(typeof(RegisterPetMcpConnectionRequest))]
 [JsonSerializable(typeof(PreparedConnectorAction))]
 [JsonSerializable(typeof(ConnectorWorkerRequest))]
 [JsonSerializable(typeof(ConnectorWorkerResponse))]
 [JsonSerializable(typeof(ConnectorCredential))]
 [JsonSerializable(typeof(ConnectorAvailableAction[]))]
-[JsonSerializable(typeof(PendingConnectorConsent))]
 internal sealed partial class ConnectorJsonContext : JsonSerializerContext;

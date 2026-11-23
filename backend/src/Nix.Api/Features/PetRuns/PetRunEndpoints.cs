@@ -4,7 +4,7 @@ using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
 using Nix.Errors;
-using Nix.Features.Linear;
+using Nix.Features.BrowserAuth;
 using Nix.Http;
 using Nix.Messaging;
 
@@ -63,22 +63,22 @@ internal static class PetRunEndpoints
     }
 
     private static Task<Results<Ok<PetRunsResponse>, ProblemHttpResult>> ListItem(
-        Guid itemId, HttpContext context, [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        Guid itemId, HttpContext context, [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, false, ct => dispatcher.QueryAsync<ListPetRuns, Result<PetRunsResponse>>(
             new ListPetRuns(ItemId.From(itemId), null), ct));
 
     private static Task<Results<Ok<PetRunsResponse>, ProblemHttpResult>> ListWorkspace(
-        Guid workspaceId, HttpContext context, [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        Guid workspaceId, HttpContext context, [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, false, ct => dispatcher.QueryAsync<ListPetRuns, Result<PetRunsResponse>>(
             new ListPetRuns(null, WorkspaceId.From(workspaceId)), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Read(
-        Guid itemId, Guid runId, HttpContext context, [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        Guid itemId, Guid runId, HttpContext context, [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, false, ct => dispatcher.QueryAsync<ReadPetRun, Result<PetRunResponse>>(
             new ReadPetRun(ItemId.From(itemId), runId), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Watch(
-        Guid itemId, Guid runId, HttpContext context, [FromServices] LinearBrowserAccess browser,
+        Guid itemId, Guid runId, HttpContext context, [FromServices] BrowserAccess browser,
         [FromServices] NixDispatcher dispatcher, long after = 0)
     {
         context.Response.Headers.CacheControl = "no-store";
@@ -88,51 +88,51 @@ internal static class PetRunEndpoints
     }
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Start(
-        Guid itemId, StartPetRunRequest request, HttpContext context, [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        Guid itemId, StartPetRunRequest request, HttpContext context, [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, true, ct => dispatcher.SendAsync<StartPetRun, PetRunResponse>(
             new StartPetRun(ItemId.From(itemId), request), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Answer(
         Guid itemId, Guid runId, AnswerPetRunRequest request, HttpContext context,
-        [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, true, ct => dispatcher.SendAsync<AnswerPetRun, PetRunResponse>(
             new AnswerPetRun(ItemId.From(itemId), runId, request), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Decide(
         Guid itemId, Guid runId, Guid proposalId, DecidePetProposalRequest request, HttpContext context,
-        [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, true, ct => dispatcher.SendAsync<DecidePetRunProposal, PetRunResponse>(
             new DecidePetRunProposal(ItemId.From(itemId), runId, proposalId, request.Approve), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> DecideScope(
         Guid itemId, Guid runId, DecidePetRunScopeRequest request, HttpContext context,
-        [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, true, ct => dispatcher.SendAsync<DecidePetRunScope, PetRunResponse>(
             new DecidePetRunScope(ItemId.From(itemId), runId, request), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Revise(
         Guid itemId, Guid runId, Guid proposalId, RevisePetRunProposalRequest request, HttpContext context,
-        [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, true, ct => dispatcher.SendAsync<RevisePetRunProposal, PetRunResponse>(
             new RevisePetRunProposal(ItemId.From(itemId), runId, proposalId, request), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Cancel(
-        Guid itemId, Guid runId, HttpContext context, [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        Guid itemId, Guid runId, HttpContext context, [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, true, ct => dispatcher.SendAsync<CancelPetRun, PetRunResponse>(
             new CancelPetRun(ItemId.From(itemId), runId), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Retry(
-        Guid itemId, Guid runId, HttpContext context, [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        Guid itemId, Guid runId, HttpContext context, [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, true, ct => dispatcher.SendAsync<RetryPetRun, PetRunResponse>(
             new RetryPetRun(ItemId.From(itemId), runId), ct));
 
     private static Task<Results<Ok<PetRunResponse>, ProblemHttpResult>> Undo(
-        Guid itemId, Guid runId, Guid stepId, HttpContext context, [FromServices] LinearBrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
+        Guid itemId, Guid runId, Guid stepId, HttpContext context, [FromServices] BrowserAccess browser, [FromServices] NixDispatcher dispatcher) =>
         Handle(context, browser, true, ct => dispatcher.SendAsync<UndoPetRunStep, PetRunResponse>(
             new UndoPetRunStep(ItemId.From(itemId), runId, stepId), ct));
 
     private static async Task<Results<Ok<T>, ProblemHttpResult>> Handle<T>(
-        HttpContext context, LinearBrowserAccess browser, bool write, Func<CancellationToken, ValueTask<Result<T>>> work)
+        HttpContext context, BrowserAccess browser, bool write, Func<CancellationToken, ValueTask<Result<T>>> work)
     {
         context.Response.Headers.CacheControl = "no-store";
         if (await browser.VerifyAsync(context, requireOrigin: write).ConfigureAwait(false) is null)

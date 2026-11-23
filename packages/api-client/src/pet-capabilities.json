@@ -87,16 +87,6 @@
     "method": "GET",
     "path": "/api/v1/items/{itemId}/file/thumbnail"
   },
-  "AuthorizeLinearConnection": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/workspaces/{workspaceId}/linear/authorize"
-  },
-  "AuthorizePetConnection": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/workspaces/{workspaceId}/pet-connections/authorize"
-  },
   "BatchRecords": {
     "mode": "review",
     "method": "POST",
@@ -283,11 +273,6 @@
     "method": "POST",
     "path": "/api/v1/me/security/totp/confirm"
   },
-  "CopyLinkedLinearStatus": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/items/{itemId}/linear-link/copy-status"
-  },
   "CreateAccessToken": {
     "mode": "human",
     "method": "POST",
@@ -343,11 +328,6 @@
     "mode": "human",
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/invitations"
-  },
-  "DecideLinearIssueRequest": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/items/{itemId}/linear-requests/{requestId}/decision"
   },
   "DecideOAuthConsent": {
     "mode": "human",
@@ -413,11 +393,6 @@
     "mode": "human",
     "method": "POST",
     "path": "/api/v1/tenant/people/{id}/disable"
-  },
-  "DisconnectLinearConnection": {
-    "mode": "human",
-    "method": "DELETE",
-    "path": "/api/v1/workspaces/{workspaceId}/linear"
   },
   "DisconnectPetConnection": {
     "mode": "human",
@@ -548,21 +523,6 @@
     "mode": "read",
     "method": "GET",
     "path": "/api/v1/items/{itemId}/site"
-  },
-  "GetLinearConnection": {
-    "mode": "read",
-    "method": "GET",
-    "path": "/api/v1/workspaces/{workspaceId}/linear"
-  },
-  "GetLinearIssueRequest": {
-    "mode": "read",
-    "method": "GET",
-    "path": "/api/v1/items/{itemId}/linear-requests/{requestId}"
-  },
-  "GetLinearLink": {
-    "mode": "human",
-    "method": "GET",
-    "path": "/api/v1/items/{itemId}/linear-link"
   },
   "GetLocalSecurity": {
     "mode": "human",
@@ -714,11 +674,6 @@
     "method": "PUT",
     "path": "/api/v1/tenant/admins/{principalId}"
   },
-  "HandToPet": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/items/{itemId}/linear-requests/hand-to-pet"
-  },
   "ImportConversation": {
     "mode": "human",
     "method": "POST",
@@ -743,11 +698,6 @@
     "mode": "human",
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/leave"
-  },
-  "LinkLinearIssue": {
-    "mode": "human",
-    "method": "PUT",
-    "path": "/api/v1/items/{itemId}/linear-link"
   },
   "ListAccessTokens": {
     "mode": "human",
@@ -823,11 +773,6 @@
     "mode": "read",
     "method": "GET",
     "path": "/api/v1/workspaces/{workspaceId}/items"
-  },
-  "ListLinearRequests": {
-    "mode": "read",
-    "method": "GET",
-    "path": "/api/v1/items/{itemId}/linear-requests"
   },
   "ListNotifications": {
     "mode": "read",
@@ -1242,11 +1187,6 @@
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/recover"
   },
-  "RefreshLinearLink": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/items/{itemId}/linear-link/refresh"
-  },
   "RegisterPetMcpConnection": {
     "mode": "human",
     "method": "POST",
@@ -1357,11 +1297,6 @@
     "mode": "review",
     "method": "POST",
     "path": "/api/v1/items/{itemId}/comments/{threadId}/replies"
-  },
-  "RequestLinearIssue": {
-    "mode": "review",
-    "method": "POST",
-    "path": "/api/v1/items/{itemId}/linear-requests"
   },
   "RequestSiteApproval": {
     "mode": "review",
@@ -1707,11 +1642,6 @@
     "mode": "human",
     "method": "POST",
     "path": "/api/v1/items/{itemId}/pet-runs/{runId}/steps/{stepId}/undo"
-  },
-  "UnlinkLinearIssue": {
-    "mode": "human",
-    "method": "DELETE",
-    "path": "/api/v1/items/{itemId}/linear-link"
   },
   "UnlinkWorkspaceCalendar": {
     "mode": "review",

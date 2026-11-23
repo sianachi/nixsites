@@ -72,18 +72,6 @@ public sealed record StartPetRunAction(
     public override string TypeText => Type;
 }
 
-/// <summary>Watches the exact mailbox resource the owner selected when saving a schedule.</summary>
-public sealed record PollPetMailboxAction(
-    string Provider, Guid ConnectionId, Guid ConnectionRevision, string ResourceId, string Brief,
-    bool? IncludeTargetText = null) : AutomationAction
-{
-    /// <summary>The action discriminator used in rules.</summary>
-    public const string Type = "poll_pet_mailbox";
-
-    /// <inheritdoc />
-    public override string TypeText => Type;
-}
-
 /// <summary>Reads and writes a rule's action list.</summary>
 public static class AutomationActionJson
 {
@@ -146,7 +134,6 @@ public static class AutomationActionJson
                 "create_item" => ReadCreateItem(entry, path, violations),
                 "notify" => ReadNotify(entry, path, violations),
                 StartPetRunAction.Type => ReadStartPetRun(entry, path, violations),
-                PollPetMailboxAction.Type => ReadPollPetMailbox(entry, path, violations),
                 "create_from_template" => Unavailable(path, violations),
                 _ => Unknown(path, violations),
             };
@@ -210,17 +197,6 @@ public static class AutomationActionJson
                         entry["autoRename"] = new JsonObject { ["from"] = rename.From, ["to"] = rename.To };
                     }
 
-                    break;
-                case PollPetMailboxAction mailbox:
-                    entry["provider"] = mailbox.Provider;
-                    entry["connectionId"] = mailbox.ConnectionId.ToString("D");
-                    entry["connectionRevision"] = mailbox.ConnectionRevision.ToString("D");
-                    entry["resourceId"] = mailbox.ResourceId;
-                    entry["brief"] = mailbox.Brief;
-                    if (mailbox.IncludeTargetText is { } includeMailboxText)
-                    {
-                        entry["includeTargetText"] = includeMailboxText;
-                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(actions), action.TypeText, "Unknown action.");
@@ -350,45 +326,6 @@ public static class AutomationActionJson
 
         var includeText = ReadOptionalTargetText(entry, path, violations);
         return brief is null ? null : new StartPetRunAction(brief, sources, abilities, autoRename, includeText);
-    }
-
-    private static PollPetMailboxAction? ReadPollPetMailbox(JsonObject entry, string path, List<AutomationViolation> violations)
-    {
-        AutomationJsonRead.RefuseUnknown(entry, path, violations, "type", "provider", "connectionId", "connectionRevision", "resourceId", "brief", "includeTargetText");
-        var provider = AutomationJsonRead.String(entry, "provider", path, violations);
-        var connection = AutomationJsonRead.String(entry, "connectionId", path, violations);
-        var revision = AutomationJsonRead.String(entry, "connectionRevision", path, violations);
-        var resource = AutomationJsonRead.String(entry, "resourceId", path, violations);
-        var brief = AutomationJsonRead.String(entry, "brief", path, violations);
-        CheckTemplate(brief, 2_000, $"{path}.brief", violations);
-        if (brief?.Contains('\0', StringComparison.Ordinal) == true)
-        {
-            violations.Add(new AutomationViolation($"{path}.brief", "cannot contain null characters"));
-        }
-
-        if (provider is not ("gmail" or "outlook-mail"))
-        {
-            violations.Add(new AutomationViolation($"{path}.provider", "must be gmail or outlook-mail"));
-        }
-
-        if (!Guid.TryParse(connection, out var connectionId) || connectionId == Guid.Empty)
-        {
-            violations.Add(new AutomationViolation($"{path}.connectionId", "must be a connection id"));
-        }
-
-        if (!Guid.TryParse(revision, out var connectionRevision) || connectionRevision == Guid.Empty)
-        {
-            violations.Add(new AutomationViolation($"{path}.connectionRevision", "must be a connection revision"));
-        }
-
-        if (resource is not { Length: > 0 and <= 512 } || resource.Any(char.IsControl))
-        {
-            violations.Add(new AutomationViolation($"{path}.resourceId", "must be a label or folder identifier of 1 to 512 characters"));
-        }
-
-        var includeText = ReadOptionalTargetText(entry, path, violations);
-        return provider is null || resource is null || brief is null ? null
-            : new PollPetMailboxAction(provider, connectionId, connectionRevision, resource, brief, includeText);
     }
 
     private static bool? ReadOptionalTargetText(JsonObject entry, string path, List<AutomationViolation> violations)

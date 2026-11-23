@@ -53,9 +53,8 @@ follows semantic versioning (`0.x` pre-1.0).
   to pending decisions and keep job details inside the dialog. Jobs resume after a restart.
 - Review a pet's fitted Canvas draft in the canvas area. Apply native shapes, strokes, groups,
   attached arrows, and linked Nix cards, or ask for changes. Undo preserves separate edits.
-- Set up scoped pet connections to supported mail, drive, messaging, calendar, issue, and code
-  services. Review outbound changes in the pet dialog. Register an MCP tool or a peer with its own
-  grant.
+- Register a remote MCP tool as a scoped pet connection in Settings > Connections, or a peer with
+  its own grant. Review each outbound call in the pet dialog.
 - Browse public websites or use a saved session for an exact site. Review the destination and
   fields before a pet submits a supported form. Open the reviewed page from the pet dialog when a
   form needs you to finish it yourself.
@@ -63,14 +62,6 @@ follows semantic versioning (`0.x` pre-1.0).
   before sending selected sources to the model or handing them to another agent.
 - Schedule a named pet routine from the pet dialog. Its owner can allow one exact, reversible task
   rename to apply automatically. Other proposed changes still ask for review.
-- Watch a connected Gmail label or Outlook folder from the pet dialog. New messages queue one pet
-  job each, and message reads and replies still ask for review in that conversation.
-- Assign a Linear lookup from the task's pet dialog. After you approve the lookup, the pet posts its
-  suggested next step as a task comment.
-- Connect Linear read-only in workspace settings. Claude and Codex can request an issue lookup from
-  a Nix task, and the connection owner can approve or decline it in the task's pet dialog.
-- Link an issue from an authorized Linear team to a Nix task, refresh its status, and copy the
-  reviewed value into the task. Nix flags independent status edits and preserves conflicting values.
 - OAuth sign-in for remote MCP: hosted clients such as ChatGPT and claude.ai connect through discovery, dynamic
   client registration and an authorization-code flow with PKCE; the token they receive is an ordinary personal
   access token that expires after 90 days.
@@ -210,8 +201,6 @@ follows semantic versioning (`0.x` pre-1.0).
   the pet asks you to close another conversation.
 - Saved Canvas drawings fit the initial viewport while preserving zoom and movement after you
   start using the editor.
-- Read-only Linear issue approvals show the requested issue and authorized destination with a
-  clear Look up issue action.
 - Pet web research distinguishes a page's title from the text visible on the page.
 
 - Pet job search shows only sources that are available to the pet. When a source becomes

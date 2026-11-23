@@ -566,14 +566,14 @@ it('keeps the generic failure and exact retry for an older job response', async 
   expect(calls).toEqual([{ path: `${route}/${runId}/retry`, body: undefined }]);
 });
 
-it('reviews a scoped read-only Linear issue lookup and approves the exact proposal', async () => {
-  const lookup = {
+it('shows a registered tool call as proposed and approves that exact proposal', async () => {
+  const call = {
     connectionId: petId,
     connectionRevision: routineId,
-    action: 'linear.read_issue',
-    kind: 'read',
-    resourceId: source.id,
-    destination: `linear team ${source.id}`,
+    action: 'remote.invoke',
+    kind: 'write',
+    resourceId: 'https://mcp.test/mcp#lookup',
+    destination: 'https://mcp.test/mcp#lookup',
     schemaHash: 'a'.repeat(64),
     arguments: { issueId: 'NIX-37' },
   };
@@ -583,24 +583,10 @@ it('reviews a scoped read-only Linear issue lookup and approves the exact propos
     question: null,
     proposals: [
       {
-        id: 'aaf1d113-ce45-47d4-bd7c-51a4dd47e4ab',
-        capability: 'connection.action',
-        description: 'Update a Linear issue',
-        preview: { ...lookup, action: 'linear.update_issue', kind: 'write' },
-        status: 'pending',
-      },
-      {
-        id: 'baf1d113-ce45-47d4-bd7c-51a4dd47e4ab',
-        capability: 'connection.action',
-        description: 'Unrecognized Linear lookup arguments',
-        preview: { ...lookup, arguments: { ...lookup.arguments, includeComments: true } },
-        status: 'pending',
-      },
-      {
         id: proposalId,
         capability: 'connection.action',
-        description: `linear.read_issue in ${lookup.destination}`,
-        preview: lookup,
+        description: `remote.invoke in ${call.destination}`,
+        preview: call,
         status: 'pending',
       },
     ],
@@ -608,23 +594,13 @@ it('reviews a scoped read-only Linear issue lookup and approves the exact propos
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
   const dialog = within(await screen.findByRole('dialog'));
-  const draft = within(await dialog.findByRole('group', { name: 'Look up Linear issue NIX-37' }));
-  expect(draft.getByText('Read-only lookup of the issue’s details.')).toBeVisible();
-  expect(draft.getByText('Linear')).toBeVisible();
-  expect(draft.getByText('Authorized team')).toBeVisible();
-  expect(draft.getByText(source.id)).toBeVisible();
-  expect(draft.queryByText(/schemaHash|connectionRevision|connectionId/u)).not.toBeInTheDocument();
-  const update = within(dialog.getByRole('group', { name: 'Update a Linear issue' }));
-  expect(update.getByText(/"action": "linear.update_issue"/u)).toBeVisible();
-  expect(update.getByRole('button', { name: 'Approve request' })).toBeVisible();
-  const unrecognized = within(
-    dialog.getByRole('group', { name: 'Unrecognized Linear lookup arguments' }),
+  const draft = within(
+    await dialog.findByRole('group', { name: `remote.invoke in ${call.destination}` }),
   );
-  expect(unrecognized.getByText(/"includeComments": true/u)).toBeVisible();
-  expect(unrecognized.getByRole('button', { name: 'Approve request' })).toBeVisible();
+  expect(draft.getByText(/"issueId": "NIX-37"/u)).toBeVisible();
   expect(calls).toEqual([]);
 
-  await user.click(draft.getByRole('button', { name: 'Look up issue' }));
+  await user.click(draft.getByRole('button', { name: 'Approve request' }));
   expect(calls).toEqual([
     { path: `${route}/${runId}/proposals/${proposalId}/decision`, body: { approve: true } },
   ]);

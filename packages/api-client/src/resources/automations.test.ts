@@ -5,7 +5,6 @@ import {
   dryRun,
   get,
   list,
-  petMailboxRoutineRuleInputSchema,
   petRoutineRuleInputSchema,
   remove,
   run,
@@ -21,8 +20,6 @@ import {
 const WORKSPACE = '22222222-2222-4222-8222-222222222222';
 const RULE = '33333333-3333-4333-8333-333333333333';
 const ITEM = '11111111-1111-4111-8111-111111111111';
-const CONNECTION = '44444444-4444-4444-8444-444444444444';
-const CONNECTION_REVISION = '55555555-5555-4555-8555-555555555555';
 
 const input = {
   name: 'Morning review',
@@ -45,17 +42,6 @@ const petRoutine = {
   scopeItemId: ITEM,
   actions: [petAction],
 };
-
-const mailboxAction = {
-  type: 'poll_pet_mailbox',
-  provider: 'gmail',
-  connectionId: CONNECTION,
-  connectionRevision: CONNECTION_REVISION,
-  resourceId: 'Label_867',
-  brief: 'Draft a follow-up task.\nPreserve the sender’s request.',
-};
-
-const mailboxRoutine = { ...petRoutine, actions: [mailboxAction] };
 
 describe('the automations resource', () => {
   it('list reads the caller own rules for one workspace', () => {
@@ -147,36 +133,6 @@ describe('the automation schemas', () => {
     },
   ])('rejects a malformed pet routine %#', (draft) => {
     expect(petRoutineRuleInputSchema.safeParse(draft).success).toBe(false);
-  });
-
-  it.each(['gmail', 'outlook-mail'])(
-    'authors a %s mailbox routine with the exact selected resource and grant revision',
-    (provider) => {
-      const draft = { ...mailboxRoutine, actions: [{ ...mailboxAction, provider }] };
-      const rule = petMailboxRoutineRuleInputSchema.parse(draft);
-      expect(create(WORKSPACE, rule).body).toEqual(draft);
-      expect(update(RULE, 4, rule).body).toEqual({ expectedRevision: 4, rule: draft });
-    },
-  );
-
-  it.each([
-    { ...mailboxRoutine, scopeItemId: null },
-    { ...mailboxRoutine, trigger: { type: 'property_changed', key: 'status' } },
-    { ...mailboxRoutine, actions: [mailboxAction, petAction] },
-    { ...mailboxRoutine, actions: [{ ...mailboxAction, provider: 'slack' }] },
-    { ...mailboxRoutine, actions: [{ ...mailboxAction, connectionRevision: undefined }] },
-    {
-      ...mailboxRoutine,
-      actions: [{ ...mailboxAction, connectionId: '00000000-0000-0000-0000-000000000000' }],
-    },
-    { ...mailboxRoutine, actions: [{ ...mailboxAction, resourceId: 'bad\nlabel' }] },
-    { ...mailboxRoutine, actions: [{ ...mailboxAction, resourceId: 'r'.repeat(513) }] },
-    { ...mailboxRoutine, actions: [{ ...mailboxAction, brief: 'b'.repeat(2_001) }] },
-    { ...mailboxRoutine, actions: [{ ...mailboxAction, brief: '   ' }] },
-    { ...mailboxRoutine, actions: [{ ...mailboxAction, brief: 'Review\0mail' }] },
-    { ...mailboxRoutine, actions: [{ ...mailboxAction, autoRename: { from: 'A', to: 'B' } }] },
-  ])('rejects a malformed mailbox routine %#', (draft) => {
-    expect(petMailboxRoutineRuleInputSchema.safeParse(draft).success).toBe(false);
   });
 
   it('accept an unknown run status and reason so new Core codes still parse', () => {

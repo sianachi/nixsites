@@ -15,9 +15,7 @@ import type {
   ConversationJobs,
 } from '@nix/web-pets/pets/conversation/conversation-jobs';
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { LinearRequestsSection } from './linear-requests-section';
 import { isPetJobMessage } from './pet-job-message';
-import { PetMailboxRoutineForm } from './pet-mailbox-routine-form';
 import { PetPeerSection } from './pet-peer-section';
 import { PetRunCard } from './pet-run-card';
 import { PetRoutines, RoutineFields, routineDraft } from './pet-routines';
@@ -66,7 +64,6 @@ interface PetDialogJobsInput {
   readonly activeDecisionId?: string | undefined;
   readonly showTimeline?: boolean | undefined;
   readonly onStartForItem?: ((run: PetRunResponse) => void) | undefined;
-  readonly onViewComment?: ((id: string) => void) | undefined;
   readonly onItemChanged?: ((id: string) => void) | undefined;
 }
 
@@ -83,7 +80,6 @@ export function usePetDialogJobs({
   activeDecisionId,
   showTimeline = true,
   onStartForItem,
-  onViewComment,
   onItemChanged,
 }: PetDialogJobsInput): PetDialogJobs {
   const [startedRunId, setStartedRunId] = useState<string | null>(null);
@@ -292,14 +288,6 @@ export function usePetDialogJobs({
                 message={message}
                 starting={sending}
               />
-              {showTimeline ? (
-                <LinearRequestsSection
-                  itemId={target.id}
-                  showHandoff={!enabled}
-                  showLink={false}
-                  onViewComment={onViewComment}
-                />
-              ) : null}
             </>
           ) : null}
         </section>
@@ -675,11 +663,6 @@ function JobOptions({
                       </div>
                     </>
                   ) : null}
-                  <PetMailboxRoutineForm
-                    workspaceId={workspaceId}
-                    itemId={target.id}
-                    onSaved={refreshRoutines}
-                  />
                 </>
               ) : null}
             </>

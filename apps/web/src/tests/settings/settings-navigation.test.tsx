@@ -67,109 +67,13 @@ describe('reaching the settings screen', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Calendars' })).toBeVisible();
   });
 
-  it('shows the scoped connection action and OAuth failure in Connections', async () => {
-    const inner = globalThis.fetch;
-    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
-      new URL(requestUrl(input), globalThis.location.origin).pathname ===
-      `/api/v1/workspaces/${STUB_WORKSPACE_ID}/linear`
-        ? Promise.resolve(json({ connected: false }))
-        : inner(input, init),
-    );
-    renderAt(<App />, `/w/${STUB_WORKSPACE_ID}/settings?tab=connections&linear_status=failed`);
+  it('says so in Connections when the workspace has none available', async () => {
+    renderAt(<App />, `/w/${STUB_WORKSPACE_ID}/settings?tab=connections`);
 
     const connections = within(await screen.findByRole('region', { name: 'Connections' }));
-    expect(await connections.findByRole('button', { name: 'Connect Linear' })).toBeVisible();
-    expect(connections.getByText('Linear could not be connected. Try again.')).toBeVisible();
-  });
-
-  it('offers only read actions for a read-only linked calendar and submits that exact grant', async () => {
-    const route = `/api/v1/workspaces/${STUB_WORKSPACE_ID}/pet-connections`;
-    const linkId = '6a16da3f-d587-47c0-be4d-a125ca5a3961';
-    const inner = globalThis.fetch;
-    const submitted: unknown[] = [];
-    const calendarAction = {
-      provider: 'google',
-      resourceKind: 'calendar',
-      schema: {},
-      schemaHash: 'schema',
-      configured: true,
-    };
-    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(requestUrl(input), globalThis.location.origin);
-      if (url.pathname === route) {
-        return json({
-          enabled: true,
-          connections: [],
-          actions: [
-            {
-              ...calendarAction,
-              id: 'google.calendar.availability',
-              kind: 'read',
-              description: 'Find availability',
-            },
-            {
-              ...calendarAction,
-              id: 'google.calendar.event.create',
-              kind: 'write',
-              description: 'Create an event',
-            },
-          ],
-          calendars: [
-            {
-              linkId,
-              provider: 'google',
-              resourceId: 'ops@example.test',
-              name: 'Operations',
-              writable: false,
-            },
-          ],
-        });
-      }
-      if (url.pathname === `${route}/authorize`) {
-        submitted.push(
-          typeof init?.body === 'string'
-            ? JSON.parse(init.body)
-            : input instanceof Request
-              ? await input.clone().json()
-              : undefined,
-        );
-        return json(
-          {
-            type: 'about:blank',
-            title: 'The linked calendar is no longer available.',
-            status: 409,
-            code: 'connector.unavailable',
-          },
-          409,
-        );
-      }
-      return inner(input, init);
-    });
-    renderAt(<App />, `/w/${STUB_WORKSPACE_ID}/settings?tab=connections`);
-    const area = within(
-      await screen.findByRole('region', { name: 'Pet connections' }, { timeout: 5_000 }),
-    );
-    const user = userEvent.setup();
-    await user.selectOptions(await area.findByRole('combobox', { name: 'Provider' }), 'google');
-    await user.selectOptions(area.getByRole('combobox', { name: 'Resource type' }), 'calendar');
-    await user.selectOptions(area.getByRole('combobox', { name: 'Linked calendar' }), linkId);
-    expect(area.queryByRole('checkbox', { name: 'Create an event' })).not.toBeInTheDocument();
-    await user.click(area.getByRole('checkbox', { name: 'Find availability' }));
-    await user.click(area.getByRole('button', { name: 'Connect linked calendar' }));
-
-    expect(await area.findByRole('alert')).toHaveTextContent(
-      'The linked calendar is no longer available.',
-    );
-    expect(submitted).toEqual([
-      {
-        provider: 'google',
-        resourceKind: 'calendar',
-        resourceId: 'ops@example.test',
-        calendarLinkId: linkId,
-        actions: ['google.calendar.availability'],
-        returnTo: `/w/${STUB_WORKSPACE_ID}/settings?tab=connections`,
-      },
-    ]);
+    expect(
+      await connections.findByText('Connections are not available in this workspace.'),
+    ).toBeVisible();
   });
 
   it('lets the owner disconnect an existing resource while pet connections are paused', async () => {
@@ -177,10 +81,10 @@ describe('reaching the settings screen', () => {
     const connection = {
       id: '6a16da3f-d587-47c0-be4d-a125ca5a3961',
       revision: 'c6fb32a2-d9bc-41df-aeb9-8403e24b2b58',
-      provider: 'slack',
-      resourceKind: 'channel',
-      resourceId: 'C123456',
-      actions: ['slack.read_thread'],
+      provider: 'mcp',
+      resourceKind: 'tool',
+      resourceId: 'https://mcp.test/mcp#lookup',
+      actions: ['remote.invoke'],
     };
     const inner = globalThis.fetch;
     let disconnected = false;
@@ -188,7 +92,7 @@ describe('reaching the settings screen', () => {
       const path = new URL(requestUrl(input), globalThis.location.origin).pathname;
       if (path === route) {
         return Promise.resolve(
-          json({ enabled: false, connections: disconnected ? [] : [connection], actions: [] }),
+          json({ enabled: false, connections: disconnected ? [] : [connection] }),
         );
       }
       const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
@@ -201,12 +105,10 @@ describe('reaching the settings screen', () => {
     renderAt(<App />, `/w/${STUB_WORKSPACE_ID}/settings?tab=connections`);
 
     const area = within(await screen.findByRole('region', { name: 'Pet connections' }));
-    expect(area.getByText(/C123456/)).toBeVisible();
-    expect(area.queryByRole('combobox', { name: 'Provider' })).not.toBeInTheDocument();
-    expect(area.queryByRole('button', { name: 'Reconnect' })).not.toBeInTheDocument();
+    expect(area.getByText(/mcp\.test/)).toBeVisible();
     await userEvent.setup().click(area.getByRole('button', { name: 'Disconnect' }));
     await waitFor(() => {
-      expect(screen.queryByText(/C123456/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/mcp\.test/)).not.toBeInTheDocument();
     });
     expect(disconnected).toBe(true);
   });

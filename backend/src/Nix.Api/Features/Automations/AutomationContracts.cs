@@ -17,7 +17,7 @@ namespace Nix.Features.Automations;
 /// <param name="Conditions">Up to five <c>{key, op, value?}</c> checks on the triggering item.</param>
 /// <param name="Actions">
 /// One to five of <c>set_property</c>, <c>create_item</c> and <c>notify</c>. Pet routines use a
-/// sole <c>start_pet_run</c> or <c>poll_pet_mailbox</c> action on a schedule with an exact task scope.
+/// sole <c>start_pet_run</c> action on a schedule with an exact task scope.
 /// </param>
 public sealed record AutomationRuleInput(
     string Name,

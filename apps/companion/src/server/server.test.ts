@@ -70,30 +70,17 @@ describe('routes and authentication', () => {
     expect((await fetch(`${b.url}/healthz`, { method: 'POST' })).status).toBe(405);
   });
 
-  it('requires Core authentication and keeps Linear worker replies uncached', async () => {
+  it('requires Core authentication and keeps worker replies uncached', async () => {
     const b = await up();
-    const path = `${b.url}/v1/sani/linear`;
-    const body = JSON.stringify({
-      operation: 'read',
-      issueId: 'TEST-7',
-      oauthState: {},
-      callbackUrl: 'https://nix.example/oauth/callback',
-    });
-    const denied = await fetch(path, { method: 'POST', body });
+    const path = `${b.url}/v1/sani/registered-mcp`;
+    const denied = await fetch(path, { method: 'POST', body: '{}' });
     expect(denied.status).toBe(401);
     expect(denied.headers.get('Cache-Control')).toBe('no-store');
     const headers = { 'X-Nix-Internal-Secret': SECRET };
     const invalid = await fetch(path, { method: 'POST', headers, body: '{' });
     expect(invalid.status).toBe(400);
-    expect(await invalid.json()).toEqual({ code: 'invalid_linear_request' });
-    const disconnected = await fetch(path, { method: 'POST', headers, body });
-    expect(disconnected.status).toBe(200);
-    expect(disconnected.headers.get('Cache-Control')).toBe('no-store');
-    expect(await disconnected.json()).toEqual({
-      oauthState: {},
-      sent: false,
-      failure: 'linear_read_failed',
-    });
+    expect(invalid.headers.get('Cache-Control')).toBe('no-store');
+    expect(await invalid.json()).toEqual({ code: 'invalid_registered_mcp_request' });
   });
 });
 

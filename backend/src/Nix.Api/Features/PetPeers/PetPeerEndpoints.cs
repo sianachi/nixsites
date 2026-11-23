@@ -3,7 +3,7 @@ using Nix.Abstractions;
 using Nix.Abstractions.PetPeers;
 using Nix.Domain.Items;
 using Nix.Errors;
-using Nix.Features.Linear;
+using Nix.Features.BrowserAuth;
 using Nix.Features.PetRuns;
 using Nix.Http;
 
@@ -37,7 +37,7 @@ internal static class PetPeerEndpoints
             .WithRequestBodyLimit(128 * 1024).RequireRateLimiting(RateLimitPolicy);
     }
 
-    private static async Task<IResult> List(Guid itemId, HttpContext http, [FromServices] LinearBrowserAccess browser,
+    private static async Task<IResult> List(Guid itemId, HttpContext http, [FromServices] BrowserAccess browser,
         [FromServices] PetPeerAccess access, [FromServices] IPetPeerStore store)
     {
         if (await browser.VerifyAsync(http, requireOrigin: false).ConfigureAwait(false) is null
@@ -49,7 +49,7 @@ internal static class PetPeerEndpoints
             PetPeerJsonContext.Default.PetPeersResponse);
     }
 
-    private static async Task<IResult> ListWork(Guid itemId, HttpContext http, [FromServices] LinearBrowserAccess browser,
+    private static async Task<IResult> ListWork(Guid itemId, HttpContext http, [FromServices] BrowserAccess browser,
         [FromServices] PetPeerAccess access, [FromServices] IPetPeerStore store, [FromServices] TimeProvider clock)
     {
         if (await browser.VerifyAsync(http, requireOrigin: false).ConfigureAwait(false) is null
@@ -64,13 +64,13 @@ internal static class PetPeerEndpoints
     }
 
     private static async Task<IResult> Register(Guid itemId, RegisterPetPeerRequest request, HttpContext http,
-        [FromServices] LinearBrowserAccess browser, [FromServices] PetPeerAccess access, [FromServices] IPetPeerStore store,
+        [FromServices] BrowserAccess browser, [FromServices] PetPeerAccess access, [FromServices] IPetPeerStore store,
         [FromServices] INixSessionContextAccessor session, [FromServices] PetPeerCredential credentials,
         [FromServices] TimeProvider clock)
     {
         http.Response.Headers.CacheControl = "no-store";
         if (await browser.VerifyAsync(http, requireOrigin: true).ConfigureAwait(false) is null
-            || session.Current is not { } actor || browser.Callback is not { } origin
+            || session.Current is not { } actor || browser.PublicOrigin is not { } origin
             || await access.GetTaskAsync(ItemId.From(itemId), http.RequestAborted).ConfigureAwait(false) is not { } item
             || await access.ActivePetAsync(http.RequestAborted).ConfigureAwait(false) is not { } petId)
         {
@@ -98,7 +98,7 @@ internal static class PetPeerEndpoints
         return TypedResults.Json(response, PetPeerJsonContext.Default.RegisteredPetPeer, statusCode: StatusCodes.Status201Created);
     }
 
-    private static async Task<IResult> Revoke(Guid itemId, Guid peerId, HttpContext http, [FromServices] LinearBrowserAccess browser,
+    private static async Task<IResult> Revoke(Guid itemId, Guid peerId, HttpContext http, [FromServices] BrowserAccess browser,
         [FromServices] PetPeerAccess access, [FromServices] IPetPeerStore store, [FromServices] TimeProvider clock)
     {
         if (await browser.VerifyAsync(http, requireOrigin: true).ConfigureAwait(false) is null

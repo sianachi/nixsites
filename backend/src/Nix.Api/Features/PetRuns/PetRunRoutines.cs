@@ -20,7 +20,6 @@ internal static class PetRoutineServices
     {
         services.AddScoped<IPetRunRoutineAuthorization, PetRoutinePolicy>();
         services.AddScoped<ICommandHandler<StartPetRoutine, PetRunResponse>, StartPetRoutineHandler>();
-        services.AddScoped<ICommandHandler<PollPetMailbox, bool>, PetMailboxPollHandler>();
         services.AddScoped<IPetRunCapability, PetTaskRenameCapability>();
     }
 }
