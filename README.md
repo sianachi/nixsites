@@ -105,7 +105,7 @@ Nix is for a workspace you run yourself: structured views, and a copy of the dat
 
 | | Nix | Notion | Obsidian |
 | --- | --- | --- | --- |
-| Where it runs | Your machine or server, with Docker or Kubernetes | Notion's hosted service | A folder of Markdown on your devices. Sync is [Obsidian Sync](https://obsidian.md/sync) or your own |
+| Where it runs | Your machine or server, with Docker, Kubernetes or plain systemd services | Notion's hosted service | A folder of Markdown on your devices. Sync is [Obsidian Sync](https://obsidian.md/sync) or your own |
 | Licence | [AGPL-3.0](LICENSE), with [permissions](LICENSE-ADDITIONAL-PERMISSIONS.md) for your content and programs that use Nix | Proprietary | Proprietary. Free for personal use |
 | Shape | One item tree: lists, boards, calendars, sheets, habits and the rest | Pages and databases | Notes, plus a large plugin ecosystem |
 | Editing together | Real-time CRDT editing, with presence, for a small group | Real-time collaboration | Files synced between devices |
@@ -166,6 +166,21 @@ with the earlier bundled Zitadel must run `install.sh --migrate-local-auth` to u
 
 Flags, what the installer starts, upgrades, Kubernetes and image tags are in
 [docs/install.md](docs/install.md).
+
+### Without Docker
+
+On one Ubuntu 24.04 machine, [deploy/bare/install.sh](deploy/bare/install.sh) installs Nix as
+systemd services: Postgres and Caddy from `apt`, and Nix from the plain files on a release. Read it
+first; it runs as root and replaces `/etc/caddy/Caddyfile`.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/bare/install.sh \
+  | sudo bash -s -- https://nix.example.org
+```
+
+It idles at about 300 MB. The remote MCP server and sites are not part of this install. What lands
+where, backup and upgrades are in
+[Without Docker](docs/install.md#without-docker).
 
 ## Run it locally
 

@@ -7,6 +7,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- **Install without Docker.** `deploy/bare/install.sh` installs or upgrades Nix on one Ubuntu 24.04 machine as systemd services, from the plain files on a release: Postgres, the object store, Caddy, Core and the Node service. The remote MCP server and sites are not part of it. See "Without Docker" in `docs/install.md`.
 - `Nix:Sync:DeviceItemIds` (off by default). With it on, an item created offline keeps the
   identifier its device chose when the change reaches Core, so installs that exchange changes
   without a shared server agree on what each item is called. A create whose identifier is already

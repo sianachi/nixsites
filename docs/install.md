@@ -2,7 +2,8 @@
 
 The short path is in the [README](../README.md#run-it-for-real). Read
 [deploy/install.sh](../deploy/install.sh) before you run it. This page is the rest of that install:
-what the script does, the flags, upgrades, Kubernetes and image tags.
+what the script does, the flags, upgrades, an install [without Docker](#without-docker), Kubernetes
+and image tags.
 
 ## Try it on your machine
 
@@ -40,6 +41,56 @@ curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/insta
 **Before you run it:** point `nix.example.org` at the machine and leave ports 80 and 443 free. That
 is the only hostname a new install needs. The tools and the Docker memory are the same as
 the try-out above.
+
+## Without Docker
+
+For one Linux machine where Nix should run as ordinary services. Read
+[deploy/bare/install.sh](../deploy/bare/install.sh) before you run it: it runs as root, installs
+packages and replaces `/etc/caddy/Caddyfile` (the old one is kept beside it as
+`Caddyfile.before-nix`).
+
+**Needs:** Ubuntu 24.04 with systemd, on x86-64 or arm64, at least 1 GB of memory, and a release
+that carries the plain files (`nix-core-…`, `nix-node-…`, `nix-web-…` on its GitHub release page).
+Other Debian-family systems work when their Postgres has a `pgvector` package; only Ubuntu 24.04 is
+tested.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/bare/install.sh \
+  | sudo bash -s -- https://nix.example.org
+```
+
+Point `nix.example.org` at the machine first and leave ports 80 and 443 free: Caddy fetches the
+certificate. Then open the setup page the script prints and enter the setup code.
+
+What ends up on the machine:
+
+| Where | What |
+| --- | --- |
+| `apt` packages | `postgresql`, its `pgvector` extension, `caddy`, ICU |
+| `/opt/nix` | the release, Node 22 and the object store binary |
+| `/etc/nix` | settings and every generated secret |
+| `/var/lib/nix` | uploaded files, sign-in keys, companion data |
+| systemd | `nix-api`, `nix-node`, `nix-objects`, and the system's `caddy` and `postgresql` |
+
+Only Caddy listens on the network. Core, the Node service, the object store and Postgres listen on
+`127.0.0.1`.
+
+- **Back up** `/etc/nix`, `/var/lib/nix` and the `nix` database (`pg_dump`) together. The secrets
+  cannot be regenerated.
+- **Upgrade** by running the same line with `--version <newer release>`. State is kept and the
+  migrations run.
+- **Logs:** `journalctl -u nix-api -u nix-node -u nix-objects -u caddy -f`.
+- **Token for scripts:** run `/opt/nix/current/core/Nix.Migrator account service-token --name <name>`
+  with `NIX_MIGRATOR_CONNECTION_STRING` set (the `nix_migrator` password is `pg_migrator` in
+  `/etc/nix/secrets.env`).
+
+**An origin without public DNS.** An https origin that is an IP address or a private name gets a
+certificate from Caddy's own authority. The script adds that authority to the machine's trusted
+roots so Core can fetch uploaded files, and prints where the root certificate is. Browsers warn
+until a device trusts that root, and passkeys do not work on an IP address. With no argument the
+script installs a try-out at `http://nix.localhost`, reachable from that machine only.
+
+**Not included:** the remote MCP server and sites. Both need the Docker or Kubernetes install.
 
 ## What it does
 
