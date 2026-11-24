@@ -90,6 +90,14 @@ function remoteCall({ capability, preview }: PetRunProposal) {
   const tool = call.data.destination.slice(at + 1);
   return at > 0 && tool !== '' ? { server, tool, inputs: call.data.arguments } : undefined;
 }
+function appendNoteOf({ capability, preview }: PetRunProposal) {
+  return capability === 'nix.action' ? appendNoteSchema.safeParse(preview).data : undefined;
+}
+function proposalHeading(proposal: PetRunProposal): string {
+  const call = remoteCall(proposal);
+  if (call !== undefined) return `Call ${call.tool}`;
+  return appendNoteOf(proposal) === undefined ? proposal.description : 'Add to end of note';
+}
 const appendOperation = z.literal('AppendItemBody');
 const appendNoteSchema = z
   .object({
@@ -209,6 +217,13 @@ export function PetRunCard({
     }
   }
 
+  // A failed undo also reports stage `apply`, and the failure names no proposal: say nothing then.
+  const failedProposal =
+    run.failure?.stage === 'apply' && !run.proposals.some((p) => p.status === 'undo_refused')
+      ? run.proposals.findLast((p) => p.status === 'refused')
+      : undefined;
+  const failedCall = failedProposal && remoteCall(failedProposal);
+  const failedNote = failedProposal && appendNoteOf(failedProposal);
   return (
     <article className="flex min-w-0 flex-col gap-2">
       {hideBrief ? null : (
@@ -235,6 +250,19 @@ export function PetRunCard({
           <Text variant="bodySmall" className="wrap-anywhere whitespace-pre-wrap">
             {run.failure.message}
           </Text>
+          {failedProposal !== undefined ? (
+            <Text variant="note" tone="muted">
+              {failedCall !== undefined
+                ? `Call ${failedCall.tool} on ${failedCall.server}`
+                : proposalHeading(failedProposal)}
+              {failedNote !== undefined ? (
+                <>
+                  {' '}
+                  <NoteLink workspaceId={run.workspaceId} itemId={failedNote.itemId} />
+                </>
+              ) : null}
+            </Text>
+          ) : null}
         </section>
       ) : null}
       {error !== null ? (
@@ -268,17 +296,9 @@ export function PetRunCard({
         const waiting = run.status === 'waiting_for_approval';
         const canDecide = waiting && proposal.status === 'pending';
         const stale = waiting && proposal.status === 'stale';
-        const appendNote =
-          proposal.capability === 'nix.action'
-            ? appendNoteSchema.safeParse(proposal.preview).data
-            : undefined;
+        const appendNote = appendNoteOf(proposal);
         const call = remoteCall(proposal);
-        const heading =
-          call !== undefined
-            ? `Call ${call.tool}`
-            : appendNote === undefined
-              ? proposal.description
-              : 'Add to end of note';
+        const heading = proposalHeading(proposal);
         const preview =
           appendNote === undefined ? (
             <ProposalPreview proposal={proposal} />
@@ -618,6 +638,25 @@ function approvalLabel(capability: string): string {
   }
 }
 
+function NoteLink({
+  workspaceId,
+  itemId,
+}: {
+  readonly workspaceId: string;
+  readonly itemId: string;
+}): ReactElement {
+  return (
+    <a
+      href={itemLink('', workspaceId, itemId)}
+      target="_blank"
+      rel="noreferrer"
+      className={`underline ${focusRing}`}
+    >
+      Open target note
+    </a>
+  );
+}
+
 function AppendNotePreview({
   workspaceId,
   itemId,
@@ -630,14 +669,7 @@ function AppendNotePreview({
   return (
     <>
       <Text variant="note" tone="muted">
-        <a
-          href={itemLink('', workspaceId, itemId)}
-          target="_blank"
-          rel="noreferrer"
-          className={`underline ${focusRing}`}
-        >
-          Open target note
-        </a>
+        <NoteLink workspaceId={workspaceId} itemId={itemId} />
       </Text>
       <ScrollRegion
         aria-label="Text to add"

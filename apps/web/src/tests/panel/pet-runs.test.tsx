@@ -613,6 +613,87 @@ it.each([
   },
 );
 
+it.each([
+  {
+    capability: 'connection.action',
+    description: 'remote.invoke in https://mcp.test/mcp#lookup',
+    preview: {
+      action: 'remote.invoke',
+      destination: 'https://mcp.test/mcp#lookup',
+      arguments: { issueId: 'NIX-37' },
+    },
+    text: 'Call lookup on https://mcp.test/mcp',
+  },
+  {
+    capability: 'nix.action',
+    description: 'Run AppendItemBody in the selected Nix scope.',
+    preview: {
+      operationId: 'AppendItemBody',
+      method: 'POST',
+      target: `/api/v1/items/${source.id}/body`,
+      inputs: {
+        operationId: 'AppendItemBody',
+        path: { itemId: source.id },
+        body: { markdown: 'More' },
+      },
+      documentId: source.id,
+      headSeq: 1,
+    },
+    text: 'Add to end of note',
+  },
+])('names the action that could not be applied and where', async (refused) => {
+  showTask({
+    ...firstRun,
+    status: 'failed',
+    question: null,
+    proposals: [{ id: proposalId, ...refused, status: 'refused' }],
+    failure: {
+      stage: 'apply',
+      code: 'pet_runs.step_unavailable',
+      message: 'Nix could not confirm this change.',
+    },
+  });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  const failure = within(await dialog.findByRole('region', { name: 'Job failure' }));
+  expect(failure.getByText(refused.text, { exact: false })).toBeVisible();
+  if (refused.capability === 'nix.action') {
+    expect(failure.getByRole('link', { name: 'Open target note' })).toHaveAttribute(
+      'href',
+      `/w/${task.workspaceId}?item=${source.id}`,
+    );
+  }
+});
+
+it('names no action when an undo failed, because the failure does not say which step', async () => {
+  const call = {
+    capability: 'connection.action',
+    description: 'remote.invoke in https://mcp.test/mcp#lookup',
+    preview: { action: 'remote.invoke', destination: 'https://mcp.test/mcp#lookup', arguments: {} },
+  };
+  showTask({
+    ...firstRun,
+    status: 'failed',
+    question: null,
+    proposals: [
+      { id: proposalId, ...call, status: 'undo_refused' },
+      { id: '77fa1d13-ce45-47d4-bd7c-51a4dd47e4ab', ...call, status: 'refused' },
+    ],
+    failure: {
+      stage: 'apply',
+      code: 'pet_runs.step_unavailable',
+      message: 'Nix could not confirm this change.',
+    },
+  });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  const failure = within(await dialog.findByRole('region', { name: 'Job failure' }));
+  expect(failure.getByText('Nix could not confirm this change.')).toBeVisible();
+  expect(failure.queryByText(/Call lookup/u)).not.toBeInTheDocument();
+});
+
 it('keeps the generic failure and exact retry for an older job response', async () => {
   const calls = showTask({ ...firstRun, status: 'failed', question: null });
   const user = userEvent.setup();

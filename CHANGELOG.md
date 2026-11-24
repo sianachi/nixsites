@@ -104,6 +104,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- A pet job that fails while applying a change names the action that failed and where it was aimed.
 - An approval for a registered tool call names the tool, the server and each input instead of showing raw JSON.
 - Pet job statuses use the same words in the job list, the job card, the peer work list and the pet activity page
   ("Needs an answer", "Needs review", "Waiting for the other agent", "Needs attention").
