@@ -188,6 +188,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Drawing approval cards identify which refresh or decline request is waiting for confirmation.
 - The companion shows when it is preparing the first message, preserves newer drafts after a send,
   and keeps an explicit chat or job choice when that route becomes unavailable.
 - A remark that begins with a work verb, such as "Sort of, yes" or "Plan B sounds better", stays in pet chat and no longer starts a job. A command after a filler word, such as "Thanks, make it shorter", now starts one.

@@ -54,6 +54,53 @@ export const WaitingForApproval = {
   },
 };
 
+const unavailableDrawing: PetRunResponse = {
+  ...run,
+  brief: 'Update the release flow drawing.',
+  abilities: ['canvas.edit'],
+  proposals: [
+    {
+      id: '8eadd6a1-e91a-4be5-b3c4-a37d341b6d51',
+      capability: 'canvas.edit',
+      description: 'Edit canvas Release flow',
+      preview: {},
+      status: 'pending',
+    },
+  ],
+};
+
+function drawingFeedbackStory(): ReactNode {
+  return (
+    <div className="w-full max-w-lg p-3">
+      <PetRunCard
+        client={{ ...client, execute: () => new Promise(() => undefined) }}
+        run={unavailableDrawing}
+        onUpdate={() => undefined}
+      />
+    </div>
+  );
+}
+
+export const DrawingRefreshPending = {
+  render: drawingFeedbackStory,
+  play: async ({ canvasElement }: { readonly canvasElement: HTMLElement }): Promise<void> => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: 'Refresh draft' }));
+    await canvas.findByRole('button', { name: 'Refreshing draft…' });
+    canvas.getByRole('button', { name: 'Decline request' });
+  },
+};
+
+export const DrawingDeclinePending = {
+  render: drawingFeedbackStory,
+  play: async ({ canvasElement }: { readonly canvasElement: HTMLElement }): Promise<void> => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: 'Decline request' }));
+    await canvas.findByRole('button', { name: 'Declining request…' });
+    canvas.getByRole('button', { name: 'Refresh draft' });
+  },
+};
+
 const outdatedShape = { id: 'outdated', type: 'rectangle', version: 1, versionNonce: 1 };
 
 export const DrawingNeedsRefresh = {

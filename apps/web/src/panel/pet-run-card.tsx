@@ -337,9 +337,15 @@ export function PetRunCard({
         const approve = () =>
           apply(proposal.id, petRuns.decide(run.itemId, run.id, proposal.id, true));
         const decline = () =>
-          void apply(proposal.id, petRuns.decide(run.itemId, run.id, proposal.id, false));
+          void apply(
+            `decline:${proposal.id}`,
+            petRuns.decide(run.itemId, run.id, proposal.id, false),
+          );
         const revise = (feedback?: string) =>
-          void apply(proposal.id, petRuns.revise(run.itemId, run.id, proposal.id, feedback));
+          void apply(
+            `revise:${proposal.id}`,
+            petRuns.revise(run.itemId, run.id, proposal.id, feedback),
+          );
         return (
           <section
             key={proposal.id}
@@ -353,6 +359,13 @@ export function PetRunCard({
                 proposal={proposal}
                 stale={stale}
                 busy={busy !== null}
+                pendingAction={
+                  busy === `revise:${proposal.id}`
+                    ? 'refresh'
+                    : busy === `decline:${proposal.id}`
+                      ? 'decline'
+                      : null
+                }
                 error={error}
                 openOnMount={activeDecisionId === proposal.id}
                 onApprove={() => {
@@ -496,6 +509,7 @@ function DrawingProposal({
   proposal,
   stale,
   busy,
+  pendingAction,
   error,
   openOnMount,
   onApprove,
@@ -505,6 +519,7 @@ function DrawingProposal({
   readonly proposal: PetRunProposal;
   readonly stale: boolean;
   readonly busy: boolean;
+  readonly pendingAction: 'refresh' | 'decline' | null;
   readonly error: string | null;
   readonly openOnMount: boolean;
   readonly onApprove: () => Promise<void>;
@@ -567,11 +582,11 @@ function DrawingProposal({
                   onRevise();
                 }}
               >
-                Refresh draft
+                {pendingAction === 'refresh' ? 'Refreshing draft…' : 'Refresh draft'}
               </Button>
               {stale ? null : (
                 <Button type="button" variant="ghost" disabled={busy} onClick={onDecline}>
-                  Decline request
+                  {pendingAction === 'decline' ? 'Declining request…' : 'Decline request'}
                 </Button>
               )}
             </div>
