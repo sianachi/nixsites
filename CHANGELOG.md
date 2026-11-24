@@ -191,6 +191,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Pet requests include valid recursive tool definitions, preserving every existing operation and
+  argument rule.
 - API-key conversations use the newly selected model when resuming, including after a restart.
   OpenAI model and request failures show a specific recovery message instead of an account/usage
   message.

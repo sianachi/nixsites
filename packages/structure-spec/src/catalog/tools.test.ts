@@ -31,7 +31,47 @@ function toolNames(): string[] {
   return buildPetTools().map((tool) => tool.name);
 }
 
+function schemaReferences(schema: unknown): string[] {
+  if (Array.isArray(schema)) return schema.flatMap(schemaReferences);
+  const record = z.record(z.string(), z.unknown()).safeParse(schema);
+  if (!record.success) return [];
+  const reference = record.data.$ref;
+  return [
+    ...(typeof reference === 'string' ? [reference] : []),
+    ...Object.values(record.data).flatMap(schemaReferences),
+  ];
+}
+
+function resolveReference(root: unknown, reference: string): unknown {
+  if (reference === '#') return root;
+  if (!reference.startsWith('#/')) return undefined;
+  let target = root;
+  for (const segment of reference.slice(2).split('/')) {
+    const key = segment.replaceAll('~1', '/').replaceAll('~0', '~');
+    if (Array.isArray(target)) target = target[Number(key)];
+    else {
+      const record = z.record(z.string(), z.unknown()).safeParse(target);
+      target = record.success ? record.data[key] : undefined;
+    }
+  }
+  return target;
+}
+
 describe('buildPetTools', () => {
+  it('resolves every local schema reference against the final tool inputSchema root', () => {
+    const unresolved: string[] = [];
+    let references = 0;
+    for (const tool of buildPetTools()) {
+      for (const reference of schemaReferences(tool.inputSchema)) {
+        references++;
+        if (resolveReference(tool.inputSchema, reference) === undefined)
+          unresolved.push(`${tool.name}: ${reference}`);
+      }
+    }
+    expect(references).toBeGreaterThan(0);
+    expect(unresolved).toEqual([]);
+  });
+
   it('teaches the supported property grammar to formula-writing tools', () => {
     const tools = new Map(buildPetTools().map((tool) => [tool.name, tool]));
     for (const operation of [
@@ -152,9 +192,19 @@ describe('buildPetTools', () => {
       const full = normalizeForCodex(
         z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any', cycles: 'ref' }),
       );
-      const expected = operation === 'create_structured' ? omitCustomViews(full) : full;
-      const inputSchema = tool?.inputSchema as { properties: Record<string, unknown> } | undefined;
-      expect(inputSchema?.properties[property]).toEqual(expected);
+      const expected = z
+        .record(z.string(), z.unknown())
+        .parse(operation === 'create_structured' ? omitCustomViews(full) : full);
+      const definitions = expected.$defs;
+      delete expected.$defs;
+      const inputSchema = z
+        .object({
+          properties: z.record(z.string(), z.unknown()),
+          $defs: z.record(z.string(), z.unknown()).optional(),
+        })
+        .parse(tool?.inputSchema);
+      expect(inputSchema.properties[property]).toEqual(expected);
+      expect(inputSchema.$defs).toEqual(definitions);
     }
   });
 

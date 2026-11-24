@@ -215,11 +215,27 @@ function blueprintProperty(): JsonObject {
 }
 
 function wrap(properties: JsonObject, required: readonly string[]): JsonObject {
+  const defs: JsonObject = {};
+  // Embedded Zod schemas keep root-relative references, so their definitions belong at the tool root.
+  for (const [name, value] of Object.entries(properties)) {
+    const schema = z.record(z.string(), z.unknown()).parse(value);
+    if (schema.$defs === undefined) continue;
+    for (const [definition, body] of Object.entries(
+      z.record(z.string(), z.unknown()).parse(schema.$defs),
+    )) {
+      if (Object.hasOwn(defs, definition))
+        throw new Error(`Duplicate tool schema definition: ${definition}`);
+      defs[definition] = body;
+    }
+    delete schema.$defs;
+    properties[name] = schema;
+  }
   return {
     type: 'object',
     properties,
     required: [...required],
     additionalProperties: false,
+    ...(Object.keys(defs).length > 0 ? { $defs: defs } : {}),
   };
 }
 
