@@ -24,7 +24,9 @@ export function Composer({
   onInterrupt,
   running,
   canSend,
+  preparing = false,
   route = 'chat',
+  routeUnavailable,
   onFlip,
   chips,
   onRemoveChip,
@@ -54,8 +56,10 @@ export function Composer({
   readonly onInterrupt: () => void;
   readonly running: boolean;
   readonly canSend: boolean;
+  readonly preparing?: boolean;
   /** Where the draft goes; `onFlip` is given only when the other route is open too. */
   readonly route?: 'chat' | 'job';
+  readonly routeUnavailable?: string | undefined;
   readonly onFlip?: (() => void) | undefined;
   readonly chips: readonly SharedContext[];
   readonly onRemoveChip: (context: SharedContext) => void;
@@ -158,6 +162,7 @@ export function Composer({
       <ContextChips
         chips={chips}
         onRemove={onRemoveChip}
+        disabled={readOnly}
         workspace={
           workspaceAccess && !hasNoteScope
             ? { disabled: running, onRemove: onToggleWorkspaceAccess }
@@ -207,14 +212,25 @@ export function Composer({
       <label htmlFor="pet-message" className="sr-only">
         Message {petName}
       </label>
-      {onFlip && !running && draft.trim() ? (
+      {(onFlip || routeUnavailable) && !running && draft.trim() ? (
         <div className="flex flex-wrap items-center gap-x-2">
-          <Text variant="note" tone="muted" role="status">
-            {route === 'job' ? 'Starts a job' : 'Sends as chat'}
+          <div role="status" aria-label="Message route">
+            <Text variant="note" tone="muted">
+              {routeUnavailable ?? (route === 'job' ? 'Starts a job' : 'Sends as chat')}
+            </Text>
+          </div>
+          {onFlip ? (
+            <Button variant="ghost" disabled={readOnly} onClick={onFlip}>
+              {route === 'job' ? 'Switch to chat' : 'Switch to job'}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {preparing ? (
+        <div role="status" aria-label="Message preparation">
+          <Text variant="note" tone="muted">
+            Preparing message…
           </Text>
-          <Button variant="ghost" onClick={onFlip}>
-            {route === 'job' ? 'Switch to chat' : 'Switch to job'}
-          </Button>
         </div>
       ) : null}
       <div className="flex min-w-0 items-end gap-2">
@@ -222,7 +238,13 @@ export function Composer({
           {(trigger) => {
             plusTrigger.current = trigger.ref;
             return (
-              <Button {...trigger} variant="icon" className="shrink-0" aria-label="Add to message">
+              <Button
+                {...trigger}
+                variant="icon"
+                className="shrink-0"
+                aria-label="Add to message"
+                disabled={readOnly}
+              >
                 <Icon icon={Plus} size="sm" />
               </Button>
             );
@@ -235,7 +257,7 @@ export function Composer({
             variant="icon"
             className="shrink-0"
             aria-label={hasSelection ? 'Share selected text' : 'Select text on the page first'}
-            disabled={!hasSelection || contextCount >= MAX_CONTEXTS}
+            disabled={readOnly || !hasSelection || contextCount >= MAX_CONTEXTS}
             onMouseDown={(event) => {
               event.preventDefault();
             }}

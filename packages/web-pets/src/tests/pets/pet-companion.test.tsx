@@ -5,6 +5,8 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { PetCompanion } from '../../pets/pet-companion';
 import { PetConnectionPanel } from '../../pets/pet-connection-panel';
 import { NixApiError, type PetProfile } from '@nix/api-client';
+import { clearPetDrafts } from '@nix/web-foundation/lib/pet-drafts';
+import { z } from 'zod';
 
 const client = vi.hoisted(() => ({
   execute: vi.fn(),
@@ -250,6 +252,67 @@ describe('companion workflow', () => {
     expect(paginate).toHaveBeenCalledOnce();
     view.unmount();
     Object.assign(client, { paginate: undefined, cache: undefined });
+  });
+
+  it('shows preparation while the first workspace map is held and preserves a refused draft', async () => {
+    let releaseMap: (() => void) | undefined;
+    const heldMap = new Promise<void>((resolve) => {
+      releaseMap = resolve;
+    });
+    const paginate = vi.fn(async function* () {
+      await heldMap;
+      yield {
+        id: '55555555-5555-4555-8555-555555555555',
+        title: 'Tasks',
+        type: 'note',
+        hasChildren: false,
+        settings: { withholdFromPets: false },
+      };
+    });
+    Object.assign(client, { paginate, cache: { peek: vi.fn() } });
+    client.execute.mockRejectedValue(new Error('Send refused'));
+    const user = userEvent.setup();
+    const view = render(
+      <MemoryRouter>
+        <PetCompanion />
+      </MemoryRouter>,
+    );
+    try {
+      await user.click(screen.getByRole('button', { name: 'Talk with Cat' }));
+      await screen.findByRole('dialog', { name: 'Conversation with Cat' });
+      await chooseFromPlus(user, 'Use workspace');
+      const field = screen.getByRole('textbox', { name: 'Message Cat' });
+      await user.clear(field);
+      await user.type(field, 'What is due?');
+      await user.click(screen.getByRole('button', { name: 'Send' }));
+
+      expect(screen.getByRole('status', { name: 'Message preparation' })).toHaveTextContent(
+        'Preparing message…',
+      );
+      expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+      expect(field).toHaveValue('What is due?');
+      await user.click(screen.getByRole('button', { name: 'Send' }));
+      expect(paginate).toHaveBeenCalledOnce();
+      const sendEndpoint = z.object({ body: z.object({ operation: z.literal('send') }) });
+      const sends = () =>
+        client.execute.mock.calls.filter(([endpoint]) => sendEndpoint.safeParse(endpoint).success);
+      expect(sends()).toHaveLength(0);
+
+      await act(async () => {
+        releaseMap?.();
+        await heldMap;
+      });
+      expect(await screen.findByRole('alert')).toHaveTextContent('your draft is preserved');
+      expect(field).toHaveValue('What is due?');
+      expect(screen.queryByRole('status', { name: 'Message preparation' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+      expect(sends()).toHaveLength(1);
+    } finally {
+      releaseMap?.();
+      view.unmount();
+      clearPetDrafts();
+      Object.assign(client, { paginate: undefined, cache: undefined });
+    }
   });
 
   it('has one conversation: no mode switch, and no mode on any runtime call', async () => {

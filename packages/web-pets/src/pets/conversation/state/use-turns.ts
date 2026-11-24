@@ -1,5 +1,5 @@
 import { type NixClient } from '@nix/api-client';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { buildWorkspaceMap } from '../../turn-context';
 import { type UsePetRuntimeResult } from '../../use-pet-runtime';
 
@@ -25,7 +25,7 @@ export function useTurns({
   readonly runtimeApi: UsePetRuntimeResult;
   readonly petName: string;
   readonly draft: string;
-  readonly setDraft: (value: string) => void;
+  readonly setDraft: (value: string | ((current: string) => string)) => void;
   readonly model: string;
   readonly workspaceAccess: boolean;
   readonly hasNoteScope: boolean;
@@ -40,14 +40,17 @@ export function useTurns({
   readonly retryLabel: () => string | null;
   readonly retryError: () => void;
   readonly loadErrorMessage: string;
+  readonly preparing: boolean;
 } {
   const { runtime, busy, errorKind, regenerateRequestId, send, reload, retryWatch } = runtimeApi;
-  const preparing = useRef(false);
+  const preparationPending = useRef(false);
+  const [preparing, setPreparing] = useState(false);
   const lastCreation = useRef<string | undefined>(undefined);
 
   async function submit(creationRequest?: string, onStarted?: () => void) {
     const text = creationRequest ?? draft;
-    if (!text.trim() || busy || preparing.current || runtime?.status !== 'connected') return;
+    if (!text.trim() || busy || preparationPending.current || runtime?.status !== 'connected')
+      return;
     const access = workspaceAccess || creationRequest !== undefined;
     lastCreation.current = creationRequest;
     if (onStarted !== undefined) {
@@ -56,16 +59,18 @@ export function useTurns({
     }
     // Plan B.2: a conversation's first message carries a map of the workspace's main
     // containers, so the pet can use their ids without listing the tree first. Only with
-    // workspace access on: without it the pet has no tools to use the ids with. `preparing`
+    // workspace access on: without it the pet has no tools to use the ids with. The ref
     // keeps a second press from starting another send while the map is read.
     const firstMessage = !messages.some((message) => message.role === 'user');
     let workspaceMap: Awaited<ReturnType<typeof buildWorkspaceMap>> = undefined;
     if (firstMessage && access && !hasNoteScope) {
-      preparing.current = true;
+      preparationPending.current = true;
+      setPreparing(true);
       try {
         workspaceMap = await buildWorkspaceMap(client, workspaceId, new AbortController().signal);
       } finally {
-        preparing.current = false;
+        preparationPending.current = false;
+        setPreparing(false);
       }
     }
     onSent();
@@ -76,7 +81,8 @@ export function useTurns({
       ...(creationRequest === undefined ? contextFields() : {}),
       ...(workspaceMap?.length ? { workspaceMap } : {}),
     });
-    if (ok && creationRequest === undefined) setDraft('');
+    if (ok && creationRequest === undefined)
+      setDraft((current) => (current === text ? '' : current));
   }
 
   /** Sends `text` as a new turn that replaces the user message `replaceFromMessageId` and
@@ -84,6 +90,7 @@ export function useTurns({
    * "Regenerate" and an edited last message; each is a new request, unlike a failed `send`'s
    * retry, which resends the exact same one. */
   function resendTurn(text: string, replaceFromMessageId: string) {
+    if (preparationPending.current) return Promise.resolve(false);
     onSent();
     regenerateRequestId();
     const creation = text === lastCreation.current;
@@ -120,5 +127,5 @@ export function useTurns({
   }
   const loadErrorMessage = runtimeApi.error || `Lost connection to ${petName}. Retrying…`;
 
-  return { submit, resendTurn, retryLastTurn, retryLabel, retryError, loadErrorMessage };
+  return { submit, resendTurn, retryLastTurn, retryLabel, retryError, loadErrorMessage, preparing };
 }

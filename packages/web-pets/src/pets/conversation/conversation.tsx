@@ -200,20 +200,21 @@ export function Conversation({
   }
 
   const context = useMessageContext({ currentItem, noteScope, workspaceAccess });
-  const { submit, resendTurn, retryLastTurn, retryLabel, retryError, loadErrorMessage } = useTurns({
-    client,
-    workspaceId,
-    runtimeApi,
-    petName: pet.name,
-    draft,
-    setDraft,
-    model,
-    workspaceAccess,
-    hasNoteScope: noteScope !== undefined,
-    messages,
-    contextFields: context.contextFields,
-    onSent: closeEditor,
-  });
+  const { submit, resendTurn, retryLastTurn, retryLabel, retryError, loadErrorMessage, preparing } =
+    useTurns({
+      client,
+      workspaceId,
+      runtimeApi,
+      petName: pet.name,
+      draft,
+      setDraft,
+      model,
+      workspaceAccess,
+      hasNoteScope: noteScope !== undefined,
+      messages,
+      contextFields: context.contextFields,
+      onSent: closeEditor,
+    });
 
   const jobDraft: ConversationJobDraft = {
     text: draft,
@@ -227,19 +228,22 @@ export function Conversation({
   if (routeOverride !== null && !draft.trim()) setRouteOverride(null);
   const jobAllowed = canRouteToJob && jobs.ready;
   const route: 'chat' | 'job' =
-    routeOverride === 'job' && jobAllowed
-      ? 'job'
-      : routeOverride === 'chat' && connected
-        ? 'chat'
-        : routeOverride === null && canRouteToJob && jobs.canSubmit(draft)
-          ? 'job'
-          : 'chat';
-  const canSend = !busy && !jobs?.busy && Boolean(draft.trim()) && (route === 'job' || connected);
+    routeOverride ?? (canRouteToJob && jobs.canSubmit(draft) ? 'job' : 'chat');
+  const routeUnavailable =
+    route === 'job'
+      ? context.contexts.length > 0
+        ? 'Remove attached notes to start a job.'
+        : !jobAllowed
+          ? 'Jobs are unavailable. Try again when jobs are ready.'
+          : undefined
+      : !connected
+        ? 'Chat is disconnected. Reconnect to send as chat.'
+        : undefined;
+  const canSend = !busy && !preparing && !jobs?.busy && Boolean(draft.trim()) && !routeUnavailable;
 
   function submitMessage(): void {
     if (!canSend || running) return;
-    if (
-      (route === 'job' || (routeOverride === null && canRouteToJob)) &&
+    if (route === 'job') {
       jobs?.submit(
         {
           ...jobDraft,
@@ -247,9 +251,9 @@ export function Conversation({
           focusComposer: () => input.current?.focus(),
         },
         routeOverride === 'job' ? true : undefined,
-      )
-    )
+      );
       return;
+    }
     if (connected) void submit();
   }
 
@@ -263,6 +267,7 @@ export function Conversation({
       !connected ||
       running ||
       busy ||
+      preparing ||
       approvalPending
     )
       return;
@@ -270,7 +275,7 @@ export function Conversation({
       startedCreation.current = creationRequest.id;
       creationRequest.onStarted();
     });
-  }, [creationRequest, connected, running, busy, approvalPending, submit]);
+  }, [creationRequest, connected, running, busy, preparing, approvalPending, submit]);
 
   const rename = useRename({
     workspaceId,
@@ -321,7 +326,7 @@ export function Conversation({
     openNoteId: noteScope?.rootItemId,
     layout,
     messages,
-    inactive: busy || running,
+    inactive: busy || running || preparing,
     onSaveChat: () => {
       setSaveChat(true);
     },
@@ -418,7 +423,7 @@ export function Conversation({
             name={pet.name}
             client={client}
             rootItemId={noteScope?.rootItemId}
-            running={running || busy}
+            running={running || busy || preparing}
             onResumed={(resumed) => {
               resumeFromList(resumed);
               input.current?.focus();
@@ -473,7 +478,7 @@ export function Conversation({
           menuTrigger={menuTrigger}
           onClose={onClose}
           noteScope={noteScope}
-          locked={running || busy}
+          locked={running || busy || preparing}
         />
         {panel === 'settings' ? (
           <PetSettingsPanel
@@ -481,7 +486,7 @@ export function Conversation({
             workspaceId={workspaceId}
             model={model}
             models={models}
-            running={running || busy}
+            running={running || busy || preparing}
             runtime={runtime}
             readWithoutAsking={readWithoutAsking}
             headingRef={panelHeading}
@@ -504,7 +509,7 @@ export function Conversation({
             name={pet.name}
             client={client}
             rootItemId={noteScope?.rootItemId}
-            running={running || busy}
+            running={running || busy || preparing}
             onResumed={(resumed) => {
               resumeFromList(resumed);
               goBackFromPanel();
@@ -611,7 +616,7 @@ export function Conversation({
             ))}
           </div>
         ) : null}
-        {panel === 'chat' && (connected || jobs?.ready) ? (
+        {panel === 'chat' && (connected || jobs?.ready || draft.trim()) ? (
           <Composer
             petName={pet.name}
             scopeLabel={
@@ -623,7 +628,7 @@ export function Conversation({
             }
             input={input}
             draft={draft}
-            readOnly={jobs?.busy ?? false}
+            readOnly={preparing || (jobs?.busy ?? false)}
             onDraftChange={(text) => {
               setDraft(text);
               regenerateRequestId();
@@ -634,9 +639,11 @@ export function Conversation({
             onInterrupt={() => void interrupt()}
             running={running}
             canSend={canSend}
+            preparing={preparing}
             route={route}
+            routeUnavailable={routeUnavailable}
             onFlip={
-              jobAllowed && connected
+              (route === 'job' ? connected : jobAllowed)
                 ? () => {
                     setRouteOverride(route === 'job' ? 'chat' : 'job');
                     input.current?.focus();

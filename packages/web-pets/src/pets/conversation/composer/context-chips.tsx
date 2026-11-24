@@ -11,9 +11,11 @@ export function ContextChips({
   chips,
   onRemove,
   workspace,
+  disabled = false,
 }: {
   readonly chips: readonly SharedContext[];
   readonly onRemove: (context: SharedContext) => void;
+  readonly disabled?: boolean;
   /** Present while the pet may use the workspace; removing it turns that off. */
   readonly workspace: { readonly disabled: boolean; readonly onRemove: () => void } | undefined;
 }): ReactElement | null {
@@ -31,7 +33,7 @@ export function ContextChips({
           <Button
             variant="icon"
             aria-label="Remove Workspace"
-            disabled={workspace.disabled}
+            disabled={disabled || workspace.disabled}
             onClick={workspace.onRemove}
           >
             <Icon icon={X} size="sm" />
@@ -46,6 +48,7 @@ export function ContextChips({
           <Button
             variant="icon"
             aria-label={`Remove ${context.label}`}
+            disabled={disabled}
             onClick={() => {
               onRemove(context);
             }}
