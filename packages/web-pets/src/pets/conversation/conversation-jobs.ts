@@ -20,7 +20,8 @@ export interface ConversationJobs {
   readonly ready: boolean;
   readonly busy: boolean;
   readonly canSubmit: (text: string) => boolean;
-  readonly submit: (message: ConversationJobMessage) => boolean;
+  /** `force` starts a job whatever the wording; the person chose it. */
+  readonly submit: (message: ConversationJobMessage, force?: boolean) => boolean;
   readonly panel: (draft: ConversationJobDraft) => ReactNode;
   readonly timeline: readonly ConversationJobEntry[];
   readonly options?: ReactNode;

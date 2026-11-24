@@ -311,7 +311,7 @@ it('starts a job from the message box with the current item only', async () => {
   const composer = await dialog.findByRole('textbox', { name: 'Message Owl' });
   await user.click(composer);
   await user.paste('Draw a flowchart for intake and review.');
-  await user.click(dialog.getByRole('button', { name: 'Send' }));
+  await user.click(dialog.getByRole('button', { name: 'Start job' }));
 
   expect(await dialog.findByRole('textbox', { name: question.text })).toBeVisible();
   expect(composer).toHaveValue('');
@@ -326,6 +326,66 @@ it('starts a job from the message box with the current item only', async () => {
       },
     },
   ]);
+});
+
+it('says where a message goes and lets the person flip it before sending', async () => {
+  const calls = showTask(null);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  const composer = await dialog.findByRole('textbox', { name: 'Message Owl' });
+  await user.type(composer, 'Create a checklist for launch');
+  expect(await dialog.findByText('Starts a job')).toBeVisible();
+  expect(dialog.getByRole('button', { name: 'Start job' })).toBeVisible();
+
+  await user.click(dialog.getByRole('button', { name: 'Send as chat' }));
+  expect(composer).toHaveFocus();
+  expect(dialog.getByText('Sends as chat')).toBeVisible();
+  await user.click(dialog.getByRole('button', { name: 'Send' }));
+
+  expect(await dialog.findByText('A flowchart shows the steps in a process.')).toBeVisible();
+  expect(calls.map(({ path }) => path)).toEqual([chatRoute]);
+});
+
+it('starts a job from a chat-like message when the person asks for one', async () => {
+  const calls = showTask(null);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  await user.type(
+    await dialog.findByRole('textbox', { name: 'Message Owl' }),
+    'What is on my list today?',
+  );
+  expect(await dialog.findByText('Sends as chat')).toBeVisible();
+  await user.click(dialog.getByRole('button', { name: 'Start a job' }));
+  await user.click(dialog.getByRole('button', { name: 'Start job' }));
+
+  expect(await dialog.findByRole('textbox', { name: question.text })).toBeVisible();
+  expect(calls).toEqual([
+    {
+      path: route,
+      body: {
+        brief: 'What is on my list today?',
+        sourceItemIds: [],
+        workspaceScope: false,
+        includeTargetText: false,
+      },
+    },
+  ]);
+});
+
+it("forgets the person's choice once the draft is cleared", async () => {
+  showTask(null);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  const composer = await dialog.findByRole('textbox', { name: 'Message Owl' });
+  await user.type(composer, 'Create a checklist for launch');
+  await user.click(await dialog.findByRole('button', { name: 'Send as chat' }));
+  expect(dialog.getByText('Sends as chat')).toBeVisible();
+  await user.clear(composer);
+  await user.type(composer, 'Create a checklist for launch');
+  expect(await dialog.findByText('Starts a job')).toBeVisible();
 });
 
 it('answers a conversational question in chat', async () => {
@@ -350,7 +410,7 @@ it('holds a workspace request until a target is picked, with a way back to the d
   const dialog = within(await screen.findByRole('dialog', { name: 'Conversation with Owl' }));
   const composer = await dialog.findByRole('textbox', { name: 'Message Owl' });
   await user.type(composer, brief);
-  const send = dialog.getByRole('button', { name: 'Send' });
+  const send = dialog.getByRole('button', { name: 'Start job' });
   await user.click(send);
   const picker = await dialog.findByRole('searchbox', { name: 'Find a target' });
   expect(picker).toHaveFocus();
@@ -384,7 +444,7 @@ it('keeps a message in the composer when its job fails to start', async () => {
   const dialog = within(await screen.findByRole('dialog'));
   const composer = await dialog.findByRole('textbox', { name: 'Message Owl' });
   await user.type(composer, brief);
-  await user.click(dialog.getByRole('button', { name: 'Send' }));
+  await user.click(dialog.getByRole('button', { name: 'Start job' }));
 
   expect(await dialog.findByRole('alert')).toHaveTextContent('Pet work paused');
   expect(composer).toHaveValue(brief);
@@ -405,7 +465,7 @@ it('starts a scoped job, answers its question, and applies and undoes only the r
   await user.click(inclusion);
   await user.type(await work.findByRole('searchbox', { name: 'Find a source' }), 'cost');
   await user.click(await work.findByRole('button', { name: 'Add source Cost notes' }));
-  await user.click(dialog.getByRole('button', { name: 'Send' }));
+  await user.click(dialog.getByRole('button', { name: 'Start job' }));
   expect(calls[0]).toEqual({
     path: route,
     body: { brief, sourceItemIds: [source.id], workspaceScope: false, includeTargetText: true },
@@ -867,7 +927,7 @@ it('adds the selected chat message as an editable quote and starts a job from it
   await user.click(attach);
   expect(composer).toHaveValue(nextDraft);
   expect(composer).toHaveFocus();
-  await user.click(dialog.getByRole('button', { name: 'Send' }));
+  await user.click(dialog.getByRole('button', { name: 'Start job' }));
   expect(await dialog.findByRole('textbox', { name: question.text })).toBeVisible();
   expect(calls).toEqual([
     {

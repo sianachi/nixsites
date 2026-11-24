@@ -222,21 +222,32 @@ export function Conversation({
     },
   };
   const canRouteToJob = jobs !== undefined && context.contexts.length === 0;
-  const canSend =
-    !busy &&
-    !jobs?.busy &&
-    Boolean(draft.trim()) &&
-    (connected || (canRouteToJob && jobs.canSubmit(draft)));
+  // The person's choice for this draft; null leaves it to the wording.
+  const [routeOverride, setRouteOverride] = useState<'chat' | 'job' | null>(null);
+  if (routeOverride !== null && !draft.trim()) setRouteOverride(null);
+  const jobAllowed = canRouteToJob && jobs.ready;
+  const route: 'chat' | 'job' =
+    routeOverride === 'job' && jobAllowed
+      ? 'job'
+      : routeOverride === 'chat' && connected
+        ? 'chat'
+        : routeOverride === null && canRouteToJob && jobs.canSubmit(draft)
+          ? 'job'
+          : 'chat';
+  const canSend = !busy && !jobs?.busy && Boolean(draft.trim()) && (route === 'job' || connected);
 
   function submitMessage(): void {
     if (!canSend || running) return;
     if (
-      canRouteToJob &&
-      jobs.submit({
-        ...jobDraft,
-        afterMessageId: messages.findLast((message) => !message.id.includes(':draft:'))?.id,
-        focusComposer: () => input.current?.focus(),
-      })
+      (route === 'job' || (routeOverride === null && canRouteToJob)) &&
+      jobs?.submit(
+        {
+          ...jobDraft,
+          afterMessageId: messages.findLast((message) => !message.id.includes(':draft:'))?.id,
+          focusComposer: () => input.current?.focus(),
+        },
+        routeOverride === 'job' ? true : undefined,
+      )
     )
       return;
     if (connected) void submit();
@@ -623,6 +634,15 @@ export function Conversation({
             onInterrupt={() => void interrupt()}
             running={running}
             canSend={canSend}
+            route={route}
+            onFlip={
+              jobAllowed && connected
+                ? () => {
+                    setRouteOverride(route === 'job' ? 'chat' : 'job');
+                    input.current?.focus();
+                  }
+                : undefined
+            }
             chips={context.chips}
             onRemoveChip={context.removeContext}
             needsWorkspaceAccess={context.contexts.length > 0 && !workspaceAccess}

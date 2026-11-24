@@ -185,8 +185,8 @@ export function usePetDialogJobs({
     }
   }
 
-  function submit(message: ConversationJobMessage): boolean {
-    if (!isJob(message.text) || (availabilityKnown && !enabled)) {
+  function submit(message: ConversationJobMessage, force?: boolean): boolean {
+    if ((force !== true && !isJob(message.text)) || (availabilityKnown && !enabled)) {
       setError(null);
       return false;
     }

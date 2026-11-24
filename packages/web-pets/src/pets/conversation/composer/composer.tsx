@@ -24,6 +24,8 @@ export function Composer({
   onInterrupt,
   running,
   canSend,
+  route = 'chat',
+  onFlip,
   chips,
   onRemoveChip,
   needsWorkspaceAccess,
@@ -52,6 +54,9 @@ export function Composer({
   readonly onInterrupt: () => void;
   readonly running: boolean;
   readonly canSend: boolean;
+  /** Where the draft goes; `onFlip` is given only when the other route is open too. */
+  readonly route?: 'chat' | 'job';
+  readonly onFlip?: (() => void) | undefined;
   readonly chips: readonly SharedContext[];
   readonly onRemoveChip: (context: SharedContext) => void;
   readonly needsWorkspaceAccess: boolean;
@@ -202,6 +207,16 @@ export function Composer({
       <label htmlFor="pet-message" className="sr-only">
         Message {petName}
       </label>
+      {onFlip && !running && draft.trim() ? (
+        <div className="flex flex-wrap items-center gap-x-2">
+          <Text variant="note" tone="muted" role="status">
+            {route === 'job' ? 'Starts a job' : 'Sends as chat'}
+          </Text>
+          <Button variant="ghost" onClick={onFlip}>
+            {route === 'job' ? 'Send as chat' : 'Start a job'}
+          </Button>
+        </div>
+      ) : null}
       <div className="flex min-w-0 items-end gap-2">
         <Menu label="Add to message" items={addItems}>
           {(trigger) => {
@@ -254,7 +269,8 @@ export function Composer({
         <Button
           variant="primary"
           className="w-(--control-md) shrink-0 px-0 any-pointer-coarse:w-(--control-lg)"
-          aria-label={running ? 'Stop response' : 'Send'}
+          aria-label={running ? 'Stop response' : route === 'job' ? 'Start job' : 'Send'}
+          title={!running && route === 'job' ? 'Start job' : undefined}
           disabled={!running && !canSend}
           onClick={running ? onInterrupt : onSubmit}
         >
