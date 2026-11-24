@@ -213,7 +213,7 @@ export function Composer({
             {route === 'job' ? 'Starts a job' : 'Sends as chat'}
           </Text>
           <Button variant="ghost" onClick={onFlip}>
-            {route === 'job' ? 'Send as chat' : 'Start a job'}
+            {route === 'job' ? 'Switch to chat' : 'Switch to job'}
           </Button>
         </div>
       ) : null}

@@ -338,7 +338,7 @@ it('says where a message goes and lets the person flip it before sending', async
   expect(await dialog.findByText('Starts a job')).toBeVisible();
   expect(dialog.getByRole('button', { name: 'Start job' })).toBeVisible();
 
-  await user.click(dialog.getByRole('button', { name: 'Send as chat' }));
+  await user.click(dialog.getByRole('button', { name: 'Switch to chat' }));
   expect(composer).toHaveFocus();
   expect(dialog.getByText('Sends as chat')).toBeVisible();
   await user.click(dialog.getByRole('button', { name: 'Send' }));
@@ -357,7 +357,7 @@ it('starts a job from a chat-like message when the person asks for one', async (
     'What is on my list today?',
   );
   expect(await dialog.findByText('Sends as chat')).toBeVisible();
-  await user.click(dialog.getByRole('button', { name: 'Start a job' }));
+  await user.click(dialog.getByRole('button', { name: 'Switch to job' }));
   await user.click(dialog.getByRole('button', { name: 'Start job' }));
 
   expect(await dialog.findByRole('textbox', { name: question.text })).toBeVisible();
@@ -381,7 +381,7 @@ it("forgets the person's choice once the draft is cleared", async () => {
   const dialog = within(await screen.findByRole('dialog'));
   const composer = await dialog.findByRole('textbox', { name: 'Message Owl' });
   await user.type(composer, 'Create a checklist for launch');
-  await user.click(await dialog.findByRole('button', { name: 'Send as chat' }));
+  await user.click(await dialog.findByRole('button', { name: 'Switch to chat' }));
   expect(dialog.getByText('Sends as chat')).toBeVisible();
   await user.clear(composer);
   await user.type(composer, 'Create a checklist for launch');
