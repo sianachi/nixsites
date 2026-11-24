@@ -120,6 +120,16 @@ it('lists jobs by status and opens the exact pending decision in the task', asyn
   expect(
     within(screen.getByRole('region', { name: 'In progress' })).getByRole('link'),
   ).toHaveAttribute('href', `/w/${workspaceId}?item=${itemId}&petRun=${runningRunId}`);
+  expect(waiting.getByText('Needs an answer', { selector: 'span' })).toHaveAttribute(
+    'data-tone',
+    'accent',
+  );
+  expect(
+    within(screen.getByRole('region', { name: 'In progress' })).getByText('Working'),
+  ).toHaveAttribute('data-tone', 'neutral');
+  expect(
+    within(screen.getByRole('region', { name: 'Recent jobs' })).getByText('Completed'),
+  ).toHaveAttribute('data-tone', 'muted');
   expect(
     within(screen.getByRole('region', { name: 'Recent jobs' })).getByRole('link'),
   ).toHaveAttribute('href', `/w/${workspaceId}?item=${itemId}&petRun=${completedRunId}`);
@@ -144,4 +154,19 @@ it('keeps jobs hidden when the workspace feature is disabled', async () => {
 
   expect(await screen.findByText('Pet jobs are unavailable')).toBeVisible();
   expect(screen.queryByRole('link')).not.toBeInTheDocument();
+});
+
+it('labels a job with an unknown outcome apart from the section it sits in', async () => {
+  client.query.mockResolvedValue({
+    enabled: true,
+    abilities: [],
+    runs: [run(reviewRunId, 'File the invoices', 'review_required')],
+  });
+  openActivity();
+
+  const section = await screen.findByRole('region', { name: 'Needs attention' });
+  expect(
+    within(section).getByRole('link', { name: 'File the invoices Check the outcome' }),
+  ).toBeVisible();
+  expect(within(section).queryByText('Needs attention', { selector: 'span' })).toBeNull();
 });

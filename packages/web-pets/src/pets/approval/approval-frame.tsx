@@ -71,6 +71,11 @@ export function ApprovalActions({
 }): ReactElement {
   const [requestingChanges, setRequestingChanges] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [pressed, setPressed] = useState<'approve' | 'decline' | 'feedback' | null>(null);
+  const working = (button: typeof pressed, label: ReactNode) =>
+    busy && pressed === button ? 'Working…' : label;
+  // Forget the press once nothing is running, so a later wait started elsewhere names no button here.
+  if (!busy && pressed !== null) setPressed(null);
   const changeButton = useRef<HTMLButtonElement>(null);
   const feedbackField = useRef<HTMLTextAreaElement>(null);
   const restoreFocus = useRef(false);
@@ -89,7 +94,10 @@ export function ApprovalActions({
         className="flex flex-col gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!busy && feedback.trim()) onRequestChanges(feedback.trim());
+          if (!busy && feedback.trim()) {
+            setPressed('feedback');
+            onRequestChanges(feedback.trim());
+          }
         }}
       >
         <Field label="What should change?" hint="This proposal will be declined." required>
@@ -109,7 +117,7 @@ export function ApprovalActions({
         </Field>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="primary" type="submit" disabled={busy || !feedback.trim()}>
-            Send feedback
+            {working('feedback', 'Send feedback')}
           </Button>
           <Button
             variant="ghost"
@@ -134,9 +142,12 @@ export function ApprovalActions({
         variant="primary"
         aria-describedby={headingId}
         disabled={approveDisabled || busy}
-        onClick={onApprove}
+        onClick={() => {
+          setPressed('approve');
+          onApprove();
+        }}
       >
-        {approveLabel}
+        {working('approve', approveLabel)}
       </Button>
       {onRequestChanges ? (
         <Button
@@ -162,8 +173,16 @@ export function ApprovalActions({
           {editLabel}
         </Button>
       ) : null}
-      <Button variant="ghost" aria-describedby={headingId} disabled={busy} onClick={onDecline}>
-        Decline request
+      <Button
+        variant="ghost"
+        aria-describedby={headingId}
+        disabled={busy}
+        onClick={() => {
+          setPressed('decline');
+          onDecline();
+        }}
+      >
+        {working('decline', 'Decline request')}
       </Button>
       {onUndo ? (
         <Button variant="ghost" aria-describedby={headingId} disabled={busy} onClick={onUndo}>

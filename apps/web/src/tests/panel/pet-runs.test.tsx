@@ -82,12 +82,16 @@ function showTask(
     refuseSource = false,
     refuseStart = false,
     workspaceChat = false,
+    holdAnswer,
+    holdDecision,
   }: {
     readonly messages?: readonly { id: string; role: 'user' | 'assistant'; text: string }[];
     readonly direct?: boolean;
     readonly refuseSource?: boolean;
     readonly refuseStart?: boolean;
     readonly workspaceChat?: boolean;
+    readonly holdAnswer?: Promise<void>;
+    readonly holdDecision?: Promise<void>;
   } = {},
 ) {
   clearPetDrafts();
@@ -212,6 +216,7 @@ function showTask(
     }
     if (pathname === `${route}/${runId}/answer`) {
       calls.push({ path: pathname, body: await readBody(input, init) });
+      await holdAnswer;
       run = {
         ...firstRun,
         revision: 2,
@@ -223,6 +228,7 @@ function showTask(
     }
     if (pathname === `${route}/${runId}/proposals/${proposalId}/decision`) {
       calls.push({ path: pathname, body: await readBody(input, init) });
+      await holdDecision;
       if (renameProposal) persistedTitle = renamedTitle;
       run = {
         ...(run ?? firstRun),
@@ -437,6 +443,22 @@ it('holds a workspace request until a target is picked, with a way back to the d
   ]);
 });
 
+it('says how far over the limit a message is when it is too long for a job', async () => {
+  const calls = showTask(null);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  const composer = await dialog.findByRole('textbox', { name: 'Message Owl' });
+  await user.click(composer);
+  await user.paste(`Draw a flowchart of ${'x'.repeat(4_100)}`);
+  await user.click(dialog.getByRole('button', { name: 'Start job' }));
+
+  expect(await dialog.findByRole('alert')).toHaveTextContent(
+    'This message is 120 characters over the 4,000 a job can take. Shorten it to start a job.',
+  );
+  expect(calls).toEqual([]);
+});
+
 it('keeps a message in the composer when its job fails to start', async () => {
   const calls = showTask(null, { refuseStart: true });
   const user = userEvent.setup();
@@ -487,6 +509,46 @@ it('starts a scoped job, answers its question, and applies and undoes only the r
     { path: `${route}/${runId}/steps/${proposalId}/undo`, body: undefined },
   ]);
 }, 30_000);
+
+it('says an answer is being sent until the job takes it', async () => {
+  let release = (): void => undefined;
+  showTask(firstRun, {
+    holdAnswer: new Promise<void>((resolve) => {
+      release = resolve;
+    }),
+  });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  await user.click(await dialog.findByRole('textbox', { name: question.text }));
+  await user.paste('The updated estimate');
+  await user.click(dialog.getByRole('button', { name: 'Answer' }));
+
+  expect(await dialog.findByRole('button', { name: 'Sending answer…' })).toBeDisabled();
+  release();
+  expect(await dialog.findByText(/The updated estimate is ready to review/)).toBeVisible();
+});
+
+it('names the pressed approval button while the decision is sent', async () => {
+  let release = (): void => undefined;
+  showTask(
+    { ...firstRun, status: 'waiting_for_approval', question: null, proposals: [proposal] },
+    {
+      holdDecision: new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    },
+  );
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
+  const dialog = within(await screen.findByRole('dialog'));
+  await user.click(await dialog.findByRole('button', { name: 'Post comment' }));
+
+  expect(await dialog.findByRole('button', { name: 'Working…' })).toBeDisabled();
+  expect(dialog.getByRole('button', { name: 'Decline request' })).toBeDisabled();
+  release();
+  expect(await dialog.findByText('Posted the estimate comment')).toBeVisible();
+});
 
 it('updates the open task title after approving and undoing a pet rename', async () => {
   showTask({
@@ -713,6 +775,10 @@ it('labels a job that waits on an answer with the shared status words', async ()
   await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
   const dialog = within(await screen.findByRole('dialog'));
   expect(await dialog.findByText('Needs an answer', { selector: 'span' })).toBeVisible();
+  expect(await dialog.findByText('Needs an answer', { selector: 'span' })).toHaveAttribute(
+    'data-tone',
+    'accent',
+  );
   expect(screen.queryByText('Waiting for your answer')).not.toBeInTheDocument();
 });
 

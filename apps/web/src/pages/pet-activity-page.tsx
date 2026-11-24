@@ -9,7 +9,7 @@ import {
 } from '@nix/web-foundation/components/states/status-panels';
 import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
-import { petRunStatusText } from '../panel/pet-run-card';
+import { PetRunStatusTag, petRunStatusText } from '../panel/pet-run-card';
 import { usePetRunFeed } from '../panel/use-pet-run-feed';
 import { petJobHref } from './editor/pet-job-routing';
 
@@ -36,9 +36,7 @@ function ActivityRow({ run }: { readonly run: PetRunResponse }): ReactElement {
         <Text as="span" className="min-w-0 flex-1 break-words">
           {summary}
         </Text>{' '}
-        <Text as="span" variant="note" tone="muted">
-          {status}
-        </Text>
+        <PetRunStatusTag status={run.status} label={status} />
       </Link>
     </li>
   );

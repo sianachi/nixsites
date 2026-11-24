@@ -17,7 +17,7 @@ import type {
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { isPetJobMessage } from './pet-job-message';
 import { PetPeerSection } from './pet-peer-section';
-import { PetRunCard, petRunStatusText } from './pet-run-card';
+import { PetRunCard, PetRunStatusTag } from './pet-run-card';
 import { PetRoutines, RoutineFields, routineDraft } from './pet-routines';
 import { usePetRunFeed } from './use-pet-run-feed';
 
@@ -194,7 +194,12 @@ export function usePetDialogJobs({
     if (!enabled || client === null) {
       setError('Job availability could not be confirmed. Try again in a moment.');
     } else if (!validBrief(message.text)) {
-      setError('Shorten the message to start a job.');
+      const over = message.text.length - maxBriefLength;
+      setError(
+        over > 0
+          ? `This message is ${over.toLocaleString('en')} characters over the ${maxBriefLength.toLocaleString('en')} a job can take. Shorten it to start a job.`
+          : 'Shorten the message to start a job.',
+      );
     } else if (target === null) {
       setError(null);
       setNeedsTarget(message);
@@ -336,9 +341,7 @@ function JobEntry({
         <Text as="span" variant="bodySmall">
           {run.brief}
         </Text>
-        <Text as="span" variant="note" tone="muted" className="ms-2">
-          {petRunStatusText(run.status)}
-        </Text>
+        <PetRunStatusTag status={run.status} className="ms-2" />
       </summary>
       <PetRunCard
         client={client}

@@ -17,6 +17,7 @@ import {
   Field,
   ScrollRegion,
   Table,
+  Tag,
   Text,
   Textarea,
   Toast,
@@ -120,7 +121,7 @@ const statusText: Record<PetRunResponse['status'], string> = {
   waiting_for_input: 'Needs an answer',
   waiting_for_approval: 'Needs review',
   waiting_for_handoff: 'Waiting for the other agent',
-  review_required: 'Needs attention',
+  review_required: 'Check the outcome',
   completed: 'Completed',
   failed: 'Job failed',
   cancelled: 'Cancelled',
@@ -149,6 +150,33 @@ const failureHeadings: Record<NonNullable<PetRunResponse['failure']>['stage'], s
 
 export function petRunStatusText(status: PetRunResponse['status']): string {
   return statusText[status];
+}
+
+const statusTone = {
+  waiting_for_input: 'accent',
+  waiting_for_approval: 'accent',
+  review_required: 'accent',
+  failed: 'accent',
+  completed: 'muted',
+  cancelled: 'muted',
+} as const;
+
+/** A job's status as a Tag: accent when it needs the person, muted once it is over. */
+export function PetRunStatusTag({
+  status,
+  label,
+  className,
+}: {
+  readonly status: PetRunResponse['status'];
+  readonly label?: string;
+  readonly className?: string | undefined;
+}): ReactElement {
+  const tone = status in statusTone ? statusTone[status as keyof typeof statusTone] : 'neutral';
+  return (
+    <Tag tone={tone} data-tone={tone} {...(className === undefined ? {} : { className })}>
+      {label ?? petRunStatusText(status)}
+    </Tag>
+  );
 }
 
 export function PetRunCard({
@@ -281,6 +309,7 @@ export function PetRunCard({
             <RunQuestion
               question={run.question}
               busy={busy !== null}
+              sending={busy === run.question.id}
               answer={(questionId, text) =>
                 apply(questionId, petRuns.answer(run.itemId, run.id, questionId, text))
               }
@@ -581,10 +610,12 @@ function DrawingProposal({
 function RunQuestion({
   question,
   busy,
+  sending,
   answer,
 }: {
   readonly question: { readonly id: string; readonly text: string };
   readonly busy: boolean;
+  readonly sending: boolean;
   readonly answer: (questionId: string, text: string) => Promise<void>;
 }): ReactElement {
   const [text, setText] = useState('');
@@ -613,7 +644,7 @@ function RunQuestion({
       </Field>
       <div>
         <Button type="submit" disabled={busy || text.trim().length === 0}>
-          Answer
+          {sending ? 'Sending answer…' : 'Answer'}
         </Button>
       </div>
     </form>
