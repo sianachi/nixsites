@@ -23,7 +23,7 @@
          Nix.Api.csproj: the 2.0.0 that 10.0.0 resolves to carries GHSA-v5pm-xwqc-g5wc
          (high), patched in 2.7.5. Drop the direct reference once an ASP.NET Core
          10.0.x floors it above the advisory. -->
-    <PackageVersion Include="Microsoft.OpenApi" Version="2.13.0" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="3.11.1" />
   </ItemGroup>
 
   <!-- ==========================================================================
