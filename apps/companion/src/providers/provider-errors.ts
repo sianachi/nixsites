@@ -95,12 +95,41 @@ export async function readBounded(response: Response, limit: number): Promise<st
   return Buffer.concat(chunks).toString('utf8');
 }
 
+const OPENAI_REQUEST_CODES = new Set([
+  'invalid_function_parameters',
+  'unsupported_parameter',
+  'unsupported_value',
+  'invalid_value',
+  'invalid_type',
+  'context_length_exceeded',
+  'model_not_found',
+]);
+const OPENAI_REQUEST_PARAM =
+  /^(?:model|messages|tools|stream|tools\[(?:0|[1-9]\d?)\]\.function(?:\.(?:name|parameters|description))?)$/;
+
+function openaiRequestDiagnostic(error: unknown): string {
+  if (!isRecord(error)) return '';
+  const details: string[] = [];
+  if (typeof error.code === 'string' && OPENAI_REQUEST_CODES.has(error.code))
+    details.push(`code=${error.code}`);
+  if (error.type === 'invalid_request_error') details.push('type=invalid_request_error');
+  if (
+    details.length > 0 &&
+    typeof error.param === 'string' &&
+    error.param.trim() === error.param &&
+    OPENAI_REQUEST_PARAM.test(error.param)
+  )
+    details.push(`param=${error.param}`);
+  return details.join(', ');
+}
+
 export async function providerResponseError(
   provider: string,
   response: Response,
   models: boolean,
 ): Promise<ProviderFailure> {
   let code = '';
+  let diagnostic = '';
   switch (response.status) {
     case 401:
       code = 'authentication';
@@ -125,8 +154,15 @@ export async function providerResponseError(
       }
       break;
     case 400:
-      if (provider === 'openai') code = 'request_rejected';
-      else if (provider === 'anthropic') {
+      if (provider === 'openai') {
+        code = 'request_rejected';
+        try {
+          const envelope: unknown = JSON.parse(await readBounded(response, 4 << 10));
+          diagnostic = openaiRequestDiagnostic(isRecord(envelope) ? envelope.error : undefined);
+        } catch {
+          // An unreadable body keeps the fixed failure without diagnostic details.
+        }
+      } else if (provider === 'anthropic') {
         try {
           const envelope: unknown = JSON.parse(await readBounded(response, 4 << 10));
           const error = isRecord(envelope) ? envelope.error : undefined;
@@ -165,5 +201,7 @@ export async function providerResponseError(
       break;
   }
   void response.body?.cancel().catch(() => undefined);
-  return new ProviderFailure(provider, response.status, code);
+  const failure = new ProviderFailure(provider, response.status, code);
+  if (diagnostic !== '') failure.message += ` [${diagnostic}]`;
+  return failure;
 }

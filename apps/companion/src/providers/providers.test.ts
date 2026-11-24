@@ -989,6 +989,138 @@ describe('OpenAI', () => {
     expect(error.message).not.toContain('private fixture text');
   });
 
+  describe('local request diagnostics', () => {
+    const publicReason =
+      'OpenAI rejected the request. Try another model, or report this problem if it continues.';
+    const internalReason = `${publicReason} (HTTP 400)`;
+
+    it('keeps recognized details in the internal failure while the public reason stays fixed', async () => {
+      const privateText = 'private prompt echo sk-test-secret';
+      const server = await track(
+        startServer((seen, res) => {
+          if (seen.url === '/models') return jsonResponse(res, 200, models);
+          jsonResponse(res, 400, {
+            error: {
+              code: 'invalid_function_parameters',
+              type: 'invalid_request_error',
+              param: 'tools[27].function.parameters',
+              message: privateText,
+            },
+          });
+        }),
+      );
+      const k = keyAccount('openai', server);
+      await k.send();
+      await eventually(() => k.account.snapshot(key).state === 'error');
+      expect(k.account.snapshot(key).reason).toBe(publicReason);
+      expect(failure(k.events)).toBe(
+        `${internalReason} [code=invalid_function_parameters, type=invalid_request_error, param=tools[27].function.parameters]`,
+      );
+      expect(JSON.stringify(k.events)).toContain('openai.request_rejected.400');
+      expect(JSON.stringify(k.events)).not.toContain(privateText);
+      expect(JSON.stringify(k.account.snapshot(key))).not.toContain('invalid_function_parameters');
+      expect(JSON.stringify(k.account.snapshot(key))).not.toContain('tools[27]');
+    });
+
+    it.each([
+      'invalid_function_parameters',
+      'unsupported_parameter',
+      'unsupported_value',
+      'invalid_value',
+      'invalid_type',
+      'context_length_exceeded',
+      'model_not_found',
+    ])('accepts only the fixed diagnostic code %s', async (code) => {
+      const error = await providerResponseError(
+        'openai',
+        new Response(JSON.stringify({ error: { code } }), { status: 400 }),
+        false,
+      );
+      expect(error.token()).toBe('openai.request_rejected.400');
+      expect(error.message).toBe(`${internalReason} [code=${code}]`);
+    });
+
+    it.each([
+      'model',
+      'messages',
+      'tools',
+      'stream',
+      'tools[0].function',
+      'tools[4].function.name',
+      'tools[27].function.parameters',
+      'tools[99].function.description',
+    ])('accepts the canonical diagnostic parameter %s', async (param) => {
+      const error = await providerResponseError(
+        'openai',
+        new Response(JSON.stringify({ error: { type: 'invalid_request_error', param } }), {
+          status: 400,
+        }),
+        false,
+      );
+      expect(error.message).toBe(`${internalReason} [type=invalid_request_error, param=${param}]`);
+    });
+
+    it.each([
+      'tools[100].function.parameters',
+      'tools[00].function.parameters',
+      'tools[27].function.parameters\n',
+      'tools[27].function.parameters.private_prompt',
+      'tools[27].function.parameters\nprivate prompt sk-test-secret',
+    ])('discards a noncanonical diagnostic parameter %j', async (param) => {
+      const error = await providerResponseError(
+        'openai',
+        new Response(
+          JSON.stringify({
+            error: {
+              type: 'invalid_request_error',
+              code: 'private prompt sk-test-secret',
+              param,
+              message: 'private prompt sk-test-secret',
+            },
+          }),
+          { status: 400 },
+        ),
+        false,
+      );
+      expect(error.message).toBe(`${internalReason} [type=invalid_request_error]`);
+    });
+
+    it.each([
+      {
+        name: 'unknown',
+        body: JSON.stringify({
+          error: {
+            code: 'private sk-test-secret',
+            type: 'private sk-test-secret',
+            param: 'model',
+            message: 'private sk-test-secret',
+          },
+        }),
+      },
+      { name: 'malformed', body: 'private sk-test-secret, not JSON' },
+      { name: 'wrong shape', body: JSON.stringify({ error: ['invalid_request_error'] }) },
+      {
+        name: 'oversized',
+        body: JSON.stringify({
+          error: {
+            code: 'invalid_function_parameters',
+            type: 'invalid_request_error',
+            param: 'tools[27].function.parameters',
+            message: `private sk-test-secret${'x'.repeat(4 << 10)}`,
+          },
+        }),
+      },
+    ])('keeps the original fixed failure for a $name body', async ({ body }) => {
+      const error = await providerResponseError(
+        'openai',
+        new Response(body, { status: 400 }),
+        false,
+      );
+      expect(error.token()).toBe('openai.request_rejected.400');
+      expect(error.message).toBe(internalReason);
+    });
+  });
+
   it('names OpenAI in failures and tells an exhausted quota from a rate limit', async () => {
     const fake = (status: number, body: unknown): Response =>
       new Response(JSON.stringify(body), { status });
