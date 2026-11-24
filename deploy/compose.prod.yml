@@ -38,7 +38,7 @@ services:
       - no-new-privileges:true
 
   postgres:
-    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
+    image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -92,7 +92,7 @@ services:
       - no-new-privileges:true
 
   nix-template-presets:
-    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
+    image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
     restart: "no"
     depends_on:
       postgres:
@@ -117,7 +117,7 @@ services:
   # Opt-in identity bootstrap for a fresh install: deploy/compose/deploy.sh runs it after the
   # migrator when NIX_BOOTSTRAP_IDENTITY=true. See deploy/seed/bootstrap_identity.sql.
   nix-identity-bootstrap:
-    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
+    image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
     restart: "no"
     profiles: ["bootstrap"]
     environment:
