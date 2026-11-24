@@ -55,6 +55,18 @@ export function providerFailureMessage(provider: string, token: string): string 
       return `${name} refused access for this API key. Check the key's permissions and API access.`;
     case 'rate_limited.429':
       return `${name} is rate limiting this API key. Wait briefly, then try again.`;
+    case 'model_unavailable.404':
+      return provider === 'openai'
+        ? 'OpenAI could not use the selected model for this API key. Choose another model, then try again.'
+        : '';
+    case 'request_rejected.400':
+      return provider === 'openai'
+        ? 'OpenAI rejected the request. Try another model, or report this problem if it continues.'
+        : '';
+    case 'request_rejected.404':
+      return provider === 'openai'
+        ? 'OpenAI could not find the requested model or endpoint. Check the selected model and API access, then try again.'
+        : '';
     case 'models_rejected.400':
       return provider === 'anthropic'
         ? `${name} rejected model discovery for this API key. Check its API access and billing, then try again.`
@@ -113,7 +125,8 @@ export async function providerResponseError(
       }
       break;
     case 400:
-      if (provider === 'anthropic') {
+      if (provider === 'openai') code = 'request_rejected';
+      else if (provider === 'anthropic') {
         try {
           const envelope: unknown = JSON.parse(await readBounded(response, 4 << 10));
           const error = isRecord(envelope) ? envelope.error : undefined;
@@ -133,6 +146,18 @@ export async function providerResponseError(
           }
         } catch {
           // an unreadable body classifies as no code
+        }
+      }
+      break;
+    case 404:
+      if (provider === 'openai') {
+        code = 'request_rejected';
+        try {
+          const envelope: unknown = JSON.parse(await readBounded(response, 4 << 10));
+          const error = isRecord(envelope) ? envelope.error : undefined;
+          if (isRecord(error) && error.code === 'model_not_found') code = 'model_unavailable';
+        } catch {
+          // An unreadable body keeps the fixed status-based failure.
         }
       }
       break;

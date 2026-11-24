@@ -208,7 +208,10 @@ export class HttpTransport implements Transport {
       case 'thread/resume': {
         const id = str(p.threadId);
         if (id === '') throw new Error('thread id required');
-        this.thread(id);
+        const thread = this.thread(id);
+        const model = str(p.model);
+        if (model !== '') thread.model = model;
+        if (Array.isArray(p.dynamicTools)) thread.tools = p.dynamicTools;
         return { thread: { id } };
       }
       case 'turn/start':

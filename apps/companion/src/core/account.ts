@@ -836,6 +836,8 @@ export class Account {
     let started: unknown;
     try {
       if (method === 'thread/resume') {
+        if (this.provider !== '' && this.provider !== 'chatgpt')
+          params.dynamicTools = supportsTools ? workspaceToolsForRequest(r) : [];
         try {
           started = await this.transport.call(method, { ...params, threadId: thread }, signal);
         } catch (error) {

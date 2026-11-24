@@ -191,6 +191,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- API-key conversations use the newly selected model when resuming, including after a restart.
+  OpenAI model and request failures show a specific recovery message instead of an account/usage
+  message.
 - Provider-key settings keep the key field readable on narrow screens, show progress without moving
   the action buttons, and keep pending saves visible until confirmed. Failed settings requests no
   longer claim they were saved.

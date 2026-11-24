@@ -739,6 +739,52 @@ describe('OpenRouter', () => {
     expect(post.tools).toBeUndefined();
   });
 
+  it.each([
+    { initialModel: 'vendor/tools', model: 'vendor/plain', workspaceAccess: false, tools: false },
+    { initialModel: 'vendor/plain', model: 'vendor/tools', workspaceAccess: true, tools: true },
+  ])('refreshes tools when changing from $initialModel to $model', async (fixture) => {
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url === '/models') return jsonResponse(res, 200, models);
+        sse(res, [chunk({ content: 'First answer.' }), chunk({}, 'stop'), '[DONE]']);
+      }),
+    );
+    const k = keyAccount('openrouter', server);
+    await k.send({ text: 'First question.', model: fixture.initialModel, workspaceAccess: false });
+    await eventually(() => k.account.snapshot(key).state === 'success');
+    await k.send({
+      requestId: IDS.other,
+      text: 'Second question.',
+      model: fixture.model,
+      workspaceAccess: fixture.workspaceAccess,
+    });
+    await eventually(() => k.account.snapshot(key).messages.length === 4);
+    const posts = server.seen.filter((seen) => seen.method === 'POST');
+    expect(posts).toHaveLength(2);
+    const first: unknown = JSON.parse(posts[0]?.body ?? '{}');
+    const second: unknown = JSON.parse(posts[1]?.body ?? '{}');
+    expect(first).toHaveProperty('model', fixture.initialModel);
+    expect(second).toMatchObject({
+      model: fixture.model,
+      messages: [
+        { role: 'system' },
+        { role: 'user' },
+        { role: 'assistant', content: 'First answer.' },
+        { role: 'user' },
+      ],
+    });
+    expect(posts[1]?.body).toContain('First question.');
+    expect(posts[1]?.body).toContain('Second question.');
+    if (fixture.tools) {
+      expect(first).not.toHaveProperty('tools');
+      expect(second).toHaveProperty('tools.0.function.name', 'nix_list_items');
+      expect(posts[1]?.body).toContain('"name":"nix_create_note"');
+    } else {
+      expect(first).toHaveProperty('tools.0.function.name', 'nix_list_items');
+      expect(second).not.toHaveProperty('tools');
+    }
+  });
+
   it('puts a tool result picture in a user message, and drops it for a model that cannot see images', async () => {
     for (const [model, sees] of [
       ['anthropic/claude-x', true],
@@ -844,6 +890,105 @@ describe('OpenAI', () => {
     expect(failure(k.events)).toBe('');
   });
 
+  it.each([false, true])(
+    'uses a newly selected model while retaining conversation history after restart=%s',
+    async (restart) => {
+      const server = await track(
+        startServer((seen, res) => {
+          if (seen.url === '/models') return jsonResponse(res, 200, models);
+          sse(res, [chunk({ content: 'First answer.' }), chunk({}, 'stop'), '[DONE]']);
+        }),
+      );
+      const first = keyAccount('openai', server);
+      await first.send({ text: 'First question.' });
+      await eventually(() => first.account.snapshot(key).state === 'success');
+      if (restart) first.transport.close();
+      const resumed = restart ? keyAccount('openai', server, first.home) : first;
+      if (restart) resumed.account.load(key);
+      await resumed.send({ requestId: IDS.other, text: 'Second question.', model: 'gpt-4o' });
+      await eventually(() => resumed.account.snapshot(key).messages.length === 4);
+      const posts = server.seen.filter((seen) => seen.method === 'POST');
+      expect(posts).toHaveLength(2);
+      expect(JSON.parse(posts[0]?.body ?? '{}')).toMatchObject({ model: 'gpt-5' });
+      expect(JSON.parse(posts[1]?.body ?? '{}')).toMatchObject({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system' },
+          { role: 'user' },
+          { role: 'assistant', content: 'First answer.' },
+          { role: 'user' },
+        ],
+      });
+      expect(posts[1]?.body).toContain('First question.');
+      expect(posts[1]?.body).toContain('Second question.');
+    },
+  );
+
+  it.each([
+    {
+      status: 404,
+      error: { code: 'model_not_found', type: 'invalid_request_error' },
+      token: 'openai.model_unavailable.404',
+      reason:
+        'OpenAI could not use the selected model for this API key. Choose another model, then try again.',
+    },
+    {
+      status: 400,
+      error: { code: 'unsupported_parameter', type: 'invalid_request_error' },
+      token: 'openai.request_rejected.400',
+      reason:
+        'OpenAI rejected the request. Try another model, or report this problem if it continues.',
+    },
+    {
+      status: 404,
+      error: { code: 'unrecognized_fixture_code', type: 'unrecognized_fixture_type' },
+      token: 'openai.request_rejected.404',
+      reason:
+        'OpenAI could not find the requested model or endpoint. Check the selected model and API access, then try again.',
+    },
+    {
+      status: 400,
+      error: { code: 'unrecognized_fixture_code', type: 'unrecognized_fixture_type' },
+      token: 'openai.request_rejected.400',
+      reason:
+        'OpenAI rejected the request. Try another model, or report this problem if it continues.',
+    },
+  ])('shows a safe account failure for $status and $error.code', async (fixture) => {
+    const privateText = 'private prompt echo sk-test-secret';
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url === '/models') return jsonResponse(res, 200, models);
+        jsonResponse(res, fixture.status, {
+          error: { ...fixture.error, message: privateText, param: privateText },
+        });
+      }),
+    );
+    const k = keyAccount('openai', server);
+    await k.send();
+    await eventually(() => k.account.snapshot(key).state === 'error');
+    expect(k.account.snapshot(key).reason).toBe(fixture.reason);
+    expect(JSON.stringify(k.events)).toContain(fixture.token);
+    expect(JSON.stringify(k.events)).not.toContain(privateText);
+    expect(JSON.stringify(k.account.snapshot(key))).not.toContain(privateText);
+  });
+
+  it.each([
+    { name: 'malformed', body: 'private fixture text, not JSON' },
+    {
+      name: 'oversized',
+      body: JSON.stringify({
+        error: { code: 'model_not_found', message: `private fixture text${'x'.repeat(4 << 10)}` },
+      }),
+    },
+  ])('uses the fixed 404 fallback for a $name response body', async ({ body }) => {
+    const error = await providerResponseError('openai', new Response(body, { status: 404 }), false);
+    expect(error.token()).toBe('openai.request_rejected.404');
+    expect(error.message).toBe(
+      'OpenAI could not find the requested model or endpoint. Check the selected model and API access, then try again. (HTTP 404)',
+    );
+    expect(error.message).not.toContain('private fixture text');
+  });
+
   it('names OpenAI in failures and tells an exhausted quota from a rate limit', async () => {
     const fake = (status: number, body: unknown): Response =>
       new Response(JSON.stringify(body), { status });
@@ -927,6 +1072,18 @@ describe('provider failures', () => {
     expect(providerFailureMessage('anthropic', 'anthropic.credit_balance.400')).toContain(
       'insufficient credit',
     );
+    expect(providerFailureMessage('openai', 'openai.model_unavailable.404')).toContain(
+      'selected model',
+    );
+    expect(providerFailureMessage('openai', 'openai.request_rejected.400')).toContain(
+      'rejected the request',
+    );
+    expect(providerFailureMessage('openai', 'openai.request_rejected.404')).toContain(
+      'model or endpoint',
+    );
+    expect(providerFailureMessage('anthropic', 'anthropic.model_unavailable.404')).toBe('');
+    expect(providerFailureMessage('openrouter', 'openrouter.request_rejected.400')).toBe('');
+    expect(providerFailureMessage('openai', 'openai.unrecognized_fixture_code.404')).toBe('');
     expect(providerFailureMessage('anthropic', 'anthropic.made_up.500')).toBe('');
   });
 
