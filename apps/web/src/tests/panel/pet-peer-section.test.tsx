@@ -1,10 +1,11 @@
 import { createNixClient } from '@nix/api-client';
 import { requestUrl } from '@nix/web-foundation/testing/request-url';
 import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-provider';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vitest';
 import { PetPeerSection } from '../../panel/pet-peer-section';
+import { petRunStatusText } from '../../panel/pet-run-card';
 
 it('registers a task runner and can still revoke it after the pilot is disabled', async () => {
   const itemId = '11fa1d13-ce45-47d4-bd7c-51a4dd47e4ab';
@@ -93,4 +94,44 @@ it('registers a task runner and can still revoke it after the pilot is disabled'
   });
   expect(await screen.findByText('Revoked')).toBeVisible();
   expect(methods).toEqual(['register', 'revoke']);
+});
+
+it('labels peer work with the same status words as a pet job', async () => {
+  const itemId = '11fa1d13-ce45-47d4-bd7c-51a4dd47e4ab';
+  const shared = ['running', 'completed', 'review_required'] as const;
+  const work = shared.map((status, index) => ({
+    id: `5${String(index)}fa1d13-ce45-47d4-bd7c-51a4dd47e4ab`,
+    peerId: '33fa1d13-ce45-47d4-bd7c-51a4dd47e4ab',
+    runId: '66fa1d13-ce45-47d4-bd7c-51a4dd47e4ab',
+    direction: 'outbound',
+    status,
+    createdAt: '2026-11-17T00:00:00Z',
+  }));
+  const client = createNixClient({
+    baseUrl: 'https://nix.test',
+    tokens: {
+      getAccessToken: () => Promise.resolve('browser-fixture'),
+      refreshAccessToken: () => Promise.resolve('browser-fixture'),
+    },
+    fetch: (input) =>
+      Promise.resolve(
+        Response.json(
+          new URL(requestUrl(input), 'https://nix.test').pathname.endsWith('/work')
+            ? { work }
+            : { peers: [] },
+        ),
+      ),
+  });
+  render(
+    <ApiClientOverrideProvider client={client}>
+      <PetPeerSection itemId={itemId} />
+    </ApiClientOverrideProvider>,
+  );
+
+  const rows = await within(await screen.findByRole('list', { name: 'Peer work' })).findAllByRole(
+    'listitem',
+  );
+  expect(rows.map((row) => row.textContent)).toEqual(
+    shared.map((status) => `Registered peer · ${petRunStatusText(status)}`),
+  );
 });

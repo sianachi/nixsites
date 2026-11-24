@@ -10,6 +10,7 @@ import {
 import { Button, Field, Input, Select, Text } from '@nix/ui';
 import { useOptionalApiClient } from '@nix/web-platform/api/api-client-provider';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { petRunStatusText } from './pet-run-card';
 
 const labels = {
   client: 'MCP client',
@@ -19,10 +20,10 @@ const labels = {
 const statusLabels = {
   submitted: 'Submitted',
   queued: 'Awaiting runner',
-  running: 'Working',
-  completed: 'Complete',
+  running: petRunStatusText('running'),
+  completed: petRunStatusText('completed'),
   failed: 'Failed',
-  review_required: 'Needs review',
+  review_required: petRunStatusText('review_required'),
 } as const;
 
 export function PetPeerSection({
