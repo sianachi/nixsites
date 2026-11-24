@@ -65,3 +65,102 @@ it.each([
 ])('leaves a conversational or ambiguous message in chat: %s', (message) => {
   expect(isPetJobMessage(message)).toBe(false);
 });
+
+it.each([
+  'Sort of, yes',
+  'sort of agree with that',
+  'Make sure I understand this',
+  'make sense of this for me',
+  'Plan B sounds better',
+  'File names here are odd',
+  'Set aside the details, what do you think?',
+  'Find it hard to believe',
+  'Post mortem went fine',
+  'Link rot is a problem',
+  'Send my regards',
+  'Turn out it was fine',
+  'Add to that, I think we are late',
+  'Compare notes later?',
+  'Design looks great',
+  'Update went well',
+  'Copy that',
+])('keeps a remark that starts with a work verb in chat: %s', (message) => {
+  expect(isPetJobMessage(message)).toBe(false);
+});
+
+it.each([
+  'Sort the tasks by due date',
+  'Make a checklist for the launch',
+  'Plan the launch week',
+  'File this under Projects',
+  'Set the due date to Friday',
+  'Find the notes about pricing',
+  'Post a comment on this task',
+  'Link this note to the roadmap',
+  'Send the summary to the task comments',
+  'Turn this note into a checklist',
+  'Add a due date',
+  'Compare these two notes',
+  'Create tasks for each heading',
+  'Write release notes',
+  'Research competitors',
+  'Find notes where status is open',
+  'Move tasks where priority is high to Later',
+  'Find tasks whose status is done',
+  'Remove tasks if they are done',
+  'Schedule review when draft is ready',
+  'Rename Design is done to Shipped',
+  'Add Bob is out to the calendar',
+  'Update status is done on the launch task',
+  'Organize notes so they are easier to find',
+  'Make Monday look lighter',
+  'Make sure every task has a due date',
+  'Make sure the tasks are sorted',
+  'Create note "Sprint went well"',
+  "Create task 'Taxes are due'",
+  'Add task “Rent is due”',
+  'Find whatever is due today',
+  'Set aside 2 hours on Friday',
+  'Add to that note a summary',
+  'Send my thanks to the team in a comment',
+])('still routes a real command that shares a work verb to a job: %s', (message) => {
+  expect(isPetJobMessage(message)).toBe(true);
+});
+
+it.each([
+  'Thanks, make it shorter',
+  'ok now rename it to Launch',
+  'Also add a due date',
+  'Okay sort the tasks by date',
+  'Yes, delete the old draft',
+  'Thanks, please move it to Done',
+  'Ok can you rename this note to Launch',
+  'And then archive the done tasks',
+  'Great! Now draw a flowchart of the signup steps',
+  'Also, add a due date',
+  'Sure, move it',
+])('routes a command behind an opening word to a job: %s', (message) => {
+  expect(isPetJobMessage(message)).toBe(true);
+});
+
+it.each([
+  'Nice find on that bug',
+  'Good plan for tomorrow',
+  'Great post about the launch',
+  'Right now is fine',
+  'Ok, sort of',
+  'So plan B sounds better',
+  'So make sure I understand',
+  'Thanks.',
+  'Yes',
+  'Ok, so what is next?',
+  'Thanks for the update',
+  'Ok, copy that',
+  'Ok, move on',
+  'Ok, plan B then',
+  'So plan ahead',
+  'Yes, schedule works',
+  'Thanks, plan accordingly',
+])('keeps a remark behind an opening word in chat: %s', (message) => {
+  expect(isPetJobMessage(message)).toBe(false);
+});

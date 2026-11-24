@@ -185,6 +185,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- A remark that begins with a work verb, such as "Sort of, yes" or "Plan B sounds better", stays in pet chat and no longer starts a job. A command after a filler word, such as "Thanks, make it shorter", now starts one.
 - An upload aimed at a file item that has no version yet becomes its first version. It was refused
   before, which left a file item created without bytes unusable.
 - A note edited offline in the native apps no longer replays the same edits when reopened after they have synced: the
