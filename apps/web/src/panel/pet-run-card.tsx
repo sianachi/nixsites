@@ -350,6 +350,11 @@ export function PetRunCard({
                   </div>
                 )}
               >
+                {call === undefined ? null : (
+                  <Text variant="note" tone="muted" className="wrap-anywhere">
+                    {call.server}
+                  </Text>
+                )}
                 <Text variant="note" tone="muted">
                   The target changed. Refresh the draft to review it again.
                 </Text>
@@ -359,6 +364,11 @@ export function PetRunCard({
                 <Text variant="bodySmall" className="wrap-anywhere">
                   {heading}
                 </Text>
+                {call === undefined ? null : (
+                  <Text variant="note" tone="muted" className="wrap-anywhere">
+                    {call.server}
+                  </Text>
+                )}
                 <Text variant="note" tone="muted">
                   {proposalStatusText[proposal.status] ?? proposal.status}
                 </Text>
@@ -708,14 +718,16 @@ function ProposalPreview({ proposal }: { readonly proposal: PetRunProposal }): R
             <Text
               as="dd"
               variant="bodySmall"
-              {...(value === null ? { tone: 'muted' as const } : {})}
+              {...(value === null || value === '' ? { tone: 'muted' as const } : {})}
               className="whitespace-pre-wrap wrap-anywhere"
             >
               {value === null
                 ? 'Empty'
-                : typeof value === 'object'
-                  ? JSON.stringify(value, null, 2)
-                  : String(value as string | number | boolean)}
+                : value === ''
+                  ? 'Empty text'
+                  : typeof value === 'object'
+                    ? JSON.stringify(value, null, 2)
+                    : String(value as string | number | boolean)}
             </Text>
           </div>
         ))}

@@ -635,9 +635,20 @@ it('shows every input of a registered tool call and keeps raw JSON for other pre
         preview: {
           action: 'remote.invoke',
           destination,
-          arguments: { filter: { state: 'open' }, limit: 5, cursor: null },
+          arguments: { filter: { state: 'open' }, limit: 5, cursor: null, note: '' },
         },
         status: 'pending',
+      },
+      {
+        id: petId,
+        capability: 'connection.action',
+        description: 'remote.invoke in https://other.test/mcp#archive',
+        preview: {
+          action: 'remote.invoke',
+          destination: 'https://other.test/mcp#archive',
+          arguments: {},
+        },
+        status: 'declined',
       },
       {
         id: routineId,
@@ -655,6 +666,9 @@ it('shows every input of a registered tool call and keeps raw JSON for other pre
   expect(plain.getByText('limit')).toBeVisible();
   expect(plain.getByText('5')).toBeVisible();
   expect(plain.getByText('Empty')).toBeVisible();
+  expect(plain.getByText('Empty text')).toBeVisible();
+  const decided = within(dialog.getByRole('region', { name: 'Call archive' }));
+  expect(decided.getByText('https://other.test/mcp')).toBeVisible();
   expect(plain.getByText(/"state": "open"/u)).toBeVisible();
   const raw = within(await dialog.findByRole('group', { name: 'something.else in x' }));
   expect(raw.getByText(/"action": "something.else"/u)).toBeVisible();
