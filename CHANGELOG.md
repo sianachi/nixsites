@@ -188,6 +188,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Provider-key settings keep the key field readable on narrow screens, show progress without moving
+  the action buttons, and keep pending saves visible until confirmed. Failed settings requests no
+  longer claim they were saved.
 - Conversation history shows saving, deleting and continuing progress, and restores keyboard focus
   to a remaining control after editing or removing a conversation.
 - Drawing approval cards identify which refresh or decline request is waiting for confirmation.

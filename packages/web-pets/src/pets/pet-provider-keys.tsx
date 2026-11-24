@@ -22,11 +22,13 @@ export function PetProviderKeys({
   const [keys, setKeys] = useState<readonly PetProviderKey[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<'save' | 'remove' | 'provider' | null>(null);
+  const busy = pending !== null;
   const [message, setMessage] = useState('');
   const [reload, setReload] = useState(0);
   const label = petProviderLabels[provider];
   const stored = keys?.find((entry) => entry.provider === provider);
+  const saveLabel = stored ? `Replace ${label} key` : `Save ${label} setup`;
   const [editing, setEditing] = useState(false);
   const { panel, change } = useChangeFocus(editing);
 
@@ -52,11 +54,13 @@ export function PetProviderKeys({
   async function save(): Promise<void> {
     const key = draft.trim();
     if (!key || busy) return;
-    setBusy(true);
+    setPending('save');
     setError(null);
     setMessage('');
+    let settingsSaved = false;
     try {
       if (!(await onSaveSettings())) return;
+      settingsSaved = true;
       const saved = await client.execute(pets.saveProviderKey(provider, key));
       setKeys((current) => [
         ...(current ?? []).filter((entry) => entry.provider !== provider),
@@ -70,16 +74,18 @@ export function PetProviderKeys({
       setError(
         isNixApiError(cause) && cause.detail !== undefined
           ? cause.detail
-          : 'The key could not be saved. Your pet settings were saved; retry saving the key.',
+          : settingsSaved
+            ? 'The key could not be saved. Your pet settings were saved; retry saving the key.'
+            : 'The pet settings could not be confirmed. Your key was not changed. Try again.',
       );
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
   async function remove(): Promise<void> {
     if (busy) return;
-    setBusy(true);
+    setPending('remove');
     setError(null);
     setMessage('');
     try {
@@ -94,13 +100,13 @@ export function PetProviderKeys({
           : 'The key could not be removed.',
       );
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
   async function saveProviderChoice(): Promise<void> {
     if (busy) return;
-    setBusy(true);
+    setPending('provider');
     setError(null);
     setMessage('');
     try {
@@ -108,11 +114,17 @@ export function PetProviderKeys({
     } catch {
       setError('The pet settings could not be saved. Try again.');
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
-  if (collapsible && !editing && !error && (keys === null || (stored && !needsProviderSave))) {
+  if (
+    collapsible &&
+    !editing &&
+    !busy &&
+    !error &&
+    (keys === null || (stored && !needsProviderSave))
+  ) {
     return keys === null ? (
       <Text variant="note" tone="muted" role="status">
         Loading your key…
@@ -186,12 +198,13 @@ export function PetProviderKeys({
               type="button"
               variant="primary"
               disabled={busy}
+              aria-busy={pending === 'provider'}
               onClick={() => void saveProviderChoice()}
             >
-              Use {label}
+              {pending === 'provider' ? 'Saving setup…' : `Use ${label}`}
             </Button>
           ) : null}
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="flex min-w-0 flex-col gap-2">
             <Field
               label={`${label} API key`}
               hint={
@@ -201,7 +214,7 @@ export function PetProviderKeys({
                     ? 'Get an API key from platform.openai.com.'
                     : 'Get an API key from openrouter.ai.'
               }
-              className="min-w-0 flex-1"
+              className="w-full min-w-0"
             >
               {(control) => (
                 <Input
@@ -223,19 +236,42 @@ export function PetProviderKeys({
                 />
               )}
             </Field>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={busy || !draft.trim()}
-              onClick={() => void save()}
-            >
-              {busy ? 'Saving…' : stored ? `Replace ${label} key` : `Save ${label} setup`}
-            </Button>
-            {stored ? (
-              <Button type="button" variant="ghost" disabled={busy} onClick={() => void remove()}>
-                Remove {label} key
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy || !draft.trim()}
+                aria-busy={pending === 'save'}
+                onClick={() => void save()}
+              >
+                <span className="grid">
+                  <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+                    {saveLabel}
+                  </span>
+                  <span className="col-start-1 row-start-1">
+                    {pending === 'save' ? 'Saving…' : saveLabel}
+                  </span>
+                </span>
               </Button>
-            ) : null}
+              {stored ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={busy}
+                  aria-busy={pending === 'remove'}
+                  onClick={() => void remove()}
+                >
+                  <span className="grid">
+                    <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+                      Remove {label} key
+                    </span>
+                    <span className="col-start-1 row-start-1">
+                      {pending === 'remove' ? 'Removing key…' : `Remove ${label} key`}
+                    </span>
+                  </span>
+                </Button>
+              ) : null}
+            </div>
           </div>
           {stored ? (
             <Text variant="note" tone="muted">
@@ -249,6 +285,7 @@ export function PetProviderKeys({
           type="button"
           variant="ghost"
           className="self-start"
+          disabled={busy}
           onClick={() => {
             setEditing(false);
           }}
