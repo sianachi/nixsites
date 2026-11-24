@@ -192,6 +192,9 @@ internal sealed partial class PetRunService
         }
 
         var observations = RevisionInstructions(step.State);
+        var preferences = await services.GetRequiredService<IPrincipalPreferencesStore>()
+            .FindAsync(work.Context.TenantId, work.Context.PrincipalId, cancellationToken).ConfigureAwait(false);
+        observations.Add(PetRunClock.Describe(clock.GetUtcNow(), preferences?.TimeZone));
         var observed = new List<PetRunProposal>();
         var selectedNotes = new List<ItemId>();
         var effective = EffectiveRun(step.Run, step.State);
@@ -317,7 +320,7 @@ internal sealed partial class PetRunService
             var read = await services.GetRequiredService<ItemBodyClient>().ReadAsync(itemId.Value, bearer, deadline.Token)
                 .ConfigureAwait(false);
             return read.IsSuccess
-                ? $"Untrusted excerpt from selected Nix item {itemId.Value:D}: {Cut(read.Value.Markdown, 650)}"
+                ? PetRunExcerpt.Describe(itemId.Value, read.Value.Markdown)
                 : unavailable;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
