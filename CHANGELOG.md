@@ -188,6 +188,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Conversation history shows saving, deleting and continuing progress, and restores keyboard focus
+  to a remaining control after editing or removing a conversation.
 - Drawing approval cards identify which refresh or decline request is waiting for confirmation.
 - The companion shows when it is preparing the first message, preserves newer drafts after a send,
   and keeps an explicit chat or job choice when that route becomes unavailable.

@@ -1,7 +1,14 @@
 import { pets, type PetConnection, type PetMessage, type NixClient } from '@nix/api-client';
-import { Button, Icon, Input, Text } from '@nix/ui';
+import { Button, Icon, Input, Text, focusRing } from '@nix/ui';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type RefObject,
+} from 'react';
 import { isAborted } from '@nix/web-foundation/lib/guards';
 
 export function exportPetMessages(messages: readonly PetMessage[], name: string): void {
@@ -28,19 +35,22 @@ function validTitle(value: string): boolean {
 export function TitleEditor({
   initial,
   busy,
+  inputRef,
   onSave,
   onCancel,
 }: {
   readonly initial: string;
   readonly busy: boolean;
+  readonly inputRef?: RefObject<HTMLInputElement | null>;
   readonly onSave: (title: string) => void;
   readonly onCancel: () => void;
 }): ReactElement {
   const [value, setValue] = useState(initial);
-  const field = useRef<HTMLInputElement>(null);
+  const localField = useRef<HTMLInputElement>(null);
+  const field = inputRef ?? localField;
   useEffect(() => {
     field.current?.focus();
-  }, []);
+  }, [field]);
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       <Input
@@ -55,13 +65,13 @@ export function TitleEditor({
         }}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing) return;
-          if (event.key === 'Enter' && validTitle(value)) {
+          if (event.key === 'Enter' && !busy && validTitle(value)) {
             event.preventDefault();
             onSave(value.trim());
           } else if (event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();
-            onCancel();
+            if (!busy) onCancel();
           }
         }}
       />
@@ -72,9 +82,9 @@ export function TitleEditor({
           onSave(value.trim());
         }}
       >
-        Save title
+        {busy ? 'Saving title…' : 'Save title'}
       </Button>
-      <Button variant="ghost" onClick={onCancel}>
+      <Button variant="ghost" disabled={busy} onClick={onCancel}>
         Cancel
       </Button>
     </div>
@@ -104,18 +114,46 @@ export function PetHistory({
   const [selected, setSelected] = useState('');
   const [messages, setMessages] = useState<PetMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<
+    'history' | 'read_history' | 'delete_history' | 'rename' | 'resume_history' | null
+  >(null);
+  const busy = pending !== null;
   const [confirmId, setConfirmId] = useState('');
   const [renamingId, setRenamingId] = useState('');
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
+  const needle = query.trim().toLowerCase();
+  const shown = needle
+    ? history.filter((entry) => entry.title.toLowerCase().includes(needle))
+    : history;
   const lifetime = useRef<AbortController | null>(null);
+  const inFlight = useRef(false);
+  const panel = useRef<HTMLElement>(null);
+  const searchField = useRef<HTMLInputElement>(null);
+  const titleField = useRef<HTMLInputElement>(null);
+  const rowButtons = useRef(new Map<string, HTMLButtonElement>());
+  const focusAfterUpdate = useRef('');
+  function rowRef(key: string, button: HTMLButtonElement | null) {
+    if (button) rowButtons.current.set(key, button);
+    else rowButtons.current.delete(key);
+  }
+  useLayoutEffect(() => {
+    if (busy || !focusAfterUpdate.current) return;
+    const target =
+      focusAfterUpdate.current === 'title'
+        ? titleField.current
+        : rowButtons.current.get(focusAfterUpdate.current);
+    (target ?? searchField.current ?? panel.current)?.focus();
+    focusAfterUpdate.current = '';
+  });
   async function load(
     operation: 'history' | 'read_history' | 'delete_history' | 'rename' | 'resume_history',
     historyId = '',
     text = '',
   ) {
-    setBusy(true);
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setPending(operation);
     setError('');
     try {
       const signal = lifetime.current?.signal;
@@ -139,7 +177,16 @@ export function PetHistory({
       } else if (operation === 'rename') {
         setHistory(result.history ?? []);
         setRenamingId('');
+        focusAfterUpdate.current = `${historyId}:rename`;
       } else {
+        if (operation === 'delete_history') {
+          const remaining = (result.history ?? []).filter(
+            (entry) => !needle || entry.title.toLowerCase().includes(needle),
+          );
+          const previousIndex = shown.findIndex((entry) => entry.id === historyId);
+          const next = remaining[Math.max(0, previousIndex)] ?? remaining.at(-1);
+          focusAfterUpdate.current = next ? `${next.id}:open` : 'panel';
+        }
         setHistory(result.history ?? []);
         setLoaded(true);
         setMessages([]);
@@ -149,8 +196,10 @@ export function PetHistory({
       }
     } catch {
       setError('History could not be loaded or changed. Try again.');
+      focusAfterUpdate.current = operation === 'rename' ? 'title' : `${historyId}:open`;
     } finally {
-      setBusy(false);
+      inFlight.current = false;
+      setPending(null);
     }
   }
   // The list is the point of this panel, so it loads on open rather than behind a button.
@@ -164,17 +213,19 @@ export function PetHistory({
     // Once per mount: the parent remounts this panel when the conversation changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- loads once per mount; the parent remounts on a new conversation.
   }, []);
-  const needle = query.trim().toLowerCase();
-  const shown = needle
-    ? history.filter((entry) => entry.title.toLowerCase().includes(needle))
-    : history;
   return (
-    <section aria-label="Companion history" className="flex min-w-0 flex-col gap-2">
+    <section
+      ref={panel}
+      tabIndex={-1}
+      aria-label="Companion history"
+      className={`flex min-w-0 flex-col gap-2 ${focusRing}`}
+    >
       {!loaded && !error ? <Text role="status">Loading conversations…</Text> : null}
       {loaded ? (
         <>
           {history.length ? (
             <Input
+              ref={searchField}
               type="search"
               aria-label="Search saved conversations"
               placeholder="Search by title"
@@ -193,18 +244,23 @@ export function PetHistory({
                   <li key={entry.id} className="min-w-0 border-b border-divider py-1">
                     {renamingId === entry.id ? (
                       <TitleEditor
+                        inputRef={titleField}
                         initial={entry.title}
                         busy={busy}
                         onSave={(next) => {
                           void load('rename', entry.id, next);
                         }}
                         onCancel={() => {
+                          focusAfterUpdate.current = `${entry.id}:rename`;
                           setRenamingId('');
                         }}
                       />
                     ) : (
                       <div className="flex min-w-0 items-center">
                         <Button
+                          ref={(button) => {
+                            rowRef(`${entry.id}:open`, button);
+                          }}
                           variant="ghost"
                           aria-expanded={open}
                           disabled={busy}
@@ -225,6 +281,9 @@ export function PetHistory({
                         </Button>
                         <RowAction
                           label={`Rename ${title}`}
+                          buttonRef={(button) => {
+                            rowRef(`${entry.id}:rename`, button);
+                          }}
                           icon={Pencil}
                           disabled={busy}
                           onClick={() => {
@@ -234,6 +293,9 @@ export function PetHistory({
                         />
                         <RowAction
                           label={`Remove ${title}`}
+                          buttonRef={(button) => {
+                            rowRef(`${entry.id}:remove`, button);
+                          }}
                           icon={Trash2}
                           disabled={busy}
                           onClick={() => {
@@ -257,11 +319,13 @@ export function PetHistory({
                               void load('delete_history', entry.id);
                             }}
                           >
-                            Delete permanently
+                            {pending === 'delete_history' ? 'Deleting…' : 'Delete permanently'}
                           </Button>
                           <Button
                             variant="ghost"
+                            disabled={busy}
                             onClick={() => {
+                              focusAfterUpdate.current = `${entry.id}:remove`;
                               setConfirmId('');
                             }}
                           >
@@ -286,7 +350,7 @@ export function PetHistory({
                               </Text>
                             ))}
                           </div>
-                        ) : busy ? (
+                        ) : pending === 'read_history' ? (
                           <Text role="status" variant="note" tone="muted">
                             Loading messages…
                           </Text>
@@ -299,7 +363,7 @@ export function PetHistory({
                               void load('resume_history', entry.id);
                             }}
                           >
-                            Continue
+                            {pending === 'resume_history' ? 'Continuing…' : 'Continue'}
                           </Button>
                           {messages.length ? (
                             <Button
@@ -354,17 +418,20 @@ export function PetHistory({
 
 function RowAction({
   label,
+  buttonRef,
   icon,
   disabled,
   onClick,
 }: {
   readonly label: string;
+  readonly buttonRef: (button: HTMLButtonElement | null) => void;
   readonly icon: typeof Pencil;
   readonly disabled: boolean;
   readonly onClick: () => void;
 }): ReactElement {
   return (
     <Button
+      ref={buttonRef}
       variant="ghost"
       className="w-(--control-md) shrink-0 px-0 any-pointer-coarse:w-(--control-lg)"
       aria-label={label}
