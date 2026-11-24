@@ -2,6 +2,7 @@ import { Text, cn, focusRing } from '@nix/ui';
 import type { ReactElement } from 'react';
 
 import type { WriteTextItem } from './write-gate';
+import { ValueFields } from './value-fields';
 
 /** Security fix S1: every string a pending write would store, in a focusable scroll region so
  * nothing here can hide or truncate behind a click before Approve. */
@@ -69,14 +70,6 @@ export function WriteTextSection({
   );
 }
 
-function formatPropertyValue(value: unknown): string {
-  if (value === null || value === undefined) return '(empty)';
-  if (Array.isArray(value)) return value.map((entry) => formatPropertyValue(entry)).join(', ');
-  if (typeof value === 'boolean') return value ? 'yes' : 'no';
-  if (typeof value === 'number' || typeof value === 'string') return String(value);
-  return JSON.stringify(value);
-}
-
 /** UX fix U15: a `set_properties` request's values as a plain key/value list, alongside (never
  * instead of) `WriteTextSection`'s full text of every string among them. */
 export function PropertyValueList({
@@ -99,18 +92,5 @@ export function PropertyValueList({
     return null;
   }
   if (entries.length === 0) return null;
-  return (
-    <dl className="flex flex-col gap-1">
-      {entries.map(([key, value]) => (
-        <div key={key} className="flex flex-wrap gap-2">
-          <Text as="dt" variant="note" tone="muted">
-            {key}
-          </Text>
-          <Text as="dd" variant="note">
-            {formatPropertyValue(value)}
-          </Text>
-        </div>
-      ))}
-    </dl>
-  );
+  return <ValueFields label="Property values" value={Object.fromEntries(entries)} />;
 }

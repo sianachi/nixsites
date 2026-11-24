@@ -814,8 +814,7 @@ it('shows a registered tool call as proposed and approves that exact proposal', 
   const draft = within(group);
   expect(draft.getByText('Server')).toBeVisible();
   expect(draft.getByText('https://mcp.test/mcp')).toBeVisible();
-  expect(draft.getByText('issueId')).toBeVisible();
-  expect(draft.getByText('NIX-37')).toBeVisible();
+  expect(draft.getByRole('textbox', { name: /issue id/iu })).toHaveValue('NIX-37');
   const text = group.textContent;
   expect(text).not.toContain('{');
   expect(text).not.toContain(call.schemaHash);
@@ -828,7 +827,7 @@ it('shows a registered tool call as proposed and approves that exact proposal', 
   ]);
 });
 
-it('shows every input of a registered tool call and keeps raw JSON for other previews', async () => {
+it('shows every registered-tool input and unfamiliar preview as review fields', async () => {
   const destination = 'https://mcp.test/mcp#search';
   showTask({
     ...firstRun,
@@ -870,15 +869,16 @@ it('shows every input of a registered tool call and keeps raw JSON for other pre
   await user.click(await screen.findByRole('button', { name: 'Ask pet' }, dialogLoad));
   const dialog = within(await screen.findByRole('dialog'));
   const plain = within(await dialog.findByRole('group', { name: 'Call search' }));
-  expect(plain.getByText('limit')).toBeVisible();
-  expect(plain.getByText('5')).toBeVisible();
-  expect(plain.getByText('Empty')).toBeVisible();
-  expect(plain.getByText('Empty text')).toBeVisible();
+  expect(plain.getByRole('textbox', { name: 'Limit' })).toHaveValue('5');
+  expect(plain.getByRole('textbox', { name: 'Cursor' })).toHaveValue('');
+  expect(plain.getByRole('textbox', { name: 'Cursor' })).toHaveAttribute('placeholder', 'No value');
+  expect(plain.getByRole('textbox', { name: 'Note' })).toHaveValue('');
+  expect(plain.getByRole('textbox', { name: 'Note' })).toHaveAttribute('placeholder', 'Empty text');
   const decided = within(dialog.getByRole('region', { name: 'Call archive' }));
   expect(decided.getByText('https://other.test/mcp')).toBeVisible();
-  expect(plain.getByText(/"state": "open"/u)).toBeVisible();
-  const raw = within(await dialog.findByRole('group', { name: 'something.else in x' }));
-  expect(raw.getByText(/"action": "something.else"/u)).toBeVisible();
+  expect(plain.getByRole('textbox', { name: 'State' })).toHaveValue('open');
+  const other = within(await dialog.findByRole('group', { name: 'something.else in x' }));
+  expect(other.getByRole('textbox', { name: 'Action' })).toHaveValue('something.else');
 });
 
 it('reviews an exact note append as literal text and retains other Nix action previews', async () => {
@@ -934,9 +934,13 @@ it('reviews an exact note append as literal text and retains other Nix action pr
   );
   const legacy = within(dialog.getByRole('group', { name: 'Legacy append' }));
   expect(legacy.getByRole('button', { name: 'Approve request' })).toBeVisible();
-  expect(legacy.getByText(/"markdown": null/u)).toBeVisible();
+  expect(legacy.getByRole('textbox', { name: 'Markdown' })).toHaveValue('');
+  expect(legacy.getByRole('textbox', { name: 'Markdown' })).toHaveAttribute(
+    'placeholder',
+    'No value',
+  );
   const replace = within(dialog.getByRole('group', { name: 'Replace note' }));
-  expect(replace.getByText(/"operationId": "ReplaceItemBody"/u)).toBeVisible();
+  expect(replace.getByRole('textbox', { name: /operation id/iu })).toHaveValue('ReplaceItemBody');
   expect(calls).toEqual([]);
 
   await user.click(draft.getByRole('button', { name: 'Add to note' }));
@@ -1007,7 +1011,7 @@ it('shows exact sheet changes and preserves the preview for an unsupported chang
 
   const legacy = within(dialog.getByRole('group', { name: 'Edit sheet Old estimate' }));
   expect(legacy.queryByRole('table')).not.toBeInTheDocument();
-  expect(legacy.getByText(/"range": "C1:C2"/u)).toBeVisible();
+  expect(legacy.getByRole('textbox', { name: 'Range' })).toHaveValue('C1:C2');
 });
 
 it('shares only the source selected for a specific job request', async () => {

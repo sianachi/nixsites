@@ -53,6 +53,10 @@
       "types": "./src/pets/approval/write-text.tsx",
       "default": "./src/pets/approval/write-text.tsx"
     },
+    "./pets/approval/value-fields": {
+      "types": "./src/pets/approval/value-fields.tsx",
+      "default": "./src/pets/approval/value-fields.tsx"
+    },
     "./pets/chat/chat-destination": {
       "types": "./src/pets/chat/chat-destination.tsx",
       "default": "./src/pets/chat/chat-destination.tsx"

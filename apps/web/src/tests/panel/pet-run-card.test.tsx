@@ -126,3 +126,74 @@ it('shows refresh progress for a stale drawing without offering approval or decl
   });
   expect(screen.getByRole('button', { name: 'Refresh draft' })).toBeEnabled();
 });
+
+it('shows nested registered-tool inputs as labelled review fields', () => {
+  const preview = {
+    action: 'remote.invoke',
+    destination: 'https://mcp.test/mcp#search',
+    arguments: {
+      filter: { projectName: 'Release', archived: false },
+      tags: ['Ready', 'Review'],
+      note: '{"keep":"this literal text"}',
+    },
+  };
+  setup({
+    ...run,
+    proposals: [
+      {
+        id: '8eadd6a1-e91a-4be5-b3c4-a37d341b6d51',
+        status: 'pending',
+        capability: 'connection.action',
+        description: 'Search the selected project',
+        preview,
+      },
+    ],
+  });
+  expect(screen.getByRole('textbox', { name: /project name/iu })).toHaveValue('Release');
+  expect(screen.getByRole('textbox', { name: /archived/iu })).toHaveValue('No');
+  expect(screen.getByRole('textbox', { name: /note/iu })).toHaveValue(
+    '{"keep":"this literal text"}',
+  );
+  expect(screen.getAllByRole('textbox').every((field) => field.hasAttribute('readonly'))).toBe(
+    true,
+  );
+  expect(screen.queryByText(/"projectName":/u)).toBeNull();
+  expect(screen.getByRole('button', { name: 'Approve request' })).toBeEnabled();
+});
+
+it('shows every value of an unfamiliar proposal in review fields without interpreting text', () => {
+  setup({
+    ...run,
+    proposals: [
+      {
+        id: '8eadd6a1-e91a-4be5-b3c4-a37d341b6d51',
+        status: 'pending',
+        capability: 'nix.action',
+        description: 'Review the proposed change',
+        preview: {
+          taskTitle: 'Prepare release',
+          details: { ready: true, estimate: 0, missing: null, emptyText: '' },
+          notes: '<script>keep this as text</script>',
+        },
+      },
+    ],
+  });
+  expect(screen.getByRole('textbox', { name: /task title/iu })).toHaveValue('Prepare release');
+  expect(screen.getByRole('textbox', { name: /ready/iu })).toHaveValue('Yes');
+  expect(screen.getByRole('textbox', { name: /estimate/iu })).toHaveValue('0');
+  expect(screen.getByRole('textbox', { name: /missing/iu })).toHaveValue('');
+  expect(screen.getByRole('textbox', { name: /missing/iu })).toHaveAttribute(
+    'placeholder',
+    'No value',
+  );
+  expect(screen.getByRole('textbox', { name: /empty text/iu })).toHaveValue('');
+  expect(screen.getByRole('textbox', { name: /empty text/iu })).toHaveAttribute(
+    'placeholder',
+    'Empty text',
+  );
+  expect(screen.getByRole('textbox', { name: /notes/iu })).toHaveValue(
+    '<script>keep this as text</script>',
+  );
+  expect(screen.queryByText(/"taskTitle":/u)).toBeNull();
+  expect(document.querySelector('script')).toBeNull();
+});

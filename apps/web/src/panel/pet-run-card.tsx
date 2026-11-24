@@ -26,6 +26,7 @@ import {
 } from '@nix/ui';
 import { itemLink } from '@nix/web-foundation/lib/item-link';
 import { ApprovalActions, ApprovalFrame } from '@nix/web-pets/pets/approval/approval-frame';
+import { ValueFields } from '@nix/web-pets/pets/approval/value-fields';
 import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { z } from 'zod';
@@ -81,7 +82,7 @@ const remoteCallSchema = z.object({
   destination: z.string(),
   arguments: z.record(z.string(), z.unknown()),
 });
-// Plain view of a registered tool call; undefined keeps the raw preview.
+// Plain view of a registered tool call; undefined keeps the complete preview.
 function remoteCall({ capability, preview }: PetRunProposal) {
   if (capability !== 'connection.action') return undefined;
   const call = remoteCallSchema.safeParse(preview);
@@ -777,49 +778,8 @@ function ProposalPreview({ proposal }: { readonly proposal: PetRunProposal }): R
   const { capability, preview } = proposal;
   const call = remoteCall(proposal);
   if (call !== undefined) {
-    const inputs = Object.entries(call.inputs);
     return (
-      <dl className="flex flex-col gap-2">
-        <div>
-          <Text as="dt" variant="note" tone="muted">
-            Server
-          </Text>
-          <Text as="dd" variant="bodySmall" className="whitespace-pre-wrap wrap-anywhere">
-            {call.server}
-          </Text>
-        </div>
-        {inputs.map(([name, value]) => (
-          <div key={name}>
-            <Text as="dt" variant="note" tone="muted">
-              {name}
-            </Text>
-            <Text
-              as="dd"
-              variant="bodySmall"
-              {...(value === null || value === '' ? { tone: 'muted' as const } : {})}
-              className="whitespace-pre-wrap wrap-anywhere"
-            >
-              {value === null
-                ? 'Empty'
-                : value === ''
-                  ? 'Empty text'
-                  : typeof value === 'object'
-                    ? JSON.stringify(value, null, 2)
-                    : String(value as string | number | boolean)}
-            </Text>
-          </div>
-        ))}
-        {inputs.length === 0 ? (
-          <div>
-            <Text as="dt" variant="note" tone="muted">
-              Inputs
-            </Text>
-            <Text as="dd" variant="bodySmall" tone="muted">
-              No inputs
-            </Text>
-          </div>
-        ) : null}
-      </dl>
+      <ValueFields label="Call details" value={{ server: call.server, inputs: call.inputs }} />
     );
   }
   if (capability === 'browser.browse') {
@@ -907,9 +867,7 @@ function ProposalPreview({ proposal }: { readonly proposal: PetRunProposal }): R
           Sheet revision {sheet.data.preview.revision.headSeq}
         </Text>
       ) : null}
-      <Text as="div" variant="note" className="min-w-0 wrap-anywhere whitespace-pre-wrap">
-        {typeof details === 'string' ? details : JSON.stringify(details, null, 2)}
-      </Text>
+      <ValueFields label={sheet.success ? 'Changes' : 'Details'} value={details} />
     </div>
   );
 }

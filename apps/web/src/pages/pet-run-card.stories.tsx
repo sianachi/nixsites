@@ -54,6 +54,84 @@ export const WaitingForApproval = {
   },
 };
 
+export const RegisteredToolReviewFields = {
+  render: (): ReactNode => (
+    <div className="w-full max-w-lg p-3">
+      <PetRunCard
+        client={client}
+        run={{
+          ...run,
+          proposals: [
+            {
+              id: '8eadd6a1-e91a-4be5-b3c4-a37d341b6d51',
+              capability: 'connection.action',
+              description: 'Search the release project',
+              preview: {
+                action: 'remote.invoke',
+                destination: 'https://example.test/mcp#search',
+                arguments: {
+                  filter: { projectName: 'Release', archived: false },
+                  tags: ['Ready', 'Review'],
+                  note: '{"keep":"this literal text"}',
+                },
+              },
+              status: 'pending',
+            },
+          ],
+        }}
+        onUpdate={() => undefined}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }: { readonly canvasElement: HTMLElement }): Promise<void> => {
+    const canvas = within(canvasElement);
+    const field = await canvas.findByRole('textbox', { name: /project name/iu });
+    if (!field.hasAttribute('readonly')) throw new Error('The preview must not accept edits.');
+    canvas.getByRole('button', { name: 'Approve request' });
+    canvas.getByRole('button', { name: 'Ask for changes' });
+    canvas.getByRole('button', { name: 'Decline request' });
+  },
+};
+
+export const OtherProposalReviewFields = {
+  render: (): ReactNode => (
+    <div className="w-full max-w-lg p-3">
+      <PetRunCard
+        client={client}
+        run={{
+          ...run,
+          proposals: [
+            {
+              id: '8eadd6a1-e91a-4be5-b3c4-a37d341b6d51',
+              capability: 'nix.action',
+              description: 'Review the proposed change',
+              preview: {
+                taskTitle: 'Prepare release',
+                details: { ready: true, estimate: 0, missing: null, emptyText: '' },
+                comment: 'First line\n\nThe entire proposed text is available here.\nLast line.',
+              },
+              status: 'pending',
+            },
+          ],
+        }}
+        onUpdate={() => undefined}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }: { readonly canvasElement: HTMLElement }): Promise<void> => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole('textbox', { name: /task title/iu });
+    const missing = canvas.getByRole('textbox', { name: 'Missing' });
+    const emptyText = canvas.getByRole('textbox', { name: /empty text/iu });
+    if (
+      missing.getAttribute('placeholder') !== 'No value' ||
+      emptyText.getAttribute('placeholder') !== 'Empty text'
+    )
+      throw new Error('Empty values must keep their distinct placeholders.');
+    canvas.getByRole('button', { name: 'Approve request' });
+  },
+};
+
 const unavailableDrawing: PetRunResponse = {
   ...run,
   brief: 'Update the release flow drawing.',

@@ -107,6 +107,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Pet job and property previews show nested values in labelled review fields, with clear empty
+  states and access to complete text values.
 - Pet job statuses are shown as tags, with the ones that need you outlined in the accent colour. A job whose outcome is unknown reads "Check the outcome".
 - While a pet job takes your answer, approval, decline or feedback, the button you pressed says so ("Sending answer…", "Working…").
 - A message too long to start a pet job says how many characters over the limit it is.
