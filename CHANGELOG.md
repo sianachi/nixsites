@@ -107,6 +107,8 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Website sessions use labelled cookie fields with concealed values and local Undo. Failed
+  connection requests keep the entered details for correction and retry.
 - Pet job and property previews show nested values in labelled review fields, with clear empty
   states and access to complete text values.
 - Pet job statuses are shown as tags, with the ones that need you outlined in the accent colour. A job whose outcome is unknown reads "Check the outcome".
