@@ -48,6 +48,27 @@ describe('public health command', () => {
     }
   });
 
+  it('opts into the anonymous browser-session check only when requested', async () => {
+    const healthModule = await import('./commands/health.ts');
+    const spy = vi.spyOn(healthModule, 'readHealth').mockResolvedValue();
+    try {
+      const program = buildProgram();
+      overrideExitRecursively(program);
+      await program.parseAsync(
+        ['--json', 'health', '--api-url', 'http://localhost:5014', '--check-session'],
+        { from: 'user' },
+      );
+      expect(spy).toHaveBeenCalledWith(
+        'http://localhost:5014',
+        expect.objectContaining({ json: true }),
+        undefined,
+        true,
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('requires an explicit origin before making a request', async () => {
     const program = buildProgram();
     overrideExitRecursively(program);

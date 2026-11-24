@@ -7,6 +7,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- `nixctl health --check-session` checks anonymous browser-session availability in addition to
+  process liveness. It fails when the session endpoint fails, reports no session data, and leaves
+  the default health output unchanged.
 - The pet message box says whether a message will start a job or go to chat before you send it,
   with a button to switch.
 - **Install without Docker.** `deploy/bare/install.sh` installs or upgrades Nix on one Ubuntu 24.04 machine as systemd services, from the plain files on a release: Postgres, the object store, Caddy, Core and the Node service. The remote MCP server and sites are not part of it. See "Without Docker" in `docs/install.md`.

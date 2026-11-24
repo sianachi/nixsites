@@ -1,4 +1,5 @@
 import { createNixClient, health } from '@nix/api-client';
+import { z } from 'zod';
 import { printResult, type OutputOptions } from '../output.ts';
 
 function coreOrigin(value: string): string {
@@ -24,11 +25,36 @@ function coreOrigin(value: string): string {
   return url.origin;
 }
 
+const browserSessionSchema = z.object({ authenticated: z.boolean(), configured: z.boolean() });
+
+async function checkBrowserSession(origin: string, signal?: AbortSignal): Promise<void> {
+  const response = await fetch(new URL('/auth/session', origin), {
+    credentials: 'omit',
+    redirect: 'error',
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(5000)]),
+  }).catch(() => {
+    throw new Error('The browser-session endpoint could not be reached.');
+  });
+  if (!response.ok)
+    throw new Error(`The browser-session endpoint returned HTTP ${String(response.status)}.`);
+  const parsed = await response
+    .json()
+    .then((value: unknown) => browserSessionSchema.safeParse(value))
+    .catch(() => null);
+  if (
+    response.headers.get('content-type')?.split(';', 1)[0]?.trim() !== 'application/json' ||
+    !parsed?.success
+  )
+    throw new Error('The browser-session endpoint returned an unexpected response.');
+}
+
 /** Probes public Core routes without reading a profile or acquiring any credentials. */
 export async function readHealth(
   apiUrl: string,
   output: OutputOptions,
   signal?: AbortSignal,
+  checkSession = false,
 ): Promise<void> {
   const origin = coreOrigin(apiUrl);
   const client = createNixClient({
@@ -43,12 +69,14 @@ export async function readHealth(
     client.query(health.liveness(), { forceRefresh: true, signal }),
     client.query(health.serviceStatus(), { forceRefresh: true, signal }),
   ]);
+  if (checkSession) await checkBrowserSession(origin, signal);
   printResult(
     {
       apiUrl: origin,
       liveness: alive.status,
       ...status,
       dependenciesChecked: false,
+      ...(checkSession ? { browserSession: 'available' } : {}),
     },
     output,
   );

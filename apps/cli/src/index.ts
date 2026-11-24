@@ -91,8 +91,13 @@ export function buildProgram(): Command {
     .command('health')
     .description('Check public Core HTTP liveness and service identity without signing in.')
     .requiredOption('--api-url <url>', "Core's origin, e.g. http://localhost:5014")
-    .action((options: { apiUrl: string }, command: Command) =>
-      act(command, (_profile, output) => readHealth(options.apiUrl, output)),
+    .option('--check-session', 'Also check the anonymous browser-session endpoint.', false)
+    .action((options: { apiUrl: string; checkSession: boolean }, command: Command) =>
+      act(command, (_profile, output) =>
+        options.checkSession
+          ? readHealth(options.apiUrl, output, undefined, true)
+          : readHealth(options.apiUrl, output),
+      ),
     );
 
   registerConversationCommands(program, act);
