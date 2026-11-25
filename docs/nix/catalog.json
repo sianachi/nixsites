@@ -55,6 +55,13 @@
       "bytes": 5164,
       "itemCount": 2,
       "rootId": "057b4d53-b885-54c0-a8a8-0d63db8cfb47"
+    },
+    {
+      "path": "docs/nix/nix-plan-consent-decision.nix",
+      "sha256": "3ba9afd4ee21672de2525af5ae5bd0084b0752edd4bba540e0f2e1d69fb7c3d5",
+      "bytes": 15387,
+      "itemCount": 2,
+      "rootId": "98fbadd6-de04-5cb8-b345-3d2a1df43cbb"
     }
   ],
   "pages": [
@@ -2221,6 +2228,32 @@
         "original_sha256": "c2865355b82aab75c1e3c7a93f684b1b35d8212dc3a2741abf819ab57e107391",
         "decision_status": "Proposed",
         "recorded_status": "Proposed 2026-10-15; owner-approved implementation plan for v0.3, implementation verification pending."
+      }
+    },
+    {
+      "sourcePath": "docs/adr/0069-companion-whole-plan-consent.md",
+      "sourceSha256": "87a3e210905868b6adc847474ed8018d5a03f7078cb2141209ff57d3ddd1fd2e",
+      "sourceBytes": 15183,
+      "title": "ADR-0069: Whole-plan companion consent and readable review forms",
+      "archive": "docs/nix/nix-plan-consent-decision.nix",
+      "itemId": "98fbadd6-de04-5cb8-b345-3d2a1df43cbb",
+      "sourceItemId": "a105a981-747f-5596-a0a5-a0247fd49ec6",
+      "disposition": "native-record",
+      "conversion": {
+        "unresolvedWikiLinks": 0,
+        "unresolvedObsidianEmbeds": 0,
+        "unresolvedLocalImages": 0,
+        "unsupportedImageAddresses": 0,
+        "inlineImagesFlattened": 0
+      },
+      "properties": {
+        "category": "Architecture decision",
+        "disposition": "Migrated",
+        "source_path": "docs/adr/0069-companion-whole-plan-consent.md",
+        "original_bytes": 15183,
+        "original_sha256": "87a3e210905868b6adc847474ed8018d5a03f7078cb2141209ff57d3ddd1fd2e",
+        "decision_status": "Accepted",
+        "recorded_status": "Accepted by explicit owner decision, 2026-11-24. Implementation and verification in progress when recorded offline, 2026-11-25; acceptance is not a deployment claim."
       }
     }
   ],
