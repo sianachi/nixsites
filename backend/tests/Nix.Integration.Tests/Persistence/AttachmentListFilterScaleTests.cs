@@ -16,6 +16,7 @@ namespace Nix.Integration.Tests.Persistence;
 public sealed class AttachmentListFilterScaleTests : IAsyncLifetime
 {
     private const int Files = 120000;
+    private static readonly SeedOnce Seeded = new();
 
     private readonly NixPostgresFixture _fixture;
     private readonly ITestOutputHelper _output;
@@ -26,12 +27,12 @@ public sealed class AttachmentListFilterScaleTests : IAsyncLifetime
         _output = output;
     }
 
-    public async ValueTask InitializeAsync()
+    public ValueTask InitializeAsync() => new(Seeded.RunAsync(async () =>
     {
         await _fixture.ResetAsync();
         await M0SchemaSeed.SeedBothTenantsAsync(_fixture);
         await SeedCorpusAsync();
-    }
+    }));
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
