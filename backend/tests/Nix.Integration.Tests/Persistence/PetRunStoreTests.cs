@@ -345,10 +345,11 @@ public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyn
     [Fact]
     public async Task A_comment_job_waits_for_comments_to_be_enabled_and_keeps_the_applied_rename()
     {
-        var (note, _) = await CreateNoteWithPetAsync();
+        var (note, petId) = await CreateNoteWithPetAsync();
         using var planner = new RenameAndCommentPlanner();
         await using var host = CreatePetHost(planner);
         var browser = await SignInAsync(host);
+        await ApproveLegacySharingAsync(host, browser, note, petId);
         var itemPath = $"/api/v1/items/{note.Value:D}";
         using var started = await host.SendAsync(HttpMethod.Post, itemPath + "/pet-runs", browser,
             new { brief = "Rename the task to Review checklist and comment with 'Confirm the owner.'", includeTargetText = false });
@@ -391,10 +392,11 @@ public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyn
     [Fact]
     public async Task A_browse_job_gives_the_planner_a_bounded_page_title_and_body_excerpt()
     {
-        var (note, _) = await CreateNoteWithPetAsync();
+        var (note, petId) = await CreateNoteWithPetAsync();
         using var worker = new BrowseWorkers();
         await using var host = CreatePetHost(worker, worker);
         var browser = await SignInAsync(host);
+        await ApproveLegacySharingAsync(host, browser, note, petId);
         var itemPath = $"/api/v1/items/{note.Value:D}";
         using var started = await host.SendAsync(HttpMethod.Post, itemPath + "/pet-runs", browser,
             new { brief = "Read the fixture page and describe its title and heading.", abilities = BrowseAbilities, includeTargetText = false });
@@ -420,10 +422,11 @@ public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyn
     [InlineData(true, "preview", "pet_runs.invalid_action")]
     public async Task A_failed_step_persists_a_safe_stage_and_reason_without_a_proposal(bool invalidPreview, string stage, string code)
     {
-        var (note, _) = await CreateNoteWithPetAsync();
+        var (note, petId) = await CreateNoteWithPetAsync();
         using var planner = new RefusedStepPlanner(invalidPreview, note.Value);
         await using var host = CreatePetHost(planner);
         var browser = await SignInAsync(host);
+        await ApproveLegacySharingAsync(host, browser, note, petId);
         var route = $"/api/v1/items/{note.Value:D}/pet-runs";
         using var started = await host.SendAsync(HttpMethod.Post, route, browser,
             new { brief = "Append a checklist item while preserving the note.", includeTargetText = false });
@@ -459,11 +462,12 @@ public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyn
     [InlineData(true)]
     public async Task Appending_supplied_text_can_be_reviewed_without_a_read_and_an_unshared_read_requests_consent(bool readFirst)
     {
-        var (note, _) = await CreateNoteWithPetAsync();
+        var (note, petId) = await CreateNoteWithPetAsync();
         using var planner = new AppendPlanner(note.Value, readFirst);
         using var body = new NoteBodyFixture();
         await using var host = CreatePetHost(planner, noteBody: body);
         var browser = await SignInAsync(host);
+        await ApproveLegacySharingAsync(host, browser, note, petId);
         var route = $"/api/v1/items/{note.Value:D}/pet-runs";
         using var started = await host.SendAsync(HttpMethod.Post, route, browser,
             new { brief = "Append the exact unchecked checklist item.", includeTargetText = false });
@@ -494,6 +498,28 @@ public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyn
         Assert.True(body.Reads > 0);
         Assert.True(planner.SawTextConsentMetadata);
         Assert.True(planner.SawAppendExample);
+    }
+
+    private static async Task ApproveLegacySharingAsync(SiteHttpHost host, string browser, ItemId note, Guid petId)
+    {
+        var route = $"/api/v1/workspaces/{AlphaWorkspace.Value:D}/pet-sharing";
+        var scope = new { kind = "selected", itemIds = new[] { note.Value } };
+        using var asked = await host.SendAsync(HttpMethod.Post, route + "/question", browser,
+            new { petId, sourceScope = scope, forDecision = true });
+        asked.EnsureSuccessStatusCode();
+        using var question = await SiteHttpHost.JsonAsync(asked);
+        var reviewed = question.RootElement.GetProperty("question");
+        using var approved = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, new
+        {
+            petId,
+            sourceScope = scope,
+            recipientRevision = reviewed.GetProperty("recipientRevision").GetString(),
+            scopeDigest = reviewed.GetProperty("scopeDigest").GetString(),
+            decisionNonce = reviewed.GetProperty("decisionNonce").GetString(),
+            approve = true,
+            requestId = Guid.NewGuid(),
+        });
+        approved.EnsureSuccessStatusCode();
     }
 
     private async Task<(ItemId Note, Guid PetId)> CreateNoteWithPetAsync()
@@ -555,6 +581,7 @@ public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyn
             ["Nix:Workers:Families:0"] = planner is null ? "notify" : "pet",
         }, services =>
         {
+            services.AddHttpClient("PetRecipientMetadataClient").ConfigurePrimaryHttpMessageHandler(() => new PreparedRecipientMetadata());
             if (planner is not null)
             {
                 services.AddHttpClient<PetWorkerClient>().ConfigurePrimaryHttpMessageHandler(() => planner);

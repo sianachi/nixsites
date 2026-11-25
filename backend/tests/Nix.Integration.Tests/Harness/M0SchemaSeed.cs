@@ -309,6 +309,21 @@ internal static class M0SchemaSeed
                     {Literal(rows.ItemId)}, {Literal(rows.PrincipalId)}, 'A waiting pet run', ARRAY[]::uuid[], FALSE,
                     ARRAY[]::text[], 'waiting_for_input', 2, jsonb_build_object(), now(), now());
 
+                INSERT INTO pet_plan_consent
+                    (id, tenant_id, owner_id, workspace_id, pet_id, scope_digest, recipient_revision,
+                     request_id, authority_id, granted_at, expires_at)
+                VALUES ({Literal(rows.ItemId)}, {Literal(rows.TenantId)}, {Literal(rows.PrincipalId)},
+                    {Literal(rows.WorkspaceId)}, {Literal(rows.ItemId)}, repeat('a', 64), repeat('b', 64),
+                    {Literal(rows.AclEntryId)}, {Literal(rows.PrincipalId)}, now(), now() + interval '1 day');
+
+                INSERT INTO pet_plan_decision_context
+                    (id, tenant_id, owner_id, workspace_id, run_id, plan_id, plan_version, review_digest,
+                     grantee_credential_id, client_name, approve, secret_hash, expires_at)
+                VALUES ({Literal(rows.ItemId)}, {Literal(rows.TenantId)}, {Literal(rows.PrincipalId)},
+                    {Literal(rows.WorkspaceId)}, {Literal(rows.ItemId)}, {Literal(rows.AclEntryId)}, 1, repeat('a', 64),
+                    {Literal(rows.PrincipalId)}, 'Seed client', true,
+                    replace({Literal(rows.TenantId)}::text, '-', '') || repeat('a', 32), now() + interval '5 minutes');
+
                 INSERT INTO pet_peer (id, tenant_id, owner_id, workspace_id, item_id, pet_id, name, kind, expires_at)
                 VALUES ({Literal(rows.AclEntryId)}, {Literal(rows.TenantId)}, {Literal(rows.PrincipalId)},
                     {Literal(rows.WorkspaceId)}, {Literal(rows.ItemId)}, {Literal(rows.ItemId)}, 'Seed peer', 'client',

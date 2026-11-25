@@ -158,6 +158,12 @@ public static class NixTables
     /// <summary>One person's protected API key per model provider for their pets.</summary>
     public const string PetProviderCredential = "pet_provider_credential";
 
+    /// <summary>An owner's source-sharing challenge and provider-bound consent.</summary>
+    public const string PetPlanConsent = "pet_plan_consent";
+
+    /// <summary>An owner's expiring, credential-bound plan decision handoff.</summary>
+    public const string PetPlanDecisionContext = "pet_plan_decision_context";
+
     /// <summary>One entry in a principal's private inbox.</summary>
     public const string Notification = "notification";
 
@@ -344,6 +350,8 @@ public static class NixTables
         WorkspaceSyncPending,
         NativeReplayReceipt,
         PetProviderCredential,
+        PetPlanConsent,
+        PetPlanDecisionContext,
         Notification,
         PushSubscription,
         NotificationInbox,
@@ -556,6 +564,8 @@ public static class NixTables
             [WorkspaceSyncPending] = [],
             [NativeReplayReceipt] = ImmutableRegistration,
             [PetProviderCredential] = FullDml,
+            [PetPlanConsent] = FullDml,
+            [PetPlanDecisionContext] = FullDml,
             [Notification] = FullDml,
             [PushSubscription] = FullDml,
             [NotificationInbox] = FullDml,
