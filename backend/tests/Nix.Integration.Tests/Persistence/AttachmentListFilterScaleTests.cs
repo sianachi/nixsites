@@ -173,7 +173,14 @@ public sealed class AttachmentListFilterScaleTests : IAsyncLifetime
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))
         {
+            // Pause user triggers during the synthetic attachment load, keeping foreign keys active.
+            // The batch restores the triggers atomically before runtime-role queries measure
+            // attachment filtering with the complete corpus.
             await RawSql.ExecuteAsync(connection, null, $$"""
+                ALTER TABLE item DISABLE TRIGGER USER;
+                ALTER TABLE file_version DISABLE TRIGGER USER;
+                ALTER TABLE file_body DISABLE TRIGGER USER;
+
                 INSERT INTO item
                     (id, tenant_id, workspace_id, type, parent_id, seq, properties, lifecycle_state,
                      purge_after, created_by, last_modified_by, created_at, last_modified_at)
@@ -212,11 +219,32 @@ public sealed class AttachmentListFilterScaleTests : IAsyncLifetime
                 FROM item i
                 WHERE i.seq > 100000;
 
+                ALTER TABLE item ENABLE TRIGGER USER;
+                ALTER TABLE file_version ENABLE TRIGGER USER;
+                ALTER TABLE file_body ENABLE TRIGGER USER;
+
                 ANALYZE item;
                 ANALYZE item_closure;
                 ANALYZE file_version;
                 ANALYZE file_body;
                 """, commandTimeoutSeconds: 600);
+
+            Assert.Equal(0, await RawSql.CountAsync(connection, null, """
+                SELECT count(*) FROM pg_trigger
+                WHERE tgrelid IN ('item'::regclass, 'file_version'::regclass, 'file_body'::regclass)
+                  AND NOT tgisinternal AND tgenabled = 'D'
+                """));
+            Assert.Equal(Files, await RawSql.CountAsync(connection, null, $$"""
+                SELECT count(*) FROM item WHERE tenant_id = {{tenant}} AND seq > 100000
+                """));
+            Assert.Equal(Files, await RawSql.CountAsync(connection, null, $$"""
+                SELECT count(*) FROM file_body body JOIN item ON item.id = body.item_id
+                WHERE item.tenant_id = {{tenant}} AND item.seq > 100000
+                """));
+            Assert.Equal(Files + Files / 10, await RawSql.CountAsync(connection, null, $$"""
+                SELECT count(*) FROM file_version version JOIN item ON item.id = version.item_id
+                WHERE item.tenant_id = {{tenant}} AND item.seq > 100000
+                """));
         }
     }
 }
