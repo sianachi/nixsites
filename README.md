@@ -36,8 +36,7 @@ the Compose plugin, `curl`, `openssl`, `jq`, and at least 1 GB of memory for Doc
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
 ```
 
-Open <http://nix.localhost> in Chrome or Firefox, go to the setup page the script prints and enter
-the setup code. Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost` to
+Open the setup link the script prints in Chrome or Firefox and create the first account. Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost` to
 `/etc/hosts` first. A public hostname, Kubernetes and backups are in [Run it for real](#run-it-for-real).
 
 The line installs the latest release, with the copy of the installer that shipped in that release.
@@ -144,8 +143,8 @@ Give it more as more people use it at once. These are a guide, not measurements:
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
 ```
 
-Open <http://nix.localhost> in Chrome or Firefox, go to the setup page the script prints, and enter
-the setup code it prints to create the first account (it becomes the administrator). Safari does not
+Open the setup link the script prints in Chrome or Firefox to create the first account (it becomes
+the administrator). Safari does not
 resolve `.localhost` names: add `127.0.0.1 nix.localhost` to `/etc/hosts` first.
 
 The same line with a public origin is a real install, using the images at `ghcr.io/sianachi/nix`:
@@ -157,7 +156,7 @@ curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/insta
 Point `nix.example.org` at the machine and leave ports 80 and 443 free. One hostname is enough:
 Nix signs people in itself.
 
-The script writes every secret into `~/nix/nix.env` and prints the setup code for the first account.
+The script writes every secret into `~/nix/nix.env` and prints the setup link for the first account.
 Back that file up with the Docker volumes (`nix-*`); it cannot be regenerated. Add other people from
 the People page in the settings: each gets a one-time link, valid for an hour, to set a password or a
 passkey, and the same page issues a new link when someone is locked out. An install made

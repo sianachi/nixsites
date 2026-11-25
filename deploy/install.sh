@@ -15,7 +15,7 @@
 # Docker (default): Caddy is the public listener on ports 80 and 443 and fetches the certificates;
 # everything lands under --dir (default ~/nix), where nix.env holds every generated secret and is
 # the only file to back up with the Docker volumes. Nix signs people in itself: the first visit
-# asks for the setup code printed at the end, and the person who uses it becomes the administrator.
+# is opened from the setup link printed at the end, and the person who uses it becomes the administrator.
 # An install made with the bundled Zitadel must run --migrate-local-auth to upgrade: this version no
 # longer includes, starts or upgrades Zitadel.
 #
@@ -197,7 +197,7 @@ finish() {
       echo "  Sign in with your email and password. The setup code is NIX_AUTH_SETUP_CODE in $env_file."
       echo "  Add people from People in the settings; they get a one-time link to set a password." ;;
     *)
-      printf '  Open %s/setup and enter this setup code to create the first account\n  (it becomes the administrator):\n\n    %s\n\n' "$origin" "$1"
+      printf '  Open this link to create the first account (it becomes the administrator):\n\n    %s/setup#code=%s\n\n' "$origin" "$1"
       echo "  Add people from People in the settings; they get a one-time link to set a password." ;;
   esac
   printf '\nState: %s\nUpgrade: run this installer again with --version <newer release>\n' "$dir"

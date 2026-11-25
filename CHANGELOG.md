@@ -107,6 +107,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- A Compose release whose release check is not signed in prints a link to approve in a browser,
+  in place of asking for an access token. A stored token still works.
+- The installers print a setup link for the first account. Opening it does not ask for the setup
+  code; the plain setup page still does.
 - Companion workspace context defaults to on for a new pet and workspace. An explicit off choice
   stays off; Core access checks and provider-sharing decisions still apply.
 - **Breaking:** Sharing Nix content with a companion now requires consent for the selected

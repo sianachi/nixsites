@@ -25,8 +25,7 @@ Give it more as more people use it at once. These are a guide, not measurements:
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash
 ```
 
-Then open <http://nix.localhost> in Chrome or Firefox, go to the setup page the script prints and
-enter the setup code. Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost` to
+Then open the setup link the script prints in Chrome or Firefox. Safari does not resolve `.localhost` names: add `127.0.0.1 nix.localhost` to
 `/etc/hosts` first.
 
 ## Install for real
@@ -60,7 +59,7 @@ curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/bare/
 ```
 
 Point `nix.example.org` at the machine first and leave ports 80 and 443 free: Caddy fetches the
-certificate. Then open the setup page the script prints and enter the setup code.
+certificate. Then open the setup link the script prints.
 
 What ends up on the machine:
 
@@ -96,7 +95,7 @@ script installs a try-out at `http://nix.localhost`, reachable from that machine
 
 The installer generates every secret into `~/nix/nix.env`, starts Postgres and the object
 store behind Caddy, which fetches the TLS certificates itself, runs the database migrations, starts
-every service and prints the address of the setup page with a setup code.
+every service and prints a setup link for the first account.
 
 Back up `~/nix/nix.env` together with the Docker volumes (`nix-*`). The env file holds every secret
 and cannot be regenerated.
@@ -109,8 +108,9 @@ the public https origin, since they cannot reach a `.localhost` try-out.
 
 Nix signs people in itself. Nobody can sign up on their own; accounts come from two places.
 
-- **The first account.** Open the setup page the installer printed (`<origin>/setup`), enter the
-  setup code (`NIX_AUTH_SETUP_CODE` in `nix.env`), your email, name and a password. That account
+- **The first account.** Open the setup link the installer printed and enter your email, name and a
+  password. The link carries the setup code (`NIX_AUTH_SETUP_CODE` in `nix.env`); the plain
+  `<origin>/setup` page asks for it. That account
   is the administrator. The page closes once an account exists.
 - **Adding people.** An administrator opens People in the settings, enters an email and a name and
   gets a one-time link to send them. The link is valid for one hour and works once. The person
@@ -263,8 +263,8 @@ or list the tunnel or proxy addresses in the entrypoint's `forwardedHeaders.trus
 curl -fsSL https://raw.githubusercontent.com/sianachi/nixsites/main/deploy/install.sh | bash -s -- --kubernetes https://nix.example.org
 ```
 
-A Kubernetes install signs in locally and deploys no identity provider; the setup code is printed at
-the end and kept as `setup-code` in the `nix-auth` secret. Managed template sync there is off by
+A Kubernetes install signs in locally and deploys no identity provider; the setup link is printed at
+the end and its code kept as `setup-code` in the `nix-auth` secret. Managed template sync there is off by
 default: it needs a Core access token (`account service-token --name <name> --scopes read,write`,
 run with the migrator image) stored as key `token` in a secret you name in `TEMPLATE_BOOT_TOKEN_SECRET`.
 `NIX_AUTH_MODE=oidc` is for a provider you run yourself and needs both `OIDC_ISSUER` and

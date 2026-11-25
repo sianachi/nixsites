@@ -58,7 +58,6 @@ fi
 export NIX_SMOKE_ORIGIN
 # Smoke checks run from the release-tools image at the release tag; the host needs no Node.
 nixctl_config=${NIXCTL_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/nixctl/config.json}
-[ -f "$nixctl_config" ] || { echo "nixctl profile file not found: $nixctl_config" >&2; exit 2; }
 case "$release_tools_image" in
   localhost/*) docker image inspect "$release_tools_image" >/dev/null ;;
   *) docker pull --quiet "$release_tools_image" >/dev/null ;;
@@ -67,6 +66,19 @@ smoke() {
   docker run --rm --user "$(id -u):$(id -g)" -v "$nixctl_config:/config/nixctl/config.json:ro" \
     -e NIXCTL_PROFILE -e NIX_SMOKE_WORKSPACE -e NIX_SMOKE_ORIGIN "$release_tools_image" smoke "$@"
 }
+# No working sign-in for the release check: print a link to approve in a browser. The profile
+# folder is mounted writable only for this, and a refused or expired link leaves preflight to
+# report why.
+mkdir -p "$(dirname "$nixctl_config")"
+nixctl() {
+  docker run --rm --user "$(id -u):$(id -g)" -v "$(dirname "$nixctl_config"):/config/nixctl" \
+    "$release_tools_image" nixctl --profile "$NIXCTL_PROFILE" "$@"
+}
+if ! nixctl auth status >/dev/null 2>&1; then
+  echo "The release check is not signed in. Open the link below and approve it (10 minutes):" >&2
+  nixctl auth login --api-url "$NIX_SMOKE_ORIGIN" --no-browser >/dev/null || true
+fi
+[ -f "$nixctl_config" ] || { echo "nixctl profile file not found: $nixctl_config" >&2; exit 2; }
 smoke --preflight
 # Fetch release images before writers stop, so the maintenance window excludes the download.
 # Host-built images (NIX_IMAGE_REGISTRY=localhost/nix) must already exist locally.

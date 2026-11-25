@@ -123,6 +123,27 @@ describe('setup page', () => {
   });
 });
 
+describe('setup link', () => {
+  it('takes the setup code from the link and does not ask for it', async () => {
+    auth.value = { mode: 'local', setupRequired: true };
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(json(401, { code: 'auth.setup_code_invalid' }));
+    mount('/setup#code=abc123', <LocalSetupPage />, '/setup');
+    expect(screen.queryByLabelText(/setup code/i)).toBeNull();
+    await userEvent.type(screen.getByLabelText(/your name/i), 'Ada');
+    await userEvent.type(screen.getByLabelText(/email/i), 'a@b.co');
+    await userEvent.type(screen.getByLabelText(/^password/i), 'a long enough pass');
+    await userEvent.click(screen.getByRole('button', { name: /create admin/i }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(String(fetchMock.mock.calls[0]?.[1]?.body)).toContain('"setupCode":"abc123"');
+    // A refused code brings the field back so it can be corrected.
+    expect(await screen.findByLabelText(/setup code/i)).toBeTruthy();
+  });
+});
+
 describe('account link page', () => {
   it('shows who the link is for and signs in after the password is set', async () => {
     vi.spyOn(globalThis, 'fetch')

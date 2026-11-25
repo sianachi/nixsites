@@ -1,6 +1,6 @@
 import { Button, Field, Input } from '@nix/ui';
 import { useState, type ReactNode, type SyntheticEvent } from 'react';
-import { Navigate, useSearchParams } from 'react-router';
+import { Navigate, useLocation, useSearchParams } from 'react-router';
 
 import { useAuth } from '@nix/web-platform/auth/auth-provider';
 import { localAuth } from '@nix/web-platform/auth/local-auth-client';
@@ -11,7 +11,11 @@ export const MIN_PASSWORD_LENGTH = 10;
 export function LocalSetupPage(): ReactNode {
   const { mode, setupRequired } = useAuth();
   const [params] = useSearchParams();
-  const [setupCode, setSetupCode] = useState('');
+  // The installer prints /setup#code=<setup code>: a fragment never reaches the server or its logs.
+  const linkCode = new URLSearchParams(useLocation().hash.slice(1)).get('code') ?? '';
+  const [setupCode, setSetupCode] = useState(linkCode);
+  // A link that carries the code hides the field, until Core refuses and it may need correcting.
+  const [askCode, setAskCode] = useState(linkCode === '');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,6 +53,7 @@ export function LocalSetupPage(): ReactNode {
         },
         (cause: unknown) => {
           setError(describeError(cause));
+          setAskCode(true);
           setBusy(false);
         },
       );
@@ -57,22 +62,24 @@ export function LocalSetupPage(): ReactNode {
   return (
     <LocalAuthCard title="Set up Nix">
       <form className="flex flex-col gap-4" onSubmit={submit}>
-        <Field
-          label="Setup code"
-          hint="From NIX_AUTH_SETUP_CODE in this server's settings."
-          required
-        >
-          {(field) => (
-            <Input
-              {...field}
-              value={setupCode}
-              onChange={(event) => {
-                setSetupCode(event.target.value);
-              }}
-              autoComplete="off"
-            />
-          )}
-        </Field>
+        {askCode && (
+          <Field
+            label="Setup code"
+            hint="From NIX_AUTH_SETUP_CODE in this server's settings."
+            required
+          >
+            {(field) => (
+              <Input
+                {...field}
+                value={setupCode}
+                onChange={(event) => {
+                  setSetupCode(event.target.value);
+                }}
+                autoComplete="off"
+              />
+            )}
+          </Field>
+        )}
         <Field label="Your name" required>
           {(field) => (
             <Input

@@ -360,7 +360,7 @@ wait_for nix-node http://127.0.0.1:8302/healthz
 
 printf '\nNix is running at %s\n\n' "$origin"
 if [ "$new_install" = true ]; then
-  printf '  Open %s/setup and enter this setup code to create the first account\n  (it becomes the administrator):\n\n    %s\n\n' "$origin" "$setup_code"
+  printf '  Open this link to create the first account (it becomes the administrator):\n\n    %s/setup#code=%s\n\n' "$origin" "$setup_code"
 else
   echo "  Sign in with your email and password. The setup code is setup_code in $secrets."
 fi

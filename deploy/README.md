@@ -48,7 +48,7 @@ Use Docker Engine with Compose v2 supporting `up --wait`, Git and Python 3 on th
 it needs no Node, pnpm or `pdftotext`. `nixctl` and the smoke runner ship in the `release-tools`
 image (`release-tools smoke [--preflight]`, `release-tools nixctl <args>`), which `deploy.sh`
 runs at the release tag with the host profile file mounted read-only at
-`/config/nixctl/config.json`. It reads `$NIXCTL_CONFIG`, defaulting to
+`/config/nixctl/config.json` (its folder is mounted writable only for the sign-in link). It reads `$NIXCTL_CONFIG`, defaulting to
 `${XDG_CONFIG_HOME:-~/.config}/nixctl/config.json`.
 
 Copy `deploy/compose.prod.env.example` to a private absolute path, restrict it to mode 0600,
@@ -87,6 +87,12 @@ NIX_SMTP_USER=<user> NIX_SMTP_PASSWORD_FILE=~/smtp.password \
 ```
 
 Prove it by choosing "Reset Password" for a test account and following the emailed link.
+
+When the profile cannot sign in, `deploy.sh` prints a link before preflight: open it, sign in and
+approve, and the release continues with a revocable CLI session in the profile (no token is typed
+or stored). The link lasts 10 minutes and the session acts as whoever approved it, so approve as
+the release-check principal described below. A stored token keeps working and is the choice for
+unattended releases.
 
 Release checks use a dedicated release-check token, never a personal working token: a revoked
 personal token broke the last smoke run. The release operator owns it and records its expiry

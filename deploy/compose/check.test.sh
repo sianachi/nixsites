@@ -222,6 +222,8 @@ elif 'config' in args and '--images' in args:
  print('localhost/nix/api:test\nghcr.io/sianachi/nix/collab:test')
 elif 'run' in args and args[-1]=='nix-migrate' and os.environ.get('FAIL_MIGRATION'):
  sys.exit(1)
+elif args[-2:]==['auth','status'] and os.environ.get('SIGNED_OUT'):
+ sys.exit(1)
 PYCODE
 chmod +x "$fixture/bin/docker"
 export DOCKER_TEST_LOG="$fixture/docker-calls" COMPOSE_TEST_CONFIG="$fixture/compose.json"
@@ -278,6 +280,20 @@ assert all(':/config/nixctl/config.json:ro' in calls[i] for i in smokes)
 # Sites are not enabled in the example env, so the rollout leaves them alone.
 assert not any(s in call.split() for call in calls for s in ('nix-sites-serve', 'nix-mcp', 'nix-pet-browser'))
 PYCODE
+# A release check that is not signed in gets a browser approval link before preflight, never a token prompt.
+: > "$DOCKER_TEST_LOG"
+SIGNED_OUT=1 bash deploy/compose/deploy.sh > "$fixture/deploy-signed-out" 2>&1
+rg -q 'Open the link below' "$fixture/deploy-signed-out"
+python3 - "$DOCKER_TEST_LOG" <<'PYCODE'
+import sys
+calls=open(sys.argv[1]).read().splitlines()
+login=next(i for i,s in enumerate(calls) if s.endswith('auth login --api-url https://production.example --no-browser'))
+assert '--token' not in calls[login] and ':ro' not in calls[login]
+assert login < next(i for i,s in enumerate(calls) if s.endswith(' smoke --preflight'))
+PYCODE
+: > "$DOCKER_TEST_LOG"
+bash deploy/compose/deploy.sh > /dev/null 2>&1
+if rg -q 'auth login' "$DOCKER_TEST_LOG"; then echo 'A signed-in release check was asked to sign in again' >&2; exit 1; fi
 # Enabled by profile or by domain, sites are pre-pulled, stopped with the writers and rolled with --wait.
 for enable in SITES_PROFILE=1 SITES_DOMAIN=sites.example.test; do
  : > "$DOCKER_TEST_LOG"
