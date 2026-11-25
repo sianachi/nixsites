@@ -138,7 +138,7 @@ describe('setup link', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled();
     });
-    expect(String(fetchMock.mock.calls[0]?.[1]?.body)).toContain('"setupCode":"abc123"');
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toContain('"setupCode":"abc123"');
     // A refused code brings the field back so it can be corrected.
     expect(await screen.findByLabelText(/setup code/i)).toBeTruthy();
   });
