@@ -210,7 +210,8 @@ it('keeps the workspace default when an unrelated item is open in the same pane'
   expect(contextReads).not.toHaveBeenCalled();
 });
 
-it('keeps an explicitly attached page as a selected source in new-plan chat', async () => {
+// The turn is sent with workspace context on, so Core checks consent for the workspace.
+it('asks for workspace sharing when a page is attached with workspace context on', async () => {
   const sourceId = '44444444-4444-4444-8444-444444444444';
   const { user, requests, send } = setup(true, sourceId);
   await user.click(screen.getByRole('button', { name: 'Add to message' }));
@@ -222,7 +223,7 @@ it('keeps an explicitly attached page as a selected source in new-plan chat', as
   ).toBeVisible();
   expect(requests).toHaveBeenCalledWith(expect.stringMatching(/\/pet-sharing\/question$/u), {
     petId,
-    sourceScope: { kind: 'selected', itemIds: [sourceId] },
+    sourceScope: { kind: 'workspace' },
   });
   expect(send).not.toHaveBeenCalled();
 });

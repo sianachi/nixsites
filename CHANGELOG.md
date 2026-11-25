@@ -210,6 +210,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Companion chat asks for sharing consent on the sources the message really sends. With workspace
+  context on and a page open, it asked about the page alone and then refused every message with
+  "Review the selected sources and provider before sharing content".
 - Ordinary requests and event streams no longer initialize companion plan-dispatch services;
   requests carrying plan credentials still enforce the exact dispatch checks.
 

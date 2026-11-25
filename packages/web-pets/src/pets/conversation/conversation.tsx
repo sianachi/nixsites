@@ -50,6 +50,7 @@ import { useRename } from './state/use-rename';
 import { useResumeUndo } from './state/use-resume-undo';
 import { PetHistory } from '../pet-history';
 import { useTurns } from './state/use-turns';
+import { sharingScope } from './state/sharing-scope';
 import { useSharingConsent } from '@nix/web-platform/api/use-pet-sharing-consent';
 import { type ConversationJobDraft, type ConversationJobs } from './conversation-jobs';
 
@@ -246,20 +247,8 @@ export function Conversation({
     if (!include) setApplyWithoutAsking(false);
   }
   const acceptedScope = useRef<PetPlanSourceScope | null>(null);
-  function sourceScope(access: boolean, fields: object): PetPlanSourceScope | null {
-    const ids =
-      'itemIds' in fields && Array.isArray(fields.itemIds)
-        ? fields.itemIds.filter((id): id is string => typeof id === 'string')
-        : [];
-    const itemId = 'itemId' in fields && typeof fields.itemId === 'string' ? fields.itemId : null;
-    return ids.length > 0
-      ? { kind: 'selected', itemIds: [...ids].sort() }
-      : itemId !== null
-        ? { kind: 'subtree', itemIds: [itemId] }
-        : access
-          ? { kind: 'workspace' }
-          : null;
-  }
+  const sourceScope = (access: boolean, fields: object): PetPlanSourceScope | null =>
+    sharingScope(noteScope?.rootItemId, access, fields);
   const sharing = useSharingConsent({
     client,
     workspaceId,
