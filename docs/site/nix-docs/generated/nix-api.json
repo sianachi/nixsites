@@ -335,36 +335,6 @@
         }
       }
     },
-    "/internal/pets/sharing/validate": {
-      "post": {
-        "tags": [
-          "PetPlanSharingEndpoints"
-        ],
-        "operationId": "ValidatePetSharing",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidatePetSharingRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidatePetSharingResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/workspaces/{workspaceId}/pet-runs": {
       "get": {
         "tags": [
@@ -28867,114 +28837,6 @@
           }
         }
       },
-      "ValidatePetSharingRequest": {
-        "required": [
-          "attestation",
-          "tenantId",
-          "principalId",
-          "workspaceId",
-          "petId",
-          "provider",
-          "turnId"
-        ],
-        "type": "object",
-        "properties": {
-          "attestation": {
-            "type": "string"
-          },
-          "tenantId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "principalId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "workspaceId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "petId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "provider": {
-            "type": "string"
-          },
-          "turnId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "priorTurnId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "contextSourceItemIds": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "contextProtected": {
-            "type": "boolean",
-            "default": false
-          },
-          "contextUnbounded": {
-            "type": "boolean",
-            "default": false
-          },
-          "priorRecipientRevision": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "priorSourceScope": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/PetPlanSourceScope"
-              }
-            ]
-          }
-        }
-      },
-      "ValidatePetSharingResponse": {
-        "required": [
-          "allowed"
-        ],
-        "type": "object",
-        "properties": {
-          "allowed": {
-            "type": "boolean"
-          },
-          "recipientRevision": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "sourceScope": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/PetPlanSourceScope"
-              }
-            ]
-          }
-        }
-      },
       "ViewAggregateContract": {
         "required": [
           "property",
@@ -30494,9 +30356,6 @@
     },
     {
       "name": "Canvas"
-    },
-    {
-      "name": "PetPlanSharingEndpoints"
     },
     {
       "name": "Pet Runs"

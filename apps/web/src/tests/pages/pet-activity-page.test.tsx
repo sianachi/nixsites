@@ -23,6 +23,12 @@ vi.mock('@nix/web-platform/api/api-client-provider', () => ({
 vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId }),
 }));
+vi.mock('../../panel/use-pet-plan-feed', () => ({
+  usePetPlanFeed: () => ({
+    feed: { status: 'ready', data: { enabled: true, runs: [] } },
+    retry: vi.fn(),
+  }),
+}));
 
 function run(
   id: string,

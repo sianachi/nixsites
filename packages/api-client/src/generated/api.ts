@@ -144,22 +144,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/internal/pets/sharing/validate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['ValidatePetSharing'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/workspaces/{workspaceId}/pet-runs': {
     parameters: {
       query?: never;
@@ -7527,34 +7511,6 @@ export interface components {
       outcome: string;
       item: components['schemas']['ItemResponse'];
     };
-    ValidatePetSharingRequest: {
-      attestation: string;
-      /** Format: uuid */
-      tenantId: string;
-      /** Format: uuid */
-      principalId: string;
-      /** Format: uuid */
-      workspaceId: string;
-      /** Format: uuid */
-      petId: string;
-      provider: string;
-      /** Format: uuid */
-      turnId: string;
-      /** Format: uuid */
-      priorTurnId?: null | string;
-      contextSourceItemIds?: null | string[];
-      /** @default false */
-      contextProtected: boolean;
-      /** @default false */
-      contextUnbounded: boolean;
-      priorRecipientRevision?: null | string;
-      priorSourceScope?: null | components['schemas']['PetPlanSourceScope'];
-    };
-    ValidatePetSharingResponse: {
-      allowed: boolean;
-      recipientRevision?: null | string;
-      sourceScope?: null | components['schemas']['PetPlanSourceScope'];
-    };
     ViewAggregateContract: {
       property: string;
       function: string;
@@ -8136,30 +8092,6 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ValidatePetSharing: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ValidatePetSharingRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ValidatePetSharingResponse'];
         };
       };
     };

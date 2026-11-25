@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Nix.Abstractions;
 using Nix.Authentication;
+using Nix.Features.Pets;
 using Nix.Messaging;
 using Nix.Persistence;
 using Nix.Persistence.ObjectStorage;
@@ -87,6 +89,16 @@ public sealed class CompositionRootTests
         services.AddRouting();
         services.AddSingleton<IServer>(server);
         services.AddSingleton<SelfIssuedTokenService>();
+        services.AddHttpClient<PetWorkerClient>();
+        services.AddSingleton<OidcMetadataClient>();
+        services.AddSingleton<AuthSettings>();
+        services.AddScoped<NixTokenValidator>();
+        services.AddScoped<BrowserAuthCoordinator>();
+        var browserAccess = typeof(Program).Assembly.GetType("Nix.Features.BrowserAuth.BrowserAccess");
+        Assert.NotNull(browserAccess);
+        services.AddScoped(browserAccess);
+        services.AddHttpClient<IUserInfoClient, UserInfoClient>();
+        services.AddHttpContextAccessor();
 
         var handlerServiceTypes = services
             .Select(descriptor => descriptor.ServiceType)

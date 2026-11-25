@@ -40,7 +40,6 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Pet Plans](#pet-plans)
 - [Pet Runs](#pet-runs)
 - [Pet Sharing](#pet-sharing)
-- [PetPlanSharingEndpoints](#petplansharingendpoints)
 - [Pets](#pets)
 - [PublicLinks](#publiclinks)
 - [Query](#query)
@@ -3812,26 +3811,6 @@ Parameters:
 - `workspaceId` in path (required, string (uuid))
 
 Request body: `PetSharingQuestionRequest`.
-
-Responses: `200`.
-
-## PetPlanSharingEndpoints
-
-<a id="petplansharingendpoints"></a>
-
-### POST /internal/pets/sharing/validate
-
-<a id="validatepetsharing"></a>
-
-Operation id: `ValidatePetSharing`.
-
-**Can.** Write what the summary names.
-
-**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
-
-**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
-
-Request body: `ValidatePetSharingRequest`.
 
 Responses: `200`.
 

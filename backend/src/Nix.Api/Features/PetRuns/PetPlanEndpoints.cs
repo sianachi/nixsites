@@ -53,11 +53,14 @@ internal static class PetPlanEndpoints
         plans.MapPost("/{runId:guid}/cancel", Cancel).WithName("CancelPetPlan").WithSummary("Cancel the plan's undispatched effects.")
             .WithRequestBodyLimit(1024).RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         plans.MapPost("/{runId:guid}/plans/{planId:guid}/steps/{stepId:guid}/claim", Claim).WithName("ClaimPetPlanStep")
-            .WithSummary("Claim the next frozen effect requiring an owner client.").WithRequestBodyLimit(2048);
+            .WithSummary("Claim the next frozen effect requiring an owner client.").WithRequestBodyLimit(2048)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         plans.MapPost("/{runId:guid}/plans/{planId:guid}/steps/{stepId:guid}/result", Record).WithName("RecordPetPlanStep")
-            .WithSummary("Record a bounded receipt for the exact active client claim.").WithRequestBodyLimit(96 * 1024);
+            .WithSummary("Record a bounded receipt for the exact active client claim.").WithRequestBodyLimit(96 * 1024)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         plans.MapPost("/{runId:guid}/plans/{planId:guid}/steps/{stepId:guid}/undo", Undo).WithName("UndoPetPlanStep")
-            .WithSummary("Queue the supported undo of one applied receipt.").WithRequestBodyLimit(1024);
+            .WithSummary("Queue the supported undo of one applied receipt.").WithRequestBodyLimit(1024)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         endpoints.MapPetPlanSharingEndpoints();
         endpoints.MapPetSharingInternalEndpoints();
         endpoints.MapPetPlanDispatchEndpoints();

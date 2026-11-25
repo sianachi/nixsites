@@ -206,6 +206,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Companion owner-client plan mutations use the standard writes rate limit, and the internal
+  sharing validator stays out of the public API contract.
+
 - Solution-wide .NET validation no longer browses frontend dependency trees or Android build
   output through the frontend source-listing project.
 - The local web server refuses an occupied configured port instead of silently starting on a

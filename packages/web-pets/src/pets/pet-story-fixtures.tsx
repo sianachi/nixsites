@@ -128,7 +128,9 @@ function routeQuery(
         })
       : endpoint.operation === 'locks.get'
         ? Promise.resolve({ locked: false, unlockedUntil: null })
-        : endpoint.operation === 'petRuns.list' || endpoint.operation === 'petRuns.listWorkspace'
+        : endpoint.operation === 'petRuns.list' ||
+            endpoint.operation === 'petRuns.listWorkspace' ||
+            endpoint.operation === 'petPlans.list'
           ? Promise.resolve(endpoint.schema.parse(phoneRunList))
           : endpoint.operation === 'pets.watchRuntime' || endpoint.operation === 'pets.connection'
             ? Promise.resolve({ ...connection, revision: 1 })

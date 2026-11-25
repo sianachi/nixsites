@@ -4,7 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
 import { PetPlanCard } from '../panel/pet-plan-card';
 
-export default { title: 'Nix/Companion/Prepared plans' };
+export default {
+  title: 'Nix/Companion/Prepared plans',
+  excludeStories: ['preparedPlanFixture', 'preparedReadPlanFixture'],
+};
 
 export const preparedPlanFixture: PetPlanResponse = {
   id: '49b80577-9ad4-46aa-ad2c-5988fda36abf',

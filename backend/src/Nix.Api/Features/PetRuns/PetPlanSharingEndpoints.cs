@@ -49,7 +49,7 @@ internal static class PetPlanSharingEndpoints
 
     internal static void MapPetSharingInternalEndpoints(this IEndpointRouteBuilder endpoints) =>
         endpoints.MapPost("/internal/pets/sharing/validate", ValidateSharing)
-            .WithName("ValidatePetSharing").WithRequestBodyLimit(20 * 1024);
+            .ExcludeFromDescription().WithRequestBodyLimit(20 * 1024);
 
     private static async Task<Results<Ok<PetSharingQuestionResponse>, ProblemHttpResult>> SharingQuestion(
         Guid workspaceId, PetSharingQuestionRequest request, HttpContext http, [FromServices] PetPlanSharingService sharing)

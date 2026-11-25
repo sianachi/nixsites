@@ -44,7 +44,7 @@ internal static class PetPlanDispatchEndpoints
         var owner = endpoints.MapGroup("/api/v1/workspaces/{workspaceId:guid}/pet-plans/{runId:guid}/io").WithTags("Pet Plans");
         owner.MapGet("", Next).WithName("GetPetPlanClientIntent").WithSummary("Read the next server-prepared exact request for an owner client.");
         owner.MapPost("/result", Result).WithName("RecordPetPlanClientIoResult").WithSummary("Return the response to the exact dispatched owner-client request.")
-            .WithRequestBodyLimit(96 * 1024);
+            .WithRequestBodyLimit(96 * 1024).RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
     }
 
     private static async Task<IResult> Issue(PetPlanIssueRequest request, HttpContext http,
