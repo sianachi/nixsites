@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Nix.Abstractions;
+using Nix.Abstractions.PetRuns;
 using Nix.Domain.Content;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
@@ -241,9 +242,9 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             using var handler = new RecordingWorker();
             using var http = new HttpClient(handler);
             var dispatcher = work.Resolve<NixDispatcher>();
-            var gateway = Gateway(work, http);
             var settings = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
             var root = M0SchemaSeed.Alpha.ItemId;
+            var gateway = Gateway(work, http, new NoteDisclosure(settings.Settings.ActivePetId!.Value, root));
             var item = await dispatcher.QueryAsync<GetItem, Result<Item>>(new(ItemId.From(root)), Cancellation);
             var result = await gateway.ExecuteAsync(new("send", TestTenants.AlphaWorkspace, settings.Settings.ActivePetId,
                 Guid.NewGuid(), "Explain this note", ItemId: root, SharedText: "Selected text",
@@ -339,14 +340,38 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
         Assert.Equal("pets.not_found", watch.Error.Code);
     }
 
-    private static PetWorkerClient Gateway(NixUnitOfWork work, HttpClient http) => new(http,
+    private static PetWorkerClient Gateway(NixUnitOfWork work, HttpClient http, IPetDisclosureConsentGuard? disclosure = null) => new(http,
         new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Nix:Pets:WorkerUrl"] = "http://worker:8301",
             ["Nix:InternalSecret"] = "test-secret",
         }).Build(), work.Resolve<INixSessionContextAccessor>(), work.Resolve<NixDispatcher>(),
         work.Resolve<IPermissionResolver>(), work.Resolve<IPetProviderCredentialStore>(),
-        new PetProviderKeyProtector(new EphemeralDataProtectionProvider()));
+        new PetProviderKeyProtector(new EphemeralDataProtectionProvider()), disclosure: disclosure);
+
+    private sealed class NoteDisclosure(Guid expectedPet, Guid expectedRoot) : IPetDisclosureConsentGuard
+    {
+        private const string Attestation = "fixture-note-sharing";
+
+        public Task<Result<string>> RequireAsync(Guid workspaceId, Guid petId, string scopeKind,
+            IReadOnlyList<Guid> sourceItemIds, Guid turnId, CancellationToken cancellationToken,
+            IReadOnlyList<Guid>? readOnlyWorkspaceIds = null)
+        {
+            Assert.Equal(TestTenants.AlphaWorkspace, workspaceId);
+            Assert.Equal(expectedPet, petId);
+            Assert.Equal("subtree", scopeKind);
+            Assert.Equal(expectedRoot, Assert.Single(sourceItemIds));
+            Assert.NotEqual(Guid.Empty, turnId);
+            Assert.True(readOnlyWorkspaceIds is null or { Count: 0 });
+            return Task.FromResult(Result.Success(Attestation));
+        }
+
+        public Task<bool> ValidateAsync(string attestation, CancellationToken cancellationToken)
+        {
+            Assert.Equal(Attestation, attestation);
+            return Task.FromResult(true);
+        }
+    }
 
     private sealed class RecordingWorker : HttpMessageHandler
     {

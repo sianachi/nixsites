@@ -206,6 +206,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Ordinary requests and event streams no longer initialize companion plan-dispatch services;
+  requests carrying plan credentials still enforce the exact dispatch checks.
+
 - Companion owner-client plan mutations use the standard writes rate limit, and the internal
   sharing validator stays out of the public API contract.
 

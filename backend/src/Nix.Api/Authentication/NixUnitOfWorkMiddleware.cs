@@ -496,24 +496,28 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
                 return;
             }
 
-            var planDispatch = context.RequestServices.GetRequiredService<PetPlanDispatchService>();
             var planPet = validated as ValidatedPetTurnToken;
             var collabPlanAuthorization = planPet?.PlanRequest is not null
                 && PetPlanDispatchService.IsConsumedCollabAuthorization(context.Request);
             var templatePlanContinuation = planPet?.PlanRequest is not null
                 && PetPlanDispatchService.IsTemplateContinuation(context.Request);
-            if (planPet?.PlanRead is { } readScope
-                && !await planDispatch.AuthorizeReadAsync(context, readScope, context.RequestAborted).ConfigureAwait(false)
-                || collabPlanAuthorization && !await planDispatch.AuthorizeConsumedCollabAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false)
-                || templatePlanContinuation && !await planDispatch.AuthorizeTemplateContinuationAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false)
-                || !collabPlanAuthorization && !templatePlanContinuation && (planPet?.PlanRequest is not null
-                    || context.Request.Headers.ContainsKey("X-Nix-Pet-Plan-Request"))
-                    && !await planDispatch.ConsumeAsync(context, planPet, context.RequestAborted).ConfigureAwait(false))
+            if (planPet?.PlanRead is not null || planPet?.PlanRequest is not null
+                || context.Request.Headers.ContainsKey("X-Nix-Pet-Plan-Request"))
             {
-                await transaction.RollbackAsync(context.RequestAborted).ConfigureAwait(false);
-                await WriteProblemAsync(context, StatusCodes.Status409Conflict, "pet_plans.dispatch_refused", "Plan request changed",
-                    "The exact plan request is unavailable or has already been dispatched.").ConfigureAwait(false);
-                return;
+                var planDispatch = context.RequestServices.GetRequiredService<PetPlanDispatchService>();
+                if (planPet?.PlanRead is { } readScope
+                    && !await planDispatch.AuthorizeReadAsync(context, readScope, context.RequestAborted).ConfigureAwait(false)
+                    || collabPlanAuthorization && !await planDispatch.AuthorizeConsumedCollabAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false)
+                    || templatePlanContinuation && !await planDispatch.AuthorizeTemplateContinuationAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false)
+                    || !collabPlanAuthorization && !templatePlanContinuation && (planPet?.PlanRequest is not null
+                        || context.Request.Headers.ContainsKey("X-Nix-Pet-Plan-Request"))
+                        && !await planDispatch.ConsumeAsync(context, planPet, context.RequestAborted).ConfigureAwait(false))
+                {
+                    await transaction.RollbackAsync(context.RequestAborted).ConfigureAwait(false);
+                    await WriteProblemAsync(context, StatusCodes.Status409Conflict, "pet_plans.dispatch_refused", "Plan request changed",
+                        "The exact plan request is unavailable or has already been dispatched.").ConfigureAwait(false);
+                    return;
+                }
             }
 
             if (boundPetEdit
@@ -587,12 +591,14 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
                 {
                     if (templatePlanContinuation)
                     {
-                        await planDispatch.CompleteTemplateContinuationAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false);
+                        await context.RequestServices.GetRequiredService<PetPlanDispatchService>()
+                            .CompleteTemplateContinuationAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false);
                     }
                     else if (!collabPlanAuthorization && (planPet?.PlanRequest is not null
                         || context.Request.Headers.ContainsKey("X-Nix-Pet-Plan-Request")))
                     {
-                        await planDispatch.CompleteCoreAsync(context, planPet, context.RequestAborted).ConfigureAwait(false);
+                        await context.RequestServices.GetRequiredService<PetPlanDispatchService>()
+                            .CompleteCoreAsync(context, planPet, context.RequestAborted).ConfigureAwait(false);
                     }
                     await transaction.CommitAsync(context.RequestAborted).ConfigureAwait(false);
                 }
