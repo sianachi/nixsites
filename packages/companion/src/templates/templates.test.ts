@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { templateApplicationRequestSchema } from '@nix/api-client';
 import { createFakePorts } from '../testing/fake-ports.js';
 import { applyTemplate } from './apply.js';
 import { listTemplates } from './list.js';
@@ -245,7 +246,9 @@ describe('apply_template', () => {
         });
       }
       if (endpoint.operation === 'templates.apply') {
-        capturedKey = (endpoint.body as { idempotencyKey: string }).idempotencyKey;
+        const request = templateApplicationRequestSchema.parse(endpoint.body);
+        capturedKey = request.idempotencyKey;
+        expect(request.expectedRevision).toBe(1);
         return Promise.resolve({
           applicationId: '44444444-4444-4444-8444-444444444444',
           templateId,
@@ -271,6 +274,52 @@ describe('apply_template', () => {
     expect(capturedKey.length).toBeLessThan(160);
     expect(result).toEqual({ rootId: parentId, createdCount: 1, alreadyApplied: true });
   });
+  it.each([undefined, 9])(
+    'applies only the known reviewed preflight revision (%s)',
+    async (expectedRevision) => {
+      const { ports, query, execute, signal } = createFakePorts();
+      query.mockImplementation(queryByOperation({ 'templates.list': catalogWith({}) }));
+      let submittedRevision: number | undefined;
+      execute.mockImplementation((endpoint: { operation: string; body?: unknown }) => {
+        if (endpoint.operation !== 'templates.apply')
+          throw new Error('A reviewed template must not be preflighted again.');
+        submittedRevision = templateApplicationRequestSchema.parse(endpoint.body).expectedRevision;
+        return Promise.resolve({
+          applicationId: '44444444-4444-4444-8444-444444444444',
+          templateId,
+          targetItemId: parentId,
+          alreadyApplied: false,
+          createdItems: [],
+          resolvedInputs: {},
+          textBindings: {},
+          referenceMappings: {},
+          writtenTargetItemIds: [],
+        });
+      });
+      await applyTemplate(
+        ports,
+        workspace,
+        { templateId, parentId: null, title: 'Reading log' },
+        { toolId: 'tool-1', claimId: 'claim-1' },
+        signal,
+        {
+          templateId,
+          templateRevision: 7,
+          ...(expectedRevision === undefined ? {} : { expectedRevision }),
+          mode: 'create',
+          additions: { fields: 0, views: 0, items: 0 },
+          conflicts: [],
+          canApply: true,
+          initializationPreview: [],
+          resolvedInputs: {},
+          textBindings: {},
+          referenceMappings: {},
+        },
+      );
+      expect(submittedRevision).toBe(expectedRevision ?? 7);
+      expect(execute).toHaveBeenCalledOnce();
+    },
+  );
   it('refuses a template not in this workspace catalog before any preflight or apply call', async () => {
     const { ports, query, execute, signal } = createFakePorts();
     query.mockImplementation(

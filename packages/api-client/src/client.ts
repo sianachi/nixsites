@@ -47,6 +47,8 @@ import { CURSOR_PARAM, PAGE_SIZE_PARAM, cursorPageSchema } from './schemas/pagin
 import type { NixTelemetry } from './telemetry.js';
 import type { CursorPage } from './schemas/pagination.js';
 import { z } from 'zod';
+import { NixApiError } from './errors.js';
+import type { PetPlanClientIntent } from './resources/pet-plans.js';
 
 export interface NixClientConfig {
   /** Absolute base URL of Core. Comes from validated boot configuration. */
@@ -122,6 +124,11 @@ export interface NixClient {
    * whole-request timeout: a stream's length is the server's, and the signal is the way out.
    */
   stream(request: StreamRequest): Promise<Response>;
+  /** Dispatches one Core-prepared exact request under its one-use plan permit. No mutation retry is automatic. */
+  dispatchPlanIntent(
+    intent: PetPlanClientIntent,
+    options?: Pick<CallOptions, 'signal'>,
+  ): Promise<PetPlanClientIoResult>;
   /** Walks a cursor-paginated collection item by item. */
   paginate<TItem>(
     endpoint: PagedQueryEndpoint<TItem>,
@@ -129,6 +136,13 @@ export interface NixClient {
   ): AsyncGenerator<TItem, void, undefined>;
   /** Marks every cache entry under this key prefix stale. */
   invalidate(prefix: CacheKey): void;
+}
+
+export interface PetPlanClientIoResult {
+  readonly requestId: string;
+  readonly status: number;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string;
 }
 
 function requestCacheKey(
@@ -146,6 +160,10 @@ function requestCacheKey(
 }
 
 export function createNixClient(config: NixClientConfig): NixClient {
+  return createClient(config, 'core');
+}
+
+function createClient(config: NixClientConfig, destination: 'core' | 'collab'): NixClient {
   const telemetry = config.telemetry;
   // Shared by the request pipeline and `stream`, so a 401 seen by both collapses into one refresh.
   const coordinator = createRefreshCoordinator(() => config.tokens.refreshAccessToken());
@@ -298,6 +316,134 @@ export function createNixClient(config: NixClientConfig): NixClient {
       );
     },
 
+    async dispatchPlanIntent(intent, options = {}): Promise<PetPlanClientIoResult> {
+      const base = new URL(config.baseUrl);
+      const target = intent.target;
+      const servicePrefix = destination === 'collab' ? base.pathname.replace(/\/+$/u, '') : '';
+      if (
+        base.username.length > 0 ||
+        base.password.length > 0 ||
+        base.search.length > 0 ||
+        base.hash.length > 0 ||
+        (destination === 'collab' && servicePrefix !== '' && servicePrefix !== '/collab') ||
+        intent.destination !== destination ||
+        !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(intent.method) ||
+        !target.startsWith('/') ||
+        target.startsWith('//') ||
+        target.includes('\\') ||
+        target.includes('#') ||
+        Array.from(target).some(
+          (character) => character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127,
+        ) ||
+        target.length > 8192 ||
+        !intent.dispatchPermit ||
+        intent.dispatchPermit.length > 2048 ||
+        (destination === 'core' && !target.startsWith('/api/v1/'))
+      )
+        throw new TypeError('The prepared plan request does not match this configured service.');
+      const url = new URL(target, base);
+      if (url.origin !== base.origin || url.pathname + url.search !== target)
+        throw new TypeError('The prepared plan request target must be an exact relative path.');
+      const dispatchUrl = `${base.origin}${servicePrefix}${target}`;
+      const headers = new Headers();
+      for (const [name, value] of Object.entries(intent.headers)) {
+        if (
+          ![
+            'content-type',
+            'if-match',
+            'idempotency-key',
+            'x-nix-idempotency-key',
+            'x-nix-pet-item-revisions',
+          ].includes(name.toLowerCase()) ||
+          value.length > 4096 ||
+          /[\r\n]/u.test(value)
+        )
+          throw new TypeError('The prepared plan request contains a forbidden header.');
+        headers.set(name, value);
+      }
+      if (new TextEncoder().encode(intent.body ?? '').byteLength > 131072)
+        throw new TypeError('The prepared plan request exceeds the body limit.');
+      headers.set('X-Nix-Pet-Plan-Request', intent.dispatchPermit);
+      let token = await config.tokens.getAccessToken();
+      token ??= await coordinator.refresh();
+      if (token === null) throw NixApiError.fromStatus(401);
+      headers.set('Authorization', `Bearer ${token}`);
+      const deadline = AbortSignal.timeout(config.timeoutMs ?? 15_000);
+      const signal = options.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
+      let response: Response;
+      try {
+        response = await (config.fetch ?? fetch)(dispatchUrl, {
+          method: intent.method,
+          headers,
+          body: intent.body ?? null,
+          credentials: 'same-origin',
+          redirect: 'error',
+          signal,
+        });
+      } catch {
+        if (options.signal?.aborted) throw NixApiError.canceled();
+        throw NixApiError.operation(
+          'pet_plans.dispatch_uncertain',
+          'The request outcome is uncertain. Inspect its receipt before retrying.',
+          false,
+        );
+      }
+      if (response.status === 401) await coordinator.refresh();
+      const limit = 64_000;
+      const length = response.headers.get('content-length');
+      if (length !== null && Number(length) > limit) {
+        await response.body?.cancel();
+        throw NixApiError.operation(
+          'pet_plans.response_too_large',
+          'The plan request response exceeded its receipt limit. Inspect the result before retrying.',
+          false,
+        );
+      }
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder('utf-8', { fatal: true });
+      let body = '';
+      let bytes = 0;
+      try {
+        while (reader) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          bytes += chunk.value.byteLength;
+          if (bytes > limit) {
+            await reader.cancel();
+            throw NixApiError.operation(
+              'pet_plans.response_too_large',
+              'The plan request response exceeded its receipt limit. Inspect the result before retrying.',
+              false,
+            );
+          }
+          body += decoder.decode(chunk.value, { stream: true });
+        }
+        body += decoder.decode();
+      } catch (error) {
+        if (error instanceof NixApiError) throw error;
+        if (options.signal?.aborted) throw NixApiError.canceled();
+        throw NixApiError.operation(
+          'pet_plans.dispatch_uncertain',
+          'The request outcome is uncertain. Inspect its receipt before retrying.',
+          false,
+        );
+      } finally {
+        reader?.releaseLock();
+      }
+      const resultHeaders: Record<string, string> = {};
+      for (const name of [
+        'content-type',
+        'etag',
+        'last-modified',
+        'x-nix-revisions',
+        'x-nix-item-revisions',
+      ]) {
+        const value = response.headers.get(name);
+        if (value !== null && value.length <= 4096) resultHeaders[name] = value;
+      }
+      return { requestId: intent.requestId, status: response.status, headers: resultHeaders, body };
+    },
+
     async *paginate<TItem>(
       endpoint: PagedQueryEndpoint<TItem>,
       options: PaginateOptions = {},
@@ -340,7 +486,7 @@ export function createNixClient(config: NixClientConfig): NixClient {
  * the shared ingress understands, so the prefix is dropped for a direct call.
  */
 export function createDirectCollabClient(config: NixClientConfig): NixClient {
-  const transport = createNixClient(config);
+  const transport = createClient(config, 'collab');
   const strip = (path: string) => path.replace(/^\/collab(?=\/)/, '');
   const direct = <T extends { readonly path: string }>(endpoint: T): T => ({
     ...endpoint,
@@ -352,6 +498,7 @@ export function createDirectCollabClient(config: NixClientConfig): NixClient {
     queryResult: (endpoint, options) => transport.queryResult(direct(endpoint), options),
     execute: (endpoint, options) => transport.execute(direct(endpoint), options),
     stream: (request) => transport.stream({ ...request, path: strip(request.path) }),
+    dispatchPlanIntent: (intent, options) => transport.dispatchPlanIntent(intent, options),
     download: (endpoint, options) => transport.download(direct(endpoint), options),
     async *paginate(endpoint, options) {
       yield* transport.paginate(direct(endpoint), options);

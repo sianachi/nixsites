@@ -128,6 +128,100 @@ function setup(
 }
 
 describe('mirror fetch router', () => {
+  it.each([`/api/v1/workspaces/${WS}/items`, `/collab/documents/${ROOT}/updates`])(
+    'sends a bound plan request to %s exactly once without consulting the mirror',
+    async (path) => {
+      const inner = vi.fn<typeof fetch>(() => Promise.resolve(new Response(null, { status: 409 })));
+      const store = vi.fn(() => fakeStore());
+      const run = createMirrorFetch({
+        inner,
+        store,
+        readFile: () => Promise.resolve(null),
+        isBootOffline: () => false,
+        onReachability: vi.fn(),
+      });
+      const input = `${location.origin}${path}`;
+      const init = {
+        method: 'POST',
+        headers: { 'X-Nix-Pet-Plan-Request': 'synthetic-exact-permit' },
+        body: '{"type":"note","title":"Frozen exact title"}',
+      };
+      expect((await run(input, init)).status).toBe(409);
+      expect(inner).toHaveBeenCalledExactlyOnceWith(input, init);
+      expect(inner.mock.calls[0]?.[1]).toBe(init);
+      expect(store).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([`/api/v1/items/${ROOT}`, `/collab/documents/${ROOT}/updates`])(
+    'refuses offline bound plan I/O to %s without a local answer or outbox write',
+    async (path) => {
+      const store = vi.fn(() => fakeStore());
+      const inner = vi.fn<typeof fetch>();
+      const run = createMirrorFetch({
+        inner,
+        store,
+        readFile: () => Promise.resolve(null),
+        isBootOffline: () => true,
+        onReachability: vi.fn(),
+      });
+      const response = await run(`${location.origin}${path}`, {
+        method: 'PATCH',
+        headers: { 'X-Nix-Pet-Plan-Request': 'synthetic-exact-permit' },
+        body: '{"title":"Frozen exact title"}',
+      });
+      expect(response.status).toBe(503);
+      expect(inner).not.toHaveBeenCalled();
+      expect(store).not.toHaveBeenCalled();
+    },
+  );
+
+  it('retains a lost bound plan response as uncertainty without queuing or replaying', async () => {
+    const outbox: OutboxOperation[] = [];
+    const store = vi.fn(() => fakeStore({}, { outbox, aliases: { [CHILD]: ROOT } }));
+    const inner = vi.fn<typeof fetch>(() => Promise.reject(new TypeError('Response lost')));
+    const run = createMirrorFetch({
+      inner,
+      store,
+      readFile: () => Promise.resolve(null),
+      isBootOffline: () => false,
+      onReachability: vi.fn(),
+    });
+    const request = new Request(`${location.origin}/api/v1/items/${CHILD}`, {
+      method: 'PATCH',
+      headers: { 'X-Nix-Pet-Plan-Request': 'synthetic-exact-permit' },
+      body: '{"title":"Frozen exact title"}',
+    });
+    await expect(run(request)).rejects.toThrow('Response lost');
+    expect(inner).toHaveBeenCalledExactlyOnceWith(request, undefined);
+    expect(store).not.toHaveBeenCalled();
+    expect(outbox).toEqual([]);
+  });
+
+  it.each([400, 404, 409, 422])(
+    'returns a bound plan response with status %s without rewriting IDs or retrying',
+    async (status) => {
+      const inner = vi.fn<typeof fetch>(() => Promise.resolve(new Response(null, { status })));
+      const store = vi.fn(() => fakeStore({}, { aliases: { [CHILD]: ROOT } }));
+      const run = createMirrorFetch({
+        inner,
+        store,
+        readFile: () => Promise.resolve(null),
+        isBootOffline: () => false,
+        onReachability: vi.fn(),
+      });
+      const input = `${location.origin}/api/v1/items/${CHILD}`;
+      const init = {
+        method: 'PATCH',
+        headers: { 'X-Nix-Pet-Plan-Request': 'synthetic-exact-permit' },
+        body: `{"parentId":"${CHILD}"}`,
+      };
+      expect((await run(input, init)).status).toBe(status);
+      expect(inner).toHaveBeenCalledExactlyOnceWith(input, init);
+      expect(store).not.toHaveBeenCalled();
+    },
+  );
+
   it('passes through while connected and keeps the small boot reads', async () => {
     const settings: Record<string, string> = {};
     const inner = vi.fn(() => Promise.resolve(Response.json({ id: 'me' })));

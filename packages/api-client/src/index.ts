@@ -18,7 +18,7 @@
  */
 
 export { createDirectCollabClient, createNixClient } from './client.js';
-export type { CallOptions, NixClient } from './client.js';
+export type { CallOptions, NixClient, PetPlanClientIoResult } from './client.js';
 
 export { defineCommand, defineQuery } from './endpoints.js';
 export type {
@@ -291,6 +291,25 @@ export type { SetHabitInput } from './resources/habits.js';
 
 export * as conversations from './resources/conversations.js';
 export * as petRuns from './resources/pet-runs.js';
+export * as petPlans from './resources/pet-plans.js';
+export type {
+  PetPlanSourceScope,
+  PetPlanSharingQuestion,
+  PetPlanResponse,
+  PetPlanPrepared,
+  PetPlanPreparedStep,
+  PetPlanEditableField,
+  PetPlanReceiptView,
+  PetPlanList,
+  StartPetPlan,
+  PetPlanRevision,
+  PetPlanDecision,
+  PetPlanSharingDecision,
+  PetPlanDecisionHandoffStatus,
+  PetPlanDecisionContextRequest,
+  PetPlanStepClaim,
+  PetPlanClientIntent,
+} from './resources/pet-plans.js';
 export * as petConnections from './resources/pet-connections.js';
 export type { PetConnectionList, PetServiceConnection } from './resources/pet-connections.js';
 export type {

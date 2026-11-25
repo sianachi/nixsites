@@ -5,6 +5,7 @@ import {
   type PetProfile,
 } from '@nix/api-client';
 import { clearPetDrafts } from '@nix/web-foundation/lib/pet-drafts';
+import { writeWorkspaceAccess } from '@nix/web-foundation/lib/device-preferences';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -40,6 +41,7 @@ const settings = petSettingsSchema.parse({
 beforeEach(() => {
   clearPetDrafts();
   localStorage.clear();
+  writeWorkspaceAccess(workspaceId, pet.id, false);
 });
 
 function setup({ autoJob = false, accepted = true, sendResult = Promise.resolve(true) } = {}) {

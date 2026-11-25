@@ -14,6 +14,8 @@ public static class PetTurnPolicy
     // against both (PetTurnPolicyTests), so a drift in either direction fails a test.
     private static readonly (Regex Pattern, bool AnyMethod)[] HumanOnly =
     [
+        (Rule(@"^/api/v1/workspaces/[^/]+/pet-plans(/|$)"), true),
+        (Rule(@"^/api/v1/workspaces/[^/]+/pet-sharing(/|$)"), true),
         (Rule(@"^/api/v1/me/tokens(/|$)"), true),
         (Rule(@"^/api/v1/me/pets(/|$)"), true),
         (Rule(@"^/api/v1/me/push-subscriptions(/|$)"), true),
@@ -54,7 +56,12 @@ public static class PetTurnPolicy
     /// </summary>
     public static bool Allows(HttpRequest request, ValidatedPetTurnToken token)
     {
+        ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(token);
+        if (token.PlanRead is not null && IsPlanReadPreflight(request))
+        {
+            return !IsHumanOnly(request);
+        }
         return !IsHumanOnly(request) && AccessTokenScopePolicy.Classify(request.Method, request.Path) switch
         {
             AccessTokenScopePolicy.Requirement.Read => true,
@@ -62,6 +69,16 @@ public static class PetTurnPolicy
             AccessTokenScopePolicy.Requirement.Admin => token.MayAdminister,
             _ => false,
         };
+    }
+
+    internal static bool IsPlanReadPreflight(HttpRequest request)
+    {
+        const string prefix = "/api/v1/templates/";
+        const string suffix = "/preflight";
+        var path = request.Path.Value ?? "";
+        return HttpMethods.IsPost(request.Method) && path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            && path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) && path.Length == prefix.Length + 36 + suffix.Length
+            && Guid.TryParseExact(path.AsSpan(prefix.Length, 36), "D", out var id) && id != Guid.Empty;
     }
 
     private static Regex Rule(string pattern) =>

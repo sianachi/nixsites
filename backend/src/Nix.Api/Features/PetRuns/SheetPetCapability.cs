@@ -18,11 +18,13 @@ internal sealed class SheetPetCapability(
     IConfiguration configuration,
     IItemLocks locks,
     IVisibleItems visible,
+    IItemTree tree,
     SelfIssuedTokenService tokens) : IPetRunCapability
 {
     private static readonly JsonElement Schema = ReadSchema();
 
     public string Name => "sheet.edit";
+    public bool PlanRequestDispatch => true;
     public string Description => "Edit a native Nix spreadsheet. Supply itemId for a selected sheet or a sheet in a workspace-scoped run. "
         + "Set cells using uppercase A1 addresses, strings for values or formulas, and null to clear a cell. "
         + "Grow the grid with rows or columns. Change or reset columnWidths using column letters and a width or null.";
@@ -36,13 +38,21 @@ internal sealed class SheetPetCapability(
         {
             return Refused<PetRunEffect>("Provide a sheet edit plan.");
         }
-        var itemId = run.ItemId;
+        ItemId itemId;
         if (args.TryGetProperty("itemId", out var target))
         {
             if (!TryReadItem(target, out itemId))
             {
                 return Refused<PetRunEffect>("Choose a valid sheet item.");
             }
+        }
+        else if (run.ItemId is { } anchor)
+        {
+            itemId = anchor;
+        }
+        else
+        {
+            return Refused<PetRunEffect>("Choose the sheet to edit.");
         }
         var item = await AuthorizeAsync(run, itemId, cancellationToken).ConfigureAwait(false);
         if (item is null)
@@ -52,7 +62,13 @@ internal sealed class SheetPetCapability(
         var plan = JsonNode.Parse(args.GetRawText())!.AsObject();
         plan.Remove("itemId");
         var request = new JsonObject { ["kind"] = "preview", ["plan"] = plan };
+        var revision = await tree.ReadPetRevisionAsync(run.WorkspaceId, itemId, pin: false, cancellationToken).ConfigureAwait(false);
         var result = await SendAsync(run, itemId, Guid.NewGuid(), request, write: false, cancellationToken).ConfigureAwait(false);
+        if (run.RequestId is not null && (revision is null
+            || revision != await tree.ReadPetRevisionAsync(run.WorkspaceId, itemId, pin: false, cancellationToken).ConfigureAwait(false)))
+        {
+            return Refused<PetRunEffect>("The sheet changed while its preview was prepared.");
+        }
         return result.Match(
             preview => Result.Success(new PetRunEffect(
                 $"Edit sheet {ItemProperties.ReadTitle(item.Properties)}",
@@ -61,6 +77,7 @@ internal sealed class SheetPetCapability(
                     ["kind"] = "sheet",
                     ["itemId"] = itemId.Value,
                     ["preview"] = JsonNode.Parse(preview.GetRawText()),
+                    ["revisions"] = revision is { } expected ? FormattableString.Invariant($"{run.WorkspaceId.Value:D}|{itemId.Value:D}:{expected}") : "",
                 }, SheetPetJsonContext.Default.JsonObject))),
             Result.Failure<PetRunEffect>);
     }
@@ -92,6 +109,10 @@ internal sealed class SheetPetCapability(
             ["preview"] = JsonNode.Parse(preview.GetRawText()),
             ["actionId"] = actionId,
         };
+        if (run.PlanExecution is not null)
+        {
+            request["planExecution"] = PetPlanExecution.NativeContext(run, effect.Parameters.GetProperty("revisions").GetString() ?? "");
+        }
         if (receipt is not null)
         {
             try
@@ -109,8 +130,11 @@ internal sealed class SheetPetCapability(
 
     private async Task<Item?> AuthorizeAsync(PetRunRecord run, ItemId itemId, CancellationToken cancellationToken)
     {
+        var inSubtree = run.ScopeRootItemId is { } root
+            && await tree.IsVisibleSubtreeMemberAsync(run.WorkspaceId, ItemId.From(root), itemId, cancellationToken).ConfigureAwait(false);
         if (run.ReadOnlySourceItemIds?.Contains(itemId.Value) == true
-            || itemId != run.ItemId && !run.WorkspaceScope && !run.SourceItemIds.Contains(itemId.Value))
+            || run.ScopeRootItemId is not null && !inSubtree
+            || itemId != run.ItemId && !run.WorkspaceScope && !run.SourceItemIds.Contains(itemId.Value) && !inSubtree)
         {
             return null;
         }
@@ -135,7 +159,8 @@ internal sealed class SheetPetCapability(
         }
         var binding = PetActionRequestBinding.Create("GET", $"/internal/authz/items/{itemId.Value:D}", body: null);
         body["itemId"] = itemId.Value;
-        body["token"] = tokens.MintPetAction(run.ActorId, run.TenantId, actionId, write ? PetTurnMode.Write : PetTurnMode.Read, binding);
+        body["token"] = run.RequestId is not null ? tokens.MintPetPlanRead(run.ActorId, run.TenantId, run.Id)
+            : tokens.MintPetAction(run.ActorId, run.TenantId, actionId, write ? PetTurnMode.Write : PetTurnMode.Read, binding);
         using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(origin, "/v1/sani/pet-sheet"))
         {
             Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),

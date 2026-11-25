@@ -19,6 +19,9 @@ export function useTurns({
   messages,
   contextFields,
   onSent,
+  beforeDisclosure,
+  consentMode,
+  onAccepted,
 }: {
   readonly client: NixClient;
   readonly workspaceId: string;
@@ -32,9 +35,19 @@ export function useTurns({
   readonly messages: readonly Message[];
   readonly contextFields: () => object;
   /** Called when a turn starts, so a message being edited closes. */
-  readonly onSent: () => void;
+  readonly onSent: (replacement?: { readonly id: string; readonly text: string }) => void;
+  readonly consentMode?: 'plan' | undefined;
+  readonly onAccepted?:
+    ((scope: { readonly workspaceAccess: boolean; readonly context: object }) => void) | undefined;
+  readonly beforeDisclosure?:
+    | ((input: { readonly workspaceAccess: boolean; readonly context: object }) => Promise<boolean>)
+    | undefined;
 }): {
-  readonly submit: (creationRequest?: string, onStarted?: () => void) => Promise<void>;
+  readonly submit: (
+    creationRequest?: string,
+    onStarted?: () => void,
+    creationRequestId?: string,
+  ) => Promise<boolean>;
   readonly resendTurn: (text: string, replaceFromMessageId: string) => Promise<boolean>;
   readonly retryLastTurn: () => void;
   readonly retryLabel: () => string | null;
@@ -47,16 +60,30 @@ export function useTurns({
   const [preparing, setPreparing] = useState(false);
   const lastCreation = useRef<string | undefined>(undefined);
 
-  async function submit(creationRequest?: string, onStarted?: () => void) {
+  async function submit(
+    creationRequest?: string,
+    onStarted?: () => void,
+    creationRequestId?: string,
+  ) {
     const text = creationRequest ?? draft;
     if (!text.trim() || busy || preparationPending.current || runtime?.status !== 'connected')
-      return;
+      return false;
     const access = workspaceAccess || creationRequest !== undefined;
     lastCreation.current = creationRequest;
-    if (onStarted !== undefined) {
-      regenerateRequestId();
-      onStarted();
+    const context = creationRequest === undefined ? contextFields() : {};
+    preparationPending.current = true;
+    setPreparing(true);
+    try {
+      if (
+        beforeDisclosure !== undefined &&
+        !(await beforeDisclosure({ workspaceAccess: access, context }))
+      )
+        return false;
+    } finally {
+      preparationPending.current = false;
+      setPreparing(false);
     }
+    if (onStarted !== undefined && creationRequestId === undefined) regenerateRequestId();
     // Plan B.2: a conversation's first message carries a map of the workspace's main
     // containers, so the pet can use their ids without listing the tree first. Only with
     // workspace access on: without it the pet has no tools to use the ids with. The ref
@@ -73,34 +100,57 @@ export function useTurns({
         setPreparing(false);
       }
     }
-    onSent();
     const ok = await send({
       text,
       model,
       workspaceAccess: access,
-      ...(creationRequest === undefined ? contextFields() : {}),
+      ...(creationRequestId === undefined ? {} : { requestId: creationRequestId }),
+      ...(consentMode === undefined ? {} : { consentMode }),
+      ...context,
       ...(workspaceMap?.length ? { workspaceMap } : {}),
     });
     if (ok && creationRequest === undefined)
       setDraft((current) => (current === text ? '' : current));
+    if (ok) onStarted?.();
+    if (ok) onAccepted?.({ workspaceAccess: access, context });
+    if (ok) onSent();
+    return ok;
   }
 
   /** Sends `text` as a new turn that replaces the user message `replaceFromMessageId` and
    * everything after it, with the conversation's current context. Backs "Try again",
    * "Regenerate" and an edited last message; each is a new request, unlike a failed `send`'s
    * retry, which resends the exact same one. */
-  function resendTurn(text: string, replaceFromMessageId: string) {
+  async function resendTurn(text: string, replaceFromMessageId: string) {
     if (preparationPending.current) return Promise.resolve(false);
-    onSent();
-    regenerateRequestId();
+    preparationPending.current = true;
+    setPreparing(true);
     const creation = text === lastCreation.current;
-    return send({
-      text,
-      model,
-      workspaceAccess: workspaceAccess || creation,
-      replaceFromMessageId,
-      ...(creation ? {} : contextFields()),
-    });
+    const context = creation ? {} : contextFields();
+    try {
+      if (
+        beforeDisclosure !== undefined &&
+        !(await beforeDisclosure({ workspaceAccess: workspaceAccess || creation, context }))
+      )
+        return false;
+      regenerateRequestId();
+      const accepted = await send({
+        text,
+        model,
+        workspaceAccess: workspaceAccess || creation,
+        ...(consentMode === undefined ? {} : { consentMode }),
+        replaceFromMessageId,
+        ...context,
+      });
+      if (accepted) {
+        onAccepted?.({ workspaceAccess: workspaceAccess || creation, context });
+        onSent({ id: replaceFromMessageId, text });
+      }
+      return accepted;
+    } finally {
+      preparationPending.current = false;
+      setPreparing(false);
+    }
   }
 
   /** Must-fix 4: a failed turn (the worker reports `state: 'error'`, not a client-side request

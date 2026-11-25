@@ -40,6 +40,9 @@ const BACKOFF_MS = [1000, 2000, 4000, 10000] as const;
 const IDLE_RECHECK_MS = 300;
 
 export interface PetSendInput {
+  /** A structured creation keeps its request identity while a different draft is being edited. */
+  readonly requestId?: string;
+  readonly consentMode?: 'plan';
   readonly text: string;
   readonly model: string;
   readonly workspaceAccess: boolean;
@@ -537,10 +540,11 @@ export function usePetRuntime(
             ...(rootItemId ? { rootItemId } : {}),
             ...(operation === 'send' && input
               ? {
-                  requestId: requestId.current,
+                  requestId: input.requestId ?? requestId.current,
                   text: input.text,
                   model: input.model,
                   workspaceAccess: input.workspaceAccess,
+                  ...(input.consentMode === undefined ? {} : { consentMode: input.consentMode }),
                   readWithoutAsking: readReadWithoutAsking(),
                   ...(rootItemId ? { readOnly: input.readOnly ?? true } : {}),
                   ...ownerTurnContext(),

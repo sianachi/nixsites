@@ -12,6 +12,7 @@ import { BookmarksPage } from './pages/bookmarks-page';
 import { CalendarPage } from './pages/calendar-page';
 import { EditorPage } from './pages/editor-page';
 import { PetPage } from './pages/pet-page';
+import { PetPlanReviewPage } from './pages/pet-plan-review-page';
 import { OAuthAuthorizePage } from './pages/oauth-authorize-page';
 import { NotFoundPage } from './pages/not-found-page';
 import { PublicFormPage } from './pages/public-form-page';
@@ -240,6 +241,7 @@ export function AppRoutes(): ReactElement {
                   }
                 />
                 <Route path="pet" element={<PetPage />} />
+                <Route path="pet/plans/:runId/review" element={<PetPlanReviewPage />} />
                 <Route
                   path="pet/activity"
                   element={

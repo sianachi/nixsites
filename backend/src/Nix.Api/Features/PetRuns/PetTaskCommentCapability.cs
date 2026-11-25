@@ -70,7 +70,7 @@ internal sealed class PetTaskCommentCapability(IVisibleItems visible, NixDispatc
     public async Task<string?> RevisionObservationAsync(PetRunRecord run, PetRunEffect effect, CancellationToken cancellationToken)
     {
         var change = effect.Parameters.Deserialize(PetRunJsonContext.Default.PetTaskCommentPreview);
-        return change is not null && change.ItemId == run.ItemId.Value
+        return change is not null && change.ItemId == run.ItemId?.Value
             && await FindNoteWithCommentPermissionAsync(run, cancellationToken).ConfigureAwait(false) is { } item
             && ItemSettings.Read(item.Settings).Comments
             ? change.Body
@@ -88,7 +88,11 @@ internal sealed class PetTaskCommentCapability(IVisibleItems visible, NixDispatc
 
     private async Task<Item?> FindNoteWithCommentPermissionAsync(PetRunRecord run, CancellationToken cancellationToken)
     {
-        var lookup = await visible.FindAsync(run.ItemId, ItemAccess.Comment, cancellationToken).ConfigureAwait(false);
+        if (run.ItemId is not { } anchor)
+        {
+            return null;
+        }
+        var lookup = await visible.FindAsync(anchor, ItemAccess.Comment, cancellationToken).ConfigureAwait(false);
         return lookup.IsSuccess && lookup.Value.WorkspaceId == run.WorkspaceId && lookup.Value.Type == "note"
             ? lookup.Value
             : null;

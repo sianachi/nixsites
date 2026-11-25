@@ -69,6 +69,8 @@ describe('nixctl mcp workspace tools', () => {
         'commit_template_archive_import',
         'export_template_archive',
         'resume_template_file_copy',
+        'pet_plans',
+        'pet_plan_decide',
         'pet_runtime',
         'pet_tool_run',
         'structure_read',

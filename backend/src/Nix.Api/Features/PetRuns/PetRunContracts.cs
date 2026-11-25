@@ -31,7 +31,10 @@ internal sealed record PetRunProposal(
     DateTimeOffset? DecisionAt = null,
     string? Receipt = null,
     Guid? UndoId = null,
-    bool Automatic = false);
+    bool Automatic = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<Guid>? SourceItemIds = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ObservationBlocked = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool UnboundedSourceProvenance = false);
 
 internal sealed record PetRunResult(Guid Id, string Text, bool Reversible);
 internal sealed record PetRunsResponse(bool Enabled, IReadOnlyList<PetRunAbility> Abilities, IReadOnlyList<PetRunResponse> Runs);
@@ -76,7 +79,12 @@ internal sealed record PetRunCheckpoint(
     IReadOnlyList<string>? AddedAbilities = null,
     PetRunRevisionFeedback? RevisionFeedback = null,
     IReadOnlyList<string>? OwnerRevisions = null,
-    PetRunFailure? Failure = null);
+    PetRunFailure? Failure = null,
+    PetPlanRequestState? PlanRequest = null,
+    PetPlanPrepared? Plan = null,
+    PetPlanSharingQuestion? SharingQuestion = null,
+    IReadOnlyList<Guid>? HandledRequests = null,
+    PetPlanDiscovery? Discovery = null);
 
 internal sealed record PetRunRevisionFeedback(Guid ProposalId, string? Feedback);
 
@@ -107,6 +115,7 @@ internal interface IPetRunCapability
     public string Description { get; }
     public JsonElement? InputSchema => null;
     public bool Atomic => false;
+    public bool PlanRequestDispatch => false;
     public bool Reversible => false;
     public bool RequiresApproval(PetRunEffect effect) => true;
     public bool RoutineEligible(PetRunEffect effect) => false;

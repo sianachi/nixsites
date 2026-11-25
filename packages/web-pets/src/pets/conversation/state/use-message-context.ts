@@ -22,10 +22,12 @@ export function useMessageContext({
   currentItem,
   noteScope,
   workspaceAccess,
+  autoAttachPage = true,
 }: {
   readonly currentItem: string | null;
   readonly noteScope: { readonly rootItemId: string; readonly readOnly: boolean } | undefined;
   readonly workspaceAccess: boolean;
+  readonly autoAttachPage?: boolean;
 }): {
   readonly contexts: readonly SharedContext[];
   readonly chips: readonly SharedContext[];
@@ -60,22 +62,20 @@ export function useMessageContext({
       setCurrentItemOpen(false);
     });
     if (!currentItem) return;
-    void client
-      .query(locks.getItemLock(currentItem), { signal: controller.signal, forceRefresh: true })
-      .then((lock) => {
-        if (!controller.signal.aborted)
-          setCurrentItemOpen(!lock.locked || lock.unlockedUntil !== null);
+    void Promise.all([
+      client.query(locks.getItemLock(currentItem), {
+        signal: controller.signal,
+        forceRefresh: true,
+      }),
+      client.query(items.itemById(currentItem), { signal: controller.signal, forceRefresh: true }),
+    ])
+      .then(([lock, value]) => {
+        if (controller.signal.aborted) return;
+        setCurrentItemTitle(value.title);
+        setCurrentItemOpen(!lock.locked && !value.settings.withholdFromPets);
       })
       .catch(() => {
-        /* Unknown is treated as locked: nothing is attached. */
-      });
-    void client
-      .query(items.itemById(currentItem), { signal: controller.signal })
-      .then((value) => {
-        if (!controller.signal.aborted) setCurrentItemTitle(value.title);
-      })
-      .catch(() => {
-        /* The chip still offers a plain fallback below when the title cannot be resolved. */
+        /* Unknown or protected pages are never attached automatically. */
       });
     return () => {
       controller.abort();
@@ -119,6 +119,7 @@ export function useMessageContext({
    * and the note is known to be readable. Not in a note conversation, which has its own scope. */
   const autoPage: SharedContext | null =
     currentItem &&
+    autoAttachPage &&
     !noteScope &&
     workspaceAccess &&
     currentItemOpen &&

@@ -46,6 +46,8 @@ internal sealed partial class PetRunService(
     private readonly Dictionary<string, IPetRunCapability> _capabilities =
         capabilities.ToDictionary(capability => capability.Name, StringComparer.Ordinal);
     private NixSessionContext Caller => session.Current ?? throw new InvalidOperationException("A principal session is required.");
+    private IPetRunStore RunStore => runs;
+    private IServiceProvider Services => services;
 
     public async ValueTask<Result<PetRunsResponse>> HandleAsync(ListPetRuns query, CancellationToken cancellationToken)
     {
@@ -68,7 +70,11 @@ internal sealed partial class PetRunService(
         var visible = new List<PetRunResponse>();
         foreach (var run in await runs.ListAsync(workspaceId, item?.Id, cancellationToken).ConfigureAwait(false))
         {
-            var root = item ?? await items.FindAsync(run.ItemId, cancellationToken).ConfigureAwait(false);
+            if (run.ItemId is not { } anchor || Checkpoint(run).PlanRequest is not null)
+            {
+                continue;
+            }
+            var root = item ?? await items.FindAsync(anchor, cancellationToken).ConfigureAwait(false);
             if (root is not null && root.WorkspaceId == run.WorkspaceId
                 && await ScopeAvailableAsync(root, ReadSources(run, Checkpoint(run)), cancellationToken).ConfigureAwait(false))
             {
@@ -301,7 +307,8 @@ internal sealed partial class PetRunService(
     private async Task<Result<PetRunRecord>> FindAsync(ItemId itemId, Guid runId, CancellationToken cancellationToken)
     {
         var run = await runs.GetAsync(runId, cancellationToken).ConfigureAwait(false);
-        if (run is null || run.ItemId != itemId || run.ActorId != Caller.PrincipalId || run.TenantId != Caller.TenantId
+        if (run is null || run.ItemId != itemId || Checkpoint(run).PlanRequest is not null
+            || run.ActorId != Caller.PrincipalId || run.TenantId != Caller.TenantId
             || !IsEnabled(run.WorkspaceId))
         {
             return Result.Failure<PetRunRecord>(Missing());
@@ -314,7 +321,12 @@ internal sealed partial class PetRunService(
 
     private async Task<bool> RunScopeAvailableAsync(PetRunRecord run, CancellationToken cancellationToken)
     {
-        var root = await items.FindAsync(run.ItemId, cancellationToken).ConfigureAwait(false);
+        if (run.ItemId is not { } anchor)
+        {
+            return Checkpoint(run).PlanRequest is not null
+                && await WorkspaceSourcesAvailableAsync(run.WorkspaceId, ReadSources(run, Checkpoint(run)), cancellationToken).ConfigureAwait(false);
+        }
+        var root = await items.FindAsync(anchor, cancellationToken).ConfigureAwait(false);
         return root is not null && root.WorkspaceId == run.WorkspaceId
             && await ScopeAvailableAsync(root, ReadSources(run, Checkpoint(run)), cancellationToken).ConfigureAwait(false);
     }
@@ -381,7 +393,8 @@ internal sealed partial class PetRunService(
 
     private async ValueTask<Guid> QueueJobAsync(PetRunRecord run, long revision, CancellationToken cancellationToken)
     {
-        var job = await jobs.CreateAsync(run.TenantId, run.ActorId, run.WorkspaceId, AdvanceKind,
+        var kind = run.RequestId is null ? AdvanceKind : PlanAdvanceKind;
+        var job = await jobs.CreateAsync(run.TenantId, run.ActorId, run.WorkspaceId, kind,
             FormattableString.Invariant($"pet-run:{run.Id:N}:{revision}"),
             JsonSerializer.Serialize(new PetRunJobPayload(run.Id), PetRunJsonContext.Default.PetRunJobPayload),
             cancellationToken).ConfigureAwait(false);
@@ -414,7 +427,7 @@ internal sealed partial class PetRunService(
     }
 
     private static PetRunResponse Respond(PetRunRecord run, PetRunCheckpoint state) => new(
-        run.Id, run.ItemId.Value, run.WorkspaceId.Value, run.Brief, ReadSources(run, state), run.WorkspaceScope,
+        run.Id, run.ItemId?.Value ?? throw new InvalidOperationException("A legacy run requires an item anchor."), run.WorkspaceId.Value, run.Brief, ReadSources(run, state), run.WorkspaceScope,
         RunAbilities(run, state), run.Status, run.Revision, state.Question, state.Proposals, state.Results, run.CreatedAt, run.UpdatedAt,
         state.IncludeTargetText, state.AfterMessageId, state.Failure);
 

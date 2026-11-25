@@ -4,6 +4,7 @@ using Nix.Abstractions;
 using Nix.Abstractions.Connections;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
+using Nix.Features.PetRuns;
 
 namespace Nix.Features.Connections;
 
@@ -19,7 +20,8 @@ internal sealed class ConnectorRegistration(
         {
             return Result.Failure<bool>(ConnectorErrors.Missing());
         }
-        if (!IsIdentifier(request.Tool, 96) || request.Url is not { Length: > 0 and <= 400 }
+        if (!IsIdentifier(request.Tool, 96) || PetPlanOperatorToolPolicy.IsDecisionTool(request.Tool)
+            || request.Url is not { Length: > 0 and <= 400 }
             || !Uri.TryCreate(request.Url, UriKind.Absolute, out var url) || url.Scheme != Uri.UriSchemeHttps
             || url.UserInfo.Length + url.Query.Length + url.Fragment.Length != 0 || request.Token is not { Length: > 0 and <= 8192 }
             || request.Token.Any(character => character is < '!' or > '~'))

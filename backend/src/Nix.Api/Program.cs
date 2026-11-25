@@ -90,6 +90,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Add(CanvasJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(PetJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(PetRunJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(PetPlanJsonContext.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(PetPlanSharingJson.Default);
+    options.SerializerOptions.TypeInfoResolverChain.Add(PetPlanDispatchJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(PetPeerJsonContext.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(PetBrowserJson.Default);
     options.SerializerOptions.TypeInfoResolverChain.Add(ConnectorJsonContext.Default);
@@ -695,6 +698,9 @@ app.UseWhen(
                     && !context.Request.Path.StartsWithSegments(
                         "/internal/worker-dispatch",
                         StringComparison.OrdinalIgnoreCase)
+                    && !context.Request.Path.Equals(
+                        "/internal/pets/sharing/validate", StringComparison.OrdinalIgnoreCase)
+                    && !PetPlanDispatchEndpoints.IsServiceCallback(context.Request)
                     && !context.Request.Path.StartsWithSegments(
                         "/internal/worker-executions",
                         StringComparison.OrdinalIgnoreCase),

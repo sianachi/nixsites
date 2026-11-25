@@ -29,18 +29,20 @@ internal sealed class NixActionPetCapability(
     ItemBodyClient notes,
     SelfIssuedTokenService credentials,
     WorkerLoopbackClient loopback,
-    IHttpClientFactory clients) : IPetRunCapability
+    IHttpClientFactory clients,
+    IServiceProvider services) : IPetRunCapability
 {
     internal static void Register(IServiceCollection services) => services.AddScoped<IPetRunCapability>(provider => new NixActionPetCapability(
         provider.GetRequiredService<EndpointDataSource>(), provider.GetRequiredService<IItemTree>(),
         provider.GetRequiredService<IItemLocks>(), provider.GetRequiredService<IPermissionResolver>(), provider.GetRequiredService<ISiteStore>(),
         provider.GetRequiredService<IAutomationRuleStore>(), provider.GetRequiredService<ITemplateCatalogStore>(),
         provider.GetRequiredService<ItemBodyClient>(), provider.GetRequiredService<SelfIssuedTokenService>(),
-        provider.GetRequiredService<WorkerLoopbackClient>(), provider.GetRequiredService<IHttpClientFactory>()));
+        provider.GetRequiredService<WorkerLoopbackClient>(), provider.GetRequiredService<IHttpClientFactory>(), provider));
 
     internal const string TargetTextRequiredCode = "pet_runs.target_text_required";
 
     public string Name => "nix.action";
+    public bool PlanRequestDispatch => true;
     public string Description => "Read or propose a named Nix API operation using operationId, path, query and body. "
         + "Read examples: GetItem, GetItemBody, SearchPassages, ListItems. Reviewed writes: "
         + string.Join(", ", PetCapabilities.FencedWrites) + ". "
@@ -132,6 +134,19 @@ internal sealed class NixActionPetCapability(
         {
             var request = PetCoreRequest.Parse(args, endpoints);
             var revisions = await ResolveAsync(run, request, cancellationToken).ConfigureAwait(false);
+            var targets = new List<NixActionPlanTarget>();
+            foreach (var reference in request.References.Where(reference => reference.Key is "itemId" or "parentId"))
+            {
+                if (Guid.TryParse(reference.Value, out var id) && await tree.FindAsync(ItemId.From(id), cancellationToken).ConfigureAwait(false) is { } target)
+                {
+                    targets.Add(new(id, ItemProperties.ReadTitle(target.Properties)));
+                }
+            }
+            string? currentTitle = null;
+            if (request.Definition.Id == "UpdateItem" && targets.Count == 1)
+            {
+                currentTitle = targets[0].Title;
+            }
             ItemBodyRevision? note = null;
             if (IsNoteWrite(request))
             {
@@ -156,6 +171,8 @@ internal sealed class NixActionPetCapability(
                 revisions,
                 documentId = note?.DocumentId,
                 headSeq = note?.HeadSeq,
+                targets = targets.Select(target => new { id = target.Id, title = target.Title }),
+                currentTitle,
             });
             return Result.Success(new PetRunEffect(
                 $"Run {request.Definition.Id} in the selected Nix scope.", preview));
@@ -240,9 +257,13 @@ internal sealed class NixActionPetCapability(
             var item = request.Definition.Id == "RestoreItem"
                 ? await tree.FindStoredAsync(id, cancellationToken).ConfigureAwait(false)
                 : await tree.FindAsync(id, cancellationToken).ConfigureAwait(false);
+            var inSubtree = run.ScopeRootItemId is { } root
+                && await tree.IsVisibleSubtreeMemberAsync(run.WorkspaceId, ItemId.From(root), id, cancellationToken).ConfigureAwait(false);
             if (item is null || item.WorkspaceId != run.WorkspaceId || ItemSettings.Read(item.Settings).WithholdFromPets
                 || (!read && run.ReadOnlySourceItemIds?.Contains(raw) == true)
+                || (!read && run.ScopeRootItemId is not null && !inSubtree)
                 || (!run.WorkspaceScope && run.ItemId != id && !run.SourceItemIds.Contains(raw)
+                    && !inSubtree
                     && run.ReadOnlySourceItemIds?.Contains(raw) != true)
                 || (await locks.GetStateAsync(id, cancellationToken).ConfigureAwait(false)).Locked)
             {
@@ -322,8 +343,25 @@ internal sealed class NixActionPetCapability(
         var body = request.Body;
         var binding = PetActionRequestBinding.Create(method, address.PathAndQuery, body, revisions);
         var bearer = credentials.MintPetAction(run.ActorId, run.TenantId, actionId, request.TurnMode, binding);
+        PetPlanIssuedRequest? issued = null;
+        if (run.PlanExecution is { } plan)
+        {
+            var permit = await services.GetRequiredService<PetPlanDispatchService>().IssueDetachedAsync(new(run.TenantId.Value,
+                run.ActorId.Value, run.WorkspaceId.Value, plan, 1, "core", method, address.PathAndQuery, body,
+                body is null ? new Dictionary<string, string>() : new Dictionary<string, string> { ["Content-Type"] = "application/json; charset=utf-8" }, "server"), cancellationToken).ConfigureAwait(false);
+            if (permit.IsFailure)
+            {
+                return Result.Failure<string>(permit.Error);
+            }
+            issued = permit.Value;
+            bearer = issued.Token!;
+        }
         using var outgoing = new HttpRequestMessage(new HttpMethod(method), address);
         outgoing.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+        if (issued is not null)
+        {
+            outgoing.Headers.TryAddWithoutValidation("X-Nix-Pet-Plan-Request", issued.RequestId.ToString("D"));
+        }
         if (revisions.Length > 0)
         {
             outgoing.Headers.TryAddWithoutValidation(PetActionRequestBinding.RevisionsHeader, revisions);
@@ -376,9 +414,26 @@ internal sealed class NixActionPetCapability(
         {
             throw new InvalidPetActionException("A note write needs Markdown text.");
         }
-        var result = await notes.WriteWithRevisionAsync(item, markdown.GetString()!,
-            request.Definition.Id == "AppendItemBody", NoteToken(run, item, actionId, PetTurnMode.Write),
-            new ItemBodyRevision(doc, seq), cancellationToken).ConfigureAwait(false);
+        var append = request.Definition.Id == "AppendItemBody";
+        var revision = new ItemBodyRevision(doc, seq);
+        var token = NoteToken(run, item, actionId, PetTurnMode.Write);
+        ItemBodyPlanPermit? bound = null;
+        if (run.PlanExecution is { } plan)
+        {
+            var revisions = approved.GetProperty("revisions").GetString() ?? "";
+            var permit = await services.GetRequiredService<PetPlanDispatchService>().IssueDetachedAsync(new(run.TenantId.Value,
+                run.ActorId.Value, run.WorkspaceId.Value, plan, 1, "collab", append ? "POST" : "PUT", $"/documents/{item:D}/markdown",
+                ItemBodyClient.WritePayload(markdown.GetString()!, revision),
+                new Dictionary<string, string> { ["Content-Type"] = "application/json; charset=utf-8", [PetActionRequestBinding.RevisionsHeader] = revisions },
+                "server"), cancellationToken).ConfigureAwait(false);
+            if (permit.IsFailure)
+            {
+                return Result.Failure<string>(permit.Error);
+            }
+            token = permit.Value.Token!;
+            bound = new(permit.Value.RequestId, permit.Value.Headers?.GetValueOrDefault(PetActionRequestBinding.RevisionsHeader) ?? revisions);
+        }
+        var result = await notes.WriteWithRevisionAsync(item, markdown.GetString()!, append, token, revision, cancellationToken, bound).ConfigureAwait(false);
         return result.IsSuccess
             ? Result.Success($"Core saved the note at revision {result.Value.Seq}.")
             : result.Error.Code == "items.body_unavailable"
@@ -386,8 +441,9 @@ internal sealed class NixActionPetCapability(
                 : Result.Failure<string>(result.Error);
     }
 
-    private string NoteToken(PetRunRecord run, Guid item, Guid actionId, PetTurnMode mode) =>
-        credentials.MintPetAction(run.ActorId, run.TenantId, actionId, mode,
+    private string NoteToken(PetRunRecord run, Guid item, Guid actionId, PetTurnMode mode) => run.RequestId is not null && mode == PetTurnMode.Read
+        ? credentials.MintPetPlanRead(run.ActorId, run.TenantId, run.Id)
+        : credentials.MintPetAction(run.ActorId, run.TenantId, actionId, mode,
             PetActionRequestBinding.Create("GET", $"/internal/authz/items/{item:D}", null));
 
     private static Guid NoteId(PetCoreRequest request) =>
@@ -515,3 +571,5 @@ internal sealed class NixActionPetCapability(
     private static Guid Id(string value) => Guid.TryParseExact(value, "D", out var id) && id != Guid.Empty
         ? id : throw new InvalidPetActionException("The action's target identifier is invalid.");
 }
+
+internal sealed record NixActionPlanTarget(Guid Id, string Title);

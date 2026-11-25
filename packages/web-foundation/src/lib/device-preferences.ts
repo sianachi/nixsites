@@ -119,10 +119,10 @@ export function readPetSurface(): PetSurface {
 }
 
 /** Whether reads run without an approval click.
- * Defaults on: with `readWithoutAsking` on (owner decision, default on, ADR-0050 amendment 1) a
- * read's result is shared with the selected provider without a per-read click; consent is the
- * per-message workspace access toggle; reads are Core-authorised, scoped to the workspace, at most 20 per
- * turn and 16000 characters each. Device-wide, like `placement` above. */
+ * Defaults on (ADR-0050 amendment 1). Reads remain Core-authorised and scoped to the workspace,
+ * at most 20 per turn and 16000 characters each. This legacy preference controls per-read
+ * prompts; Core's destination-bound sharing consent is required separately. Device-wide,
+ * like `placement` above. */
 export function readReadWithoutAsking(): boolean {
   const raw = readLocal('nix.pet.readWithoutAsking');
   return raw === null ? true : raw === 'true';
@@ -137,11 +137,11 @@ function workspaceAccessKey(workspaceId: string, petId: string): string {
   return `nix.pet.workspaceAccess.${workspaceId}.${petId}`;
 }
 
-/** Whether workspace tools are offered for the next message to this pet, on this device, in
- * this workspace. Off on first use: a device that has never granted a pet workspace access
- * should not silently start sending it workspace content. */
+/** Whether workspace context is offered for this pet on this device. New workspaces default
+ * to on; an explicit off choice is retained. This UI preference does not replace Core access
+ * checks or the provider-sharing decision required by whole-plan conversations. */
 export function readWorkspaceAccess(workspaceId: string, petId: string): boolean {
-  return readLocal(workspaceAccessKey(workspaceId, petId)) === 'true';
+  return readLocal(workspaceAccessKey(workspaceId, petId)) !== 'false';
 }
 
 export function writeWorkspaceAccess(workspaceId: string, petId: string, value: boolean): void {

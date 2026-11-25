@@ -813,6 +813,13 @@ export function createMirrorFetch(deps: MirrorFetchDeps): typeof fetch {
   }
 
   return async (input, sentInit) => {
+    const headers = new Headers(
+      sentInit?.headers ?? (input instanceof Request ? input.headers : undefined),
+    );
+    if (headers.has('X-Nix-Pet-Plan-Request'))
+      return deps.isBootOffline()
+        ? problem(503, 'offline.unavailable', 'This prepared change needs a connection.')
+        : deps.inner(input, sentInit);
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
       globalThis.location.origin,

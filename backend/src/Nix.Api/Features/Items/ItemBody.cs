@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -185,9 +186,9 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
 
     internal async Task<Result<ItemBodyWriteResponse>> WriteWithRevisionAsync(
         Guid itemId, string markdown, bool append, string accessToken, ItemBodyRevision? revision,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, ItemBodyPlanPermit? planPermit = null)
     {
-        using var content = JsonContent.Create(new MarkdownPayload(markdown, revision?.DocumentId, revision?.HeadSeq));
+        using var content = new StringContent(WritePayload(markdown, revision), Encoding.UTF8, "application/json");
         return await SendAsync(
             append ? HttpMethod.Post : HttpMethod.Put,
             itemId,
@@ -195,8 +196,11 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
             accessToken,
             WriteResponseBytes,
             (root, id) => ParseWrite(id, root),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken, planPermit: planPermit).ConfigureAwait(false);
     }
+
+    internal static string WritePayload(string markdown, ItemBodyRevision? revision) =>
+        JsonSerializer.Serialize(new MarkdownPayload(markdown, revision?.DocumentId, revision?.HeadSeq), JsonSerializerOptions.Web);
 
     private async Task<Result<T>> SendAsync<T>(
         HttpMethod method,
@@ -206,7 +210,7 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
         int maxBytes,
         Func<JsonElement, Guid, Result<T>> parse,
         CancellationToken cancellationToken,
-        bool includeRevision = false)
+        bool includeRevision = false, ItemBodyPlanPermit? planPermit = null)
     {
         if (!ExportEndpoints.TryCollaborationBaseUri(_configuration, out var origin))
         {
@@ -221,6 +225,14 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        if (planPermit is not null)
+        {
+            request.Headers.Add("X-Nix-Pet-Plan-Request", planPermit.RequestId.ToString("D"));
+            if (planPermit.Revisions.Length > 0)
+            {
+                request.Headers.Add("X-Nix-Pet-Item-Revisions", planPermit.Revisions);
+            }
+        }
 
         try
         {
@@ -412,6 +424,8 @@ public sealed class ItemBodyClient(HttpClient http, IConfiguration configuration
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? ExpectedDocumentId,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ExpectedHeadSeq);
 }
+
+internal sealed record ItemBodyPlanPermit(Guid RequestId, string Revisions);
 
 /// <summary>Reads and writes note bodies for the item routes.</summary>
 public sealed class ItemBodyHandlers(

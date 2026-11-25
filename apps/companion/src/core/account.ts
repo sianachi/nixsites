@@ -1,3 +1,10 @@
+import type { PetPlanSourceScope } from '@nix/api-client';
+import {
+  addContextSources,
+  HISTORY_SHARING_RECOVERY,
+  readProviderContext,
+  type ProviderContextProvenance,
+} from './context-provenance.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { APP_ONLY_OPERATIONS, mayApplyUnasked } from '@nix/companion/auto-apply';
 import {
@@ -51,6 +58,15 @@ import {
   noteScopeToolRefusal,
   workspaceToolsForRequest,
 } from '../tools/scope.ts';
+import {
+  adoptPlanToolsSchema,
+  cancelPlanToolsSchema,
+  inspectPlanToolsSchema,
+  planToolBindingSchema,
+  resolvePlanToolSchema,
+  supersedePlanToolsSchema,
+} from '../tools/plan-rpc.ts';
+import { observeRecipientConnection } from '../tools/plan-recipient.ts';
 import { TurnTiming } from '../providers/turn-timing.ts';
 import {
   emptyRequest,
@@ -65,6 +81,7 @@ import {
   type ToolCall,
   type ToolState,
   type Transport,
+  type ValidateSharing,
 } from '../shared/types.ts';
 import {
   aborted,
@@ -123,6 +140,9 @@ export interface Conversation {
   title: string;
   /** Set once a protected tool result reaches this conversation; only a reset clears it. */
   lockedRead: boolean;
+  providerContext?: ProviderContextProvenance | undefined;
+  disclosureBlocked: boolean;
+  interruptRequested: boolean;
   /** Never persisted: every load gets a clock-seeded one, monotonic across restarts. */
   revision: number;
   timing: TurnTiming;
@@ -147,6 +167,8 @@ export function newConversation(): Conversation {
     tools: [],
     title: '',
     lockedRead: false,
+    disclosureBlocked: false,
+    interruptRequested: false,
     revision: 0,
     timing: new TurnTiming(),
   };
@@ -156,6 +178,7 @@ export interface HistoryArchive extends HistoryEntry {
   messages: Message[];
   tools: ToolCall[];
   lockedRead?: boolean | undefined;
+  providerContext?: ProviderContextProvenance | undefined;
 }
 
 export interface AccountOptions {
@@ -167,6 +190,7 @@ export interface AccountOptions {
   trace: boolean;
   executeConversationTool?: ConversationToolExecutor | undefined;
   serverTools?: ServerTools | undefined;
+  validateSharing?: ValidateSharing | undefined;
 }
 
 const publicTool = (t: ToolState): ToolCall => ({
@@ -175,6 +199,7 @@ const publicTool = (t: ToolState): ToolCall => ({
   status: t.status,
   result: t.result,
   claimId: t.claimId,
+  ...(t.planBinding === undefined ? {} : { planBinding: t.planBinding }),
 });
 
 function newTool(call: ToolCall): ToolState {
@@ -197,6 +222,9 @@ function toolCalls(value: unknown): ToolCall[] {
     status: str(t.status),
     result: str(t.result),
     claimId: str(t.claimId),
+    ...(planToolBindingSchema.safeParse(t.planBinding).success
+      ? { planBinding: planToolBindingSchema.parse(t.planBinding) }
+      : {}),
   }));
 }
 
@@ -302,6 +330,9 @@ export class Account {
   readonly conversations = new Map<string, Conversation>();
   private readonly chatEffort: string;
   private readonly executeConversationTool: ConversationToolExecutor | undefined;
+  private readonly sourceScopes = new Map<string, PetPlanSourceScope>();
+  private readonly recipientRevisions = new Map<string, string>();
+  private readonly validateSharing: ValidateSharing | undefined;
   private readonly serverTools: ServerTools | undefined;
   models: ModelInfo[] = [];
   private modelsListedAt = 0;
@@ -321,6 +352,7 @@ export class Account {
 
   constructor(options: AccountOptions) {
     this.provider = options.provider;
+    this.validateSharing = options.validateSharing;
     this.home = options.home;
     this.transport = options.transport;
     this.chatEffort = options.chatEffort;
@@ -479,6 +511,8 @@ export class Account {
       c.tools = toolCalls(raw.tools).map(newTool);
       c.title = str(raw.title);
       c.lockedRead = raw.lockedRead === true;
+      c.providerContext = readProviderContext(raw.providerContext);
+      c.disclosureBlocked = raw.disclosureBlocked === true;
       c.state = 'idle';
       if (c.conversationItemId !== '') {
         c.state = c.durableState;
@@ -489,10 +523,14 @@ export class Account {
         }
       }
       for (const t of c.tools) {
-        if (t.status === 'pending' || t.status === 'claimed') {
+        if (['pending', 'claimed', 'planned', 'adopted'].includes(t.status)) {
           t.status = 'interrupted';
           t.result = 'Worker restarted. Check Nix before requesting this change again.';
         }
+      }
+      if (c.disclosureBlocked) {
+        c.state = 'error';
+        c.reason = HISTORY_SHARING_RECOVERY;
       }
     }
     c.revision = Date.now();
@@ -519,6 +557,8 @@ export class Account {
       tools: c.tools.map(publicTool),
       ...(c.title !== '' ? { title: c.title } : {}),
       ...(c.lockedRead ? { lockedRead: true } : {}),
+      ...(c.providerContext === undefined ? {} : { providerContext: c.providerContext }),
+      ...(c.disclosureBlocked ? { disclosureBlocked: true } : {}),
     };
     writeFileAtomic(this.path(key), `${JSON.stringify(persisted)}\n`);
   }
@@ -549,10 +589,95 @@ export class Account {
       r.messages = c.messages.map((m) => ({ ...m }));
       r.tools = c.tools.map(publicTool);
       r.revision = c.revision;
+      if (c.requestId !== '') r.turnId = c.requestId;
+      r.conversationId = key;
+      const plannedTools = c.tools.filter((tool) => tool.status === 'planned');
+      if (plannedTools.length > 0) {
+        const batches = new Map<string, { expected: number; actual: number }>();
+        for (const tool of plannedTools) {
+          const batchId = tool.planBatchId ?? tool.id;
+          const batch = batches.get(batchId) ?? { expected: tool.planBatchSize ?? 1, actual: 0 };
+          batch.actual += tool.planBatchSeen ?? 1;
+          batches.set(batchId, batch);
+        }
+        const sourceScope = this.sourceScopes.get(c.requestId);
+        r.plannedBatch = {
+          turnId: c.requestId,
+          conversationId: key,
+          toolIds: plannedTools.map((tool) => tool.id),
+          ready: [...batches.values()].every((batch) => batch.actual === batch.expected),
+          scope: { rootItemId: c.rootItemId === '' ? null : c.rootItemId, readOnly: c.readOnly },
+          requiresReadDecision:
+            !c.actor.readWithoutAsking &&
+            plannedTools.some((tool) =>
+              READ_ONLY_OPERATIONS.has(
+                toolOperation(tool.arguments) as WorkspaceToolArgs['operation'],
+              ),
+            ),
+          ...(sourceScope === undefined ? {} : { sourceScope }),
+        };
+      }
       r.lockedRead = c.lockedRead;
       r.title = c.title === '' ? defaultTitle(c.messages) : c.title;
     }
     return r;
+  }
+
+  async canDisclose(r: Request): Promise<boolean> {
+    if (this.validateSharing === undefined) return false;
+    const conversation = this.conversations.get(conversationKey(r));
+    if (conversation?.disclosureBlocked === true) return false;
+    const context = conversation?.providerContext;
+    if (
+      conversation !== undefined &&
+      conversation.requestId !== r.requestId &&
+      (conversation.threadId !== '' || conversation.messages.length > 0) &&
+      context === undefined
+    )
+      return false;
+    const decision = await this.validateSharing(
+      {
+        tenantId: r.tenantId,
+        principalId: r.principalId,
+        workspaceId: r.workspaceId,
+        petId: r.petId,
+        provider: this.provider,
+        turnId: r.requestId,
+        attestation: r.sharingAttestation,
+        ...(context === undefined
+          ? {}
+          : {
+              contextSourceItemIds: context.sourceItemIds,
+              contextProtected: context.protectedRead,
+              contextUnbounded: context.unbounded,
+              priorRecipientRevision: context.recipientRevision,
+              priorTurnId: context.turnId,
+              priorSourceScope: context.sourceScope,
+            }),
+      },
+      AbortSignal.timeout(10_000),
+    );
+    if (typeof decision === 'boolean' || !decision.allowed || decision.recipientRevision === null)
+      return false;
+    if (context !== undefined && context.recipientRevision !== decision.recipientRevision)
+      return false;
+    const pinned = this.recipientRevisions.get(r.requestId);
+    if (pinned !== undefined && pinned !== decision.recipientRevision) return false;
+    if (this.recipientRevisions.size >= 128 && pinned === undefined) {
+      const oldest = this.recipientRevisions.keys().next().value;
+      if (oldest !== undefined) {
+        this.recipientRevisions.delete(oldest);
+        this.sourceScopes.delete(oldest);
+      }
+    }
+    this.recipientRevisions.set(r.requestId, decision.recipientRevision);
+    if (decision.sourceScope !== undefined)
+      this.sourceScopes.set(r.requestId, decision.sourceScope);
+    return true;
+  }
+
+  recipientRevisionFor(r: Request): string | undefined {
+    return this.recipientRevisions.get(r.requestId);
   }
 
   // ---- operations ----
@@ -602,6 +727,7 @@ export class Account {
       if (this.loginId !== '')
         await this.transport.call('account/login/cancel', { loginId: this.loginId }, signal);
       await this.transport.call('account/logout', {}, signal);
+      if (this.provider === 'chatgpt') observeRecipientConnection(this.home, null);
       this.status = 'disconnected';
       this.loginId = '';
       this.url = '';
@@ -611,6 +737,8 @@ export class Account {
       const result = await this.transport.call('account/read', { refreshToken: false }, signal);
       if (!isRecord(result)) throw new Error('invalid account status');
       const type = isRecord(result.account) ? str(result.account.type) : undefined;
+      if (this.provider === 'chatgpt')
+        observeRecipientConnection(this.home, type === 'chatgpt' ? result.account : null);
       if (type === 'chatgpt') {
         this.status = 'connected';
         this.reason = "ChatGPT connected. Messages use your account's Codex allowance.";
@@ -652,7 +780,7 @@ export class Account {
     if (op === 'tool_approve') {
       this.approveTool(key, r);
     } else if (op.startsWith('tool_')) {
-      this.resolveTool(key, r);
+      await this.resolveDisclosedTool(key, r);
     } else if (op === 'send') {
       const duplicate = c.requestId === r.requestId;
       if (state === 'thinking' && !duplicate) {
@@ -772,6 +900,19 @@ export class Account {
   // ---- send ----
 
   private async send(signal: AbortSignal, key: string, r: Request): Promise<void> {
+    if (!(await this.canDisclose(r))) {
+      const current = this.conversations.get(key);
+      const message =
+        current !== undefined && (current.messages.length > 0 || current.threadId !== '')
+          ? HISTORY_SHARING_RECOVERY
+          : 'Sharing consent must be reviewed before sending this content.';
+      if (current !== undefined) {
+        current.state = 'error';
+        current.reason = message;
+        this.save(key);
+      }
+      throw new Error(message);
+    }
     const c = this.conversations.get(key);
     if (c === undefined) return;
     let thread = c.threadId;
@@ -885,11 +1026,35 @@ export class Account {
     c.toolVersion = TOOL_VERSION;
     c.requestId = r.requestId;
     c.state = 'thinking';
+    c.interruptRequested = false;
     c.reason = '';
     c.workspaceAccess = r.workspaceAccess;
     c.rootItemId = r.rootItemId;
     c.conversationItemId = r.conversationItemId;
     c.sourceWorkspaceIds = [...r.sourceWorkspaceIds];
+    const sourceScope = this.sourceScopes.get(r.requestId);
+    const recipientRevision = this.recipientRevisionFor(r);
+    if (sourceScope !== undefined && recipientRevision !== undefined) {
+      c.providerContext = {
+        recipientRevision,
+        turnId: r.requestId,
+        sourceScope,
+        sourceItemIds: c.providerContext?.sourceItemIds ?? [],
+        protectedRead: c.lockedRead || (c.providerContext?.protectedRead ?? false),
+        unbounded: c.providerContext?.unbounded ?? false,
+      };
+      addContextSources(
+        c.providerContext,
+        [
+          ...r.items.map((item) => item.id),
+          ...r.workspaceMap.map((item) => item.id),
+          ...(sourceScope.itemIds ?? []),
+          ...[r.itemId, r.rootItemId, r.conversationItemId].filter((id) => id !== ''),
+        ],
+        c.lockedRead,
+        false,
+      );
+    }
     // The turn token is held only when this companion runs server tools, and only for the turn.
     c.actor = {
       ...r,
@@ -933,7 +1098,13 @@ export class Account {
       { prompt: JSON.parse(prompt) as unknown, instructions: r.instructions },
     );
     let turn: unknown;
+    let disclosureConfirmed = false;
     try {
+      if (!(await this.canDisclose(r))) throw new Error(HISTORY_SHARING_RECOVERY);
+      disclosureConfirmed = true;
+      this.transport.setDisclosureGuard?.(thread, () => this.canDisclose(c.actor));
+      turnParams.consentMode = r.consentMode;
+      turnParams.recipientRevision = this.recipientRevisionFor(r);
       turn = await this.transport.call('turn/start', turnParams, signal);
     } catch (error) {
       this.diag.record(key, 'warn', 'turn.start_failed', {
@@ -941,10 +1112,13 @@ export class Account {
         error: logSafeError(error),
       });
       c.actor.turnToken = '';
+      c.turnId = '';
       c.state = 'error';
-      c.reason =
-        'The response could not start. Check the selected model and ChatGPT connection, then retry.';
-      this.bump(c);
+      if (!disclosureConfirmed) c.disclosureBlocked = true;
+      c.reason = disclosureConfirmed
+        ? 'The response could not start. Check the selected model and ChatGPT connection, then retry.'
+        : HISTORY_SHARING_RECOVERY;
+      this.trySave(key);
       throw error;
     }
     if (!isRecord(turn)) throw new Error('invalid turn response');
@@ -956,11 +1130,15 @@ export class Account {
   /** Handles one notification from the provider (a Codex notification or its in-process twin). */
   notify(method: string, params: unknown): void {
     const p = isRecord(params) ? params : {};
+    if (this.provider === 'chatgpt' && method === 'account/updated')
+      observeRecipientConnection(this.home, isRecord(p.account) ? p.account : null);
     if (method === 'account/login/completed') {
       this.loginId = '';
       this.url = '';
       this.code = '';
       if (p.success === true) {
+        if (this.provider === 'chatgpt')
+          observeRecipientConnection(this.home, { connection: randomUUID() });
         this.status = 'connected';
         this.reason = 'ChatGPT connected.';
       } else {
@@ -989,9 +1167,11 @@ export class Account {
       return;
     }
     const failure =
-      turnError === undefined
-        ? ''
-        : providerFailureMessage(this.provider, turnError.nixProviderError);
+      turnError?.nixProviderError === 'nix.sharing_blocked'
+        ? HISTORY_SHARING_RECOVERY
+        : turnError === undefined
+          ? ''
+          : providerFailureMessage(this.provider, turnError.nixProviderError);
     const run = this.inline.get(threadId);
     if (
       failure !== '' &&
@@ -1101,9 +1281,13 @@ export class Account {
       this.diag.record(key, 'warn', 'turn.failed', meta, { turn: traceRaw(params) });
     }
     this.cancelToolsLocked(key);
+    if (turnError?.nixProviderError === 'nix.sharing_blocked') c.disclosureBlocked = true;
     c.messages = withoutDrafts(c.messages);
     c.turnId = '';
-    if (status === 'completed' && c.state !== 'error') {
+    if (c.disclosureBlocked) {
+      c.state = 'error';
+      c.reason = HISTORY_SHARING_RECOVERY;
+    } else if (status === 'completed' && c.state !== 'error') {
       c.state = 'success';
     } else if (status === 'interrupted') {
       c.state = 'idle';
@@ -1199,6 +1383,35 @@ export class Account {
     return true;
   }
 
+  private replyStored(actor: Request, id: unknown, result: unknown): boolean {
+    void this.canDisclose(actor)
+      .then((allowed) => {
+        const current = this.conversations.get(conversationKey(actor));
+        const active =
+          current?.actor === actor &&
+          current.requestId === actor.requestId &&
+          current.state === 'thinking' &&
+          !current.interruptRequested;
+        this.reply(
+          id,
+          allowed && active
+            ? result
+            : toolOutput(false, 'Sharing consent changed. The stored result was not sent.', ''),
+        );
+      })
+      .catch(() => {
+        this.reply(
+          id,
+          toolOutput(
+            false,
+            'Sharing consent could not be confirmed. The stored result was not sent.',
+            '',
+          ),
+        );
+      });
+    return true;
+  }
+
   /**
    * A tool call from the provider. Returns whether the request was accepted (replied to now or
    * later); false makes the transport answer the provider with a refusal.
@@ -1224,6 +1437,12 @@ export class Account {
       return false;
     for (const [key, c] of this.conversations) {
       if (c.threadId !== threadId || c.state !== 'thinking') continue;
+      if (
+        c.actor.consentMode === 'plan' &&
+        typeof p.planBatchSize === 'number' &&
+        p.planBatchSize > 12
+      )
+        return false;
       // Only the typed tool names are accepted; nix_workspace and anything else is rejected here.
       if (!toolNamesChat().has(tool)) {
         this.diag.record(
@@ -1301,15 +1520,27 @@ export class Account {
             status: t.status,
             same_call: t.id === callId,
           });
-          if (t.status === 'pending' || t.status === 'claimed') {
+          if (['pending', 'claimed', 'planned', 'adopted'].includes(t.status)) {
             const idKey = JSON.stringify(id);
             if (t.hasRpcId && JSON.stringify(t.rpcId) === idKey) return true;
             if (t.waiters.some((w) => JSON.stringify(w) === idKey)) return true;
             if (t.waiters.length >= 20) return false;
             t.waiters.push(id);
+            if (
+              t.status === 'planned' &&
+              typeof p.planBatchId === 'string' &&
+              p.planBatchId === t.planBatchId
+            ) {
+              t.planBatchSeen = (t.planBatchSeen ?? 1) + 1;
+              this.trySave(key);
+            }
             return true;
           }
-          return this.reply(id, toolOutput(t.status === 'completed', t.result, t.image));
+          return this.replyStored(
+            c.actor,
+            id,
+            toolOutput(t.status === 'completed', t.result, t.image),
+          );
         }
         // A read after a write needs fresh data, not a cached pre-write result.
         if (!previous.readOnly) readMayBeStale = true;
@@ -1331,16 +1562,28 @@ export class Account {
       const call = newTool({
         id: callId,
         arguments: flat,
-        status: 'pending',
+        status: c.actor.consentMode === 'plan' ? 'planned' : 'pending',
         result: '',
         claimId: '',
       });
+      if (call.status === 'planned') {
+        call.planBatchId = typeof p.planBatchId === 'string' ? p.planBatchId : call.id;
+        call.planBatchSize =
+          typeof p.planBatchSize === 'number' &&
+          Number.isInteger(p.planBatchSize) &&
+          p.planBatchSize > 0 &&
+          p.planBatchSize <= 20
+            ? p.planBatchSize
+            : 1;
+      }
       call.rpcId = id;
       call.hasRpcId = true;
       call.pendingSince = Date.now();
       c.tools.push(call);
       c.timing.toolRecorded();
-      if (c.conversationItemId !== '') {
+      if (call.status === 'planned') {
+        // Core adopts the complete frozen batch before any executor can claim it.
+      } else if (c.conversationItemId !== '') {
         call.status = 'claimed';
         call.claimId = c.requestId;
         call.claimedAt = Date.now();
@@ -1463,7 +1706,7 @@ export class Account {
     const c = this.conversations.get(key);
     if (c?.requestId !== actor.requestId || c.state !== 'thinking') return;
     try {
-      this.resolveTool(key, {
+      await this.resolveDisclosedTool(key, {
         ...emptyRequest(),
         operation: 'tool_result',
         requestId: r.requestId,
@@ -1529,7 +1772,7 @@ export class Account {
       return;
     }
     try {
-      this.resolveTool(key, {
+      await this.resolveDisclosedTool(key, {
         ...emptyRequest(),
         operation: 'tool_result',
         requestId: actor.requestId,
@@ -1572,7 +1815,7 @@ export class Account {
     const c = this.conversations.get(key);
     if (c?.requestId !== actor.requestId || c.state !== 'thinking') return;
     try {
-      this.resolveTool(key, {
+      await this.resolveDisclosedTool(key, {
         ...emptyRequest(),
         operation: 'tool_result',
         requestId: actor.requestId,
@@ -1586,11 +1829,250 @@ export class Account {
     }
   }
 
+  async handlePlanTools(r: Request): Promise<unknown> {
+    const key = conversationKey(r);
+    this.load(key);
+    const c = this.conversations.get(key);
+    if (
+      c?.requestId !== r.requestId ||
+      c.actor.tenantId !== r.tenantId ||
+      c.actor.principalId !== r.principalId ||
+      c.actor.workspaceId !== r.workspaceId ||
+      c.actor.petId !== r.petId ||
+      c.actor.consentMode !== 'plan'
+    )
+      throw new Error('The planned turn is not active.');
+    const payload: unknown = JSON.parse(r.planPayload);
+    if (r.operation === 'plan_tools_inspect') {
+      const { toolIds } = inspectPlanToolsSchema.parse(payload);
+      const sourceScope =
+        this.sourceScopes.get(c.requestId) ??
+        (c.providerContext?.turnId === c.requestId ? c.providerContext.sourceScope : undefined);
+      if (sourceScope === undefined)
+        throw new Error('The original source scope is unavailable. Start a new conversation.');
+      const context = c.providerContext?.turnId === c.requestId ? c.providerContext : undefined;
+      const batch = this.snapshot(key).plannedBatch;
+      if (
+        batch !== undefined &&
+        (!batch.ready ||
+          batch.toolIds.length !== toolIds.length ||
+          batch.toolIds.some((id) => !toolIds.includes(id)))
+      )
+        throw new Error('The complete tool batch must be reviewed together.');
+      if (new Set(toolIds).size !== toolIds.length) throw new Error('Duplicate planned call.');
+      const tools = toolIds.map((id) => {
+        const tool = c.tools.find((entry) => entry.id === id);
+        if (tool === undefined || !['planned', 'adopted'].includes(tool.status))
+          throw new Error('The planned call is unavailable.');
+        return publicTool(tool);
+      });
+      return {
+        turnId: c.requestId,
+        sourceScope,
+        contextSourceItemIds: context?.sourceItemIds ?? [],
+        contextProtected: c.lockedRead || (context?.protectedRead ?? false),
+        contextUnbounded: context?.unbounded ?? true,
+        timeZone: c.actor.timeZone,
+        today: c.actor.today,
+        buildReceipts: c.tools
+          .filter(
+            (tool) =>
+              tool.status === 'completed' &&
+              tool.planBinding !== undefined &&
+              toolOperation(tool.arguments) === 'build_blueprint',
+          )
+          .map((tool) => ({ binding: tool.planBinding, result: tool.result })),
+        tools,
+        lockedRead: c.lockedRead,
+        rootItemId: c.rootItemId,
+        readOnly: c.readOnly,
+        readWithoutAsking: c.actor.readWithoutAsking,
+      };
+    }
+    if (r.operation === 'plan_tools_cancel') {
+      const { toolIds, runId } = cancelPlanToolsSchema.parse(payload);
+      if (new Set(toolIds).size !== toolIds.length) throw new Error('Duplicate planned call.');
+      const current = c.tools.filter((tool) => tool.status === 'planned');
+      if (current.some((tool) => !toolIds.includes(tool.id)))
+        throw new Error('Cancel the complete planned batch.');
+      const reason =
+        'The owner stopped the plan. Check its receipts for any changes that already started.';
+      const tools = toolIds.map((id) => {
+        const tool = c.tools.find((entry) => entry.id === id);
+        if (
+          tool === undefined ||
+          (tool.planBinding !== undefined && tool.planBinding.runId !== runId) ||
+          (!['planned', 'adopted'].includes(tool.status) &&
+            !(tool.status === 'failed' && tool.result === reason))
+        )
+          throw new Error('The planned call belongs to a different run or has already settled.');
+        return tool;
+      });
+      for (const tool of tools) {
+        tool.status = 'failed';
+        tool.result = reason;
+      }
+      c.state = 'idle';
+      this.save(key);
+      if (c.turnId !== '')
+        await this.transport.call(
+          'turn/interrupt',
+          { threadId: c.threadId, turnId: c.turnId },
+          AbortSignal.timeout(5000),
+        );
+      return { cancelled: true };
+    }
+    if (r.operation === 'plan_tools_adopt') {
+      const { bindings } = adoptPlanToolsSchema.parse(payload);
+      if (new Set(bindings.map((binding) => binding.toolId)).size !== bindings.length)
+        throw new Error('Duplicate planned call.');
+      const entries = bindings.map((binding) => {
+        const tool = c.tools.find((entry) => entry.id === binding.toolId);
+        if (
+          tool === undefined ||
+          !['planned', 'adopted'].includes(tool.status) ||
+          (tool.planBinding !== undefined &&
+            JSON.stringify(tool.planBinding) !== JSON.stringify(binding))
+        )
+          throw new Error('The planned call is already owned or unavailable.');
+        return { tool, binding };
+      });
+      for (const { tool, binding } of entries) {
+        tool.status = 'adopted';
+        tool.planBinding = binding;
+      }
+      this.save(key);
+      return { adopted: true };
+    }
+    if (r.operation === 'plan_tools_supersede') {
+      const { bindings } = supersedePlanToolsSchema.parse(payload);
+      if (new Set(bindings.map((entry) => entry.next.toolId)).size !== bindings.length)
+        throw new Error('Duplicate planned call.');
+      const entries = bindings.map(({ previous, next }) => {
+        const tool = c.tools.find((entry) => entry.id === previous.toolId);
+        if (
+          tool?.status !== 'adopted' ||
+          tool.planBinding === undefined ||
+          previous.toolId !== next.toolId ||
+          previous.runId !== next.runId ||
+          previous.planId !== next.planId ||
+          next.planVersion !== previous.planVersion + 1 ||
+          (JSON.stringify(tool.planBinding) !== JSON.stringify(previous) &&
+            JSON.stringify(tool.planBinding) !== JSON.stringify(next))
+        )
+          throw new Error('The previous plan association changed or cannot be superseded.');
+        return { tool, next };
+      });
+      for (const { tool, next } of entries) tool.planBinding = next;
+      this.save(key);
+      return { superseded: true };
+    }
+    const value = resolvePlanToolSchema.parse(payload);
+    const tool = c.tools.find((entry) => entry.id === value.binding.toolId);
+    if (
+      tool?.planBinding === undefined ||
+      JSON.stringify(tool.planBinding) !== JSON.stringify(value.binding)
+    )
+      throw new Error('The plan receipt does not match the adopted call.');
+    if (tool.status === 'completed' || tool.status === 'failed') {
+      if (tool.result !== value.result || (tool.status === 'completed') !== value.success)
+        throw new Error('The plan receipt changed.');
+      return { resolved: true };
+    }
+    if (c.disclosureBlocked && tool.status === 'interrupted') {
+      tool.status = value.success ? 'completed' : 'failed';
+      tool.result = value.result;
+      if (value.lockedContent) c.lockedRead = true;
+      this.save(key);
+      return { resolved: true };
+    }
+    if (tool.status !== 'adopted' || !tool.hasRpcId)
+      throw new Error('The provider call is no longer waiting.');
+    if (c.providerContext !== undefined)
+      addContextSources(
+        c.providerContext,
+        value.sourceItemIds ?? [],
+        value.lockedContent,
+        value.unboundedSourceProvenance ?? value.sourceItemIds === undefined,
+      );
+    const originalActor = c.actor;
+    const allowed = await this.canDisclose(originalActor);
+    const active = c.tools.find((entry) => entry.id === value.binding.toolId);
+    if (
+      c.requestId !== r.requestId ||
+      active !== tool ||
+      JSON.stringify(active.planBinding) !== JSON.stringify(value.binding)
+    )
+      throw new Error('The plan changed while disclosure was being confirmed.');
+    if (active.status === 'completed' || active.status === 'failed') {
+      if (active.result === value.result && (active.status === 'completed') === value.success)
+        return { resolved: true };
+      throw new Error('The plan receipt changed while disclosure was being confirmed.');
+    }
+    if (active.status !== 'adopted') throw new Error('The planned call is no longer active.');
+    const current = this.conversations.get(key);
+    if (
+      current !== c ||
+      c.actor !== originalActor ||
+      c.state !== 'thinking' ||
+      c.interruptRequested
+    ) {
+      tool.status = value.success ? 'completed' : 'failed';
+      tool.result = value.result;
+      if (value.lockedContent) c.lockedRead = true;
+      tool.waiters = [];
+      if (current === c) this.save(key);
+      return { resolved: true };
+    }
+    if (!allowed) {
+      tool.status = value.success ? 'completed' : 'failed';
+      tool.result = value.result;
+      if (value.lockedContent) c.lockedRead = true;
+      c.disclosureBlocked = true;
+      c.state = 'error';
+      c.reason = HISTORY_SHARING_RECOVERY;
+      for (const waiting of c.tools) {
+        if (waiting.status === 'planned' || waiting.status === 'adopted') {
+          waiting.status = 'interrupted';
+          waiting.result =
+            'The provider turn stopped before this result was forwarded. Check execution receipts in Nix before retrying.';
+        }
+        waiting.waiters = [];
+      }
+      this.save(key);
+      await this.transport
+        .call(
+          'turn/interrupt',
+          { threadId: c.threadId, turnId: c.turnId },
+          AbortSignal.timeout(5000),
+        )
+        .catch(() => undefined);
+      return { resolved: true };
+    }
+    tool.status = value.success ? 'completed' : 'failed';
+    tool.result = value.result;
+    if (value.lockedContent) c.lockedRead = true;
+    this.save(key);
+    for (const id of [tool.rpcId, ...tool.waiters])
+      this.reply(id, toolOutput(value.success, value.result, ''));
+    tool.waiters = [];
+    return { resolved: true };
+  }
+
+  private async resolveDisclosedTool(key: string, r: Request): Promise<void> {
+    const c = this.conversations.get(key);
+    if (r.operation === 'tool_result' && c !== undefined && !(await this.canDisclose(c.actor)))
+      throw new Error('Sharing consent changed. The result was not sent to the provider.');
+    this.resolveTool(key, r);
+  }
+
   resolveTool(key: string, r: Request): void {
     const c = this.conversations.get(key);
     if (c === undefined) throw new Error('unknown tool call');
     const t = c.tools.find((tool) => tool.id === r.toolId);
     if (t === undefined) throw new Error('unknown tool call');
+    if (['planned', 'adopted'].includes(t.status) || t.planBinding !== undefined)
+      throw new Error('This tool belongs to a reviewed plan. Use the exact plan decision.');
     if (r.operation === 'tool_claim') {
       if (c.state !== 'thinking' || t.status !== 'pending') {
         this.diag.record(key, 'warn', 'tool.claim_refused', {
@@ -1619,6 +2101,8 @@ export class Account {
     t.image = r.toolImage;
     if (t.result === '') t.result = 'No result supplied. Do not assume the operation succeeded.';
     t.status = r.toolSuccess ? 'completed' : 'failed';
+    if (c.providerContext !== undefined)
+      addContextSources(c.providerContext, [], r.toolLockedContent, true);
     // Sticky for the thread's life: the result is now in the model's context.
     if (r.toolLockedContent) c.lockedRead = true;
     const kind = resultKind(r.toolSuccess, t.result);
@@ -1658,8 +2142,15 @@ export class Account {
   cancelToolsLocked(key: string): void {
     const c = this.conversations.get(key);
     if (c === undefined) return;
+    c.interruptRequested = true;
     c.actor.turnToken = ''; // the token lives no longer than its turn
     for (const t of c.tools) {
+      if (t.status === 'planned') {
+        t.status = 'interrupted';
+        t.result = 'The owner stopped this planned turn. No plan decision was made.';
+        t.waiters = [];
+        continue;
+      }
       if (t.status !== 'pending' && t.status !== 'claimed') continue;
       this.diag.record(key, 'warn', 'tool.interrupted', {
         tool: toolOperation(t.arguments),
@@ -1768,6 +2259,7 @@ export class Account {
     resumed.title = value.title;
     resumed.rootItemId = r.rootItemId;
     resumed.lockedRead = value.lockedRead === undefined || value.lockedRead;
+    resumed.providerContext = value.providerContext;
     resumed.revision = old.revision;
     this.conversations.set(key, resumed);
     this.save(key);
@@ -1883,6 +2375,7 @@ function writeArchive(dir: string, c: Conversation): void {
     messages: c.messages,
     tools: c.tools.map(publicTool),
     lockedRead: c.lockedRead,
+    ...(c.providerContext === undefined ? {} : { providerContext: c.providerContext }),
   });
 }
 
@@ -1930,5 +2423,6 @@ function parseArchive(raw: unknown): HistoryArchive {
     messages: messages(raw.messages),
     tools: toolCalls(raw.tools),
     lockedRead: typeof raw.lockedRead === 'boolean' ? raw.lockedRead : undefined,
+    providerContext: readProviderContext(raw.providerContext),
   };
 }

@@ -107,6 +107,17 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Changed
 
+- Companion workspace context defaults to on for a new pet and workspace. An explicit off choice
+  stays off; Core access checks and provider-sharing decisions still apply.
+- **Breaking:** Sharing Nix content with a companion now requires consent for the selected
+  provider and sources. Open the companion and confirm the sharing question again after upgrading;
+  the old device preference no longer grants access. Scripts using pet runtime or inline API
+  endpoints must complete this browser sharing step before sending source content.
+- Enabled companion workspaces review a whole prepared plan in labelled forms. Continue approves
+  its exact steps once; changed values or scope require a fresh review. Progress and receipts show
+  what applied, what stopped, and what needs checking. App-only steps wait for an open client.
+- Companion chats use the current workspace as their starting context, with visible controls for
+  selected sources. Read-only chats retain that limit when a conversation becomes a job.
 - Website sessions use labelled cookie fields with concealed values and local Undo. Failed
   connection requests keep the entered details for correction and retry.
 - Pet job and property previews show nested values in labelled review fields, with clear empty
@@ -195,6 +206,17 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Solution-wide .NET validation no longer browses frontend dependency trees or Android build
+  output through the frontend source-listing project.
+- The local web server refuses an occupied configured port instead of silently starting on a
+  different port from Core’s browser origin.
+- Enabling companion workspace context no longer automatically attaches withheld or password-locked
+  pages, including temporarily unlocked pages that Core refuses as conversation sources.
+- Companion job options and scheduled routines have consistent inset padding, touch-sized
+  disclosure rows, and space around routine empty states.
+- OpenAI API-key tool conversations use the Responses API for supported GPT 6 models that require
+  it, preserve ordered tool and reasoning history, and discard incompatible replay after a model
+  or provider connection changes. Incomplete responses keep a clear recovery path.
 - Pet requests include valid recursive tool definitions, preserving every existing operation and
   argument rule.
 - API-key conversations use the newly selected model when resuming, including after a restart.

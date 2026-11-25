@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { sourceScopeSchema } from './pet-plan-source-scope.js';
 
 const petProfileFields = z.object({
   id: z.uuid(),
@@ -135,7 +136,25 @@ export const petConnectionSchema = z.object({
       z.object({
         id: z.string().max(200),
         arguments: z.string().max(40000),
-        status: z.enum(['pending', 'claimed', 'completed', 'failed', 'interrupted']),
+        status: z.enum([
+          'pending',
+          'claimed',
+          'completed',
+          'failed',
+          'interrupted',
+          'planned',
+          'adopted',
+        ]),
+        planBinding: z
+          .object({
+            toolId: z.string(),
+            runId: z.uuid(),
+            planId: z.uuid(),
+            planVersion: z.number().int(),
+            reviewDigest: z.string(),
+            stepId: z.uuid(),
+          })
+          .nullish(),
         result: z.string().max(32000),
         claimId: z.string().max(80),
       }),
@@ -154,6 +173,19 @@ export const petConnectionSchema = z.object({
   serverWrites: z.boolean().default(false),
   /** The live conversation's name: the owner's rename, else its first message. */
   title: z.string().default(''),
+  turnId: z.string().default(''),
+  conversationId: z.string().default(''),
+  plannedBatch: z
+    .object({
+      turnId: z.string(),
+      conversationId: z.string(),
+      toolIds: z.array(z.string()).max(12),
+      ready: z.boolean(),
+      requiresReadDecision: z.boolean().optional(),
+      sourceScope: sourceScopeSchema.nullish(),
+      scope: z.object({ rootItemId: z.uuid().nullable(), readOnly: z.boolean() }).nullish(),
+    })
+    .nullish(),
 });
 
 export type PetProfile = z.infer<typeof petProfileSchema>;

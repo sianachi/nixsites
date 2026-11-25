@@ -335,6 +335,36 @@
         }
       }
     },
+    "/internal/pets/sharing/validate": {
+      "post": {
+        "tags": [
+          "PetPlanSharingEndpoints"
+        ],
+        "operationId": "ValidatePetSharing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidatePetSharingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidatePetSharingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/pet-runs": {
       "get": {
         "tags": [
@@ -7588,6 +7618,999 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans": {
+      "get": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "List the caller's workspace plans.",
+        "operationId": "ListPetPlans",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlansResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Prepare a workspace plan for owner review.",
+        "operationId": "CreatePetPlan",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPetPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}": {
+      "get": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Inspect an owned plan and its observed results.",
+        "operationId": "GetPetPlan",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/watch": {
+      "get": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Poll the current plan revision.",
+        "operationId": "WatchPetPlan",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/drafts": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Prepare a fresh plan from stored editable fields or feedback.",
+        "operationId": "RevisePetPlan",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisePetPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/decision": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Record exact owner or explicitly delegated consent for a prepared plan version.",
+        "operationId": "DecidePetPlan",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecidePetPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/answer": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Answer a clarification without approving effects.",
+        "operationId": "AnswerPetPlan",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerPetPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/cancel": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Cancel the plan's undispatched effects.",
+        "operationId": "CancelPetPlan",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPetPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/claim": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Claim the next frozen effect requiring an owner client.",
+        "operationId": "ClaimPetPlanStep",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "stepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimPetPlanStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanStepClaimResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/result": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Record a bounded receipt for the exact active client claim.",
+        "operationId": "RecordPetPlanStep",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "stepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordPetPlanStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/undo": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Queue the supported undo of one applied receipt.",
+        "operationId": "UndoPetPlanStep",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "stepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UndoPetPlanStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "operationId": "DecidePetPlanSharing",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecidePetPlanSharingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "operationId": "CreatePetPlanDecisionHandoff",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePetPlanDecisionHandoffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanDecisionHandoffResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs/{handoffId}": {
+      "get": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "operationId": "GetPetPlanDecisionHandoff",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "handoffId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanDecisionHandoffStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "operationId": "RevokePetPlanDecisionHandoff",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "handoffId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanDecisionHandoffStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-contexts": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "operationId": "AuthorizePetPlanDecisionContext",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePetPlanDecisionContextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPlanDecisionHandoffStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-sharing/question": {
+      "post": {
+        "tags": [
+          "Pet Sharing"
+        ],
+        "operationId": "GetPetSharingQuestion",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetSharingQuestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetSharingQuestionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-sharing/decision": {
+      "post": {
+        "tags": [
+          "Pet Sharing"
+        ],
+        "operationId": "DecidePetSharing",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetSharingDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetSharingQuestionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/io": {
+      "get": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Read the next server-prepared exact request for an owner client.",
+        "operationId": "GetPetPlanClientIntent",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/io/result": {
+      "post": {
+        "tags": [
+          "Pet Plans"
+        ],
+        "summary": "Return the response to the exact dispatched owner-client request.",
+        "operationId": "RecordPetPlanClientIoResult",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetPlanClientIoResult"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -14956,6 +15979,39 @@
           }
         }
       },
+      "AnswerPetPlanRequest": {
+        "required": [
+          "expectedRunRevision",
+          "questionId",
+          "answer",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedRunRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "AnswerPetRunRequest": {
         "required": [
           "questionId",
@@ -16274,6 +17330,27 @@
           }
         }
       },
+      "CancelPetPlanRequest": {
+        "required": [
+          "expectedRunRevision",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedRunRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "CanvasLibraryResponse": {
         "required": [
           "items"
@@ -16606,6 +17683,45 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "ClaimPetPlanStepRequest": {
+        "required": [
+          "expectedRunRevision",
+          "planVersion",
+          "reviewDigest",
+          "requestId",
+          "runnerContextId"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedRunRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "planVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reviewDigest": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runnerContextId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -17366,6 +18482,82 @@
           }
         }
       },
+      "CreatePetPlanDecisionContextRequest": {
+        "required": [
+          "handoffId",
+          "planId",
+          "planVersion",
+          "reviewDigest",
+          "granteeCredentialId",
+          "clientName",
+          "approve"
+        ],
+        "type": "object",
+        "properties": {
+          "handoffId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reviewDigest": {
+            "type": "string"
+          },
+          "granteeCredentialId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "approve": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreatePetPlanDecisionHandoffRequest": {
+        "required": [
+          "planId",
+          "planVersion",
+          "reviewDigest",
+          "clientName",
+          "approve"
+        ],
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reviewDigest": {
+            "type": "string"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "approve": {
+            "type": "boolean"
+          }
+        }
+      },
       "CreateSiteRequest": {
         "required": [
           "rootItemId",
@@ -17797,6 +18989,89 @@
           },
           "showOnCalendar": {
             "type": "boolean"
+          }
+        }
+      },
+      "DecidePetPlanRequest": {
+        "required": [
+          "expectedRunRevision",
+          "planVersion",
+          "reviewDigest",
+          "approve",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedRunRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "planVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reviewDigest": {
+            "type": "string"
+          },
+          "approve": {
+            "type": "boolean"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decisionContext": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DecidePetPlanSharingRequest": {
+        "required": [
+          "expectedRunRevision",
+          "recipientRevision",
+          "scopeDigest",
+          "approve",
+          "requestId",
+          "decisionNonce"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedRunRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "recipientRevision": {
+            "type": "string"
+          },
+          "scopeDigest": {
+            "type": "string"
+          },
+          "approve": {
+            "type": "boolean"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decisionNonce": {
+            "type": "string",
+            "format": "uuid",
+            "default": "00000000-0000-0000-0000-000000000000"
           }
         }
       },
@@ -21058,6 +22333,24 @@
           "serverWrites": {
             "type": "boolean",
             "default": false
+          },
+          "turnId": {
+            "type": "string",
+            "default": ""
+          },
+          "conversationId": {
+            "type": "string",
+            "default": ""
+          },
+          "plannedBatch": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlannedBatch"
+              }
+            ]
           }
         }
       },
@@ -21315,6 +22608,773 @@
           }
         }
       },
+      "PetPlanChatSource": {
+        "required": [
+          "conversationId",
+          "toolCallIds",
+          "turnId"
+        ],
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "toolCallIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "turnId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rootItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "PetPlanClientIoResult": {
+        "required": [
+          "requestId",
+          "status",
+          "headers",
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      },
+      "PetPlanDecisionHandoffResponse": {
+        "required": [
+          "handoffId",
+          "browserPath",
+          "decisionContext",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "handoffId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "browserPath": {
+            "type": "string"
+          },
+          "decisionContext": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PetPlanDecisionHandoffStatus": {
+        "required": [
+          "handoffId",
+          "granteeCredentialId",
+          "clientName",
+          "planId",
+          "planVersion",
+          "reviewDigest",
+          "approve",
+          "status",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "handoffId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "granteeCredentialId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reviewDigest": {
+            "type": "string"
+          },
+          "approve": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PetPlanDecisionRecord": {
+        "required": [
+          "requestId",
+          "approve",
+          "at",
+          "credentialClass",
+          "authorityId",
+          "actorId"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approve": {
+            "type": "boolean"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "credentialClass": {
+            "type": "string"
+          },
+          "authorityId": {
+            "type": "string"
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "PetPlanFieldEdit": {
+        "required": [
+          "stepId",
+          "fieldId",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fieldId": {
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonElement"
+          }
+        }
+      },
+      "PetPlanFieldResponse": {
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "help": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "default": false
+          },
+          "choices": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "currentValue": { }
+        }
+      },
+      "PetPlannedBatch": {
+        "required": [
+          "turnId",
+          "conversationId",
+          "toolIds",
+          "ready"
+        ],
+        "type": "object",
+        "properties": {
+          "turnId": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "toolIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "sourceScope": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetSourceScopeDescriptor"
+              }
+            ]
+          },
+          "scope": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlannedToolScope"
+              }
+            ]
+          },
+          "requiresReadDecision": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "PetPlannedToolScope": {
+        "required": [
+          "rootItemId",
+          "readOnly"
+        ],
+        "type": "object",
+        "properties": {
+          "rootItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PetPlanObservation": {
+        "required": [
+          "id",
+          "capability",
+          "description",
+          "receiptView"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capability": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "receiptView": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanReceiptView"
+              }
+            ]
+          }
+        }
+      },
+      "PetPlanReceiptView": {
+        "required": [
+          "summary"
+        ],
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string"
+          },
+          "details": { },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PetPlanRecipientDescriptor": {
+        "required": [
+          "provider",
+          "destination",
+          "routingPolicy",
+          "connectionRevision"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "routingPolicy": {
+            "type": "string"
+          },
+          "connectionRevision": {
+            "type": "string"
+          }
+        }
+      },
+      "PetPlanResponse": {
+        "required": [
+          "id",
+          "workspaceId",
+          "anchorItemId",
+          "petId",
+          "brief",
+          "sourceScope",
+          "status",
+          "revision",
+          "sharingQuestion",
+          "question",
+          "plan",
+          "results",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "anchorItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brief": {
+            "type": "string"
+          },
+          "sourceScope": {
+            "$ref": "#/components/schemas/PetPlanSourceScope"
+          },
+          "status": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sharingQuestion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanSharingQuestion"
+              }
+            ]
+          },
+          "question": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetRunQuestion"
+              }
+            ]
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanReview"
+              }
+            ]
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetRunResult"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "afterMessageId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failure": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetRunFailure"
+              }
+            ]
+          },
+          "observations": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PetPlanObservation"
+            }
+          }
+        }
+      },
+      "PetPlanReview": {
+        "required": [
+          "id",
+          "version",
+          "summary",
+          "reviewDigest",
+          "scopeDigest",
+          "recipientRevision",
+          "status",
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "reviewDigest": {
+            "type": "string"
+          },
+          "scopeDigest": {
+            "type": "string"
+          },
+          "recipientRevision": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetPlanStepResponse"
+            }
+          },
+          "decision": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanDecisionRecord"
+              }
+            ]
+          }
+        }
+      },
+      "PetPlanSharingQuestion": {
+        "required": [
+          "scopeDigest",
+          "recipientRevision",
+          "sourceScope",
+          "recipient",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "scopeDigest": {
+            "type": "string"
+          },
+          "recipientRevision": {
+            "type": "string"
+          },
+          "sourceScope": {
+            "$ref": "#/components/schemas/PetPlanSourceScope"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/PetPlanRecipientDescriptor"
+          },
+          "message": {
+            "type": "string"
+          },
+          "decisionNonce": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "PetPlanSourceScope": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "itemIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "readOnlyWorkspaceIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "PetPlansResponse": {
+        "required": [
+          "enabled",
+          "abilities",
+          "runs"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "abilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetRunAbility"
+            }
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetPlanResponse"
+            }
+          }
+        }
+      },
+      "PetPlanStepClaimResponse": {
+        "required": [
+          "run",
+          "claimId",
+          "executionId",
+          "stepId",
+          "capability",
+          "arguments",
+          "preview",
+          "executor",
+          "dispatchContext"
+        ],
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/PetPlanResponse"
+          },
+          "claimId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "executionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stepId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capability": {
+            "type": "string"
+          },
+          "arguments": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "executor": {
+            "type": "string"
+          },
+          "dispatchContext": {
+            "type": "string"
+          }
+        }
+      },
+      "PetPlanStepResponse": {
+        "required": [
+          "id",
+          "capability",
+          "arguments",
+          "effect",
+          "executor",
+          "status",
+          "fields"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capability": {
+            "type": "string"
+          },
+          "arguments": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "effect": {
+            "$ref": "#/components/schemas/PetRunEffect"
+          },
+          "executor": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetPlanFieldResponse"
+            }
+          },
+          "receipt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "undoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "receiptView": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanReceiptView"
+              }
+            ]
+          }
+        }
+      },
       "PetProfile": {
         "required": [
           "id",
@@ -21400,6 +23460,21 @@
           }
         }
       },
+      "PetRunEffect": {
+        "required": [
+          "description",
+          "parameters"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/JsonElement"
+          }
+        }
+      },
       "PetRunFailure": {
         "required": [
           "stage",
@@ -21466,6 +23541,24 @@
             "format": "uuid"
           },
           "automatic": {
+            "type": "boolean",
+            "default": false
+          },
+          "sourceItemIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "observationBlocked": {
+            "type": "boolean",
+            "default": false
+          },
+          "unboundedSourceProvenance": {
             "type": "boolean",
             "default": false
           }
@@ -21811,6 +23904,10 @@
           "approvedOperation": {
             "type": "string",
             "default": ""
+          },
+          "consentMode": {
+            "type": "string",
+            "default": ""
           }
         }
       },
@@ -21877,6 +23974,114 @@
           }
         }
       },
+      "PetSharingDecisionRequest": {
+        "required": [
+          "petId",
+          "sourceScope",
+          "recipientRevision",
+          "scopeDigest",
+          "approve",
+          "requestId",
+          "decisionNonce"
+        ],
+        "type": "object",
+        "properties": {
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceScope": {
+            "$ref": "#/components/schemas/PetPlanSourceScope"
+          },
+          "recipientRevision": {
+            "type": "string"
+          },
+          "scopeDigest": {
+            "type": "string"
+          },
+          "approve": {
+            "type": "boolean"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decisionNonce": {
+            "type": "string",
+            "format": "uuid",
+            "default": "00000000-0000-0000-0000-000000000000"
+          }
+        }
+      },
+      "PetSharingQuestionRequest": {
+        "required": [
+          "petId",
+          "sourceScope"
+        ],
+        "type": "object",
+        "properties": {
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceScope": {
+            "$ref": "#/components/schemas/PetPlanSourceScope"
+          },
+          "forDecision": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "PetSharingQuestionResponse": {
+        "required": [
+          "question"
+        ],
+        "type": "object",
+        "properties": {
+          "question": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanSharingQuestion"
+              }
+            ]
+          }
+        }
+      },
+      "PetSourceScopeDescriptor": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "itemIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "readOnlyWorkspaceIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "PetStreamRequest": {
         "required": [
           "workspaceId",
@@ -21929,6 +24134,55 @@
           },
           "claimId": {
             "type": "string"
+          },
+          "planBinding": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetToolPlanBinding"
+              }
+            ]
+          }
+        }
+      },
+      "PetToolPlanBinding": {
+        "required": [
+          "toolId",
+          "runId",
+          "planId",
+          "planVersion",
+          "reviewDigest",
+          "stepId"
+        ],
+        "type": "object",
+        "properties": {
+          "toolId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reviewDigest": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -22874,6 +25128,47 @@
           }
         }
       },
+      "RecordPetPlanStepRequest": {
+        "required": [
+          "planVersion",
+          "reviewDigest",
+          "claimId",
+          "executionId",
+          "status",
+          "receipt"
+        ],
+        "type": "object",
+        "properties": {
+          "planVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reviewDigest": {
+            "type": "string"
+          },
+          "claimId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "executionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "receipt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RecoverWorkspaceRequest": {
         "required": [
           "newOwnerPrincipalId"
@@ -23202,6 +25497,54 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "RevisePetPlanRequest": {
+        "required": [
+          "expectedRunRevision",
+          "planVersion",
+          "fieldEdits",
+          "feedback",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedRunRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "planVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fieldEdits": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PetPlanFieldEdit"
+            }
+          },
+          "feedback": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -24549,6 +26892,59 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "StartPetPlanRequest": {
+        "required": [
+          "petId",
+          "brief",
+          "anchorItemId",
+          "sourceScope",
+          "afterMessageId",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brief": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "anchorItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "sourceScope": {
+            "$ref": "#/components/schemas/PetPlanSourceScope"
+          },
+          "afterMessageId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatSource": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanChatSource"
+              }
+            ]
           }
         }
       },
@@ -26149,6 +28545,27 @@
           }
         }
       },
+      "UndoPetPlanStepRequest": {
+        "required": [
+          "expectedRunRevision",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedRunRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "UnlockItemResponse": {
         "required": [
           "unlockedUntil"
@@ -26447,6 +28864,114 @@
           },
           "item": {
             "$ref": "#/components/schemas/ItemResponse"
+          }
+        }
+      },
+      "ValidatePetSharingRequest": {
+        "required": [
+          "attestation",
+          "tenantId",
+          "principalId",
+          "workspaceId",
+          "petId",
+          "provider",
+          "turnId"
+        ],
+        "type": "object",
+        "properties": {
+          "attestation": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "principalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priorTurnId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "contextSourceItemIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "contextProtected": {
+            "type": "boolean",
+            "default": false
+          },
+          "contextUnbounded": {
+            "type": "boolean",
+            "default": false
+          },
+          "priorRecipientRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "priorSourceScope": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanSourceScope"
+              }
+            ]
+          }
+        }
+      },
+      "ValidatePetSharingResponse": {
+        "required": [
+          "allowed"
+        ],
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "recipientRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sourceScope": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetPlanSourceScope"
+              }
+            ]
           }
         }
       },
@@ -27971,6 +30496,9 @@
       "name": "Canvas"
     },
     {
+      "name": "PetPlanSharingEndpoints"
+    },
+    {
       "name": "Pet Runs"
     },
     {
@@ -28029,6 +30557,12 @@
     },
     {
       "name": "Pets"
+    },
+    {
+      "name": "Pet Plans"
+    },
+    {
+      "name": "Pet Sharing"
     },
     {
       "name": "Pet peers"

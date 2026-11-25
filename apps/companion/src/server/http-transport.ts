@@ -1,3 +1,5 @@
+import { responsesReplaySchema } from './responses-wire.ts';
+import { HISTORY_SHARING_RECOVERY } from '../core/context-provenance.ts';
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,6 +20,12 @@ import {
   type ProviderWire,
   type WireContext,
 } from './wire.ts';
+
+class HistoryDisclosureError extends Error {
+  constructor() {
+    super(HISTORY_SHARING_RECOVERY);
+  }
+}
 
 /**
  * Serves the Codex app-server vocabulary the account already speaks over a provider's HTTPS API:
@@ -53,6 +61,7 @@ const THREAD_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 function messageBytes(message: ProviderMessage): number {
   let size = Buffer.byteLength(message.text ?? '');
+  if (message.responses !== undefined) size += Buffer.byteLength(JSON.stringify(message.responses));
   for (const call of message.toolCalls ?? [])
     size += Buffer.byteLength(JSON.stringify(call.arguments ?? {}));
   for (const result of message.toolResults ?? [])
@@ -97,6 +106,9 @@ export function trimThread(thread: HttpThread): void {
   if (opening !== '' && head !== undefined) {
     head.text = `The conversation began with this message; its earlier turns were dropped to save space:\n${opening}\n\nThe message now:\n${head.text ?? ''}`;
   }
+  for (const message of kept)
+    if (message.responses !== undefined)
+      message.responses.items = message.responses.items.filter((item) => item.type !== 'reasoning');
   thread.messages = kept;
 }
 
@@ -110,6 +122,7 @@ export class HttpTransport implements Transport {
   private readonly wire: ProviderWire;
   private readonly threads = new Map<string, HttpThread>();
   private readonly turns = new Map<string, AbortController>();
+  private readonly disclosureGuards = new Map<string, () => Promise<boolean>>();
   private readonly replies = new Map<string, (reply: ToolReply) => void>();
   private nextId = 0;
   private handler: RequestHandler | undefined;
@@ -142,6 +155,10 @@ export class HttpTransport implements Transport {
 
   setApiKey(key: string): void {
     this.apiKey = key;
+  }
+
+  setDisclosureGuard(threadId: string, guard: () => Promise<boolean>): void {
+    this.disclosureGuards.set(threadId, guard);
   }
 
   setRequestHandler(handler: RequestHandler): void {
@@ -289,6 +306,18 @@ export class HttpTransport implements Transport {
     }
     if (!isRecord(parsed) || parsed.id !== id)
       throw new Error("that conversation's thread could not be read");
+    if (Array.isArray(parsed.messages)) {
+      for (const message of parsed.messages) {
+        if (
+          isRecord(message) &&
+          message.responses !== undefined &&
+          !responsesReplaySchema.safeParse(message.responses).success
+        )
+          throw new Error(
+            'The saved provider response could not be restored. Start a fresh conversation.',
+          );
+      }
+    }
     const loaded: HttpThread = {
       id,
       model: str(parsed.model),
@@ -303,9 +332,9 @@ export class HttpTransport implements Transport {
     return loaded;
   }
 
-  private save(thread: HttpThread): void {
+  private save(thread: HttpThread, trim = true): void {
     if (thread.ephemeral) return;
-    trimThread(thread);
+    if (trim) trimThread(thread);
     try {
       const persisted = {
         id: thread.id,
@@ -330,10 +359,24 @@ export class HttpTransport implements Transport {
       throw new Error('no API key for this provider; add one in Pet settings');
     const turnId = randomBytes(16).toString('hex');
     thread.messages.push({ role: 'user', text: str(first.text) });
+    trimThread(thread);
     const controller = new AbortController();
     this.turns.set(turnId, controller);
     // Started after the caller has the turn id, so no notification can precede it.
-    setImmediate(() => void this.runTurn(controller.signal, thread, turnId));
+    const context = {
+      ...this.context(controller.signal),
+      recipientRevision: str(p.recipientRevision),
+    };
+    setImmediate(
+      () =>
+        void this.runTurn(
+          context,
+          thread,
+          turnId,
+          this.disclosureGuards.get(thread.id),
+          p.consentMode === 'plan',
+        ),
+    );
     return { turn: { id: turnId } };
   }
 
@@ -342,8 +385,17 @@ export class HttpTransport implements Transport {
    * account's handler (the same claim/approve/result path the browser drives), feed the results
    * back, and repeat until the model answers without tools. Every outcome ends in turn/completed.
    */
-  private async runTurn(signal: AbortSignal, thread: HttpThread, turnId: string): Promise<void> {
+  private async runTurn(
+    context: WireContext,
+    thread: HttpThread,
+    turnId: string,
+    disclosureGuard?: () => Promise<boolean>,
+    planMode = false,
+  ): Promise<void> {
+    const signal = context.signal;
     thread.usage = emptyUsage();
+    const activeStart = thread.messages.length - 1;
+    let nativeActive = false;
     const finish = (status: string, failure?: unknown): void => {
       const turn: Record<string, unknown> = { status };
       // Only the Anthropic wire reports counts; zeros from the others would read as free turns.
@@ -351,7 +403,10 @@ export class HttpTransport implements Transport {
       if (failure !== undefined)
         turn.error = {
           message: errorMessage(failure),
-          nixProviderError: providerFailureToken(failure),
+          nixProviderError:
+            failure instanceof HistoryDisclosureError
+              ? 'nix.sharing_blocked'
+              : providerFailureToken(failure),
         };
       this.notify('turn/completed', { threadId: thread.id, turn });
     };
@@ -360,7 +415,18 @@ export class HttpTransport implements Transport {
         const itemId = `${turnId}-${String(round)}`;
         let result: Awaited<ReturnType<ProviderWire['stream']>>;
         try {
-          result = await this.wire.stream(this.context(signal), thread, (delta) => {
+          if (
+            nativeActive &&
+            thread.messages
+              .slice(activeStart)
+              .reduce((sum, message) => sum + messageBytes(message), 0) > MAX_THREAD_BYTES
+          )
+            throw new Error(
+              'The active response exceeded its safe continuation size. Start a smaller task.',
+            );
+          if (disclosureGuard !== undefined && !(await disclosureGuard()))
+            throw new HistoryDisclosureError();
+          result = await this.wire.stream(context, thread, (delta) => {
             this.notify('item/agentMessage/delta', { threadId: thread.id, itemId, delta });
           });
         } catch (error) {
@@ -370,12 +436,34 @@ export class HttpTransport implements Transport {
           return;
         }
         const { text, calls } = result;
+        nativeActive ||= result.responses !== undefined;
         // A reply with neither words nor tool calls would show as a blank bubble and read as success.
         if (calls.length === 0 && text.trim() === '') {
           finish('failed', new Error('The model finished without an answer. Try again'));
           return;
         }
-        thread.messages.push({ role: 'assistant', text, toolCalls: calls });
+        if (
+          result.responses !== undefined &&
+          thread.messages
+            .slice(activeStart)
+            .reduce((sum, message) => sum + messageBytes(message), 0) +
+            Buffer.byteLength(JSON.stringify(result.responses)) >
+            MAX_THREAD_BYTES
+        ) {
+          finish(
+            'failed',
+            new Error(
+              'The active response exceeded its safe continuation size. Start a smaller task.',
+            ),
+          );
+          return;
+        }
+        thread.messages.push({
+          role: 'assistant',
+          text,
+          toolCalls: calls,
+          ...(result.responses === undefined ? {} : { responses: result.responses }),
+        });
         if (calls.length === 0) {
           this.save(thread);
           this.notify('item/completed', {
@@ -392,8 +480,22 @@ export class HttpTransport implements Transport {
           });
         }
         const results: ProviderToolResult[] = [];
+        const pending = planMode
+          ? calls.map((call) =>
+              this.askTool(
+                signal,
+                thread.id,
+                call.id,
+                call.name,
+                call.arguments,
+                `${turnId}:${String(round)}`,
+                calls.length,
+              ),
+            )
+          : undefined;
         for (const [i, call] of calls.entries()) {
-          const reply = await this.askTool(signal, thread.id, call.id, call.name, call.arguments);
+          const reply = await (pending?.[i] ??
+            this.askTool(signal, thread.id, call.id, call.name, call.arguments));
           if (reply === undefined) {
             // Every call still gets an answer: an assistant tool call with no result after it
             // makes the provider refuse the thread's next message.
@@ -409,7 +511,7 @@ export class HttpTransport implements Transport {
             finish('interrupted');
             return;
           }
-          if (reply.image !== '' && !(await this.acceptsImages(signal, thread.model))) {
+          if (reply.image !== '' && !(await this.acceptsImages(context, thread.model))) {
             // A picture a text-only model is sent fails this request and every later one in the
             // thread, since the history keeps it.
             reply.text +=
@@ -424,7 +526,7 @@ export class HttpTransport implements Transport {
           });
         }
         thread.messages.push({ role: 'user', toolResults: results });
-        this.save(thread);
+        this.save(thread, false);
       }
       finish(
         'failed',
@@ -448,13 +550,21 @@ export class HttpTransport implements Transport {
     callId: string,
     name: string,
     args: unknown,
+    planBatchId?: string,
+    planBatchSize?: number,
   ): Promise<ToolReply | undefined> {
     this.nextId++;
     const id = this.nextId;
     const key = JSON.stringify(id);
     const waiting = new Promise<ToolReply>((resolve) => this.replies.set(key, resolve));
     try {
-      const params = { threadId, tool: name, callId, arguments: args };
+      const params = {
+        threadId,
+        tool: name,
+        callId,
+        arguments: args,
+        ...(planBatchId === undefined ? {} : { planBatchId, planBatchSize }),
+      };
       const handled =
         this.handler?.(id, 'item/tool/call', params, Buffer.byteLength(JSON.stringify(params))) ??
         false;
@@ -488,15 +598,16 @@ export class HttpTransport implements Transport {
    * says, read once if no list has been read yet; a model the list does not name, or a list that
    * cannot be read, counts as no.
    */
-  private async acceptsImages(signal: AbortSignal, model: string): Promise<boolean> {
+  private async acceptsImages(context: WireContext, model: string): Promise<boolean> {
     if (this.kind === 'anthropic') return true;
     if (this.seesImages === undefined) {
       try {
-        await this.listModels(signal);
+        const models = await this.wire.listModels(context);
+        this.seesImages = new Map(models.map((model) => [model.id, !model.textOnly]));
       } catch {
         return false;
       }
     }
-    return this.seesImages?.get(model) ?? false;
+    return this.seesImages.get(model) ?? false;
   }
 }

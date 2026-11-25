@@ -38,6 +38,7 @@ export function Composer({
   onToggleWorkspaceAccess,
   applyWithoutAsking,
   onApplyChange,
+  planConsent = false,
   hasPage,
   contextCount,
   hasSelection,
@@ -71,6 +72,7 @@ export function Composer({
   readonly onToggleWorkspaceAccess: () => void;
   readonly applyWithoutAsking: boolean;
   readonly onApplyChange: (on: boolean) => void;
+  readonly planConsent?: boolean;
   readonly hasPage: boolean;
   readonly contextCount: number;
   readonly hasSelection: boolean;
@@ -101,14 +103,14 @@ export function Composer({
     ...(!hasNoteScope && !workspaceAccess
       ? [
           {
-            label: 'Use workspace',
+            label: planConsent ? 'Include workspace context' : 'Use workspace',
             icon: Layers,
             disabled: running,
             onSelect: onToggleWorkspaceAccess,
           },
         ]
       : []),
-    ...(workspaceAccess && !noteReadOnly
+    ...(!planConsent && workspaceAccess && !noteReadOnly
       ? [
           {
             label: 'Apply without asking',
@@ -171,13 +173,17 @@ export function Composer({
       />
       {needsWorkspaceAccess ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-divider bg-surface px-3 py-2">
-          <Text variant="note">{petName} needs workspace access for this.</Text>
+          <Text variant="note">
+            {planConsent
+              ? 'Include context to use the selected sources.'
+              : `${petName} needs workspace access for this.`}
+          </Text>
           <Button variant="secondary" onClick={onTurnOnWorkspaceAccess}>
-            Turn on
+            {planConsent ? 'Include context' : 'Turn on'}
           </Button>
         </div>
       ) : null}
-      {applyWithoutAsking ? (
+      {applyWithoutAsking && !planConsent ? (
         // Not a live region: the menu item's own check already shows the state, and a region that
         // appears with its text already in it is read unreliably.
         <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-divider bg-accent/15 px-3 py-2">

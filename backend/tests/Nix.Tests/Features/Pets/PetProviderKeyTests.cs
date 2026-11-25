@@ -29,6 +29,21 @@ public sealed class PetProviderKeyTests
     }
 
     [Fact]
+    public async Task Save_returns_the_persisted_credential_revision_metadata()
+    {
+        var session = new ScopedNixSessionContextAccessor();
+        session.Set(new NixSessionContext(TenantId.Create(), null, PrincipalId.Create()));
+        var persistedAt = new DateTimeOffset(2027, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var store = new MemoryStore { PersistedAt = persistedAt };
+        var protector = new PetProviderKeyProtector(new EphemeralDataProtectionProvider());
+        var result = await new SavePetProviderKeyHandler(store, protector, session).HandleAsync(
+            new("anthropic", "fixture-api-key-abcdefghijklmnopqrstuvwxyz"), Cancellation);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(persistedAt, result.Value.SavedAt);
+        Assert.Equal(Assert.Single(store.Rows).SavedAt, result.Value.SavedAt);
+    }
+
+    [Fact]
     public async Task A_saved_key_is_stored_protected_listed_by_hint_only_and_forgotten_on_remove()
     {
         var session = new ScopedNixSessionContextAccessor();
@@ -66,6 +81,7 @@ public sealed class PetProviderKeyTests
 
     private sealed class MemoryStore : IPetProviderCredentialStore
     {
+        public DateTimeOffset? PersistedAt { get; init; }
         public List<PetProviderCredential> Rows { get; } = [];
 
         public ValueTask<PetProviderCredential?> FindAsync(TenantId tenantId, PrincipalId principalId, string provider, CancellationToken cancellationToken) =>
@@ -77,7 +93,15 @@ public sealed class PetProviderKeyTests
         public Task SaveAsync(PetProviderCredential credential, CancellationToken cancellationToken)
         {
             Rows.RemoveAll(row => row.TenantId == credential.TenantId && row.PrincipalId == credential.PrincipalId && row.Provider == credential.Provider);
-            Rows.Add(credential);
+            Rows.Add(PersistedAt is { } at ? new PetProviderCredential
+            {
+                TenantId = credential.TenantId,
+                PrincipalId = credential.PrincipalId,
+                Provider = credential.Provider,
+                ProtectedKey = credential.ProtectedKey,
+                KeyHint = credential.KeyHint,
+                SavedAt = at,
+            } : credential);
             return Task.CompletedTask;
         }
 

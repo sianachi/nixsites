@@ -22,7 +22,7 @@ internal sealed partial class PetRunService
 
     private sealed record Work(NixSessionContext Context, WorkerExecution Job, WorkerExecutionAuthorization Authorization, Guid RunId);
     private sealed record Step(PetRunRecord Run, PetRunCheckpoint State);
-    private sealed record PreparedTurn(PreparedPetTaskStep Request, List<PetRunProposal> Observed, string? PreviousDraft);
+    private sealed record PreparedTurn(PreparedPetTaskStep Request, List<PetRunProposal> Observed, string? PreviousDraft, string SharingAttestation);
     private sealed record ExternalStep(Step Step, PetRunProposal Proposal, bool Undo);
 
     internal async Task<string?> AdvanceAsync(WorkerExecution execution, CancellationToken cancellationToken)
@@ -34,7 +34,7 @@ internal sealed partial class PetRunService
         }
 
         var authorization = await dispatch.AuthorizeExecutionAsync(execution.Job.Id, execution.ExecutionId, cancellationToken).ConfigureAwait(false);
-        if (authorization?.Kind != AdvanceKind || authorization.WorkspaceId is not { } workspaceId)
+        if (authorization?.Kind is not (AdvanceKind or PlanAdvanceKind) || authorization.WorkspaceId is not { } workspaceId)
         {
             return null;
         }
@@ -44,6 +44,18 @@ internal sealed partial class PetRunService
         var step = await InWorkerScopeAsync(work, static (handler, job, token) => handler.BeginAsync(job, token), cancellationToken)
             .ConfigureAwait(false);
         if (step is null)
+        {
+            return null;
+        }
+        if (step.State.PlanRequest is not null)
+        {
+            if (authorization.Kind == PlanAdvanceKind)
+            {
+                await AdvancePlanAsync(work, step, cancellationToken).ConfigureAwait(false);
+            }
+            return null;
+        }
+        if (authorization.Kind != AdvanceKind)
         {
             return null;
         }
@@ -103,6 +115,17 @@ internal sealed partial class PetRunService
 
         // A prior execution may have sent an external request before its lease was lost.
         var interrupted = step.State.Proposals.FirstOrDefault(proposal => proposal.Status is "applying" or "undo_applying");
+        if (step.State.Plan is { } plan && plan.Steps.Any(effect => effect.Status is "applying" or "undo_applying"))
+        {
+            var uncertainPlan = plan with
+            {
+                Status = "review_required",
+                Steps = [.. plan.Steps.Select(effect =>
+                effect.Status is "applying" or "undo_applying" ? effect with { Status = "unknown" } : effect)]
+            };
+            var saved = await StopAsync(step.Run, step.State with { Plan = uncertainPlan }, "review_required", cancellationToken).ConfigureAwait(false);
+            return new IsolatedOutcome<Step?>(null, saved);
+        }
         if (interrupted is not null)
         {
             var uncertain = Replace(step.State, interrupted with { Status = "unknown" });
@@ -147,8 +170,33 @@ internal sealed partial class PetRunService
         }
 
         PetRunEffect? preview = null;
+        PetPlanPrepared? plan = null;
         var failure = decision.IsFailure ? RunFailure("planning", decision.Error) : null;
-        if (decision.IsSuccess && decision.Value is { Kind: "action", Capability: { } name, Arguments: { } args }
+        if (step.State.PlanRequest is not null && decision.IsSuccess && decision.Value.Kind is "plan" or "action")
+        {
+            IReadOnlyList<PetTaskPlanStep> proposed = decision.Value.Steps
+                ?? (decision.Value is { Capability: { } planCapability, Arguments: { } planArguments } ? [new(planCapability, planArguments)] : []);
+            var preparedPlan = await InWorkerScopeAsync(work, async (handler, job, ct) =>
+            {
+                var current = await handler.CurrentAsync(job, ct).ConfigureAwait(false);
+                if (current is null || current.Run.Revision != step.Run.Revision)
+                {
+                    return new IsolatedOutcome<Result<PetPlanPrepared>?>(null, false);
+                }
+                var result = await handler.PreparePlanAsync(current.Run, current.State, decision.Value.Text ?? "Review the prepared changes", proposed, ct).ConfigureAwait(false);
+                return new IsolatedOutcome<Result<PetPlanPrepared>?>(result, false);
+            }, cancellationToken).ConfigureAwait(false);
+            if (preparedPlan is { IsSuccess: true })
+            {
+                plan = preparedPlan.Value.Value;
+            }
+            else
+            {
+                failure = RunFailure("preview", preparedPlan is { IsFailure: true } invalid ? invalid.Error
+                    : new NixError("pet_plans.preview_unavailable", "The plan could not be prepared."));
+            }
+        }
+        if (step.State.PlanRequest is null && decision.IsSuccess && decision.Value is { Kind: "action", Capability: { } name, Arguments: { } args }
             && RunAbilities(step.Run, step.State).Contains(name, StringComparer.Ordinal) && _capabilities.ContainsKey(name))
         {
             var result = await InWorkerScopeAsync(work, (handler, job, ct) => handler.PreviewAsync(job, step, name, args, ct),
@@ -176,7 +224,7 @@ internal sealed partial class PetRunService
             }
         }
 
-        await InWorkerScopeAsync(work, (handler, job, ct) => handler.RecordTurnAsync(job, step, decision, preview, failure, ct),
+        await InWorkerScopeAsync(work, (handler, job, ct) => handler.RecordTurnAsync(job, step, decision, preview, failure, ct, plan),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -190,8 +238,30 @@ internal sealed partial class PetRunService
         {
             return new IsolatedOutcome<PreparedTurn?>(null, false);
         }
+        var scope = DisclosureScope(step.Run, step.State);
+        var sharing = services.GetRequiredService<PetPlanSharingService>();
+        var pin = await sharing.PinAsync(step.Run.WorkspaceId.Value, step.State.PetId, scope, work.Job.Job.Id, cancellationToken).ConfigureAwait(false);
+        if (pin.IsFailure)
+        {
+            var question = await sharing.PrepareAsync(step.Run.WorkspaceId.Value, step.State.PetId, scope, cancellationToken).ConfigureAwait(false);
+            var paused = step.State with
+            {
+                ActiveJobId = null,
+                SharingQuestion = step.State.PlanRequest is not null && question.IsSuccess ? question.Value : null,
+                Failure = new("sharing", "pet_plans.sharing_required", "Review sharing with the selected model service before continuing.")
+            };
+            var saved = await StopAsync(step.Run, paused, step.State.PlanRequest is null ? "review_required" : "waiting_for_input", cancellationToken).ConfigureAwait(false);
+            return new IsolatedOutcome<PreparedTurn?>(null, saved);
+        }
 
         var observations = RevisionInstructions(step.State);
+        if (step.State.PlanRequest?.ChatSource is not null && step.State.Plan is { Status: "superseded" } previousPlan)
+        {
+            foreach (var previous in previousPlan.Steps)
+            {
+                observations.Add($"Untrusted previous prepared effect {previous.Capability}: {Cut(PetPlanExecution.Canonical(previous.Arguments), 2000)}");
+            }
+        }
         var preferences = await services.GetRequiredService<IPrincipalPreferencesStore>()
             .FindAsync(work.Context.TenantId, work.Context.PrincipalId, cancellationToken).ConfigureAwait(false);
         observations.Add(PetRunClock.Describe(clock.GetUtcNow(), preferences?.TimeZone));
@@ -203,7 +273,8 @@ internal sealed partial class PetRunService
         {
             observations.Add($"Untrusted previous draft: {previousDraft}");
         }
-        foreach (var id in ReadSources(step.Run, step.State).Prepend(step.Run.ItemId.Value))
+        var sourceIds = step.Run.ItemId is { } anchor ? ReadSources(step.Run, step.State).Prepend(anchor.Value) : ReadSources(step.Run, step.State);
+        foreach (var id in sourceIds.Distinct())
         {
             var item = await items.FindAsync(ItemId.From(id), cancellationToken).ConfigureAwait(false);
             if (item is null || item.WorkspaceId != step.Run.WorkspaceId || !CanUseSource(item))
@@ -226,6 +297,7 @@ internal sealed partial class PetRunService
         {
             observations.Add($"Nix recorded {proposal.Capability} action {proposal.Id:D} as {proposal.Status}.");
             if (proposal is { Status: "applied", Receipt: { } receipt }
+                && !proposal.ObservationBlocked && await ObservationAvailableAsync(step.Run, proposal, cancellationToken).ConfigureAwait(false)
                 && _capabilities.TryGetValue(proposal.Capability, out var capability))
             {
                 var effect = new PetRunEffect(proposal.Description, proposal.Preview);
@@ -249,17 +321,26 @@ internal sealed partial class PetRunService
             var excerpts = selectedNotes.Select(item => ReadExcerptAsync(step.Run, item, cancellationToken));
             observations.AddRange(await Task.WhenAll(excerpts).ConfigureAwait(false));
         }
+        if (step.State.PlanRequest is not null)
+        {
+            var catalog = await PetWorkspaceToolCapability.PrepareCatalogAsync(_capabilities.Values, cancellationToken).ConfigureAwait(false);
+            if (catalog.IsFailure)
+            {
+                return new IsolatedOutcome<PreparedTurn?>(null, false);
+            }
+        }
         PetTaskCapability[] offered = [.. effective.Abilities
             .Where(_capabilities.ContainsKey)
+            .Where(name => step.State.PlanRequest?.SourceReadOnly != true || PetWorkspaceToolCapability.ReadOnlyOperation(name))
             .Select(name => new PetTaskCapability(name, _capabilities[name].Description, _capabilities[name].InputSchema))];
         var scopeAbilities = step.State.IncludeTargetText is not null
             ? _capabilities.Keys.Except(effective.Abilities, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray()
             : null;
-        var input = new PetTaskStepInput(step.Run.Id, work.Job.Job.Id, step.Run.WorkspaceId.Value, step.Run.ItemId.Value,
-            step.Run.Brief, BoundContext(observations), offered, scopeAbilities);
+        var input = new PetTaskStepInput(step.Run.Id, work.Job.Job.Id, step.Run.WorkspaceId.Value, step.Run.ItemId?.Value,
+            step.Run.Brief, BoundContext(observations), offered, scopeAbilities, step.State.PlanRequest is not null, pin.Value);
         var prepared = await services.GetRequiredService<PetWorkerClient>().PrepareTaskStepAsync(pet, input, cancellationToken)
             .ConfigureAwait(false);
-        return new IsolatedOutcome<PreparedTurn?>(prepared.IsSuccess ? new PreparedTurn(prepared.Value, observed, previousDraft) : null, false);
+        return new IsolatedOutcome<PreparedTurn?>(prepared.IsSuccess ? new PreparedTurn(prepared.Value, observed, previousDraft, pin.Value) : null, false);
     }
 
     private async Task<IsolatedOutcome<bool>> CanSendTurnAsync(
@@ -267,6 +348,7 @@ internal sealed partial class PetRunService
     {
         var current = await CurrentAsync(work, cancellationToken).ConfigureAwait(false);
         if (current is null || current.Run.Revision != step.Run.Revision
+            || !await services.GetRequiredService<PetPlanSharingService>().ValidateAsync(prepared.SharingAttestation, cancellationToken).ConfigureAwait(false)
             || !await AvailableAsync(current, cancellationToken).ConfigureAwait(false))
         {
             return new IsolatedOutcome<bool>(false, false);
@@ -280,7 +362,8 @@ internal sealed partial class PetRunService
         foreach (var proposal in prepared.Observed)
         {
             var effect = new PetRunEffect(proposal.Description, proposal.Preview);
-            if (!await _capabilities[proposal.Capability].CanObserveAsync(effective, effect, proposal.Receipt!, cancellationToken)
+            if (!await ObservationAvailableAsync(current.Run, proposal, cancellationToken).ConfigureAwait(false)
+                || !await _capabilities[proposal.Capability].CanObserveAsync(effective, effect, proposal.Receipt!, cancellationToken)
                 .ConfigureAwait(false))
             {
                 return new IsolatedOutcome<bool>(false, false);
@@ -384,7 +467,8 @@ internal sealed partial class PetRunService
     }
 
     private async Task<IsolatedOutcome<bool>> RecordTurnAsync(
-        Work work, Step step, Result<PetTaskStep> decision, PetRunEffect? effect, PetRunFailure? failure, CancellationToken cancellationToken)
+        Work work, Step step, Result<PetTaskStep> decision, PetRunEffect? effect, PetRunFailure? failure, CancellationToken cancellationToken,
+        PetPlanPrepared? plan = null)
     {
         if (!await HoldAsync(work, cancellationToken).ConfigureAwait(false)
             || await CurrentAsync(work, cancellationToken).ConfigureAwait(false) is not { } current
@@ -399,6 +483,31 @@ internal sealed partial class PetRunService
         {
             switch (decision.Value)
             {
+                case { Kind: "plan" or "action" } when current.State.PlanRequest is not null && plan is not null:
+                    state = state with { PlanRequest = state.PlanRequest! with { ProtectedRead = state.PlanRequest.ProtectedRead || plan.ProtectedRead } };
+                    if (current.State.PlanRequest.ChatSource is not null)
+                    {
+                        state = state with
+                        {
+                            PlanRequest = state.PlanRequest with
+                            {
+                                ReadPhase = plan.Steps.Any(effect =>
+                            effect.IncludedInReview && !_capabilities[effect.Capability].RequiresApproval(effect.Effect))
+                            }
+                        };
+                        var queued = await QueuePlanAsync(current.Run, state with { Plan = plan with { Status = "adopting" } }, cancellationToken).ConfigureAwait(false);
+                        return new IsolatedOutcome<bool>(queued.IsSuccess, queued.IsSuccess);
+                    }
+                    var first = plan.Steps[0];
+                    if (!_capabilities[first.Capability].RequiresApproval(first.Effect))
+                    {
+                        var queuedRead = await QueuePlanAsync(current.Run, state with
+                        { Discovery = new(Guid.NewGuid(), first.Capability, first.Effect) }, cancellationToken).ConfigureAwait(false);
+                        return new IsolatedOutcome<bool>(queuedRead.IsSuccess, queuedRead.IsSuccess);
+                    }
+                    status = "waiting_for_approval";
+                    state = state with { Plan = plan, Question = null };
+                    break;
                 case { Kind: "complete", Text: { } text }:
                     status = "completed";
                     state = state with { Results = [.. state.Results, new PetRunResult(Guid.NewGuid(), Cut(text, 1600), false)] };
@@ -441,6 +550,10 @@ internal sealed partial class PetRunService
             .ConfigureAwait(false);
         return new IsolatedOutcome<bool>(saved, saved);
     }
+
+    private static PetPlanSourceScope DisclosureScope(PetRunRecord run, PetRunCheckpoint state) => state.PlanRequest?.SourceScope
+        ?? (run.WorkspaceScope ? new("workspace") : new("selected",
+            [.. (run.ItemId is { } anchor ? ReadSources(run, state).Prepend(anchor.Value) : ReadSources(run, state)).Distinct().Order()]));
 
     private async Task ExecuteActionAsync(Work work, Step step, PetRunProposal proposal, CancellationToken cancellationToken)
     {

@@ -89,6 +89,8 @@ export interface WorkspaceToolOutcome {
   lockedContent: boolean;
   /** A file read's picture, as a `data:image/...;base64` URL, sent beside `text`. */
   image?: string;
+  sourceItemIds?: string[];
+  unboundedSourceProvenance?: boolean;
 }
 
 /** The most memories the owner's settings hold; Core refuses more. */
@@ -153,6 +155,7 @@ export async function runWorkspaceTool(
   let result: unknown;
   // The items a read returned content from, checked for a covering lock once the read is done.
   let unboundedReadProvenance = false;
+  let readSourceIds: string[] = [];
   let contentSources: (string | null | undefined)[] = [];
   let image: string | undefined;
   let actionRead = false;
@@ -438,6 +441,7 @@ export async function runWorkspaceTool(
       const fields = args.parentId
         ? (await client.query(structure.effectiveSchema(args.parentId), requestOptions)).properties
         : [];
+      readSourceIds = children.map((item) => item.id);
       result = listedItems(children, fields, truncated);
       contentSources = [args.parentId];
       break;
@@ -505,6 +509,7 @@ export async function runWorkspaceTool(
       if (z.uuid().safeParse(args.query.trim()).success) {
         const item = await check(args.query.trim());
         contentSources = [item.parentId];
+        readSourceIds = [item.id];
         result = {
           results: [
             { id: item.id, workspaceId: item.workspaceId, title: item.title, type: item.type },
@@ -534,6 +539,7 @@ export async function runWorkspaceTool(
       );
       const hits = workspaceHits.filter((hit) => visible.has(hit.id));
       const excerpts = passages.passages.filter((part) => visible.has(part.itemId));
+      readSourceIds = hits.map((hit) => hit.id);
       contentSources = [
         ...hits.map((hit) => hit.parentId),
         ...excerpts.map((passage) => passage.itemId),
@@ -767,8 +773,17 @@ export async function runWorkspaceTool(
   const lockedContent =
     actionRead ||
     (readOnly && (unboundedReadProvenance || (await anyUnderLock(ports, contentSources, signal))));
+  const sourceItemIds = [
+    ...new Set([
+      ...readSourceIds,
+      ...contentSources.filter((id): id is string => typeof id === 'string'),
+      ...actionItemIds,
+    ]),
+  ];
   return {
     lockedContent,
+    sourceItemIds: sourceItemIds.slice(0, 128),
+    unboundedSourceProvenance: unboundedReadProvenance || actionRead || sourceItemIds.length > 128,
     text:
       text.length <= 16000
         ? text

@@ -143,6 +143,9 @@ export async function runRegisteredMcp(value: unknown): Promise<unknown> {
   const parsed = request.safeParse(value);
   if (!parsed.success) return undefined;
   const input = parsed.data;
+  const normalizedAction = input.action.toLowerCase().replaceAll('-', '_').replaceAll('.', '_');
+  if (/(?:^|_)pet_(?:plans$|plan_|sharing(?:_|$))/u.test(normalizedAction))
+    return { failure: 'unknown_tool' };
   let url: string;
   try {
     url = normalizeRemoteUrl(input.resourceId);

@@ -1,6 +1,12 @@
 import { providerResponseError, readBounded } from '../providers/provider-errors.ts';
 import type { ModelInfo, ProviderUsage } from '../shared/types.ts';
 import { isRecord, str } from '../shared/util.ts';
+import {
+  discardIncompatibleReasoning,
+  requiresResponses,
+  streamResponses,
+  type ResponsesReplay,
+} from './responses-wire.ts';
 
 export interface ProviderToolCall {
   id: string;
@@ -22,6 +28,7 @@ export interface ProviderMessage {
   toolCalls?: ProviderToolCall[] | undefined;
   /** Answers the previous assistant message's toolCalls, in order. */
   toolResults?: ProviderToolResult[] | undefined;
+  responses?: ResponsesReplay | undefined;
 }
 
 export interface HttpThread {
@@ -48,6 +55,7 @@ export interface WireContext {
   fetch: typeof fetch;
   base: string;
   apiKey: string;
+  recipientRevision?: string | undefined;
   signal: AbortSignal;
 }
 
@@ -57,7 +65,13 @@ export interface ProviderWire {
     context: WireContext,
     thread: HttpThread,
     onDelta: (delta: string) => void,
-  ): Promise<{ text: string; calls: ProviderToolCall[] }>;
+  ): Promise<ProviderStreamResult>;
+}
+
+export interface ProviderStreamResult {
+  text: string;
+  calls: ProviderToolCall[];
+  responses?: ResponsesReplay | undefined;
 }
 
 /** Bounds one provider request; the 15-minute thinking expiry is the outer guard. */
@@ -73,20 +87,24 @@ export class ResponseTooLongError extends Error {
 }
 
 /** Calls onData for each `data:` line of an event stream until it ends; `[DONE]` ends it early. */
-async function readSse(
+export async function readSse(
   signal: AbortSignal,
   response: Response,
-  onData: (data: string) => void,
+  onData: (data: string) => unknown,
 ): Promise<void> {
   const reader = response.body?.getReader() as ReadableStreamDefaultReader<Uint8Array> | undefined;
   if (reader === undefined) return;
   const decoder = new TextDecoder();
   let buffer = '';
+  const abort = (): void => {
+    void reader.cancel().catch(() => undefined);
+  };
+  signal.addEventListener('abort', abort, { once: true });
   const handle = (line: string): boolean => {
     if (line.startsWith('data:') && line.length > 5) {
       const data = line.slice(5).replace(/^[ \t]+|[ \t\r]+$/g, '');
       if (data === '[DONE]') return true;
-      onData(data);
+      return onData(data) === true;
     }
     return false;
   };
@@ -105,7 +123,9 @@ async function readSse(
     }
     buffer += decoder.decode();
     if (buffer !== '') handle(buffer);
+    signal.throwIfAborted();
   } finally {
+    signal.removeEventListener('abort', abort);
     void reader.cancel().catch(() => undefined);
   }
 }
@@ -513,7 +533,16 @@ export const openrouterWire: ProviderWire = {
     return models;
   },
 
-  async stream({ kind, fetch: doFetch, base, apiKey, signal }, thread, onDelta) {
+  async stream({ kind, fetch: doFetch, base, apiKey, signal, recipientRevision }, thread, onDelta) {
+    if (kind === 'openai') {
+      discardIncompatibleReasoning(thread, recipientRevision);
+      if (requiresResponses(thread.model))
+        return streamResponses(
+          { kind, fetch: doFetch, base, apiKey, signal, recipientRevision },
+          thread,
+          onDelta,
+        );
+    }
     const ctx = AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]);
     const system: Block = { role: 'system', content: thread.system };
     // OpenRouter passes Anthropic's cache breakpoints through, and only Claude models need one.

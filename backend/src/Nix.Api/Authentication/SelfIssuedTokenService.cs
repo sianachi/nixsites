@@ -107,6 +107,8 @@ public sealed class SelfIssuedTokenService : IDisposable
 
     /// <summary>The exact request binding carried by a durable pet action credential.</summary>
     internal const string PetActionBindingClaim = "nix_pet_action_binding";
+    internal const string PetPlanRequestClaim = "nix_pet_plan_request";
+    internal const string PetPlanReadClaim = "nix_pet_plan_read";
 
     private const int DefaultLifetimeMinutes = 10;
 
@@ -346,7 +348,7 @@ public sealed class SelfIssuedTokenService : IDisposable
         MintPetCredential(principalId, tenantId, requestId, mode, actionBinding: null);
 
     /// <summary>Mints a short-lived credential usable only for the explicitly bound request.</summary>
-    public string MintPetAction(PrincipalId principalId, TenantId tenantId, Guid actionId, PetTurnMode mode, string binding)
+    public string MintPetAction(PrincipalId principalId, TenantId tenantId, Guid actionId, PetTurnMode mode, string binding, string? planRequest = null)
     {
         ArgumentNullException.ThrowIfNull(binding);
         if (!PetActionRequestBinding.IsDigest(binding))
@@ -354,10 +356,15 @@ public sealed class SelfIssuedTokenService : IDisposable
             throw new ArgumentException("The pet action binding is invalid.", nameof(binding));
         }
 
-        return MintPetCredential(principalId, tenantId, actionId, mode, binding);
+        return MintPetCredential(principalId, tenantId, actionId, mode, binding, planRequest);
     }
 
-    private string MintPetCredential(PrincipalId principalId, TenantId tenantId, Guid requestId, PetTurnMode mode, string? actionBinding)
+    /// <summary>Mints a read credential restricted to one stored plan's current source scope.</summary>
+    public string MintPetPlanRead(PrincipalId principalId, TenantId tenantId, Guid runId) =>
+        MintPetCredential(principalId, tenantId, Guid.NewGuid(), PetTurnMode.Read, null, planRead: runId.ToString("N", CultureInfo.InvariantCulture));
+
+    private string MintPetCredential(PrincipalId principalId, TenantId tenantId, Guid requestId, PetTurnMode mode, string? actionBinding,
+        string? planRequest = null, string? planRead = null)
     {
         if (principalId.Value == Guid.Empty || requestId == Guid.Empty || !Enum.IsDefined(mode))
         {
@@ -379,6 +386,14 @@ public sealed class SelfIssuedTokenService : IDisposable
         if (actionBinding is not null)
         {
             claims.Add(new Claim(PetActionBindingClaim, actionBinding));
+        }
+        if (planRequest is not null)
+        {
+            claims.Add(new Claim(PetPlanRequestClaim, planRequest));
+        }
+        if (planRead is not null)
+        {
+            claims.Add(new Claim(PetPlanReadClaim, planRead));
         }
         var token = new JwtSecurityToken(
             issuer: Issuer,

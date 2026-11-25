@@ -15,6 +15,7 @@ import { runRegisteredMcp } from '../sani/registered-mcp.ts';
 import { readBody } from '../shared/http.ts';
 import { runPetCanvas } from '../tools/pet-canvas.ts';
 import { runPetSheet } from '../tools/pet-sheet.ts';
+import { createWorkspacePlanRpc } from '../tools/plan-workspace.ts';
 import { createServerTools } from '../tools/server-tools.ts';
 
 export interface CompanionDeps extends ManagerDeps {
@@ -66,10 +67,15 @@ async function readSaniRequest(req: IncomingMessage, limit: number): Promise<unk
 }
 
 export function createCompanion(config: CompanionConfig, deps: CompanionDeps = {}): Companion {
+  const workspacePlan = createWorkspacePlanRpc(config, deps.fetch);
   const saniRoutes = new Map<
     string,
     { run: (value: unknown) => Promise<unknown>; limit: number; invalid: string }
   >([
+    [
+      '/v1/sani/pet-workspace-plan',
+      { run: workspacePlan, limit: 1_100_000, invalid: 'invalid_workspace_plan_request' },
+    ],
     [
       '/v1/sani/registered-mcp',
       { run: runRegisteredMcp, limit: 64 << 10, invalid: 'invalid_registered_mcp_request' },
@@ -77,7 +83,7 @@ export function createCompanion(config: CompanionConfig, deps: CompanionDeps = {
     [
       '/v1/sani/pet-canvas',
       {
-        run: (value) => runPetCanvas(value, config.collabUrl),
+        run: (value) => runPetCanvas(value, config.collabUrl, config, deps.fetch),
         limit: 540 << 10,
         invalid: 'invalid_canvas_request',
       },
@@ -85,7 +91,7 @@ export function createCompanion(config: CompanionConfig, deps: CompanionDeps = {
     [
       '/v1/sani/pet-sheet',
       {
-        run: (value) => runPetSheet(value, config.collabUrl, deps.fetch),
+        run: (value) => runPetSheet(value, config.collabUrl, deps.fetch, config),
         limit: 64 << 10,
         invalid: 'invalid_sheet_request',
       },
@@ -99,6 +105,7 @@ export function createCompanion(config: CompanionConfig, deps: CompanionDeps = {
   });
   const manager = new Manager(config, {
     executeConversationTool: core.executeConversationTool,
+    validateSharing: core.validateSharing,
     serverTools: createServerTools(config),
     ...deps,
   });

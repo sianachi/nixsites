@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 
+import type { PlanDispatchAuthorizer, PlanDispatchSettler } from '../auth/plan-dispatch.ts';
 import type { CoreClient } from '../core/client.ts';
 import type { TenantScope } from '../db/tenant-scope.ts';
 import type { RateWindow } from '../documents/limits.ts';
@@ -41,6 +42,8 @@ export interface ServerDependencies {
    * through Core. The secret alone never authorizes a body read.
    */
   readonly internalSecret: string;
+  readonly planDispatch?: PlanDispatchAuthorizer;
+  readonly planSettle?: PlanDispatchSettler;
   readonly conversationBodyAuthorizer?: ConversationBodyAuthorizer;
   readonly publicLinkCore?: PublicLinkCore;
 

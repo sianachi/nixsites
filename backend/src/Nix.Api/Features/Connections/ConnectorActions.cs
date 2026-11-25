@@ -29,7 +29,8 @@ internal sealed class ConnectorActions(
             foreach (var grant in grants.Where(connection => connection.Provider == "mcp").Take(8))
             {
                 var stored = await store.GetAsync(workspace, grant.Id, lockForUpdate: false, token).ConfigureAwait(false);
-                if (stored?.ProtectedTokens is { } protectedTokens && secrets.Unprotect(protectedTokens)?.RemoteMcp is { } mcp)
+                if (stored?.ProtectedTokens is { } protectedTokens && secrets.Unprotect(protectedTokens)?.RemoteMcp is { } mcp
+                    && !PetPlanOperatorToolPolicy.IsDecisionTool(mcp.Tool))
                 {
                     registered.Add(new ConnectorAvailableAction(grant.Id, grant.Revision, "mcp", grant.ResourceId, "remote.invoke", "write",
                         filter == "remote.invoke" ? mcp.Schema : null));
@@ -68,6 +69,16 @@ internal sealed class ConnectorActions(
             {
                 return false;
             }
+            if (grant.Provider == "mcp")
+            {
+                var stored = await store.GetAsync(workspace, grant.Id, lockForUpdate: false, token).ConfigureAwait(false);
+                if (stored?.ProtectedTokens is not { } protectedTokens
+                    || secrets.Unprotect(protectedTokens)?.RemoteMcp is not { } mcp
+                    || PetPlanOperatorToolPolicy.IsDecisionTool(mcp.Tool))
+                {
+                    return false;
+                }
+            }
         }
         return true;
     }
@@ -91,7 +102,8 @@ internal sealed class ConnectorActions(
         {
             return Result.Failure<PreparedConnectorAction>(ConnectorErrors.Unavailable());
         }
-        if (credential.RemoteMcp is not { } mcp || grant.Provider != "mcp" || action != "remote.invoke")
+        if (credential.RemoteMcp is not { } mcp || grant.Provider != "mcp" || action != "remote.invoke"
+            || Nix.Features.PetRuns.PetPlanOperatorToolPolicy.IsDecisionTool(mcp.Tool))
         {
             return Result.Failure<PreparedConnectorAction>(ConnectorErrors.Stale());
         }
@@ -128,6 +140,7 @@ internal sealed class ConnectorActions(
             return Result.Failure<JsonElement>(ConnectorErrors.Unavailable());
         }
         if (grant.Provider != "mcp" || prepared.Action != "remote.invoke" || prepared.Kind != "write"
+            || Nix.Features.PetRuns.PetPlanOperatorToolPolicy.IsDecisionTool(mcp.Tool)
             || prepared.SchemaHash != mcp.SchemaHash)
         {
             return Result.Failure<JsonElement>(ConnectorErrors.Stale());

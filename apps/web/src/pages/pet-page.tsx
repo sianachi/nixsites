@@ -482,7 +482,10 @@ function PetJobConversation({
   const itemDialog = props.inDialog === true;
   const jobs = usePetDialogJobs({
     workspaceId: props.workspaceId,
+    petId: props.pet.id,
+    readOnly: props.noteScope?.readOnly ?? false,
     itemId,
+    planAnchorItemId: props.noteScope?.rootItemId ?? null,
     itemTitle: props.noteScope?.title ?? targetItem?.title,
     itemType: targetType ?? targetItem?.type,
     activeRunId,

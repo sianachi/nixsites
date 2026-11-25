@@ -134,7 +134,8 @@ describe('an artifact', () => {
       markdown: `Intro\n\n${fenced(counter)}\n${fencedState('{"$count":3}')}`,
     });
     open();
-    fireEvent.click(await screen.findByRole('button', { name: 'Add' }));
+    await screen.findByText('3');
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(screen.getAllByText('4')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Edit source' })).not.toBeInTheDocument();
   });
@@ -142,7 +143,8 @@ describe('an artifact', () => {
   it('keeps working for a viewer who cannot save, and says so', async () => {
     bodies.append.mockRejectedValue(new Error('forbidden'));
     open();
-    fireEvent.click(await screen.findByRole('button', { name: 'Add' }));
+    await screen.findByText('0');
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(screen.getAllByText('1')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Save values for everyone' }));
     expect(await screen.findByText(/can't be saved here/)).toBeInTheDocument();

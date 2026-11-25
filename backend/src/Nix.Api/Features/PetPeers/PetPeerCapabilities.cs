@@ -33,7 +33,11 @@ internal sealed class DelegateToPeer(IPetPeerStore store, PetPeerAccess access, 
         }
         else
         {
-            var peers = await store.ListAsync(run.ItemId.Value, cancellationToken).ConfigureAwait(false);
+            if (run.ItemId is not { } anchor)
+            {
+                return PeerEffect.BadPreview("A registered peer requires an item-anchored run.");
+            }
+            var peers = await store.ListAsync(anchor.Value, cancellationToken).ConfigureAwait(false);
             var matches = peers.Where(candidate => candidate.Name == name && candidate.Kind is "claude" or "codex"
                 && candidate.RevokedAt is null && candidate.ExpiresAt > clock.GetUtcNow()).Take(2).ToArray();
             peer = matches.Length == 1 ? matches[0] : null;
@@ -266,7 +270,7 @@ internal static class PeerEffect
     }
 
     internal static bool OnRun(PetPeerRegistration peer, PetRunRecord run) =>
-        peer.ItemId == run.ItemId.Value && peer.WorkspaceId == run.WorkspaceId.Value;
+        peer.ItemId == run.ItemId?.Value && peer.WorkspaceId == run.WorkspaceId.Value;
 
     internal static bool ContainsCredential(string value) =>
         CredentialPrefixes.Any(prefix => value.Contains(prefix, StringComparison.OrdinalIgnoreCase));

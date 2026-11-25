@@ -45,6 +45,7 @@ export const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   [/^\/api\/v1\/me\/calendar\/connections(\/|$)/, 'any'],
   [/^\/api\/v1\/workspaces\/[^/]+\/pet-connections(\/|$)/, 'any'],
   [/^\/api\/v1\/(items|workspaces)\/[^/]+\/pet-runs(\/|$)/, 'any'],
+  [/^\/api\/v1\/workspaces\/[^/]+\/(pet-plans|pet-sharing)(\/|$)/, 'any'],
   [/^\/api\/v1\/items\/[^/]+\/pet-peers(\/|$)/, 'any'],
   [/^\/api\/v1\/me\/(preferences|ui-settings|workspace-arrangement)(\/|$)/, 'write'],
   [/^\/api\/v1\/conversations\/[^/]+\/(turns|configure|sources|cancel)$/, 'write'],

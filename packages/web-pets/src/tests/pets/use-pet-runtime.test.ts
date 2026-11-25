@@ -804,32 +804,48 @@ describe('usePetRuntime errorKind and retryWatch', () => {
     expect(result.current.errorKind).toBe('command');
   });
 
-  it('keeps the same request id when a failed send is retried unedited', async () => {
-    let sendAttempts = 0;
-    client.execute.mockImplementation((endpoint: unknown) => {
-      const body = (endpoint as { body?: { operation?: string } }).body;
-      if (body?.operation === 'send') {
-        sendAttempts += 1;
-        return sendAttempts === 1
-          ? Promise.reject(new Error('boom'))
-          : Promise.resolve(connection());
-      }
-      return Promise.resolve(connection());
-    });
-    client.query.mockResolvedValue(connection());
-    const { result } = renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
-    await act(async () => {
-      await result.current.send({ text: 'hi', model: '', workspaceAccess: false });
-    });
-    await act(async () => {
-      await result.current.send({ text: 'hi', model: '', workspaceAccess: false });
-    });
-    const sendBodies = client.execute.mock.calls
-      .map(([endpoint]) => (endpoint as { body?: { operation?: string; requestId?: string } }).body)
-      .filter((body) => body?.operation === 'send');
-    expect(sendBodies).toHaveLength(2);
-    expect(sendBodies[0]?.requestId).toBe(sendBodies[1]?.requestId);
-  });
+  it.each([undefined, '55555555-5555-4555-8555-555555555555'])(
+    'keeps the original request identity for a failed retry: %s',
+    async (creationId) => {
+      let sendAttempts = 0;
+      client.execute.mockImplementation((endpoint: unknown) => {
+        const body = (endpoint as { body?: { operation?: string } }).body;
+        if (body?.operation === 'send') {
+          sendAttempts += 1;
+          return sendAttempts === 1
+            ? Promise.reject(new Error('boom'))
+            : Promise.resolve(connection());
+        }
+        return Promise.resolve(connection());
+      });
+      client.query.mockResolvedValue(connection());
+      const { result } = renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+      const input = {
+        text: 'hi',
+        model: '',
+        workspaceAccess: false,
+        ...(creationId === undefined ? {} : { requestId: creationId }),
+      };
+      await act(async () => {
+        await result.current.send(input);
+      });
+      if (creationId !== undefined)
+        act(() => {
+          result.current.regenerateRequestId();
+        });
+      await act(async () => {
+        await result.current.send(input);
+      });
+      const sendBodies = client.execute.mock.calls
+        .map(
+          ([endpoint]) => (endpoint as { body?: { operation?: string; requestId?: string } }).body,
+        )
+        .filter((body) => body?.operation === 'send');
+      expect(sendBodies).toHaveLength(2);
+      expect(sendBodies[0]?.requestId).toBe(sendBodies[1]?.requestId);
+      if (creationId !== undefined) expect(sendBodies[1]?.requestId).toBe(creationId);
+    },
+  );
 
   it("sends the owner's day and zone with every message, and a workspace map only when given", async () => {
     client.query.mockResolvedValue(connection());
@@ -877,7 +893,9 @@ describe('usePetRuntime errorKind and retryWatch', () => {
       await vi.advanceTimersByTimeAsync(0);
     });
     act(() => {
-      staleSetRuntime(connection({ revision: 999, reason: 'stale-pet' }) as PetConnection);
+      staleSetRuntime(
+        petConnectionSchema.parse(connection({ revision: 999, reason: 'stale-pet' })),
+      );
     });
     expect(result.current.runtime?.reason).not.toBe('stale-pet');
   });
@@ -938,7 +956,7 @@ describe('usePetRuntime errorKind and retryWatch', () => {
     expect(result.current.error).toContain('no longer available');
     act(() => {
       staleSetRuntime(
-        connection({ revision: 999, reason: 'Late private snapshot' }) as PetConnection,
+        petConnectionSchema.parse(connection({ revision: 999, reason: 'Late private snapshot' })),
       );
     });
     expect(result.current.runtime).toBeNull();

@@ -2,17 +2,20 @@ import {
   automations,
   isNixApiError,
   petRuns,
+  petPlans,
   search,
   type NixClient,
   type PetRunAbility,
   type PetRunResponse,
+  type PetPlanSourceScope,
   type SearchHit,
 } from '@nix/api-client';
-import { Button, Checkbox, Field, Input, Text, focusRing } from '@nix/ui';
+import { Button, Checkbox, Field, Input, Select, Text, focusRing } from '@nix/ui';
 import type {
   ConversationJobDraft,
   ConversationJobMessage,
   ConversationJobs,
+  ConversationPlanBatch,
 } from '@nix/web-pets/pets/conversation/conversation-jobs';
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { isPetJobMessage } from './pet-job-message';
@@ -20,6 +23,11 @@ import { PetPeerSection } from './pet-peer-section';
 import { PetRunCard, PetRunStatusTag } from './pet-run-card';
 import { PetRoutines, RoutineFields, routineDraft } from './pet-routines';
 import { usePetRunFeed } from './use-pet-run-feed';
+import { usePetPlanFeed } from './use-pet-plan-feed';
+import { PetPlanCard } from './pet-plan-card';
+import { readActionReceipt, writeActionReceipt } from '@nix/web-pets/pets/action-receipts';
+import { PetPlanClientBridge } from './pet-plan-client-bridge';
+import { z } from 'zod';
 
 const maxSources = 24;
 const maxBriefLength = 4_000;
@@ -57,7 +65,11 @@ const itemOnly: JobScope = { sources: [], includeTargetText: false, workspaceSco
 
 interface PetDialogJobsInput {
   readonly workspaceId: string;
+  readonly petId?: string;
+  readonly readOnly?: boolean;
   readonly itemId: string | null;
+  /** The conversation's durable anchor, independent of a retained pane selection. */
+  readonly planAnchorItemId?: string | null;
   readonly itemTitle?: string | null | undefined;
   readonly itemType?: string | undefined;
   readonly activeRunId?: string | undefined;
@@ -73,7 +85,10 @@ interface PetDialogJobs extends ConversationJobs {
 
 export function usePetDialogJobs({
   workspaceId,
+  petId,
+  readOnly = false,
   itemId,
+  planAnchorItemId = itemId,
   itemTitle,
   itemType,
   activeRunId,
@@ -90,7 +105,22 @@ export function usePetDialogJobs({
   const [quote, setQuote] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const startPending = useRef(false);
+  const startRequests = useRef(new Map<string, string>());
+  const pendingSharing = useRef(new Map<string, ConversationJobMessage>());
+  const [waitingSharing, setWaitingSharing] = useState(false);
+  const [planSelection, setPlanSelection] = useState<{
+    readonly key: string;
+    readonly kind: 'workspace' | 'selected' | 'subtree';
+    readonly sources: readonly Source[];
+  } | null>(null);
+  const selectionKey = `${workspaceId}:${itemId ?? ''}`;
+  const planScope =
+    planSelection?.key === selectionKey
+      ? planSelection
+      : { key: selectionKey, kind: 'workspace' as const, sources: [] };
   const [error, setError] = useState<string | null>(null);
+  const adoptionAttempts = useRef(new Map<string, 'pending' | 'done' | 'failed'>());
+  const [failedBatch, setFailedBatch] = useState<ConversationPlanBatch | null>(null);
   const target =
     itemId === null ? null : { id: itemId, title: itemTitle ?? null, type: itemType ?? '' };
   const scope =
@@ -101,7 +131,22 @@ export function usePetDialogJobs({
     showTimeline ? activeRunId : undefined,
     onItemChanged,
   );
-  const enabled = feed.status === 'ready' && feed.data.enabled;
+  const plans = usePetPlanFeed(workspaceId, petId !== undefined, activeRunId);
+  const planEnabled = plans.feed.status === 'ready' && plans.feed.data.enabled;
+  useEffect(() => {
+    if (plans.feed.status !== 'ready') return;
+    for (const run of plans.feed.data.runs) {
+      const message = pendingSharing.current.get(run.id);
+      if (message === undefined || run.sharingQuestion != null) continue;
+      pendingSharing.current.delete(run.id);
+      if (run.status !== 'cancelled' && run.status !== 'failed') message.onStarted();
+      message.focusComposer();
+      queueMicrotask(() => {
+        setWaitingSharing(pendingSharing.current.size > 0);
+      });
+    }
+  }, [plans.feed]);
+  const enabled = planEnabled || (feed.status === 'ready' && feed.data.enabled);
   const availabilityKnown = feed.status === 'ready' || feed.status === 'unavailable';
   const runs =
     showTimeline && itemId !== null && feed.status === 'ready'
@@ -109,7 +154,7 @@ export function usePetDialogJobs({
           (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
         )
       : [];
-  const timeline =
+  const legacyTimeline =
     client === null
       ? []
       : runs.map((run) => ({
@@ -125,6 +170,27 @@ export function usePetDialogJobs({
             />
           ),
         }));
+  const planClient = plans.client;
+  const planTimeline =
+    planClient === null || plans.feed.status !== 'ready'
+      ? []
+      : plans.feed.data.runs
+          .filter((run) => run.petId === petId && run.anchorItemId === planAnchorItemId)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+          .map((run) => ({
+            id: run.id,
+            ...(run.afterMessageId == null ? {} : { afterMessageId: run.afterMessageId }),
+            content: (
+              <>
+                <PetPlanCard client={planClient} run={run} onUpdate={plans.update} />
+                {run.plan?.status === 'approved' &&
+                run.plan.steps.some((step) => step.executor === 'client') ? (
+                  <PetPlanClientBridge client={planClient} run={run} onUpdate={plans.update} />
+                ) : null}
+              </>
+            ),
+          }));
+  const timeline = [...legacyTimeline, ...planTimeline];
 
   function attachMessage(text: string, draft: string): string {
     const excerpt = text
@@ -185,6 +251,116 @@ export function usePetDialogJobs({
     }
   }
 
+  async function startPlan(message: ConversationJobMessage): Promise<void> {
+    if (plans.client === null || petId === undefined || startPending.current) return;
+    if (readOnly) {
+      setError('This note is read only. Allow changes to this note before preparing a task.');
+      return;
+    }
+    startPending.current = true;
+    setSending(true);
+    setError(null);
+    const sourceScope: PetPlanSourceScope =
+      planScope.kind === 'workspace'
+        ? { kind: 'workspace' }
+        : planScope.kind === 'subtree' && itemId !== null
+          ? { kind: 'subtree', itemIds: [itemId] }
+          : { kind: 'selected', itemIds: planScope.sources.map(({ id }) => id).sort() };
+    const requestKey = JSON.stringify([
+      petId,
+      planAnchorItemId,
+      message.afterMessageId,
+      message.text,
+      sourceScope,
+    ]);
+    let requestId = startRequests.current.get(requestKey);
+    if (requestId === undefined) {
+      requestId = crypto.randomUUID();
+      startRequests.current.set(requestKey, requestId);
+    }
+    try {
+      const run = await plans.client.execute(
+        petPlans.start(workspaceId, {
+          petId,
+          brief: message.text.trim(),
+          anchorItemId: planAnchorItemId,
+          sourceScope,
+          ...(message.afterMessageId === undefined
+            ? {}
+            : { afterMessageId: message.afterMessageId }),
+          requestId,
+        }),
+      );
+      plans.update(run);
+      if (run.sharingQuestion != null) {
+        pendingSharing.current.set(run.id, message);
+        setWaitingSharing(true);
+      } else message.onStarted();
+      setQuote(null);
+      message.focusComposer();
+    } catch (reason) {
+      setError(
+        isNixApiError(reason)
+          ? reason.message
+          : 'Could not confirm the plan started. Keep this message and check the conversation before trying again.',
+      );
+    } finally {
+      startPending.current = false;
+      setSending(false);
+    }
+  }
+
+  function adoptTools(batch: ConversationPlanBatch, retry = false): void {
+    if (
+      !planEnabled ||
+      plans.client === null ||
+      petId === undefined ||
+      (readOnly && !batch.readOnly) ||
+      batch.toolIds.length === 0
+    )
+      return;
+    const key = `${workspaceId}:${petId}:${batch.conversationId}:${batch.turnId}:${batch.toolIds.join(',')}`;
+    const prior = adoptionAttempts.current.get(key);
+    if (prior === 'pending' || prior === 'done' || (prior === 'failed' && !retry)) return;
+    adoptionAttempts.current.set(key, 'pending');
+    const stored = readActionReceipt(`plan-adopt:${key}`);
+    const requestId = z.uuid().safeParse(stored).success ? stored : crypto.randomUUID();
+    writeActionReceipt(`plan-adopt:${key}`, requestId);
+    const client = plans.client;
+    void client
+      .execute(
+        petPlans.start(workspaceId, {
+          petId,
+          brief: batch.brief,
+          anchorItemId: batch.rootItemId,
+          sourceScope: batch.sourceScope,
+          ...(batch.afterMessageId === undefined ? {} : { afterMessageId: batch.afterMessageId }),
+          requestId,
+          chatSource: {
+            conversationId: batch.conversationId,
+            turnId: batch.turnId,
+            toolCallIds: batch.toolIds,
+            mode: 'chat',
+            ...(batch.rootItemId === null ? {} : { rootItemId: batch.rootItemId }),
+          },
+        }),
+      )
+      .then((run) => {
+        adoptionAttempts.current.set(key, 'done');
+        setFailedBatch(null);
+        plans.update(run);
+      })
+      .catch((reason: unknown) => {
+        adoptionAttempts.current.set(key, 'failed');
+        setFailedBatch(batch);
+        setError(
+          isNixApiError(reason)
+            ? reason.message
+            : 'The prepared calls could not be linked to a plan. No changes were requested.',
+        );
+      });
+  }
+
   function submit(message: ConversationJobMessage, force?: boolean): boolean {
     if ((force !== true && !isJob(message.text)) || (availabilityKnown && !enabled)) {
       setError(null);
@@ -200,6 +376,10 @@ export function usePetDialogJobs({
           ? `This message is ${over.toLocaleString('en')} characters over the ${maxBriefLength.toLocaleString('en')} a job can take. Shorten it to start a job.`
           : 'Shorten the message to start a job.',
       );
+    } else if (planEnabled && planScope.kind === 'selected' && planScope.sources.length === 0) {
+      setError('Choose at least one source for this plan.');
+    } else if (planEnabled) {
+      void startPlan(message);
     } else if (target === null) {
       setError(null);
       setNeedsTarget(message);
@@ -211,15 +391,20 @@ export function usePetDialogJobs({
 
   return {
     enabled,
+    ...(planEnabled ? { consentMode: 'plan' as const } : {}),
+    ...(planEnabled ? { adoptTools } : {}),
     ready: enabled,
-    busy: sending || needsTarget !== null,
+    busy: sending || needsTarget !== null || waitingSharing,
     canSubmit: (text) => enabled && isJob(text),
     submit,
     timeline,
     ...(enabled ? { attachMessage } : {}),
     panel: (message): ReactNode =>
       client === null || (feed.status === 'loading' && error === null) ? null : (
-        <section aria-label="Pet work" className="flex min-w-0 flex-col gap-2">
+        <section
+          aria-label="Pet work"
+          className="flex min-w-0 flex-col gap-2 border-t border-divider p-3"
+        >
           {activeRunId !== undefined &&
           (feed.status === 'unavailable' ||
             (feed.status === 'ready' && feed.activeRunUnavailable === true)) ? (
@@ -240,11 +425,87 @@ export function usePetDialogJobs({
               {error}
             </Text>
           )}
+          {failedBatch === null ? null : (
+            <div>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  adoptTools(failedBatch, true);
+                }}
+              >
+                Retry plan review
+              </Button>
+            </div>
+          )}
           {sending ? (
             <Text variant="note" role="status">
               Starting job…
             </Text>
           ) : null}
+          {planEnabled ? (
+            <div className="flex min-w-0 flex-col gap-2">
+              <Field label="Context for the next plan">
+                {(control) => (
+                  <Select
+                    {...control}
+                    value={planScope.kind}
+                    disabled={sending || waitingSharing}
+                    onChange={(event) => {
+                      const value = event.currentTarget.value;
+                      if (value === 'workspace' || value === 'selected' || value === 'subtree')
+                        setPlanSelection({ ...planScope, kind: value });
+                    }}
+                  >
+                    <option value="workspace">Current readable workspace</option>
+                    {itemId === null ? null : (
+                      <option value="subtree">This item and its readable children</option>
+                    )}
+                    <option value="selected">Only selected sources</option>
+                  </Select>
+                )}
+              </Field>
+              {planScope.kind === 'selected' ? (
+                <SourcePicker
+                  client={client}
+                  workspaceId={workspaceId}
+                  itemId={null}
+                  sources={planScope.sources}
+                  setSources={(sources) => {
+                    setPlanSelection({ ...planScope, sources });
+                  }}
+                  disabled={sending || waitingSharing}
+                />
+              ) : null}
+            </div>
+          ) : null}
+          {planEnabled && message.restore !== undefined
+            ? plans.feed.data.runs
+                .filter(
+                  (run) =>
+                    run.petId === petId &&
+                    run.anchorItemId === planAnchorItemId &&
+                    (run.status === 'cancelled' || run.status === 'review_required'),
+                )
+                .slice(-1)
+                .map((run) => (
+                  <div key={run.id} className="flex flex-col gap-2">
+                    <Text variant="note">
+                      To change its context, prepare a fresh plan from the original request.
+                    </Text>
+                    <div>
+                      <Button
+                        variant="ghost"
+                        disabled={message.text.trim() !== ''}
+                        onClick={() => {
+                          message.restore?.(run.brief);
+                        }}
+                      >
+                        Revise this plan request
+                      </Button>
+                    </div>
+                  </div>
+                ))
+            : null}
           {needsTarget === null ? null : (
             <>
               <Text variant="bodySmall" role="status">
@@ -292,6 +553,7 @@ export function usePetDialogJobs({
                 }}
                 message={message}
                 starting={sending}
+                planMode={planEnabled}
               />
             </>
           ) : null}
@@ -468,6 +730,7 @@ function JobOptions({
   onScopeChange,
   message,
   starting,
+  planMode = false,
 }: {
   readonly client: NixClient;
   readonly workspaceId: string;
@@ -478,6 +741,7 @@ function JobOptions({
   readonly onScopeChange: (scope: JobScope) => void;
   readonly message: ConversationJobDraft;
   readonly starting: boolean;
+  readonly planMode?: boolean;
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const [scheduled, setScheduled] = useState(false);
@@ -562,26 +826,30 @@ function JobOptions({
         setOpen(event.currentTarget.open);
       }}
     >
-      <summary className={`cursor-pointer ${focusRing}`}>
+      <summary
+        className={`min-h-11 cursor-pointer py-2 any-pointer-coarse:min-h-(--control-lg) ${focusRing}`}
+      >
         <Text as="span" variant="bodySmall">
-          Job options
+          {planMode ? 'Routine options' : 'Job options'}
         </Text>
       </summary>
       {open ? (
         <div className="mt-2 flex min-w-0 flex-col gap-2">
           {enabled ? (
             <>
-              <SourcePicker
-                client={client}
-                itemId={target.id}
-                workspaceId={workspaceId}
-                sources={scope.sources}
-                setSources={(sources) => {
-                  onScopeChange({ ...scope, sources });
-                }}
-                disabled={disabled}
-              />
-              {target.type === 'note' ? (
+              {!planMode || scheduled ? (
+                <SourcePicker
+                  client={client}
+                  itemId={target.id}
+                  workspaceId={workspaceId}
+                  sources={scope.sources}
+                  setSources={(sources) => {
+                    onScopeChange({ ...scope, sources });
+                  }}
+                  disabled={disabled}
+                />
+              ) : null}
+              {target.type === 'note' && (!planMode || scheduled) ? (
                 <Checkbox
                   label={scheduled ? 'Include note text in each run' : 'Include note text'}
                   checked={scope.includeTargetText}
@@ -591,7 +859,7 @@ function JobOptions({
                   }}
                 />
               ) : null}
-              {!scheduled ? (
+              {!scheduled && !planMode ? (
                 <Checkbox
                   label="Use the whole workspace"
                   checked={scope.workspaceScope}

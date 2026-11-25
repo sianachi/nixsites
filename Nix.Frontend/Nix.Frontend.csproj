@@ -57,8 +57,8 @@
        made apps/media look absent from the solution explorer on the day it was
        added while every command-line tool saw it. -->
     <ItemGroup>
-        <None Include="../apps/**/**/**/*" LinkBase="apps" />
-        <None Include="../packages/**/src/**/*" LinkBase="packages" />
+        <None Include="../apps/**/*" Exclude="../apps/**/node_modules/**;../apps/*/dist/**;../apps/*/.tsbuild/**;../apps/mobile/android/**/build/**;../apps/mobile/android/**/.gradle/**;../apps/mobile/android/**/.cxx/**" LinkBase="apps" />
+        <None Include="../packages/*/src/**/*" LinkBase="packages" />
     </ItemGroup>
 
 

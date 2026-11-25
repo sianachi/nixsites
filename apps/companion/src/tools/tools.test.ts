@@ -153,6 +153,7 @@ describe('deduplication and limits', () => {
     expect(h.transport.replies.map((x) => x.id)).toEqual([1, 2]);
     // A later identical call replays the stored result.
     h.transport.toolCall(3, 'c', 'nix_set_properties', { itemId: ID, properties: { y: 2, x: 1 } });
+    await eventually(() => h.transport.replies.length === 3);
     expect(h.transport.replies[2]).toEqual({
       id: 3,
       result: { success: true, contentItems: [{ type: 'inputText', text: 'saved' }] },
@@ -463,6 +464,7 @@ describe('saved cross-workspace conversations', () => {
     h.transport.toolCall(1, 'a', 'nix_search', { query: 'plan', workspaceId: IDS.workspace });
     await eventually(() => h.transport.replies.length === 1);
     h.transport.toolCall(2, 'b', 'nix_search', { query: 'plan', workspaceId: IDS.workspace });
+    await eventually(() => h.transport.replies.length === 2);
     expect(executed).toHaveLength(1);
     expect(executed[0]?.conversationId).toBe(ID);
     expect(executed[0]?.requestId).toBe(IDS.request);

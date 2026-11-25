@@ -331,7 +331,7 @@ export function PetRunCard({
         const heading = proposalHeading(proposal);
         const preview =
           appendNote === undefined ? (
-            <ProposalPreview proposal={proposal} />
+            <PetRunProposalPreview proposal={proposal} />
           ) : (
             <AppendNotePreview workspaceId={run.workspaceId} {...appendNote} />
           );
@@ -774,7 +774,11 @@ const sheetColumns: readonly TableColumn<SheetEditChange>[] = [
   { key: 'after', header: 'After', cell: (change) => sheetChangeValue(change, 'after') },
 ];
 
-function ProposalPreview({ proposal }: { readonly proposal: PetRunProposal }): ReactElement {
+export function PetRunProposalPreview({
+  proposal,
+}: {
+  readonly proposal: PetRunProposal;
+}): ReactElement {
   const { capability, preview } = proposal;
   const call = remoteCall(proposal);
   if (call !== undefined) {

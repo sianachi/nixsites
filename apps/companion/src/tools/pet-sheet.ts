@@ -15,6 +15,11 @@ import {
   previewSheetEdit,
 } from '@nix/sheet';
 import { z } from 'zod';
+import {
+  createServerPlanFetch,
+  planExecutionEnvelopeSchema,
+  type PlanDispatchOptions,
+} from './plan-dispatch.ts';
 
 const MAX_PREVIEW_BYTES = 48 * 1024;
 const cell = z.string().regex(/^[A-Z]{1,2}[1-9][0-9]{0,4}$/u);
@@ -51,7 +56,11 @@ const receipt = z.strictObject({
   seq: z.string().regex(/^(?:0|[1-9][0-9]{0,18})$/u),
   changes: z.number().int().min(1).max(MAX_SHEET_EDITS),
 });
-const target = { itemId: z.uuid(), token: z.string().min(1).max(8192) };
+const target = {
+  itemId: z.uuid(),
+  token: z.string().min(1).max(8192),
+  planExecution: planExecutionEnvelopeSchema.optional(),
+};
 const request = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('preview'), ...target, plan }),
   z.strictObject({ kind: z.literal('apply'), ...target, preview, actionId: z.uuid() }),
@@ -68,15 +77,21 @@ export async function runPetSheet(
   input: unknown,
   collabUrl: string,
   fetchImpl?: typeof fetch,
+  dispatchOptions?: PlanDispatchOptions,
 ): Promise<PetSheetResponse | undefined> {
   const parsed = request.safeParse(input);
   if (!parsed.success || collabUrl === '') return undefined;
   const action = parsed.data;
+  if (action.planExecution !== undefined && dispatchOptions === undefined) return undefined;
+  const send =
+    action.planExecution !== undefined && dispatchOptions !== undefined
+      ? createServerPlanFetch(dispatchOptions, action.planExecution, fetchImpl)
+      : fetchImpl;
   const source = {
     collabUrl,
     itemId: action.itemId,
     token: action.token,
-    ...(fetchImpl === undefined ? {} : { fetchImpl }),
+    ...(send === undefined ? {} : { fetchImpl: send }),
   };
   try {
     if (action.kind === 'apply') {

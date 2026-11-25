@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 
+import { createPlanDispatchAuthorizer, createPlanDispatchSettler } from './auth/plan-dispatch.ts';
 import { createAuthorizer } from './auth/authorize.ts';
 import { createTokenValidator } from './auth/token.ts';
 import { readConfig } from './config.ts';
@@ -128,6 +129,8 @@ export async function startCollab(): Promise<{ stop: () => Promise<void> }> {
   const activeScopes = new Map<string, TenantScope>();
 
   const app = createServer({
+    planDispatch: createPlanDispatchAuthorizer(config),
+    planSettle: createPlanDispatchSettler(config),
     conversationBodyAuthorizer: createConversationBodyAuthorizer(config),
     publicLinkCore: createPublicLinkCore(config),
     pool,

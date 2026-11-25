@@ -122,7 +122,7 @@ internal sealed class PetBrowserClient(
         }
 
         var itemIds = inputs.Select(input => ItemId.From(input.FileId)).ToArray();
-        if (inputs.Any(input => input.FileId != run.ItemId.Value && !run.SourceItemIds.Contains(input.FileId)
+        if (inputs.Any(input => input.FileId != run.ItemId?.Value && !run.SourceItemIds.Contains(input.FileId)
                 && run.ReadOnlySourceItemIds?.Contains(input.FileId) != true)
             || (itemIds.Length != 0 && (await locks.LockedAmongAsync(itemIds, cancellationToken).ConfigureAwait(false)).Count != 0))
         {

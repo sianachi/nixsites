@@ -19,6 +19,11 @@ function model(overrides: Partial<PreviewModel> = {}): PreviewModel {
 }
 
 describe('PetStructurePreview', () => {
+  it('omits the guarantees sentence when the prepared preview contains no guarantees', () => {
+    render(<PetStructurePreview model={model({ neverDoes: [] })} />);
+    expect(screen.queryByText(/^This never:/u)).not.toBeInTheDocument();
+    expect(screen.getByText('Books / Reading log')).toBeVisible();
+  });
   it('shows the destination and nonzero counts, leaving the headline to its frame', () => {
     render(<PetStructurePreview model={model()} />);
     expect(screen.queryByText('I will create a reading board.')).not.toBeInTheDocument();

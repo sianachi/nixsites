@@ -18,6 +18,8 @@ internal static class PetRunDecisionNotices
         };
         return target is null
             ? Task.CompletedTask
-            : writer.CreatePetDecisionAsync(run.ActorId, run.ItemId, run.WorkspaceId, target, cancellationToken);
+            : run.ItemId is { } anchor
+                ? writer.CreatePetDecisionAsync(run.ActorId, anchor, run.WorkspaceId, target, cancellationToken)
+                : Task.CompletedTask;
     }
 }

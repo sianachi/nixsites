@@ -17,7 +17,7 @@ using Nix.Messaging;
 namespace Nix.Integration.Tests.Persistence;
 
 [Collection(PostgresCollectionDefinition.Name)]
-public sealed class PetRunStoreTests(NixPostgresFixture fixture) : IAsyncLifetime
+public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private const string PetOrigin = "https://nix.pet-runs.test";
     private static readonly WorkspaceId AlphaWorkspace = WorkspaceId.From(TestTenants.AlphaWorkspace);
@@ -36,6 +36,59 @@ public sealed class PetRunStoreTests(NixPostgresFixture fixture) : IAsyncLifetim
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    [Fact]
+    public async Task Downgrade_refuses_workspace_anchors_without_deleting_or_rewriting_them()
+    {
+        using var state = JsonDocument.Parse("{}");
+        var run = NewRun(AlphaItem, state.RootElement) with { ItemId = null, SourceItemIds = [], RequestId = Guid.NewGuid() };
+        Assert.True(await InSessionAsync(TestTenants.AlphaContext, store => store.CreateAsync(run, Cancellation)));
+        var migration = new Nix.Persistence.Migrations.Generated.WorkspacePetPlans();
+        var sql = Assert.Single(migration.DownOperations.OfType<Microsoft.EntityFrameworkCore.Migrations.Operations.SqlOperation>()).Sql;
+        await using (var connection = await fixture.OpenMigratorConnectionAsync())
+        {
+            await using var transaction = await connection.BeginTransactionAsync(Cancellation);
+            var failure = await Assert.ThrowsAsync<Npgsql.PostgresException>(() => RawSql.ExecuteAsync(connection, transaction, sql));
+            Assert.Equal("P0001", failure.SqlState);
+            await transaction.RollbackAsync(Cancellation);
+        }
+        var saved = await InSessionAsync(TestTenants.AlphaContext, store => store.GetAsync(run.Id, Cancellation));
+        Assert.NotNull(saved);
+        Assert.Null(saved.ItemId);
+        Assert.Equal(run.RequestId, saved.RequestId);
+        Assert.Equal(run.Revision, saved.Revision);
+    }
+
+    [Fact]
+    public async Task Workspace_anchors_keep_owner_isolation_null_safe_identity_and_creation_idempotency()
+    {
+        using var state = JsonDocument.Parse("""{"planRequest":{"requestId":"11111111-1111-4111-8111-111111111111","sourceScope":{"kind":"workspace"}}}""");
+        var requestId = Guid.NewGuid();
+        var run = NewRun(AlphaItem, state.RootElement) with { ItemId = null, SourceItemIds = [], RequestId = requestId };
+        Assert.True(await InSessionAsync(TestTenants.AlphaContext, store => store.CreateAsync(run, Cancellation)));
+        var anchoredPlan = run with { Id = Guid.NewGuid(), ItemId = AlphaItem, RequestId = Guid.NewGuid() };
+        Assert.True(await InSessionAsync(TestTenants.AlphaContext, store => store.CreateAsync(anchoredPlan, Cancellation)));
+        var read = await InSessionAsync(TestTenants.AlphaContext, store => store.GetByRequestAsync(AlphaWorkspace, requestId, Cancellation));
+        Assert.NotNull(read);
+        Assert.Null(read.ItemId);
+        Assert.Equal(run.Id, read.Id);
+        Assert.False(await InSessionAsync(TestTenants.AlphaContext, store => store.CreateAsync(run with { Id = Guid.NewGuid() }, Cancellation)));
+        Assert.False(await InSessionAsync(TestTenants.AlphaContext, store => store.UpdateAsync(Advance(run, run.State) with { ItemId = AlphaItem }, 1, Cancellation)));
+        Assert.False(await InSessionAsync(TestTenants.AlphaContext, store => store.UpdateAsync(Advance(run, run.State) with { RequestId = Guid.NewGuid() }, 1, Cancellation)));
+        Assert.True(await InSessionAsync(TestTenants.AlphaContext, store => store.UpdateAsync(Advance(run, run.State), 1, Cancellation)));
+        Assert.Null(await InSessionAsync(TestTenants.BetaContext, store => store.GetAsync(run.Id, Cancellation)));
+        Assert.False(await InSessionAsync(TestTenants.BetaContext, store => store.UpdateAsync(Advance(run, run.State), 1, Cancellation)));
+
+        await using (var connection = await fixture.OpenMigratorConnectionAsync())
+        {
+            await RawSql.ExecuteAsync(connection, null, $"""
+                DELETE FROM workspace_member WHERE tenant_id = '{TestTenants.Alpha:D}'
+                    AND workspace_id = '{AlphaWorkspace.Value:D}' AND subject_id = '{AlphaActor.Value:D}';
+                """);
+        }
+        Assert.Null(await InSessionAsync(TestTenants.AlphaContext, store => store.GetAsync(run.Id, Cancellation)));
+        Assert.Null(await InSessionAsync(TestTenants.AlphaContext, store => store.GetAsync(anchoredPlan.Id, Cancellation)));
+    }
 
     [Fact]
     public async Task Only_the_starting_actor_in_the_correct_tenant_and_workspace_can_see_or_update_a_run()
@@ -170,6 +223,41 @@ public sealed class PetRunStoreTests(NixPostgresFixture fixture) : IAsyncLifetim
             Assert.Null(await InSessionAsync(context, store => store.GetAsync(run.Id, Cancellation)));
             Assert.False(await InSessionAsync(context, store => store.UpdateAsync(Advance(run, run.State), 1, Cancellation)));
         }
+    }
+
+    [Fact]
+    public async Task Legacy_proposal_decisions_cannot_approve_a_whole_plan_checkpoint()
+    {
+        var proposal = Guid.NewGuid();
+        using var checkpoint = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            petId = Guid.NewGuid(),
+            proposals = new[]
+            {
+                new { id = proposal, capability = "task.rename", description = "Rename the task", preview = new { }, status = "pending" },
+            },
+            answers = Array.Empty<string>(),
+            results = Array.Empty<object>(),
+            turns = 1,
+            planRequest = new
+            {
+                requestId = Guid.NewGuid(),
+                sourceScope = new { kind = "selected", itemIds = new[] { AlphaItem.Value } },
+            },
+        }));
+        var run = NewRun(AlphaItem, checkpoint.RootElement);
+        await SaveWaitingAsync(run, "waiting_for_approval");
+        await using var host = CreatePetHost();
+        var browser = await SignInAsync(host);
+        var route = $"/api/v1/items/{AlphaItem.Value:D}/pet-runs/{run.Id:D}/proposals/{proposal:D}/decision";
+
+        using var response = await host.SendAsync(HttpMethod.Post, route, browser, new { approve = true });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var saved = await InSessionAsync(TestTenants.AlphaContext, store => store.GetAsync(run.Id, Cancellation));
+        Assert.NotNull(saved);
+        Assert.Equal("waiting_for_approval", saved.Status);
+        Assert.Equal("pending", saved.State.GetProperty("proposals")[0].GetProperty("status").GetString());
     }
 
     [Fact]

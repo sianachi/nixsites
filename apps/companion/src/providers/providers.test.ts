@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { Account } from '../core/account.ts';
 import {
@@ -80,6 +81,7 @@ function keyAccount(
   server: FakeServer,
   home = tempDir(),
   apiKey = 'sk-test',
+  authorizeSharing = true,
 ) {
   const events: { method: string; params: Record<string, unknown> }[] = [];
   const ref: { account?: Account } = {};
@@ -95,6 +97,16 @@ function keyAccount(
     chatEffort: 'low',
     logger: undefined,
     trace: false,
+    ...(authorizeSharing
+      ? {
+          validateSharing: () =>
+            Promise.resolve({
+              allowed: true,
+              recipientRevision: 'synthetic-recipient',
+              sourceScope: { kind: 'workspace', itemIds: [], readOnlyWorkspaceIds: [] },
+            }),
+        }
+      : {}),
   });
   ref.account = account;
   const signal = new AbortController().signal;
@@ -844,6 +856,110 @@ describe('OpenRouter', () => {
 });
 
 describe('OpenAI', () => {
+  it('continues native Responses tool calls and replays encrypted context after restart', async () => {
+    const reasoning = {
+      type: 'reasoning',
+      id: 'rs_fixture',
+      summary: [],
+      encrypted_content: 'enc_fixture_final',
+      status: 'completed',
+    };
+    const commentary = {
+      type: 'message',
+      id: 'msg_looking',
+      role: 'assistant',
+      phase: 'commentary',
+      status: 'completed',
+      content: [{ type: 'output_text', text: 'Looking.', annotations: [], logprobs: [] }],
+    };
+    const call = {
+      type: 'function_call',
+      id: 'fc_fixture',
+      call_id: 'call_fixture',
+      name: 'nix_search',
+      arguments: '{"query":"plan"}',
+      status: 'completed',
+    };
+    let round = 0;
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url === '/models')
+          return jsonResponse(res, 200, { data: [{ id: 'gpt-6.2-sol', created: 1 }] });
+        if (seen.url !== '/responses')
+          return jsonResponse(res, 400, {
+            error: { code: 'unsupported_parameter', param: 'tools' },
+          });
+        const output =
+          round++ === 0
+            ? [reasoning, commentary, call]
+            : [
+                {
+                  ...commentary,
+                  id: `msg_${String(round)}`,
+                  phase: 'final_answer',
+                  content: [
+                    { type: 'output_text', text: 'Found it.', annotations: [], logprobs: [] },
+                  ],
+                },
+              ];
+        return sse(res, [
+          { type: 'response.completed', response: { status: 'completed', output } },
+        ]);
+      }),
+    );
+    const first = keyAccount('openai', server);
+    await first.send({ workspaceAccess: true });
+    await eventually(() => first.account.snapshot(key).tools.length === 1);
+    await first.account.handle(
+      first.signal,
+      request({ operation: 'tool_claim', toolId: 'call_fixture', requestId: IDS.other }),
+    );
+    await first.account.handle(
+      first.signal,
+      request({
+        operation: 'tool_result',
+        toolId: 'call_fixture',
+        requestId: IDS.other,
+        toolResult: 'one synthetic hit',
+        toolSuccess: true,
+      }),
+    );
+    await eventually(() => first.account.snapshot(key).state === 'success');
+    first.transport.close();
+    const resumed = keyAccount('openai', server, first.home);
+    resumed.account.load(key);
+    await resumed.send({ requestId: IDS.other, text: 'Synthetic follow-up.' });
+    await eventually(() => resumed.account.snapshot(key).state === 'success');
+    const posts = server.seen.filter((seen) => seen.method === 'POST');
+    expect(posts.map((post) => post.url)).toEqual(['/responses', '/responses', '/responses']);
+    const body = z
+      .object({ store: z.literal(false), input: z.array(z.unknown()) })
+      .parse(JSON.parse(posts[1]?.body ?? '{}'));
+    expect(body.input.slice(2)).toEqual([
+      reasoning,
+      commentary,
+      call,
+      { type: 'function_call_output', call_id: 'call_fixture', output: 'one synthetic hit' },
+    ]);
+    const afterRestart = z
+      .object({ input: z.array(z.unknown()) })
+      .parse(JSON.parse(posts[2]?.body ?? '{}'));
+    expect(afterRestart.input).toContainEqual(reasoning);
+    expect(afterRestart.input).toContainEqual(commentary);
+    expect(posts.every((post) => !post.body.includes('previous_response_id'))).toBe(true);
+  });
+
+  it('sends no content without a sharing validator', async () => {
+    const server = await track(
+      startServer((_seen, res) =>
+        jsonResponse(res, 200, { data: [{ id: 'gpt-6.2-sol', created: 1 }] }),
+      ),
+    );
+    const k = keyAccount('openai', server, tempDir(), 'sk-test', false);
+    await expect(k.send()).rejects.toThrow('Sharing consent must be reviewed');
+    expect(server.seen.filter((seen) => seen.method === 'POST')).toHaveLength(0);
+  });
+
   const models = {
     data: [
       { id: 'text-embedding-3-small', created: 9 },

@@ -6,7 +6,7 @@ namespace Nix.Workers;
 /// <summary>Advances a pet job through Core's durable checkpoints.</summary>
 internal sealed class PetRunAdvanceHandler(IServiceScopeFactory scopes) : IWorkerJobHandler
 {
-    public IReadOnlyList<string> Kinds { get; } = [JobFamilies.PetAdvance];
+    public IReadOnlyList<string> Kinds { get; } = [JobFamilies.PetAdvance, JobFamilies.PetPlanAdvance];
 
     public async Task<string?> HandleAsync(WorkerExecution job, CancellationToken cancellationToken)
     {

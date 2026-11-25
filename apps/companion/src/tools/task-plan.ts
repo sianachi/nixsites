@@ -8,8 +8,10 @@ export const TASK_PLAN_OPERATION = 'plan_task_step';
 
 export const TASK_PLAN_INSTRUCTIONS = [
   'You are planning one step of an assigned Nix pet job. Return exactly one JSON object without Markdown fences.',
+  'When planMode is true, propose 1 to 12 concrete effects together using {"kind":"plan","summary":"a short statement of the complete plan","steps":[{"capability":"the exact offered name","arguments":{}}]}. Prepare known values only. Do not use future-result references, loops, wildcards, nested plans, or approval fields. A clarification is never approval. When planMode is absent, return the legacy single action form.',
   'Choose an offered capability using {"kind":"action","capability":"the exact offered name","arguments":{}}.',
   'If a decision or missing detail prevents progress, ask {"kind":"question","text":"one focused question"}.',
+  'When planMode is true, never return kind scope. Ask an ordinary question when something is unclear. An answer cannot expand source access; keep the task within the current scope or explain that the owner can cancel and start again with different sources.',
   'When scopeAbilities is present, ask to add a named source with {"kind":"scope","scope":"source","text":"the source name and why it is needed"} or an ability with {"kind":"scope","scope":"ability","text":"why the ability is needed","ability":"one exact name from scopeAbilities"}. A scope request asks for access and does not authorize any action.',
   'When work is complete, return {"kind":"complete","text":"a short, plain-language result for the owner"}.',
   'Write the completion text as plain text without Markdown formatting.',
@@ -42,7 +44,9 @@ const capabilitiesSchema = z
   .max(128);
 
 const contextSchema = z.strictObject({
-  taskId: z.string().regex(UUID),
+  taskId: z.string().regex(UUID).nullable(),
+  workspaceId: z.string().regex(UUID).optional(),
+  planMode: z.boolean().optional(),
   observations: z.array(z.string()).max(64),
   scopeAbilities: z.array(capabilityName).max(128).optional(),
 });
@@ -77,6 +81,11 @@ export function taskPlanInput(request: Request): string | undefined {
     const capabilities = capabilitiesSchema.safeParse(JSON.parse(request.sharedText));
     const context = contextSchema.safeParse(JSON.parse(request.contextText));
     if (!capabilities.success || !context.success) return undefined;
+    if (
+      (context.data.taskId === null && context.data.workspaceId === undefined) ||
+      (context.data.workspaceId !== undefined && context.data.workspaceId !== request.workspaceId)
+    )
+      return undefined;
     const names = new Set(capabilities.data.map((entry) => entry.name));
     if (names.size !== capabilities.data.length) return undefined;
     const scopeAbilities = context.data.scopeAbilities;
@@ -98,12 +107,14 @@ export function taskPlanInput(request: Request): string | undefined {
     return JSON.stringify({
       goal: screenPlannerText(request.text, request.apiKey),
       taskId: context.data.taskId,
+      ...(context.data.workspaceId === undefined ? {} : { workspaceId: context.data.workspaceId }),
+      ...(context.data.planMode === true ? { planMode: true } : {}),
       capabilities: capabilities.data,
       observations: observations
         .slice(ownerRevisions.length)
         .map((text) => screenPlannerText(text, request.apiKey)),
       ...(ownerRevisions.length === 0 ? {} : { ownerRevisions }),
-      scopeAbilities,
+      scopeAbilities: context.data.planMode === true ? undefined : scopeAbilities,
     });
   } catch {
     return undefined;

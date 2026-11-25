@@ -15,6 +15,9 @@ const FIELDS: Readonly<Record<keyof Request, Kind>> = {
   workspaceId: 'string',
   petId: 'string',
   operation: 'string',
+  consentMode: 'string',
+  sharingAttestation: 'string',
+  planPayload: 'string',
   provider: 'string',
   apiKey: 'string',
   requestId: 'string',
@@ -178,6 +181,12 @@ const TURN_TOKEN = /^[\w-]+\.[\w-]+\.[\w-]+$/;
 
 export function validTurnContext(r: Request): boolean {
   if (!validConversationContext(r)) return false;
+  if (
+    !['', 'plan'].includes(r.consentMode) ||
+    r.sharingAttestation.length > 16384 ||
+    r.planPayload.length > 960000
+  )
+    return false;
   if (r.turnToken !== '' && (r.turnToken.length > 4096 || !TURN_TOKEN.test(r.turnToken)))
     return false;
   if (

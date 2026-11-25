@@ -191,13 +191,17 @@ export async function inlineStart(
       throw new Error('model is unavailable');
     params.model = r.model;
   }
+  if (!(await account.canDisclose(r)))
+    throw new Error('Sharing consent must be reviewed before sending this content.');
   const started = await account.transport.call('thread/start', params, signal);
   const thread = isRecord(started) && isRecord(started.thread) ? str(started.thread.id) : '';
   if (thread === '') throw new Error('invalid thread response');
   // Registered before turn/start so no notification of the turn can arrive unrouted.
   account.registerInline(thread, run);
+  account.transport.setDisclosureGuard?.(thread, () => account.canDisclose(r));
   const turnParams: Record<string, unknown> = {
     threadId: thread,
+    recipientRevision: account.recipientRevisionFor(r),
     input: [{ type: 'text', text: input }],
   };
   const effort = await account.effortFor(signal, r.model);

@@ -65,6 +65,14 @@ public static class PetActionRequestBinding
 
     internal static bool IsDigest(string value) => value.Length == 64 && value.All(Uri.IsHexDigit);
 
+    internal static bool TryReadPlanRequest(string value, out Guid runId, out Guid requestId)
+    {
+        runId = default;
+        requestId = default;
+        return value.Length == 65 && value[32] == '.' && Guid.TryParseExact(value.AsSpan(0, 32), "N", out runId)
+            && Guid.TryParseExact(value.AsSpan(33), "N", out requestId) && runId != Guid.Empty && requestId != Guid.Empty;
+    }
+
     internal static async Task<bool> RevisionsMatchAsync(HttpContext context, CancellationToken cancellationToken)
     {
         var revisions = context.Request.Headers[RevisionsHeader].ToString();

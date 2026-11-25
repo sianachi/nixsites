@@ -31,7 +31,8 @@ public sealed class PetProviderCredentialStore(NixDbContext db) : IPetProviderCr
             INSERT INTO pet_provider_credential (tenant_id, principal_id, provider, protected_key, key_hint, saved_at)
             VALUES ({credential.TenantId.Value}, {credential.PrincipalId.Value}, {credential.Provider}, {credential.ProtectedKey.ToArray()}, {credential.KeyHint}, {credential.SavedAt})
             ON CONFLICT (tenant_id, principal_id, provider) DO UPDATE
-            SET protected_key = EXCLUDED.protected_key, key_hint = EXCLUDED.key_hint, saved_at = EXCLUDED.saved_at
+            SET protected_key = EXCLUDED.protected_key, key_hint = EXCLUDED.key_hint,
+                saved_at = GREATEST(EXCLUDED.saved_at, pet_provider_credential.saved_at + interval '1 microsecond')
             """, cancellationToken).ConfigureAwait(false);
     }
 

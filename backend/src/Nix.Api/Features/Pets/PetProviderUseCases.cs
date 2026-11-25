@@ -95,7 +95,10 @@ public sealed class SavePetProviderKeyHandler(IPetProviderCredentialStore store,
             SavedAt = DateTimeOffset.UtcNow,
         };
         await store.SaveAsync(credential, cancellationToken).ConfigureAwait(false);
-        return Result.Success(new PetProviderKeyResponse(credential.Provider, credential.KeyHint, credential.SavedAt));
+        var persisted = await store.FindAsync(context.TenantId, context.PrincipalId, command.Provider, cancellationToken).ConfigureAwait(false);
+        return persisted is null
+            ? Result.Failure<PetProviderKeyResponse>(new("pets.provider_changed", "The provider connection changed while saving. Refresh its settings."))
+            : Result.Success(new PetProviderKeyResponse(persisted.Provider, persisted.KeyHint, persisted.SavedAt));
     }
 }
 

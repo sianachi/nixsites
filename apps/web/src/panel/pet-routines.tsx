@@ -178,13 +178,15 @@ export function PetRoutines({
         setOpen(event.currentTarget.open);
       }}
     >
-      <summary className={`cursor-pointer ${focusRing}`}>
+      <summary
+        className={`min-h-11 cursor-pointer py-2 any-pointer-coarse:min-h-(--control-lg) ${focusRing}`}
+      >
         <Text variant="bodySmall" as="span">
           Scheduled routines
         </Text>
       </summary>
       {open ? (
-        <div className="flex min-w-0 flex-col gap-2 pt-2">
+        <div className="flex min-w-0 flex-col gap-2 pb-2 ps-4">
           {feed.status === 'ready' ? (
             feed.rules.length === 0 ? (
               <Text variant="note" tone="muted">

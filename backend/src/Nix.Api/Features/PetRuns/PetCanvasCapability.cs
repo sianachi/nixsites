@@ -22,6 +22,7 @@ internal sealed class PetCanvasCapability(
     private static readonly JsonElement Schema = ReadSchema();
 
     public string Name => "canvas.edit";
+    public bool PlanRequestDispatch => true;
     public string Description => "Edit native canvas elements. Supply itemId for a workspace-scoped job, elements to add or edit, and remove for IDs to delete. "
         + "Boxes use id, type (rectangle, diamond, or ellipse), x, y, width, height, and optional nixItemId to make a linked Nix card. "
         + "Text uses id, type=text, text, and either containerId or x and y. Arrow uses id, type=arrow, from and to box IDs and optional via points. "
@@ -53,7 +54,7 @@ internal sealed class PetCanvasCapability(
             return Result.Failure<PetRunEffect>(Error("Provide a canvas edit plan."));
         }
         var plan = JsonNode.Parse(args.GetRawText())!.AsObject();
-        var itemId = run.ItemId;
+        ItemId itemId;
         if (args.TryGetProperty("itemId", out var target))
         {
             if (target.ValueKind != JsonValueKind.String || !target.TryGetGuid(out var parsed) || parsed == Guid.Empty)
@@ -63,12 +64,26 @@ internal sealed class PetCanvasCapability(
             itemId = new ItemId(parsed);
             plan.Remove("itemId");
         }
+        else if (run.ItemId is { } anchor)
+        {
+            itemId = anchor;
+        }
+        else
+        {
+            return Result.Failure<PetRunEffect>(Error("Choose the canvas to edit."));
+        }
         var item = await AuthorizedCanvasAsync(run, itemId, cancellationToken).ConfigureAwait(false);
         if (item is null)
         {
             return Result.Failure<PetRunEffect>(Error("The canvas is outside this run's scope."));
         }
+        var revision = await tree.ReadPetRevisionAsync(run.WorkspaceId, itemId, pin: false, cancellationToken).ConfigureAwait(false);
         var reply = await SendAsync(run, itemId, Guid.NewGuid(), "preview", "plan", plan, cancellationToken).ConfigureAwait(false);
+        if (run.RequestId is not null && (revision is null
+            || revision != await tree.ReadPetRevisionAsync(run.WorkspaceId, itemId, pin: false, cancellationToken).ConfigureAwait(false)))
+        {
+            return Result.Failure<PetRunEffect>(Error("The canvas changed while its preview was prepared."));
+        }
         if (reply.IsFailure)
         {
             return Result.Failure<PetRunEffect>(reply.Error);
@@ -86,6 +101,7 @@ internal sealed class PetCanvasCapability(
                 ["kind"] = "canvas",
                 ["itemId"] = itemId.Value,
                 ["preview"] = JsonNode.Parse(preview.GetRawText()),
+                ["revisions"] = revision is { } expected ? FormattableString.Invariant($"{run.WorkspaceId.Value:D}|{itemId.Value:D}:{expected}") : "",
             }, PetCanvasJsonContext.Default.JsonObject)));
     }
 
@@ -173,7 +189,8 @@ internal sealed class PetCanvasCapability(
         }
         var operation = undoReceipt is null ? "apply" : "undo";
         var payload = JsonNode.Parse(undoReceipt ?? preview.GetRawText());
-        var reply = await SendAsync(run, itemId, actionId, operation, undoReceipt is null ? "preview" : "receipt", payload, cancellationToken)
+        var reply = await SendAsync(run, itemId, actionId, operation, undoReceipt is null ? "preview" : "receipt", payload, cancellationToken,
+            run.PlanExecution is null ? null : effect.Parameters.GetProperty("revisions").GetString())
             .ConfigureAwait(false);
         return reply.Match(result => Result.Success(result.GetRawText()), Result.Failure<string>);
     }
@@ -198,8 +215,11 @@ internal sealed class PetCanvasCapability(
 
     private async Task<Item?> AuthorizedCanvasAsync(PetRunRecord run, ItemId itemId, CancellationToken cancellationToken)
     {
+        var inSubtree = run.ScopeRootItemId is { } root
+            && await tree.IsVisibleSubtreeMemberAsync(run.WorkspaceId, ItemId.From(root), itemId, cancellationToken).ConfigureAwait(false);
         if (run.ReadOnlySourceItemIds?.Contains(itemId.Value) == true
-            || itemId != run.ItemId && !run.WorkspaceScope)
+            || run.ScopeRootItemId is not null && !inSubtree
+            || itemId != run.ItemId && !run.WorkspaceScope && !inSubtree)
         {
             return null;
         }
@@ -258,7 +278,7 @@ internal sealed class PetCanvasCapability(
 
     private async Task<Result<JsonElement>> SendAsync(
         PetRunRecord run, ItemId itemId, Guid actionId, string operation, string payloadName, JsonNode? payload,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, string? planRevisions = null)
     {
         var address = configuration["Nix:Pets:WorkerUrl"];
         var secret = configuration["Nix:InternalSecret"];
@@ -271,7 +291,8 @@ internal sealed class PetCanvasCapability(
         }
         var write = operation is "apply" or "undo";
         var binding = PetActionRequestBinding.Create("GET", $"/internal/authz/items/{itemId.Value:D}", body: null);
-        var token = tokens.MintPetAction(run.ActorId, run.TenantId, actionId, write ? PetTurnMode.Write : PetTurnMode.Read, binding);
+        var token = run.RequestId is not null ? tokens.MintPetPlanRead(run.ActorId, run.TenantId, run.Id)
+            : tokens.MintPetAction(run.ActorId, run.TenantId, actionId, write ? PetTurnMode.Write : PetTurnMode.Read, binding);
         var body = new JsonObject
         {
             ["operation"] = operation,
@@ -282,6 +303,10 @@ internal sealed class PetCanvasCapability(
         if (write)
         {
             body["actionId"] = actionId;
+        }
+        if (write && run.PlanExecution is not null)
+        {
+            body["planExecution"] = PetPlanExecution.NativeContext(run, planRevisions ?? "");
         }
         using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(origin, "/v1/sani/pet-canvas"))
         {
@@ -393,14 +418,17 @@ internal sealed class PetCanvasReadCapability(PetCanvasCapability canvas) : IPet
             return Result.Failure<PetRunEffect>(new NixError("pet_runs.canvas_refused", "Provide a canvas source."));
         }
         var query = JsonNode.Parse(args.GetRawText())!.AsObject();
-        var id = run.ItemId.Value;
-        if (args.TryGetProperty("itemId", out var target)
-            && (target.ValueKind != JsonValueKind.String || !target.TryGetGuid(out id)))
+        var id = run.ItemId?.Value;
+        if (args.TryGetProperty("itemId", out var target))
         {
-            return Result.Failure<PetRunEffect>(new NixError("pet_runs.canvas_refused", "Choose a valid canvas source."));
+            if (target.ValueKind != JsonValueKind.String || !target.TryGetGuid(out var selected))
+            {
+                return Result.Failure<PetRunEffect>(new NixError("pet_runs.canvas_refused", "Choose a valid canvas source."));
+            }
+            id = selected;
         }
         query.Remove("itemId");
-        if (!await canvas.CanReadAsync(run, new ItemId(id), cancellationToken).ConfigureAwait(false))
+        if (id is not { } rawId || !await canvas.CanReadAsync(run, new ItemId(rawId), cancellationToken).ConfigureAwait(false))
         {
             return Result.Failure<PetRunEffect>(new NixError("pet_runs.canvas_refused", "Select the canvas as a source for this run."));
         }

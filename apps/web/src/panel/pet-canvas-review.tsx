@@ -7,6 +7,7 @@ import {
   Suspense,
   useContext,
   useEffect,
+  useEffectEvent,
   useId,
   useRef,
   useState,
@@ -109,6 +110,7 @@ export function PetCanvasDecision({
   onDecline,
   onRequestChanges,
   onRefresh,
+  planReview,
 }: {
   readonly draft: CanvasReviewDraft;
   readonly heading: string;
@@ -119,6 +121,7 @@ export function PetCanvasDecision({
   readonly onDecline: () => void;
   readonly onRequestChanges: (feedback: string) => void;
   readonly onRefresh: () => void;
+  readonly planReview?: { readonly onReady: (ready: boolean) => void } | undefined;
 }): ReactElement {
   const { getAccessToken } = useAuth();
   const headingId = useId();
@@ -130,6 +133,15 @@ export function PetCanvasDecision({
   const [checking, setChecking] = useState(false);
   const checkRef = useRef<AbortController | null>(null);
   const canvasPalette = useRef<HTMLSpanElement>(null);
+  const reportPlanReady = useEffectEvent((ready: boolean) => {
+    planReview?.onReady(ready);
+  });
+  useEffect(() => {
+    reportPlanReady(!stale && state.kind === 'ready' && readyToView);
+    return () => {
+      reportPlanReady(false);
+    };
+  }, [stale, state.kind, readyToView]);
 
   useEffect(() => {
     const palette = canvasPalette.current;
@@ -292,15 +304,17 @@ export function PetCanvasDecision({
                 </Button>
               </div>
             ) : null}
-            <ApprovalActions
-              headingId={headingId}
-              approveLabel="Apply drawing"
-              busy={busy || checking}
-              approveDisabled={!readyToView || state.kind !== 'ready'}
-              onApprove={() => void approve()}
-              onDecline={onDecline}
-              onRequestChanges={onRequestChanges}
-            />
+            {planReview === undefined ? (
+              <ApprovalActions
+                headingId={headingId}
+                approveLabel="Apply drawing"
+                busy={busy || checking}
+                approveDisabled={!readyToView || state.kind !== 'ready'}
+                onApprove={() => void approve()}
+                onDecline={onDecline}
+                onRequestChanges={onRequestChanges}
+              />
+            ) : null}
           </>
         )}
       </div>

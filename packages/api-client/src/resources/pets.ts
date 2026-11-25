@@ -152,6 +152,7 @@ export interface RuntimeInput {
   /** The owner's "read without asking" device setting, sent with `send`: the server may then run
    * this turn's read tools itself. */
   readonly readWithoutAsking?: boolean;
+  readonly consentMode?: 'plan';
   /** The workspace's main containers, sent with a conversation's first message only. */
   readonly workspaceMap?: readonly PetWorkspaceMapEntry[];
 }
@@ -188,6 +189,7 @@ export const runtime = (input: RuntimeInput): CommandEndpoint<PetConnection> =>
       toolImage: input.toolImage ?? '',
       toolLockedContent: input.toolLockedContent ?? false,
       readWithoutAsking: input.readWithoutAsking ?? false,
+      consentMode: input.consentMode ?? '',
       approvedOperation: input.approvedOperation ?? '',
       fingerprint: input.fingerprint ?? '',
       editedArguments: input.editedArguments ?? '',

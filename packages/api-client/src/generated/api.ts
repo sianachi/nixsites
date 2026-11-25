@@ -144,6 +144,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/internal/pets/sharing/validate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['ValidatePetSharing'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/workspaces/{workspaceId}/pet-runs': {
     parameters: {
       query?: never;
@@ -2084,6 +2100,307 @@ export interface paths {
      * @description The same events as the chat stream, for the conversation attached to 'rootItemId'.
      */
     post: operations['StreamPetNoteRuntime'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the caller's workspace plans. */
+    get: operations['ListPetPlans'];
+    put?: never;
+    /** Prepare a workspace plan for owner review. */
+    post: operations['CreatePetPlan'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Inspect an owned plan and its observed results. */
+    get: operations['GetPetPlan'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/watch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Poll the current plan revision. */
+    get: operations['WatchPetPlan'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/drafts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Prepare a fresh plan from stored editable fields or feedback. */
+    post: operations['RevisePetPlan'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/decision': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Record exact owner or explicitly delegated consent for a prepared plan version. */
+    post: operations['DecidePetPlan'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/answer': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Answer a clarification without approving effects. */
+    post: operations['AnswerPetPlan'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancel the plan's undispatched effects. */
+    post: operations['CancelPetPlan'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/claim': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Claim the next frozen effect requiring an owner client. */
+    post: operations['ClaimPetPlanStep'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/result': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Record a bounded receipt for the exact active client claim. */
+    post: operations['RecordPetPlanStep'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/undo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Queue the supported undo of one applied receipt. */
+    post: operations['UndoPetPlanStep'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['DecidePetPlanSharing'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['CreatePetPlanDecisionHandoff'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs/{handoffId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['GetPetPlanDecisionHandoff'];
+    put?: never;
+    post?: never;
+    delete: operations['RevokePetPlanDecisionHandoff'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-contexts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AuthorizePetPlanDecisionContext'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-sharing/question': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['GetPetSharingQuestion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-sharing/decision': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['DecidePetSharing'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/io': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the next server-prepared exact request for an owner client. */
+    get: operations['GetPetPlanClientIntent'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/io/result': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Return the response to the exact dispatched owner-client request. */
+    post: operations['RecordPetPlanClientIoResult'];
     delete?: never;
     options?: never;
     head?: never;
@@ -4091,6 +4408,15 @@ export interface components {
       /** Format: int64 */
       skipped: number | string;
     };
+    AnswerPetPlanRequest: {
+      /** Format: int64 */
+      expectedRunRevision: number | string;
+      /** Format: uuid */
+      questionId: string;
+      answer: null | string;
+      /** Format: uuid */
+      requestId: string;
+    };
     AnswerPetRunRequest: {
       /** Format: uuid */
       questionId: string;
@@ -4410,6 +4736,12 @@ export interface components {
       entries: components['schemas']['CalendarSyncLogEntryResponse'][];
       nextCursor: null | string;
     };
+    CancelPetPlanRequest: {
+      /** Format: int64 */
+      expectedRunRevision: number | string;
+      /** Format: uuid */
+      requestId: string;
+    };
     CanvasLibraryResponse: {
       items: components['schemas']['JsonArray'];
     };
@@ -4483,6 +4815,17 @@ export interface components {
       children: number | string;
       /** Format: double */
       total: null | number | string;
+    };
+    ClaimPetPlanStepRequest: {
+      /** Format: int64 */
+      expectedRunRevision: number | string;
+      /** Format: int32 */
+      planVersion: number | string;
+      reviewDigest: string;
+      /** Format: uuid */
+      requestId: string;
+      /** Format: uuid */
+      runnerContextId: string;
     };
     CommentAnchorPositions: {
       start: string;
@@ -4667,6 +5010,28 @@ export interface components {
       idempotencyKey?: null | string;
       strict?: null | boolean;
     };
+    CreatePetPlanDecisionContextRequest: {
+      /** Format: uuid */
+      handoffId: string;
+      /** Format: uuid */
+      planId: string;
+      /** Format: int32 */
+      planVersion: number | string;
+      reviewDigest: string;
+      /** Format: uuid */
+      granteeCredentialId: string;
+      clientName: string;
+      approve: boolean;
+    };
+    CreatePetPlanDecisionHandoffRequest: {
+      /** Format: uuid */
+      planId: string;
+      /** Format: int32 */
+      planVersion: number | string;
+      reviewDigest: string;
+      clientName: string;
+      approve: boolean;
+    };
     CreateSiteRequest: {
       /** Format: uuid */
       rootItemId: string;
@@ -4763,6 +5128,31 @@ export interface components {
       /** Format: int32 */
       rolloverHour: number | string;
       showOnCalendar: boolean;
+    };
+    DecidePetPlanRequest: {
+      /** Format: int64 */
+      expectedRunRevision: number | string;
+      /** Format: int32 */
+      planVersion: number | string;
+      reviewDigest: string;
+      approve: boolean;
+      /** Format: uuid */
+      requestId: string;
+      decisionContext?: null | string;
+    };
+    DecidePetPlanSharingRequest: {
+      /** Format: int64 */
+      expectedRunRevision: number | string;
+      recipientRevision: string;
+      scopeDigest: string;
+      approve: boolean;
+      /** Format: uuid */
+      requestId: string;
+      /**
+       * Format: uuid
+       * @default 00000000-0000-0000-0000-000000000000
+       */
+      decisionNonce: string;
     };
     DecidePetProposalRequest: {
       approve: boolean;
@@ -5566,6 +5956,11 @@ export interface components {
       title: string;
       /** @default false */
       serverWrites: boolean;
+      /** @default  */
+      turnId: string;
+      /** @default  */
+      conversationId: string;
+      plannedBatch?: null | components['schemas']['PetPlannedBatch'];
     };
     PetHistoryEntry: {
       id: string;
@@ -5640,6 +6035,195 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
     };
+    PetPlanChatSource: {
+      conversationId: string;
+      toolCallIds: string[];
+      /** Format: uuid */
+      turnId: string;
+      mode?: null | string;
+      /** Format: uuid */
+      rootItemId?: null | string;
+    };
+    PetPlanClientIoResult: {
+      /** Format: uuid */
+      requestId: string;
+      /** Format: int32 */
+      status: number | string;
+      headers: {
+        [key: string]: string;
+      };
+      body: string;
+    };
+    PetPlanDecisionHandoffResponse: {
+      /** Format: uuid */
+      handoffId: string;
+      browserPath: string;
+      decisionContext: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    PetPlanDecisionHandoffStatus: {
+      /** Format: uuid */
+      handoffId: string;
+      /** Format: uuid */
+      granteeCredentialId: string;
+      clientName: string;
+      /** Format: uuid */
+      planId: string;
+      /** Format: int32 */
+      planVersion: number | string;
+      reviewDigest: string;
+      approve: boolean;
+      status: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    PetPlanDecisionRecord: {
+      /** Format: uuid */
+      requestId: string;
+      approve: boolean;
+      /** Format: date-time */
+      at: string;
+      credentialClass: string;
+      authorityId: string;
+      /** Format: uuid */
+      actorId: string;
+    };
+    PetPlanFieldEdit: {
+      /** Format: uuid */
+      stepId: string;
+      fieldId: string;
+      value: components['schemas']['JsonElement'];
+    };
+    PetPlanFieldResponse: {
+      id: string;
+      label: string;
+      kind: string;
+      value: components['schemas']['JsonElement'];
+      help?: null | string;
+      /** @default false */
+      required: boolean;
+      choices?: null | string[];
+      currentValue?: unknown;
+    };
+    PetPlannedBatch: {
+      turnId: string;
+      conversationId: string;
+      toolIds: string[];
+      ready: boolean;
+      sourceScope?: null | components['schemas']['PetSourceScopeDescriptor'];
+      scope?: null | components['schemas']['PetPlannedToolScope'];
+      requiresReadDecision?: null | boolean;
+    };
+    PetPlannedToolScope: {
+      /** Format: uuid */
+      rootItemId: null | string;
+      readOnly: boolean;
+    };
+    PetPlanObservation: {
+      /** Format: uuid */
+      id: string;
+      capability: string;
+      description: string;
+      receiptView: null | components['schemas']['PetPlanReceiptView'];
+    };
+    PetPlanReceiptView: {
+      summary: string;
+      details?: unknown;
+      text?: null | string;
+    };
+    PetPlanRecipientDescriptor: {
+      provider: string;
+      destination: string;
+      routingPolicy: string;
+      connectionRevision: string;
+    };
+    PetPlanResponse: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      workspaceId: string;
+      /** Format: uuid */
+      anchorItemId: null | string;
+      /** Format: uuid */
+      petId: string;
+      brief: string;
+      sourceScope: components['schemas']['PetPlanSourceScope'];
+      status: string;
+      /** Format: int64 */
+      revision: number | string;
+      sharingQuestion: null | components['schemas']['PetPlanSharingQuestion'];
+      question: null | components['schemas']['PetRunQuestion'];
+      plan: null | components['schemas']['PetPlanReview'];
+      results: components['schemas']['PetRunResult'][];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      afterMessageId?: null | string;
+      failure?: null | components['schemas']['PetRunFailure'];
+      observations?: null | components['schemas']['PetPlanObservation'][];
+    };
+    PetPlanReview: {
+      /** Format: uuid */
+      id: string;
+      /** Format: int32 */
+      version: number | string;
+      summary: string;
+      reviewDigest: string;
+      scopeDigest: string;
+      recipientRevision: string;
+      status: string;
+      steps: components['schemas']['PetPlanStepResponse'][];
+      decision?: null | components['schemas']['PetPlanDecisionRecord'];
+    };
+    PetPlanSharingQuestion: {
+      scopeDigest: string;
+      recipientRevision: string;
+      sourceScope: components['schemas']['PetPlanSourceScope'];
+      recipient: components['schemas']['PetPlanRecipientDescriptor'];
+      message: string;
+      /** Format: uuid */
+      decisionNonce?: null | string;
+    };
+    PetPlanSourceScope: {
+      kind: string;
+      itemIds?: null | string[];
+      readOnlyWorkspaceIds?: null | string[];
+    };
+    PetPlansResponse: {
+      enabled: boolean;
+      abilities: components['schemas']['PetRunAbility'][];
+      runs: components['schemas']['PetPlanResponse'][];
+    };
+    PetPlanStepClaimResponse: {
+      run: components['schemas']['PetPlanResponse'];
+      /** Format: uuid */
+      claimId: string;
+      /** Format: uuid */
+      executionId: string;
+      /** Format: uuid */
+      stepId: string;
+      capability: string;
+      arguments: components['schemas']['JsonElement'];
+      preview: components['schemas']['JsonElement'];
+      executor: string;
+      dispatchContext: string;
+    };
+    PetPlanStepResponse: {
+      /** Format: uuid */
+      id: string;
+      capability: string;
+      arguments: components['schemas']['JsonElement'];
+      effect: components['schemas']['PetRunEffect'];
+      executor: string;
+      status: string;
+      fields: components['schemas']['PetPlanFieldResponse'][];
+      receipt?: null | string;
+      /** Format: uuid */
+      undoId?: null | string;
+      receiptView?: null | components['schemas']['PetPlanReceiptView'];
+    };
     PetProfile: {
       /** Format: uuid */
       id: string;
@@ -5665,6 +6249,10 @@ export interface components {
       name: string;
       description: string;
     };
+    PetRunEffect: {
+      description: string;
+      parameters: components['schemas']['JsonElement'];
+    };
     PetRunFailure: {
       stage: string;
       code: string;
@@ -5684,6 +6272,11 @@ export interface components {
       undoId?: null | string;
       /** @default false */
       automatic: boolean;
+      sourceItemIds?: null | string[];
+      /** @default false */
+      observationBlocked: boolean;
+      /** @default false */
+      unboundedSourceProvenance: boolean;
     };
     PetRunQuestion: {
       /** Format: uuid */
@@ -5784,6 +6377,8 @@ export interface components {
       automatic: boolean;
       /** @default  */
       approvedOperation: string;
+      /** @default  */
+      consentMode: string;
     };
     PetSettings: {
       enabled: boolean;
@@ -5801,6 +6396,36 @@ export interface components {
       revision: number | string;
       settings: components['schemas']['PetSettings'];
     };
+    PetSharingDecisionRequest: {
+      /** Format: uuid */
+      petId: string;
+      sourceScope: components['schemas']['PetPlanSourceScope'];
+      recipientRevision: string;
+      scopeDigest: string;
+      approve: boolean;
+      /** Format: uuid */
+      requestId: string;
+      /**
+       * Format: uuid
+       * @default 00000000-0000-0000-0000-000000000000
+       */
+      decisionNonce: string;
+    };
+    PetSharingQuestionRequest: {
+      /** Format: uuid */
+      petId: string;
+      sourceScope: components['schemas']['PetPlanSourceScope'];
+      /** @default false */
+      forDecision: boolean;
+    };
+    PetSharingQuestionResponse: {
+      question: null | components['schemas']['PetPlanSharingQuestion'];
+    };
+    PetSourceScopeDescriptor: {
+      kind: string;
+      itemIds?: null | string[];
+      readOnlyWorkspaceIds?: null | string[];
+    };
     PetStreamRequest: {
       /** Format: uuid */
       workspaceId: string;
@@ -5817,6 +6442,19 @@ export interface components {
       status: string;
       result: string;
       claimId: string;
+      planBinding?: null | components['schemas']['PetToolPlanBinding'];
+    };
+    PetToolPlanBinding: {
+      toolId: string;
+      /** Format: uuid */
+      runId: string;
+      /** Format: uuid */
+      planId: string;
+      /** Format: int32 */
+      planVersion: number | string;
+      reviewDigest: string;
+      /** Format: uuid */
+      stepId: string;
     };
     PetWorkspaceMapEntry: {
       /** Format: uuid */
@@ -6034,6 +6672,17 @@ export interface components {
     ReconcileWorkspaceSyncRequest: {
       itemIds: string[];
     };
+    RecordPetPlanStepRequest: {
+      /** Format: int32 */
+      planVersion: number | string;
+      reviewDigest: string;
+      /** Format: uuid */
+      claimId: string;
+      /** Format: uuid */
+      executionId: string;
+      status: string;
+      receipt: null | string;
+    };
     RecoverWorkspaceRequest: {
       /** Format: uuid */
       newOwnerPrincipalId: string;
@@ -6110,6 +6759,16 @@ export interface components {
     };
     ResetLinkRequest: {
       currentPassword: null | string;
+    };
+    RevisePetPlanRequest: {
+      /** Format: int64 */
+      expectedRunRevision: number | string;
+      /** Format: int32 */
+      planVersion: null | number | string;
+      fieldEdits: null | components['schemas']['PetPlanFieldEdit'][];
+      feedback: null | string;
+      /** Format: uuid */
+      requestId: string;
     };
     RevisePetRunProposalRequest: {
       feedback?: null | string;
@@ -6429,6 +7088,18 @@ export interface components {
       spacing: string;
       /** Format: uuid */
       themeItemId?: null | string;
+    };
+    StartPetPlanRequest: {
+      /** Format: uuid */
+      petId: string;
+      brief: null | string;
+      /** Format: uuid */
+      anchorItemId: null | string;
+      sourceScope: components['schemas']['PetPlanSourceScope'];
+      afterMessageId: null | string;
+      /** Format: uuid */
+      requestId: string;
+      chatSource?: null | components['schemas']['PetPlanChatSource'];
     };
     StartPetRunRequest: {
       brief: null | string;
@@ -6787,6 +7458,12 @@ export interface components {
       /** Format: int64 */
       revision: number | string;
     };
+    UndoPetPlanStepRequest: {
+      /** Format: int64 */
+      expectedRunRevision: number | string;
+      /** Format: uuid */
+      requestId: string;
+    };
     UnlockItemResponse: {
       /** Format: date-time */
       unlockedUntil: string;
@@ -6849,6 +7526,34 @@ export interface components {
     UpsertRecordResponse: {
       outcome: string;
       item: components['schemas']['ItemResponse'];
+    };
+    ValidatePetSharingRequest: {
+      attestation: string;
+      /** Format: uuid */
+      tenantId: string;
+      /** Format: uuid */
+      principalId: string;
+      /** Format: uuid */
+      workspaceId: string;
+      /** Format: uuid */
+      petId: string;
+      provider: string;
+      /** Format: uuid */
+      turnId: string;
+      /** Format: uuid */
+      priorTurnId?: null | string;
+      contextSourceItemIds?: null | string[];
+      /** @default false */
+      contextProtected: boolean;
+      /** @default false */
+      contextUnbounded: boolean;
+      priorRecipientRevision?: null | string;
+      priorSourceScope?: null | components['schemas']['PetPlanSourceScope'];
+    };
+    ValidatePetSharingResponse: {
+      allowed: boolean;
+      recipientRevision?: null | string;
+      sourceScope?: null | components['schemas']['PetPlanSourceScope'];
     };
     ViewAggregateContract: {
       property: string;
@@ -7431,6 +8136,30 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ValidatePetSharing: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ValidatePetSharingRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ValidatePetSharingResponse'];
         };
       };
     };
@@ -12760,6 +13489,525 @@ export interface operations {
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
+      };
+    };
+  };
+  ListPetPlans: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlansResponse'];
+        };
+      };
+    };
+  };
+  CreatePetPlan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StartPetPlanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  GetPetPlan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  WatchPetPlan: {
+    parameters: {
+      query?: {
+        after?: number | string;
+      };
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  RevisePetPlan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RevisePetPlanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  DecidePetPlan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+        planId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DecidePetPlanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  AnswerPetPlan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AnswerPetPlanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  CancelPetPlan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CancelPetPlanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  ClaimPetPlanStep: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+        planId: string;
+        stepId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ClaimPetPlanStepRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanStepClaimResponse'];
+        };
+      };
+    };
+  };
+  RecordPetPlanStep: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+        planId: string;
+        stepId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RecordPetPlanStepRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  UndoPetPlanStep: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+        planId: string;
+        stepId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UndoPetPlanStepRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  DecidePetPlanSharing: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DecidePetPlanSharingRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanResponse'];
+        };
+      };
+    };
+  };
+  CreatePetPlanDecisionHandoff: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePetPlanDecisionHandoffRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanDecisionHandoffResponse'];
+        };
+      };
+    };
+  };
+  GetPetPlanDecisionHandoff: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+        handoffId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanDecisionHandoffStatus'];
+        };
+      };
+    };
+  };
+  RevokePetPlanDecisionHandoff: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+        handoffId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanDecisionHandoffStatus'];
+        };
+      };
+    };
+  };
+  AuthorizePetPlanDecisionContext: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePetPlanDecisionContextRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetPlanDecisionHandoffStatus'];
+        };
+      };
+    };
+  };
+  GetPetSharingQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PetSharingQuestionRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetSharingQuestionResponse'];
+        };
+      };
+    };
+  };
+  DecidePetSharing: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PetSharingDecisionRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetSharingQuestionResponse'];
+        };
+      };
+    };
+  };
+  GetPetPlanClientIntent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RecordPetPlanClientIoResult: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+        runId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PetPlanClientIoResult'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

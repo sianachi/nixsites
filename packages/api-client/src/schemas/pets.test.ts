@@ -14,6 +14,27 @@ const settings = {
 };
 
 describe('pet boundary schemas', () => {
+  it.each([null, '44444444-4444-4444-8444-444444444444'])(
+    'retains the stored turn scope for a planned batch rooted at %s',
+    (rootItemId) => {
+      const scope = { rootItemId, readOnly: false };
+      const parsed = petConnectionSchema.parse({
+        provider: 'openai',
+        status: 'connected',
+        reason: '',
+        canConnect: false,
+        plannedBatch: {
+          turnId: '55555555-5555-4555-8555-555555555555',
+          conversationId: 'stored-conversation',
+          toolIds: ['stored-tool'],
+          ready: true,
+          scope,
+          requiresReadDecision: true,
+        },
+      });
+      expect(parsed.plannedBatch).toMatchObject({ scope, requiresReadDecision: true });
+    },
+  );
   it('reads legacy settings while dropping retired fields', () => {
     expect(
       petSettingsSchema.parse({

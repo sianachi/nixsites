@@ -2,7 +2,12 @@
 // sub-panels - kept apart from the floating launcher in `pet-companion.tsx` so a page can render
 // the same conversation without the launcher, the drag handling or the panel positioning. How it
 // sits on screen is the caller's `layout`; everything inside is the same in all of them.
-import { type PetConnection, type PetProfile, type PetSettings } from '@nix/api-client';
+import {
+  type PetConnection,
+  type PetPlanSourceScope,
+  type PetProfile,
+  type PetSettings,
+} from '@nix/api-client';
 import { Button, Text, focusRing } from '@nix/ui';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { Link, useSearchParams } from 'react-router';
@@ -45,9 +50,11 @@ import { useRename } from './state/use-rename';
 import { useResumeUndo } from './state/use-resume-undo';
 import { PetHistory } from '../pet-history';
 import { useTurns } from './state/use-turns';
+import { useSharingConsent } from '@nix/web-platform/api/use-pet-sharing-consent';
 import { type ConversationJobDraft, type ConversationJobs } from './conversation-jobs';
 
 type ConversationPanel = 'chat' | 'settings' | 'history';
+const emptyMessages: NonNullable<PetConnection['messages']> = [];
 
 export type ConversationLayout = 'floating' | 'drawer' | 'fullscreen' | 'page';
 
@@ -123,27 +130,47 @@ export function Conversation({
   // The draft lives in a small in-memory store rather than here so it survives the
   // conversation moving between the floating panel and its page.
   const [draft, setDraft] = usePetDraft(workspaceId, pet.id, noteScope?.rootItemId);
+  const [draftRestorations, setDraftRestorations] = useState(0);
   const [model, setModel] = useState(() =>
     readConversationModel(workspaceId, pet.id, pet.provider),
   );
   const [workspaceAccessPreference, setWorkspaceAccess] = useState(() =>
     readWorkspaceAccess(workspaceId, pet.id),
   );
-  const workspaceAccess = noteScope !== undefined || workspaceAccessPreference;
+  const [contextChoice, setContextChoice] = useState<{
+    readonly identity: string;
+    readonly include: boolean;
+  } | null>(null);
+  const contextIdentity = `${workspaceId}:${pet.id}:${noteScope?.rootItemId ?? ''}`;
+  const planConsent = jobs?.consentMode === 'plan';
+  const workspaceAccess =
+    noteScope !== undefined ||
+    (planConsent
+      ? contextChoice?.identity === contextIdentity
+        ? contextChoice.include
+        : true
+      : workspaceAccessPreference);
   const [readWithoutAsking, setReadWithoutAsking] = useState(() => readReadWithoutAsking());
   const [needsDecisionIds, setNeedsDecisionIds] = useState<readonly string[]>([]);
   // The last user message, being edited in place: its id pins the edit to that message.
   const [editing, setEditing] = useState<{ readonly id: string; readonly text: string } | null>(
     null,
   );
+  const currentEdit = useRef(editing);
+  useEffect(() => {
+    currentEdit.current = editing;
+  }, [editing]);
   const input = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    if (draftRestorations > 0) input.current?.focus();
+  }, [draftRestorations]);
   const dialog = useRef<HTMLDivElement | null>(null);
   // Must-fix 7: `Text` deliberately takes no `ref`/`tabIndex` (its own contract refuses an open
   // prop spread), so the focus target on open is a plain wrapper around the visible `<h3>` -
   // still announced as a level-3 heading, just not itself the tab stop.
   const panelHeading = useRef<HTMLDivElement | null>(null);
   const menuTrigger = useRef<{ current: HTMLButtonElement | null } | null>(null);
-  const messages = runtime?.messages ?? [];
+  const messages = runtime?.messages ?? emptyMessages;
   // Each message's view of the generated-UI blocks before it, so a patch can find what it changes.
   const runtimeMessages = runtime?.messages;
   const piecesBefore = useStablePieces(runtimeMessages ?? []);
@@ -194,12 +221,59 @@ export function Conversation({
   );
 
   /** Closing the message editor removes the control that had focus, so focus goes to the composer. */
-  function closeEditor() {
+  function closeEditor(replacement?: { readonly id: string; readonly text: string }) {
+    if (
+      replacement !== undefined &&
+      (currentEdit.current?.id !== replacement.id || currentEdit.current.text !== replacement.text)
+    )
+      return;
     setEditing(null);
     input.current?.focus();
   }
 
-  const context = useMessageContext({ currentItem, noteScope, workspaceAccess });
+  const context = useMessageContext({
+    currentItem,
+    noteScope,
+    workspaceAccess,
+    autoAttachPage: !planConsent,
+  });
+  function chooseWorkspaceContext(include: boolean): void {
+    setContextChoice({ identity: contextIdentity, include });
+    if (!planConsent) {
+      setWorkspaceAccess(include);
+      writeWorkspaceAccess(workspaceId, pet.id, include);
+    }
+    if (!include) setApplyWithoutAsking(false);
+  }
+  const acceptedScope = useRef<PetPlanSourceScope | null>(null);
+  function sourceScope(access: boolean, fields: object): PetPlanSourceScope | null {
+    const ids =
+      'itemIds' in fields && Array.isArray(fields.itemIds)
+        ? fields.itemIds.filter((id): id is string => typeof id === 'string')
+        : [];
+    const itemId = 'itemId' in fields && typeof fields.itemId === 'string' ? fields.itemId : null;
+    return ids.length > 0
+      ? { kind: 'selected', itemIds: [...ids].sort() }
+      : itemId !== null
+        ? { kind: 'subtree', itemIds: [itemId] }
+        : access
+          ? { kind: 'workspace' }
+          : null;
+  }
+  const sharing = useSharingConsent({
+    client,
+    workspaceId,
+    petId: pet.id,
+    selectionKey: JSON.stringify({
+      provider: pet.provider,
+      workspaceAccess,
+      noteScope: noteScope?.rootItemId,
+      sources: context.contexts.map((entry) => ({
+        itemId: entry.itemId,
+        sharedText: entry.sharedText,
+      })),
+    }),
+  });
   const { submit, resendTurn, retryLastTurn, retryLabel, retryError, loadErrorMessage, preparing } =
     useTurns({
       client,
@@ -214,10 +288,48 @@ export function Conversation({
       messages,
       contextFields: context.contextFields,
       onSent: closeEditor,
+      consentMode: jobs?.consentMode,
+      onAccepted: ({ workspaceAccess: access, context: fields }) => {
+        acceptedScope.current = sourceScope(access, fields);
+      },
+      beforeDisclosure: async ({ workspaceAccess: access, context: fields }) => {
+        return sharing.ensure(sourceScope(access, fields));
+      },
     });
+  useEffect(() => {
+    const batch = runtime?.plannedBatch;
+    if (
+      jobs?.consentMode !== 'plan' ||
+      jobs.adoptTools === undefined ||
+      batch?.ready !== true ||
+      typeof batch.requiresReadDecision !== 'boolean' ||
+      batch.scope == null ||
+      (noteScope?.readOnly === true && !batch.scope.readOnly)
+    )
+      return;
+    const scope = batch.sourceScope ?? acceptedScope.current;
+    if (scope === null) return;
+    const last = messages.findLast((message) => !message.id.includes(':draft:'))?.id;
+    jobs.adoptTools({
+      conversationId: batch.conversationId,
+      turnId: batch.turnId,
+      toolIds: batch.toolIds,
+      sourceScope: scope,
+      brief:
+        messages.findLast((message) => message.role === 'user')?.text ??
+        'Review the prepared changes from this conversation',
+      ...(last === undefined ? {} : { afterMessageId: last }),
+      rootItemId: batch.scope.rootItemId,
+      readOnly: batch.scope.readOnly,
+    });
+  }, [jobs, runtime?.plannedBatch, messages, noteScope]);
 
   const jobDraft: ConversationJobDraft = {
     text: draft,
+    restore: (text) => {
+      setDraft((current) => (current.trim() === '' ? text : current));
+      setDraftRestorations((current) => current + 1);
+    },
     onStarted: () => {
       setDraft((current) => (current === draft ? '' : current));
     },
@@ -259,11 +371,12 @@ export function Conversation({
 
   const attachMessage = jobs?.busy ? undefined : jobs?.attachMessage;
 
-  const startedCreation = useRef<string | null>(null);
+  const attemptedCreation = useRef<string | null>(null);
+  const [creationRetry, setCreationRetry] = useState<string | null>(null);
   useEffect(() => {
     if (
       !creationRequest ||
-      startedCreation.current === creationRequest.id ||
+      attemptedCreation.current === creationRequest.id ||
       !connected ||
       running ||
       busy ||
@@ -271,10 +384,14 @@ export function Conversation({
       approvalPending
     )
       return;
-    void submit(creationRequest.text, () => {
-      startedCreation.current = creationRequest.id;
-      creationRequest.onStarted();
-    });
+    attemptedCreation.current = creationRequest.id;
+    void submit(creationRequest.text, creationRequest.onStarted, creationRequest.id)
+      .then((accepted) => {
+        if (!accepted) setCreationRetry(creationRequest.id);
+      })
+      .catch(() => {
+        setCreationRetry(creationRequest.id);
+      });
   }, [creationRequest, connected, running, busy, preparing, approvalPending, submit]);
 
   const rename = useRename({
@@ -332,6 +449,7 @@ export function Conversation({
     },
     onNewConversation: () => {
       context.setAutoPageOff(false);
+      setContextChoice(null);
       const hadMessages = messages.length > 0;
       void reset().then(() => {
         undoResume('Started a new conversation', hadMessages);
@@ -600,7 +718,7 @@ export function Conversation({
             {error ? (
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-divider px-3 py-2 @sm:px-4">
                 <Text role="alert">{errorKind === 'load' ? loadErrorMessage : error}</Text>
-                {error && retryLabel() ? (
+                {error && retryLabel() && !(creationRequest != null && errorKind === 'send') ? (
                   <Button variant="ghost" onClick={retryError}>
                     {retryLabel()}
                   </Button>
@@ -622,9 +740,13 @@ export function Conversation({
             scopeLabel={
               noteScope !== undefined
                 ? `${scopeKind}: ${noteScope.title}${noteScope.readOnly ? ' (read only)' : ''}`
-                : workspaceAccess
-                  ? 'Workspace chat · workspace access on'
-                  : 'Workspace chat · workspace access off'
+                : planConsent
+                  ? workspaceAccess
+                    ? 'Workspace chat · workspace context included'
+                    : 'Workspace chat · message only'
+                  : workspaceAccess
+                    ? 'Workspace chat · workspace access on'
+                    : 'Workspace chat · workspace access off'
             }
             input={input}
             draft={draft}
@@ -654,21 +776,17 @@ export function Conversation({
             onRemoveChip={context.removeContext}
             needsWorkspaceAccess={context.contexts.length > 0 && !workspaceAccess}
             onTurnOnWorkspaceAccess={() => {
-              setWorkspaceAccess(true);
-              writeWorkspaceAccess(workspaceId, pet.id, true);
+              chooseWorkspaceContext(true);
             }}
             workspaceAccess={workspaceAccess}
             hasNoteScope={noteScope !== undefined}
             noteReadOnly={noteScope?.readOnly ?? false}
             onToggleWorkspaceAccess={() => {
-              const next = !workspaceAccess;
-              setWorkspaceAccess(next);
-              writeWorkspaceAccess(workspaceId, pet.id, next);
-              // Nothing can be applied without workspace tools, so the switch goes with it.
-              if (!next) setApplyWithoutAsking(false);
+              chooseWorkspaceContext(!workspaceAccess);
             }}
             applyWithoutAsking={applyWithoutAsking}
             onApplyChange={setApplyWithoutAsking}
+            planConsent={planConsent}
             hasPage={Boolean(currentItem)}
             contextCount={context.contexts.length}
             hasSelection={context.hasSelection}
@@ -681,6 +799,34 @@ export function Conversation({
             {jobs.panel(jobDraft)}
             {jobs.options}
           </div>
+        ) : null}
+        {panel === 'chat' && creationRequest?.id === creationRetry ? (
+          <div className="flex min-w-0 flex-col gap-2 px-3 pb-3">
+            <Text role="status" variant="note">
+              This request has not been confirmed. Your draft is still here.
+            </Text>
+            <div>
+              <Button
+                disabled={busy || preparing || running}
+                onClick={() => {
+                  setCreationRetry(null);
+                  void submit(creationRequest.text, undefined, creationRequest.id)
+                    .then((accepted) => {
+                      if (accepted) creationRequest.onStarted();
+                      else setCreationRetry(creationRequest.id);
+                    })
+                    .catch(() => {
+                      setCreationRetry(creationRequest.id);
+                    });
+                }}
+              >
+                Retry creation request
+              </Button>
+            </div>
+          </div>
+        ) : null}
+        {panel === 'chat' ? (
+          <div className="min-h-0 shrink-0 overflow-y-auto px-3 pb-3">{sharing.panel}</div>
         ) : null}
       </div>
     </div>

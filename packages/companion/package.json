@@ -26,7 +26,11 @@
       "types": "./dist/guarded-body.d.ts",
       "default": "./dist/guarded-body.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./plan-tools": {
+      "types": "./dist/plan-tools.d.ts",
+      "default": "./dist/plan-tools.js"
+    }
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -48,7 +48,7 @@ describe('conversation protocol', () => {
     expect(other.account.snapshot(keyOf(r)).messages).toHaveLength(2);
   });
 
-  it('writes the on-disk shape the Go service wrote', async () => {
+  it('preserves legacy cache members and stores private source provenance', async () => {
     const h = harness();
     await send(h);
     const saved = JSON.parse(
@@ -61,6 +61,7 @@ describe('conversation protocol', () => {
       'messages',
       'tools',
       'title',
+      'providerContext',
     ]);
     expect(saved).toMatchObject({
       toolVersion: TOOL_VERSION,
@@ -68,6 +69,14 @@ describe('conversation protocol', () => {
       requestId: IDS.request,
       tools: [],
       title: 'Help me write',
+      providerContext: {
+        recipientRevision: 'synthetic-recipient',
+        turnId: IDS.request,
+        sourceScope: { kind: 'workspace', itemIds: [], readOnlyWorkspaceIds: [] },
+        sourceItemIds: [],
+        protectedRead: false,
+        unbounded: false,
+      },
     });
   });
 
@@ -213,8 +222,10 @@ describe('conversation protocol', () => {
     expect(reset.lockedRead).toBe(false);
   });
 
-  it('tells the owner when a tool-version change restarts the provider thread, once per send', async () => {
+  it('tells the owner when a tool-version change restarts a provider thread with verified history', async () => {
     const h = harness();
+    await send(h);
+    for (const [method, payload] of completed()) h.notify(method, payload);
     const key = keyOf(request());
     h.account.load(key);
     const c = h.account.conversations.get(key);
@@ -223,17 +234,18 @@ describe('conversation protocol', () => {
       threadId: 'old',
       toolVersion: 12,
       messages: [{ id: 'a', role: 'user', text: 'earlier' }],
-      lockedRead: true,
+      lockedRead: false,
     });
-    await send(h);
-    expect(h.transport.methods()[0]).toBe('thread/start');
-    expect(JSON.stringify(h.transport.calls[1]?.params.input)).toContain('earlier');
+    const before = h.transport.calls.length;
+    await send(h, { requestId: IDS.other });
+    expect(h.transport.calls[before]?.method).toBe('thread/start');
+    expect(JSON.stringify(h.transport.calls[before + 1]?.params.input)).toContain('earlier');
     const snapshot = h.account.snapshot(key);
     expect(snapshot.messages.map((m) => m.role)).toEqual(['user', 'system', 'user']);
     expect(snapshot.messages[1]?.text).toBe(
       'Your pet was updated and starts a fresh conversation.',
     );
-    expect(snapshot.lockedRead).toBe(true);
+    expect(snapshot.lockedRead).toBe(false);
   });
 
   it('resumes the thread within one tool version and restarts it when read access changes', async () => {

@@ -162,6 +162,12 @@ export function harness(
     logger,
     trace: false,
     transport,
+    validateSharing: () =>
+      Promise.resolve({
+        allowed: true,
+        recipientRevision: 'synthetic-recipient',
+        sourceScope: { kind: 'workspace', itemIds: [], readOnlyWorkspaceIds: [] },
+      }),
     ...options,
   });
   account.status = 'connected';
@@ -322,6 +328,8 @@ export async function boot(
   const { listener, manager } = createCompanion(config, {
     logger,
     ping: () => Promise.resolve(true),
+    validateSharing: () =>
+      Promise.resolve({ allowed: true, recipientRevision: 'synthetic-recipient' }),
     ...options.deps,
     launch,
   });

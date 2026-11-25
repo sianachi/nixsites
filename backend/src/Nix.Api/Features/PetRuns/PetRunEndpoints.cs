@@ -31,10 +31,12 @@ internal static class PetRunEndpoints
         PetCanvasCapability.Register(services);
         services.AddPetBrowser();
         services.AddPetRoutines();
+        services.AddPetPlans();
     }
 
     internal static void MapPetRunEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        endpoints.MapPetPlanEndpoints();
         var runs = endpoints.MapGroup("/api/v1/items/{itemId:guid}/pet-runs").WithTags("Pet Runs");
         runs.MapGet("", ListItem).WithName("ListItemPetRuns").WithSummary("List the caller's pet jobs on the task.");
         runs.MapGet("/{runId:guid}", Read).WithName("GetPetRun").WithSummary("Read an owned pet job and its action receipts.");

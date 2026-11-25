@@ -36,6 +36,9 @@ internal sealed class SiteHttpHost : IAsyncDisposable
     /// <summary>Gets the client for the hosted application.</summary>
     public HttpClient Client { get; }
 
+    /// <summary>Routes worker loopback calls through this host without opening a socket.</summary>
+    public HttpMessageHandler CreateLoopbackHandler() => _factory.Server.CreateHandler();
+
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
 
     /// <summary>Starts the application.</summary>

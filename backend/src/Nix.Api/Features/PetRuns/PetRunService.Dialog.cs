@@ -94,13 +94,17 @@ internal sealed partial class PetRunService
     private async Task<PetRunCheckpoint?> GrantSourceAsync(
         PetRunRecord run, PetRunCheckpoint state, Guid source, CancellationToken cancellationToken)
     {
-        var root = await items.FindAsync(run.ItemId, cancellationToken).ConfigureAwait(false);
-        if (root is null || root.WorkspaceId != run.WorkspaceId
-            || !await ScopeAvailableAsync(root, source == run.ItemId.Value ? [] : [source], cancellationToken).ConfigureAwait(false))
+        if (run.ItemId is not { } anchor)
         {
             return null;
         }
-        if (source == run.ItemId.Value)
+        var root = await items.FindAsync(anchor, cancellationToken).ConfigureAwait(false);
+        if (root is null || root.WorkspaceId != run.WorkspaceId
+            || !await ScopeAvailableAsync(root, source == anchor.Value ? [] : [source], cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+        if (source == anchor.Value)
         {
             return root.Type == "note" && state.IncludeTargetText == false ? state with { IncludeTargetText = true } : null;
         }
@@ -123,20 +127,33 @@ internal sealed partial class PetRunService
         _ => ["nix.action", "task.comment", "task.rename"],
     };
 
-    private static IReadOnlyList<Guid> ReadSources(PetRunRecord run, PetRunCheckpoint state) =>
-        state.AddedSources is { Count: > 0 } extra ? [.. run.SourceItemIds, .. extra] : run.SourceItemIds;
+    private static IReadOnlyList<Guid> ReadSources(PetRunRecord run, PetRunCheckpoint state) => state.PlanRequest is { } plan
+        ? plan.SourceScope.ItemIds ?? []
+        : state.AddedSources is { Count: > 0 } extra ? [.. run.SourceItemIds, .. extra] : run.SourceItemIds;
 
     private static IReadOnlyList<string> RunAbilities(PetRunRecord run, PetRunCheckpoint state) =>
         state.AddedAbilities is { Count: > 0 } extra ? [.. run.Abilities, .. extra] : run.Abilities;
 
     // Scope passed to executors is transient. The store compares the immutable starting scope on every update.
     private static PetRunRecord EffectiveRun(PetRunRecord run, PetRunCheckpoint state) => state.IncludeTargetText is null
-        ? run
+        ? run with
+        {
+            ProtectedRead = state.PlanRequest?.ProtectedRead ?? false,
+            TimeZone = state.PlanRequest?.TimeZone,
+            BuildLedger = state.PlanRequest?.BuildLedger is { } ledger ? System.Text.Json.JsonSerializer.SerializeToElement(ledger, PetPlanJsonContext.Default.BuildLedger) : null,
+            ScopeRootItemId = state.PlanRequest?.ChatSource?.RootItemId ?? (state.PlanRequest?.SourceScope.Kind == "subtree" ? run.ItemId?.Value : null),
+            WorkspaceScope = state.PlanRequest is null ? run.WorkspaceScope
+                : state.PlanRequest.SourceScope.Kind == "workspace" && state.PlanRequest.ChatSource?.RootItemId is null,
+            SourceItemIds = state.PlanRequest?.SourceScope.ItemIds ?? run.SourceItemIds
+        }
         : run with
         {
             IncludeTargetText = state.IncludeTargetText,
             ReadOnlySourceItemIds = ReadSources(run, state),
             SourceItemIds = [],
             Abilities = RunAbilities(run, state),
+            ProtectedRead = state.PlanRequest?.ProtectedRead ?? false,
+            TimeZone = state.PlanRequest?.TimeZone,
+            BuildLedger = state.PlanRequest?.BuildLedger is { } scopedLedger ? System.Text.Json.JsonSerializer.SerializeToElement(scopedLedger, PetPlanJsonContext.Default.BuildLedger) : null,
         };
 }

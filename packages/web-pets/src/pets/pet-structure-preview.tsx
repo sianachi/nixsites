@@ -118,9 +118,11 @@ export function PetStructurePreview({
           </ul>
         </div>
       ) : null}
-      <Text variant="note" tone="muted">
-        This never: {model.neverDoes.join('; ')}.
-      </Text>
+      {model.neverDoes.length > 0 ? (
+        <Text variant="note" tone="muted">
+          This never: {model.neverDoes.join('; ')}.
+        </Text>
+      ) : null}
     </div>
   );
 }

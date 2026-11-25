@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { PetCompanion } from '../../pets/pet-companion';
 import { usePetAttention } from '../../pets/pet-attention';
+import { petSharingFixture } from '../../testing/pet-sharing-fixture';
+import { writeWorkspaceAccess } from '@nix/web-foundation/lib/device-preferences';
 
 const client = vi.hoisted(() => ({
   execute: vi.fn(),
@@ -11,7 +13,19 @@ const client = vi.hoisted(() => ({
   // No stream on this server: the hook falls back to the watch these tests drive.
   stream: vi.fn(() => Promise.resolve(new Response(null, { status: 501 }))),
 }));
-vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
+const sharing = petSharingFixture();
+const sharingClient = new Proxy(client, {
+  get(target, key) {
+    if (key === 'execute') return executeWithSharing;
+    const member: unknown = Reflect.get(target, key);
+    return member;
+  },
+});
+async function executeWithSharing(endpoint: unknown, options?: unknown): Promise<unknown> {
+  const response: unknown = await (sharing.reply(endpoint) ?? client.execute(endpoint, options));
+  return response;
+}
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => sharingClient }));
 vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: '33333333-3333-4333-8333-333333333333' }),
 }));
@@ -67,7 +81,13 @@ async function chooseFromPlus(user: ReturnType<typeof userEvent.setup>, name: st
 describe('companion live wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sharing.reset();
     sessionStorage.clear();
+    writeWorkspaceAccess(
+      '33333333-3333-4333-8333-333333333333',
+      '44444444-4444-4444-8444-444444444444',
+      false,
+    );
   });
 
   it('renders tool rows after the latest turn and before its final answer, and gives earlier turns none', async () => {

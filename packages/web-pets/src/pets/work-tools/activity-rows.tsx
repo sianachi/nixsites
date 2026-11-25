@@ -225,6 +225,10 @@ function writeStatusText(
   // stay readable as "what ran on its own" against "what I approved", also after reopening.
   const withoutAsking = ranWithoutAsking(submitted);
   switch (tool.status) {
+    case 'planned':
+      return 'Waiting for plan review';
+    case 'adopted':
+      return 'Linked to the prepared plan';
     case 'pending':
       return submitted ?? 'Waiting for your approval';
     case 'claimed':

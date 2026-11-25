@@ -6,8 +6,10 @@ import { petEvalChat } from './pet-eval-chat.ts';
 import { petCommand, petToolRun, type PetOptions, type PetToolRunOptions } from './pets.ts';
 import type { LoginOptions } from './program-support.ts';
 import { type Act } from './shared.ts';
+import { registerPetPlanCommands } from './pet-plans.ts';
 
 export function registerAccountCommands(program: Command, act: Act): void {
+  registerPetPlanCommands(program, act);
   const auth = program.command('auth').description('Sign in, check who you are, and sign out.');
   const pet = program
     .command('pet <operation>')

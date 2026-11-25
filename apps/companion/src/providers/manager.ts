@@ -8,6 +8,8 @@ import { conversationKey, logSafeError, stdoutLogger } from '../shared/diagnosti
 import { readBody } from '../shared/http.ts';
 import { HttpTransport } from '../server/http-transport.ts';
 import { sendError, serveInline, writeProviderFailure } from '../tools/inline.ts';
+import { privatePlanToolOperations } from '../tools/plan-rpc.ts';
+import { recipientMetadata } from '../tools/plan-recipient.ts';
 import { TASK_PLAN_OPERATION } from '../tools/task-plan.ts';
 import { launchCodex } from '../server/rpc.ts';
 import {
@@ -16,6 +18,7 @@ import {
   type Launch,
   type Logger,
   type Request,
+  type ValidateSharing,
 } from '../shared/types.ts';
 import { UUID } from '../shared/util.ts';
 import { serveWatchStream } from '../tools/watch-stream.ts';
@@ -29,6 +32,7 @@ const REQUEST_TIMEOUT_MS = 25_000;
 
 export interface ManagerDeps {
   logger?: Logger | undefined;
+  validateSharing?: ValidateSharing | undefined;
   /** Replaces the default launcher (the Codex child, or the in-process HTTPS transport). */
   launch?: Launch | undefined;
   executeConversationTool?: ConversationToolExecutor | undefined;
@@ -47,6 +51,7 @@ export class Manager {
   private readonly logger: Logger;
   private readonly launch: Launch;
   private readonly executeConversationTool: ConversationToolExecutor | undefined;
+  private readonly validateSharing: ValidateSharing | undefined;
   private readonly serverTools: ServerTools | undefined;
   private readonly timer: NodeJS.Timeout;
 
@@ -55,6 +60,7 @@ export class Manager {
     this.logger = deps.logger ?? stdoutLogger();
     this.executeConversationTool = deps.executeConversationTool;
     this.serverTools = deps.serverTools;
+    this.validateSharing = deps.validateSharing;
     mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
     this.launch =
       deps.launch ??
@@ -161,6 +167,7 @@ export class Manager {
       trace: this.config.trace,
       executeConversationTool: this.executeConversationTool,
       serverTools: this.serverTools,
+      validateSharing: this.validateSharing,
     });
     ref.account = account;
     try {
@@ -184,6 +191,48 @@ export class Manager {
     const request = body === undefined ? null : parseRequest(body);
     if (request === null) {
       sendError(res, 400, 'Invalid companion request');
+      return;
+    }
+    if (request.operation === 'recipient_metadata') {
+      const provider = request.provider === '' ? 'chatgpt' : request.provider;
+      if (
+        !UUID.test(request.tenantId) ||
+        !UUID.test(request.principalId) ||
+        !['chatgpt', 'anthropic', 'openrouter', 'openai'].includes(provider)
+      ) {
+        sendError(res, 400, 'Invalid companion request');
+        return;
+      }
+      const home = join(this.config.dataDir, `${request.tenantId}-${request.principalId}`);
+      res.end(`${JSON.stringify(recipientMetadata(home, provider))}\n`);
+      return;
+    }
+    if (privatePlanToolOperations.has(request.operation)) {
+      if (
+        ![
+          request.tenantId,
+          request.principalId,
+          request.workspaceId,
+          request.petId,
+          request.requestId,
+        ].every((id) => UUID.test(id)) ||
+        request.planPayload.length > 960_000
+      ) {
+        sendError(res, 400, 'Invalid plan request');
+        return;
+      }
+      const provider = request.provider === '' ? 'chatgpt' : request.provider;
+      const key = `${request.tenantId}-${request.principalId}${provider === 'chatgpt' ? '' : `-${provider}`}`;
+      const account = this.accounts.get(key);
+      if (account === undefined) {
+        sendError(res, 409, 'The planned provider turn is no longer active');
+        return;
+      }
+      try {
+        res.end(`${JSON.stringify(await account.handlePlanTools(request))}\n`);
+      } catch {
+        sendError(res, 409, 'The planned tool batch changed or is unavailable');
+      }
       return;
     }
     // The streaming operations answer on their own when the runtime cannot start.

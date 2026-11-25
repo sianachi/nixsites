@@ -65,7 +65,7 @@ internal sealed class PetRoutinePolicy(IAutomationRuleStore rules, IStructuralLo
             && rule.TenantId == run.TenantId && rule.OwnerPrincipalId == run.ActorId && rule.WorkspaceId == run.WorkspaceId
             && rule.ScopeItemId == run.ItemId && routine.Abilities.Contains(capability, StringComparer.Ordinal)
             && routine.AutoRename is { } rename
-            && effect.Parameters.GetProperty("itemId").GetGuid() == run.ItemId.Value
+            && effect.Parameters.GetProperty("itemId").GetGuid() == run.ItemId?.Value
             && effect.Parameters.GetProperty("from").GetString() == rename.From
             && effect.Parameters.GetProperty("to").GetString() == rename.To;
     }
@@ -123,7 +123,7 @@ internal sealed class PetTaskRenameCapability(
 
         return Result.Success(new PetRunEffect("Rename the task", JsonSerializer.SerializeToElement(new
         {
-            itemId = run.ItemId.Value,
+            itemId = run.ItemId?.Value,
             from = current.Title,
             to = title,
             revision = current.Revision,
@@ -140,7 +140,7 @@ internal sealed class PetTaskRenameCapability(
             : Task.FromResult(Result.Failure<string>(Conflict()));
 
     public async Task<string?> RevisionObservationAsync(PetRunRecord run, PetRunEffect effect, CancellationToken cancellationToken) =>
-        effect.Parameters.GetProperty("itemId").GetGuid() == run.ItemId.Value
+        effect.Parameters.GetProperty("itemId").GetGuid() == run.ItemId?.Value
         && await ReadAsync(run, cancellationToken).ConfigureAwait(false) is not null
             ? effect.Parameters.GetProperty("to").GetString()
             : null;
@@ -149,7 +149,7 @@ internal sealed class PetTaskRenameCapability(
         PetRunRecord run, PetRunEffect effect, long revision, string fromKey, string toKey, CancellationToken cancellationToken)
     {
         var parameters = effect.Parameters;
-        if (parameters.GetProperty("itemId").GetGuid() != run.ItemId.Value
+        if (run.ItemId is not { } anchor || parameters.GetProperty("itemId").GetGuid() != anchor.Value
             || await ReadAsync(run, cancellationToken).ConfigureAwait(false) is not { } current
             || current.Revision != revision || current.Title != parameters.GetProperty(fromKey).GetString())
         {
@@ -157,14 +157,14 @@ internal sealed class PetTaskRenameCapability(
         }
 
         var title = parameters.GetProperty(toKey).GetString()!;
-        var renamed = await dispatcher.SendAsync<RenameItem, Item>(new RenameItem(run.ItemId, title), cancellationToken).ConfigureAwait(false);
+        var renamed = await dispatcher.SendAsync<RenameItem, Item>(new RenameItem(anchor, title), cancellationToken).ConfigureAwait(false);
         if (renamed.IsFailure)
         {
             return Result.Failure<string>(renamed.Error);
         }
 
         await sync.PublishPendingAsync(cancellationToken).ConfigureAwait(false);
-        var written = await revisions.LockItemRevisionAsync(run.WorkspaceId, run.ItemId, cancellationToken).ConfigureAwait(false);
+        var written = await revisions.LockItemRevisionAsync(run.WorkspaceId, anchor, cancellationToken).ConfigureAwait(false);
         if (written is not { } newRevision || newRevision <= revision || ItemProperties.ReadTitle(renamed.Value.Properties) != title)
         {
             throw new InvalidOperationException("The task rename did not advance its revision.");
@@ -176,10 +176,10 @@ internal sealed class PetTaskRenameCapability(
     private async Task<(long Revision, string Title)?> ReadAsync(PetRunRecord run, CancellationToken cancellationToken)
     {
         await topology.AcquireWorkspaceTopologyAsync(run.WorkspaceId, cancellationToken).ConfigureAwait(false);
-        if (!await permissions.CanWriteWorkspaceAsync(run.WorkspaceId, cancellationToken).ConfigureAwait(false)
-            || await revisions.LockItemRevisionAsync(run.WorkspaceId, run.ItemId, cancellationToken).ConfigureAwait(false) is not { } revision
-            || (await locks.LockedAmongAsync([run.ItemId], cancellationToken).ConfigureAwait(false)).Count != 0
-            || await items.FindAsync(run.ItemId, cancellationToken).ConfigureAwait(false) is not
+        if (run.ItemId is not { } anchor || !await permissions.CanWriteWorkspaceAsync(run.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            || await revisions.LockItemRevisionAsync(run.WorkspaceId, anchor, cancellationToken).ConfigureAwait(false) is not { } revision
+            || (await locks.LockedAmongAsync([anchor], cancellationToken).ConfigureAwait(false)).Count != 0
+            || await items.FindAsync(anchor, cancellationToken).ConfigureAwait(false) is not
             { Type: "note", ManagedBy: null, LifecycleState: ItemLifecycleState.Active } item
             || item.WorkspaceId != run.WorkspaceId || ItemSettings.Read(item.Settings).WithholdFromPets)
         {

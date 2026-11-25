@@ -334,7 +334,12 @@ public sealed class NixTokenValidator
                 return null;
             }
 
-            if (SelfIssuedTokenService.TryReadClaims(
+            var hasPetClaims = result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetTurnClaim) is not null
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetModeClaim) is not null
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetActionBindingClaim) is not null
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetPlanRequestClaim) is not null
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetPlanReadClaim) is not null;
+            if (!hasPetClaims && SelfIssuedTokenService.TryReadClaims(
                 result.ClaimsIdentity,
                 out var tenantId,
                 out var principalId,
@@ -344,7 +349,7 @@ public sealed class NixTokenValidator
                     tenantId, principalId, accessTokenId, result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.SecretLookupClaim)?.Value ?? string.Empty);
             }
 
-            if (SelfIssuedTokenService.TryReadWorkerExecutionClaims(
+            if (!hasPetClaims && SelfIssuedTokenService.TryReadWorkerExecutionClaims(
                 result.ClaimsIdentity,
                 out tenantId,
                 out principalId,
@@ -372,15 +377,22 @@ public sealed class NixTokenValidator
                 out var petMode))
             {
                 var binding = result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetActionBindingClaim)?.Value;
-                return binding is null || PetActionRequestBinding.IsDigest(binding)
-                    ? new ValidatedPetTurnToken(tenantId, principalId, petRequestId, petMode, binding)
+                var planRequest = result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetPlanRequestClaim)?.Value;
+                var planRead = result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetPlanReadClaim)?.Value;
+                return (binding is null || PetActionRequestBinding.IsDigest(binding))
+                    && (planRequest is null || binding is not null && PetActionRequestBinding.TryReadPlanRequest(planRequest, out _, out _))
+                    && (planRead is null || petMode == PetTurnMode.Read && binding is null && Guid.TryParseExact(planRead, "N", out _))
+                    && (planRead is null || planRequest is null)
+                    ? new ValidatedPetTurnToken(tenantId, principalId, petRequestId, petMode, binding, planRequest, planRead)
                     : null;
             }
 
             // A pet claim that does not read cleanly (unknown mode, mixed with another kind) is refused whole.
             if (result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetTurnClaim) is not null
                 || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetModeClaim) is not null
-                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetActionBindingClaim) is not null)
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetActionBindingClaim) is not null
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetPlanRequestClaim) is not null
+                || result.ClaimsIdentity.FindFirst(SelfIssuedTokenService.PetPlanReadClaim) is not null)
             {
                 return null;
             }
@@ -612,7 +624,9 @@ public sealed record ValidatedPetTurnToken(
     PrincipalId PrincipalId,
     Guid RequestId,
     PetTurnMode Mode,
-    string? ActionBinding = null)
+    string? ActionBinding = null,
+    string? PlanRequest = null,
+    string? PlanRead = null)
     : ValidatedToken(TenantId)
 {
     /// <summary>Gets a value indicating whether the token reaches write routes.</summary>

@@ -15,6 +15,11 @@ import {
   type BodySource,
 } from '@nix/companion/guarded-body';
 import { z } from 'zod';
+import {
+  createServerPlanFetch,
+  planExecutionEnvelopeSchema,
+  type PlanDispatchOptions,
+} from './plan-dispatch.ts';
 
 const receiptSchema = z.strictObject({
   docId: z.uuid(),
@@ -42,7 +47,11 @@ function boundReceipt(changes: readonly CanvasChange[]): void {
     );
 }
 
-const accessShape = { itemId: z.uuid(), token: z.string().min(1).max(4096) };
+const accessShape = {
+  itemId: z.uuid(),
+  token: z.string().min(1).max(4096),
+  planExecution: planExecutionEnvelopeSchema.optional(),
+};
 const readQuery = z.strictObject({
   after: z
     .string()
@@ -276,13 +285,26 @@ export async function undoPetCanvas(
 export async function runPetCanvas(
   input: unknown,
   collabUrl: string,
+  dispatchOptions?: PlanDispatchOptions,
+  fetchImpl?: typeof fetch,
 ): Promise<
   | { ok: true; result: CanvasPreview | CanvasReceipt | CanvasReadResult }
   | { ok: false; uncertain: boolean; stale?: true; error: string }
 > {
   const request = requestSchema.safeParse(input);
   if (!request.success) return { ok: false, uncertain: false, error: 'Invalid canvas action.' };
-  const source = { collabUrl, itemId: request.data.itemId, token: request.data.token };
+  if (request.data.planExecution !== undefined && dispatchOptions === undefined)
+    return { ok: false, uncertain: false, error: 'The native plan dispatcher is unavailable.' };
+  const send =
+    request.data.planExecution !== undefined && dispatchOptions !== undefined
+      ? createServerPlanFetch(dispatchOptions, request.data.planExecution, fetchImpl)
+      : fetchImpl;
+  const source = {
+    collabUrl,
+    itemId: request.data.itemId,
+    token: request.data.token,
+    ...(send === undefined ? {} : { fetchImpl: send }),
+  };
   try {
     switch (request.data.operation) {
       case 'read':

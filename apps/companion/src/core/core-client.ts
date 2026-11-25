@@ -1,5 +1,6 @@
+import { petPlans } from '@nix/api-client';
 import { readBounded } from '../providers/provider-errors.ts';
-import type { ConversationToolExecutor } from '../shared/types.ts';
+import type { ConversationToolExecutor, ValidateSharing } from '../shared/types.ts';
 import { isRecord, UUID } from '../shared/util.ts';
 
 export interface CoreClientOptions {
@@ -60,6 +61,50 @@ export class CoreClient {
       return false;
     }
   }
+
+  readonly validateSharing: ValidateSharing = async (input, signal) => {
+    if (
+      ![input.tenantId, input.principalId, input.workspaceId, input.petId, input.turnId].every(
+        (id) => UUID.test(id),
+      ) ||
+      input.attestation.length === 0 ||
+      input.attestation.length > 16_384
+    )
+      return false;
+    try {
+      const response = await (this.options.fetch ?? fetch)(
+        `${this.options.baseUrl}/internal/pets/sharing/validate`,
+        {
+          method: 'POST',
+          headers: this.headers(),
+          body: JSON.stringify(input),
+          redirect: 'manual',
+          signal,
+        },
+      );
+      if (!response.ok) {
+        void response.body?.cancel();
+        return false;
+      }
+      const body: unknown = JSON.parse(await readBounded(response, 8192));
+      if (
+        !isRecord(body) ||
+        Object.keys(body).some(
+          (key) => !['allowed', 'recipientRevision', 'sourceScope'].includes(key),
+        ) ||
+        body.allowed !== true ||
+        typeof body.recipientRevision !== 'string' ||
+        body.recipientRevision.length === 0 ||
+        body.recipientRevision.length > 256
+      )
+        return false;
+      const scope = petPlans.sourceScopeSchema.safeParse(body.sourceScope);
+      if (!scope.success) return false;
+      return { allowed: true, recipientRevision: body.recipientRevision, sourceScope: scope.data };
+    } catch {
+      return false;
+    }
+  };
 
   /** Runs a saved conversation's tool in Core, which rechecks access and consent. */
   readonly executeConversationTool: ConversationToolExecutor = async (

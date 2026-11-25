@@ -189,7 +189,7 @@ internal static class PetEndpoints
             error => TypedResults.Problem(ApiProblem.Create(context,
                 error.Code == "pets.not_found" ? 404
                     : error.Code == "pets.invalid_request" ? 422
-                    : error.Code == "pets.busy" ? 409
+                    : error.Code is "pets.busy" or "pets.sharing_required" ? 409
                     : error.Code == "pets.too_many_watches" ? 429
                     : 503,
                 error.Code, "Companion request failed", error.Message)));

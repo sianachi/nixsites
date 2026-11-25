@@ -36,6 +36,11 @@
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/query/aggregate"
   },
+  "AnswerPetPlan": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/answer"
+  },
   "AnswerPetRun": {
     "mode": "human",
     "method": "POST",
@@ -87,6 +92,11 @@
     "method": "GET",
     "path": "/api/v1/items/{itemId}/file/thumbnail"
   },
+  "AuthorizePetPlanDecisionContext": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-contexts"
+  },
   "BatchRecords": {
     "mode": "review",
     "method": "POST",
@@ -136,6 +146,11 @@
     "mode": "review",
     "method": "POST",
     "path": "/api/v1/operations/{operationId}/cancel"
+  },
+  "CancelPetPlan": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/cancel"
   },
   "CancelPetRun": {
     "mode": "human",
@@ -243,6 +258,11 @@
     "method": "PATCH",
     "path": "/api/v1/workspaces/{workspaceId}/members/{principalId}"
   },
+  "ClaimPetPlanStep": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/claim"
+  },
   "CommitDocumentImport": {
     "mode": "review",
     "method": "POST",
@@ -299,6 +319,16 @@
     "path": "/api/v1/workspaces/{workspaceId}/items",
     "executor": "nix.action"
   },
+  "CreatePetPlan": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans"
+  },
+  "CreatePetPlanDecisionHandoff": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs"
+  },
   "CreatePetRun": {
     "mode": "human",
     "method": "POST",
@@ -334,6 +364,16 @@
     "method": "POST",
     "path": "/api/v1/oauth/consent"
   },
+  "DecidePetPlan": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/decision"
+  },
+  "DecidePetPlanSharing": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision"
+  },
   "DecidePetRunProposal": {
     "mode": "human",
     "method": "POST",
@@ -343,6 +383,11 @@
     "mode": "human",
     "method": "POST",
     "path": "/api/v1/items/{itemId}/pet-runs/{runId}/scope"
+  },
+  "DecidePetSharing": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-sharing/decision"
   },
   "DeclineWorkspaceInvitation": {
     "mode": "human",
@@ -544,6 +589,21 @@
     "method": "GET",
     "path": "/api/v1/me/pets/connection"
   },
+  "GetPetPlan": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}"
+  },
+  "GetPetPlanClientIntent": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/io"
+  },
+  "GetPetPlanDecisionHandoff": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs/{handoffId}"
+  },
   "GetPetRun": {
     "mode": "human",
     "method": "GET",
@@ -553,6 +613,11 @@
     "mode": "human",
     "method": "GET",
     "path": "/api/v1/me/pets/settings"
+  },
+  "GetPetSharingQuestion": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-sharing/question"
   },
   "GetPreferences": {
     "mode": "read",
@@ -798,6 +863,11 @@
     "mode": "human",
     "method": "GET",
     "path": "/api/v1/items/{itemId}/pet-peers/work"
+  },
+  "ListPetPlans": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans"
   },
   "ListPetProviderKeys": {
     "mode": "human",
@@ -1182,6 +1252,16 @@
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/sync/reconcile"
   },
+  "RecordPetPlanClientIoResult": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/io/result"
+  },
+  "RecordPetPlanStep": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/result"
+  },
   "RecoverWorkspace": {
     "mode": "human",
     "method": "POST",
@@ -1323,6 +1403,11 @@
     "method": "POST",
     "path": "/api/v1/items/{itemId}/pet-runs/{runId}/retry"
   },
+  "RevisePetPlan": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/drafts"
+  },
   "RevisePetRunProposal": {
     "mode": "human",
     "method": "POST",
@@ -1337,6 +1422,11 @@
     "mode": "human",
     "method": "DELETE",
     "path": "/api/v1/items/{itemId}/pet-peers/{peerId}"
+  },
+  "RevokePetPlanDecisionHandoff": {
+    "mode": "human",
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs/{handoffId}"
   },
   "RevokePublicForm": {
     "mode": "human",
@@ -1638,6 +1728,11 @@
     "method": "POST",
     "path": "/api/v1/automations/{ruleId}/test"
   },
+  "UndoPetPlanStep": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/undo"
+  },
   "UndoPetRunStep": {
     "mode": "human",
     "method": "POST",
@@ -1723,6 +1818,11 @@
     "mode": "human",
     "method": "GET",
     "path": "/api/v1/me/pets/runtime/note/watch"
+  },
+  "WatchPetPlan": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/watch"
   },
   "WatchPetRun": {
     "mode": "human",

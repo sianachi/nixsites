@@ -1,3 +1,6 @@
+import type { PetPlanSourceScope } from '@nix/api-client';
+import type { PlanToolBinding } from '../tools/plan-rpc.ts';
+
 export interface Message {
   id: string;
   role: string;
@@ -23,6 +26,9 @@ export interface Request {
   workspaceId: string;
   petId: string;
   operation: string;
+  consentMode: string;
+  sharingAttestation: string;
+  planPayload: string;
   provider: string;
   apiKey: string;
   requestId: string;
@@ -73,6 +79,9 @@ export function emptyRequest(): Request {
     workspaceId: '',
     petId: '',
     operation: '',
+    consentMode: '',
+    sharingAttestation: '',
+    planPayload: '',
     provider: '',
     apiKey: '',
     requestId: '',
@@ -135,6 +144,7 @@ export interface ToolCall {
   status: string;
   result: string;
   claimId: string;
+  planBinding?: PlanToolBinding;
 }
 
 export interface ToolState extends ToolCall {
@@ -144,6 +154,9 @@ export interface ToolState extends ToolCall {
   claimedAt: number;
   waiters: unknown[];
   image: string;
+  planBatchId?: string;
+  planBatchSize?: number;
+  planBatchSeen?: number;
 }
 
 export interface HistoryEntry {
@@ -165,6 +178,17 @@ export interface Response {
   tools: ToolCall[];
   history: HistoryEntry[];
   revision: number;
+  turnId?: string;
+  conversationId?: string;
+  plannedBatch?: {
+    turnId: string;
+    conversationId: string;
+    toolIds: string[];
+    ready: boolean;
+    scope: { rootItemId: string | null; readOnly: boolean };
+    requiresReadDecision: boolean;
+    sourceScope?: PetPlanSourceScope;
+  };
   lockedRead: boolean;
   title: string;
   /** True only when approved writes run here (NIX_COMPANION_SERVER_TOOLS=all). */
@@ -200,6 +224,7 @@ export interface Transport {
   setRequestHandler?(handler: RequestHandler): void;
   reply?(id: unknown, result: unknown): void;
   setApiKey?(key: string): void;
+  setDisclosureGuard?(threadId: string, guard: () => Promise<boolean>): void;
 }
 
 export type Launch = (
@@ -219,3 +244,26 @@ export type ConversationToolExecutor = (
   requestId: string,
   args: string,
 ) => Promise<{ text: string; success: boolean; lockedContent: boolean }>;
+
+export type SharingValidation = Pick<
+  Request,
+  'tenantId' | 'principalId' | 'workspaceId' | 'petId' | 'provider'
+> & {
+  attestation: string;
+  turnId: string;
+  contextSourceItemIds?: string[];
+  contextProtected?: boolean;
+  contextUnbounded?: boolean;
+  priorRecipientRevision?: string;
+  priorTurnId?: string;
+  priorSourceScope?: PetPlanSourceScope;
+};
+export interface SharingDecision {
+  allowed: boolean;
+  recipientRevision: string | null;
+  sourceScope?: PetPlanSourceScope;
+}
+export type ValidateSharing = (
+  input: SharingValidation,
+  signal: AbortSignal,
+) => Promise<boolean | SharingDecision>;

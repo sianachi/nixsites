@@ -55,7 +55,22 @@ public sealed record SavePetSettingsRequest(long ExpectedRevision, PetSettings S
 public sealed record PetConnectionResponse(string Provider, string Status, string Reason, bool CanConnect,
     string VerificationUrl = "", string UserCode = "", string State = "idle", IReadOnlyList<PetMessage>? Messages = null,
     IReadOnlyList<PetModel>? Models = null, IReadOnlyList<PetToolCall>? Tools = null, IReadOnlyList<PetHistoryEntry>? History = null,
-    long Revision = 0, bool LockedRead = false, string Title = "", bool ServerWrites = false);
+    long Revision = 0, bool LockedRead = false, string Title = "", bool ServerWrites = false, string TurnId = "",
+    string ConversationId = "", PetPlannedBatch? PlannedBatch = null);
+
+/// <summary>A complete private-chat tool batch available for exact durable plan adoption.</summary>
+public sealed record PetPlannedBatch(string TurnId, string ConversationId, IReadOnlyList<string> ToolIds, bool Ready,
+    PetSourceScopeDescriptor? SourceScope = null, PetPlannedToolScope? Scope = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? RequiresReadDecision = null);
+
+/// <summary>The original conversation anchor and read-only mode supplied by the companion.</summary>
+public sealed record PetPlannedToolScope(
+    [property: JsonRequired, JsonIgnore(Condition = JsonIgnoreCondition.Never)] Guid? RootItemId,
+    [property: JsonRequired, JsonIgnore(Condition = JsonIgnoreCondition.Never)] bool ReadOnly);
+
+/// <summary>The nonsecret source scope of a turn, validated by Core before disclosure.</summary>
+public sealed record PetSourceScopeDescriptor(string Kind, IReadOnlyList<Guid>? ItemIds = null,
+    IReadOnlyList<Guid>? ReadOnlyWorkspaceIds = null);
 
 /// <summary>A private archived conversation in this workspace and pet.</summary>
 public sealed record PetHistoryEntry(string Id, string Title, string CreatedAt);
@@ -64,7 +79,11 @@ public sealed record PetHistoryEntry(string Id, string Title, string CreatedAt);
 public sealed record PetModel(string Id, string Name, bool Default, bool SupportsTools = true);
 
 /// <summary>A bounded tool request and its private execution receipt.</summary>
-public sealed record PetToolCall(string Id, string Arguments, string Status, string Result, string ClaimId);
+public sealed record PetToolCall(string Id, string Arguments, string Status, string Result, string ClaimId,
+    PetToolPlanBinding? PlanBinding = null);
+
+/// <summary>The exact durable plan association of an adopted model tool call.</summary>
+public sealed record PetToolPlanBinding(string ToolId, Guid RunId, Guid PlanId, int PlanVersion, string ReviewDigest, Guid StepId);
 
 /// <summary>One private conversation message. Changes the pet proposes are tool calls, never part of a message.</summary>
 public sealed record PetMessage(string Id, string Role, string Text);
@@ -110,7 +129,7 @@ public sealed record PetRuntimeRequest(string Operation, Guid? WorkspaceId = nul
     bool ToolLockedContent = false, Guid? RootItemId = null, bool ReadOnly = false,
     IReadOnlyList<Guid>? ItemIds = null, Guid? ReplaceFromMessageId = null, string ToolImage = "",
     bool ReadWithoutAsking = false, string Fingerprint = "", string EditedArguments = "", string EditNote = "",
-    bool Automatic = false, string ApprovedOperation = "");
+    bool Automatic = false, string ApprovedOperation = "", string ConsentMode = "");
 
 /// <summary>Opens a chat event stream: the conversation is the workspace, the pet and, for a note chat, the note.</summary>
 public sealed record PetStreamRequest(Guid WorkspaceId, Guid PetId, string Mode = "", Guid? RootItemId = null);
@@ -143,7 +162,9 @@ internal sealed record PetWorkerRequest(string TenantId, string PrincipalId, str
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? EditedArguments = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? EditNote = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Automatic = false,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? ApprovedOperation = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? ApprovedOperation = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ConsentMode = null);
 
 /// <summary>One inline writing request from the editor: the person's selection and what to do with it.</summary>
 /// <param name="WorkspaceId">The workspace the item is in.</param>
@@ -163,7 +184,8 @@ internal sealed record PetInlineWorkerRequest(string TenantId, string PrincipalI
     string PetId, string Operation, string RequestId, string Text, string SharedText, string ContextText,
     string InlineKind, string Language, string Model,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Provider = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ApiKey = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ApiKey = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(PetSettings))]

@@ -50,7 +50,7 @@ describe('history', () => {
     expect(deleted.history).toHaveLength(1);
   });
 
-  it('writes the archive shape the Go service wrote', async () => {
+  it('preserves legacy archive members and private source provenance', async () => {
     const h = harness();
     await turn(h, 1);
     await op(h, 'reset');
@@ -65,9 +65,17 @@ describe('history', () => {
       'messages',
       'tools',
       'lockedRead',
+      'providerContext',
     ]);
     expect(archive.createdAt).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
     expect(archive.lockedRead).toBe(false);
+    expect(archive.providerContext).toMatchObject({
+      recipientRevision: 'synthetic-recipient',
+      sourceScope: { kind: 'workspace' },
+      sourceItemIds: [],
+      protectedRead: false,
+      unbounded: false,
+    });
   });
 
   it('refuses a malformed history id', async () => {

@@ -98,6 +98,31 @@ async function inspect() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('registered MCP tools', () => {
+  it.each([
+    'pet_plans',
+    'pet_plan_decide',
+    'PET.PLAN.DECISION',
+    'pet-plan-handoff',
+    'pet_sharing_decide',
+    'mcp__nix__pet_plans',
+    'nix.pet_plan_decide',
+  ])('refuses owner decision tool %s before connecting to a remote', async (tool) => {
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    vi.stubGlobal('fetch', fetch);
+    for (const operation of ['inspect', 'prepare', 'execute']) {
+      const reviewed = operation === 'inspect' ? {} : { args: {}, schemaHash: 'a'.repeat(64) };
+      expect(
+        await runRegisteredMcp({
+          ...inspectRequest,
+          action: tool,
+          operation,
+          ...reviewed,
+          ...(operation === 'execute' ? { executionId } : {}),
+        }),
+      ).toEqual({ failure: 'unknown_tool' });
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it('discovers only the exact tool, prepares without a call, and dispatches the reviewed arguments once', async () => {
     const { calls } = fixture({
       tools: [

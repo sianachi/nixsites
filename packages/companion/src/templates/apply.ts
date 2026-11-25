@@ -81,6 +81,7 @@ export async function applyTemplate(
     title: input.title,
     inputs: input.inputs,
     idempotencyKey,
+    expectedRevision: preflight.expectedRevision ?? preflight.templateRevision,
   };
   const initial = await ports.collab.execute(templates.applyTemplate(request), requestOptions);
   const applied = await templates.resumeTemplateFileTransfer(

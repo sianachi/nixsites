@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 
+import { registerPlanDispatch } from '../auth/plan-dispatch.ts';
 import { LIMITS, RateWindow } from '../documents/limits.ts';
 import { describeSchema } from '../documents/service.ts';
 import { createHandshakeHub } from '../ws/handshake-hub.ts';
@@ -44,6 +45,8 @@ export function createServer(deps: ServerDependencies): FastifyInstance {
         ? false
         : { level: process.env.NIX_COLLAB_LOG_LEVEL ?? 'info' },
   });
+
+  registerPlanDispatch(app, deps.planDispatch, deps.planSettle);
 
   const rateWindow = deps.rateWindow ?? new RateWindow();
   const newDocId = deps.newDocId ?? randomUUID;

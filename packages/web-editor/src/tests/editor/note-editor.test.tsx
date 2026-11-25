@@ -45,9 +45,14 @@ const fileHarness = vi.hoisted(() => ({
     execute: vi.fn(() => Promise.resolve({ id: 'upload-id' })),
     query: vi.fn((endpoint?: { operation?: string }) =>
       Promise.resolve(
-        endpoint?.operation?.startsWith('comments.') === true
-          ? { revision: 0, threads: [], canComment: true }
-          : { references: [] },
+        endpoint?.operation === 'pets.settings'
+          ? {
+              revision: 1,
+              settings: { enabled: false, inlineWriting: false, activePetId: null, profiles: [] },
+            }
+          : endpoint?.operation?.startsWith('comments.') === true
+            ? { revision: 0, threads: [], canComment: true }
+            : { references: [] },
       ),
     ),
   },
@@ -172,6 +177,17 @@ async function open(): Promise<Y.Doc> {
   }
   return doc;
 }
+
+it('keeps ordinary typing available while inline writing is disabled', async () => {
+  const document = await open();
+  const body = screen.getByRole('textbox', { name: 'Note body' });
+  body.focus();
+  await userEvent.type(body, '/continue', { skipClick: true });
+  expect(screen.queryByText('Continue writing')).not.toBeInTheDocument();
+  await userEvent.keyboard('{Escape}');
+  expect(body).toHaveTextContent('/continue');
+  expect(JSON.stringify(document.getXmlFragment('default').toJSON())).toContain('/continue');
+});
 
 it('changes writing modes while retaining the collaborative body and its connection', async () => {
   const document = await open();

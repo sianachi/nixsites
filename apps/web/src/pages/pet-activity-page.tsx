@@ -1,5 +1,5 @@
 import { Button, Text, focusRing } from '@nix/ui';
-import type { PetRunResponse } from '@nix/api-client';
+import type { PetPlanResponse, PetRunResponse } from '@nix/api-client';
 import type { ReactElement, ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
@@ -11,6 +11,7 @@ import { paneScroller } from '@nix/web-foundation/layout/regions';
 import { useWorkspace } from '@nix/web-workspaces/workspaces/workspace-context';
 import { PetRunStatusTag, petRunStatusText } from '../panel/pet-run-card';
 import { usePetRunFeed } from '../panel/use-pet-run-feed';
+import { usePetPlanFeed } from '../panel/use-pet-plan-feed';
 import { petJobHref } from './editor/pet-job-routing';
 
 const waiting = new Set(['waiting_for_input', 'waiting_for_approval', 'review_required']);
@@ -53,6 +54,24 @@ function ActivityFrame({ children }: { readonly children: ReactNode }): ReactEle
   );
 }
 
+function PlanActivityRow({ run }: { readonly run: PetPlanResponse }): ReactElement {
+  return (
+    <li className="min-w-0 border-b border-divider">
+      <Link
+        to={`/w/${run.workspaceId}/pet/plans/${run.id}/review`}
+        className={`flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-2 py-2 hover:bg-surface ${focusRing}`}
+      >
+        <Text as="span" className="min-w-0 flex-1 break-words">
+          {run.brief}
+        </Text>
+        <Text as="span" variant="note" tone="muted">
+          {run.status.replaceAll('_', ' ')}
+        </Text>
+      </Link>
+    </li>
+  );
+}
+
 export function PetActivityPage(): ReactElement {
   const { workspaceId } = useWorkspace();
   return <PetActivity key={workspaceId} workspaceId={workspaceId} />;
@@ -60,14 +79,17 @@ export function PetActivityPage(): ReactElement {
 
 function PetActivity({ workspaceId }: { readonly workspaceId: string }): ReactElement {
   const { feed, retry } = usePetRunFeed('workspace', workspaceId);
-  if (feed.status === 'loading') {
+  const plans = usePetPlanFeed(workspaceId);
+  const planRuns =
+    plans.feed.status === 'ready' && plans.feed.data.enabled ? plans.feed.data.runs : [];
+  if (feed.status === 'loading' && planRuns.length === 0) {
     return (
       <ActivityFrame>
         <LoadingPanel label="pet activity" />
       </ActivityFrame>
     );
   }
-  if (feed.status === 'error') {
+  if (feed.status === 'error' && planRuns.length === 0) {
     return (
       <ActivityFrame>
         <ErrorPanel
@@ -78,7 +100,12 @@ function PetActivity({ workspaceId }: { readonly workspaceId: string }): ReactEl
       </ActivityFrame>
     );
   }
-  if (feed.status !== 'ready' || !feed.data.enabled) {
+  if (
+    (feed.status !== 'ready' || !feed.data.enabled) &&
+    planRuns.length === 0 &&
+    plans.feed.status !== 'loading' &&
+    plans.feed.status !== 'error'
+  ) {
     return (
       <ActivityFrame>
         <EmptyPanel
@@ -88,30 +115,53 @@ function PetActivity({ workspaceId }: { readonly workspaceId: string }): ReactEl
       </ActivityFrame>
     );
   }
+  const legacyRuns = feed.status === 'ready' && feed.data.enabled ? feed.data.runs : [];
   const groups = [
-    { label: 'Needs attention', runs: feed.data.runs.filter((run) => waiting.has(run.status)) },
-    { label: 'In progress', runs: feed.data.runs.filter((run) => active.has(run.status)) },
+    {
+      label: 'Needs attention',
+      runs: legacyRuns.filter((run) => waiting.has(run.status)),
+      plans: planRuns.filter((run) => waiting.has(run.status)),
+    },
+    {
+      label: 'In progress',
+      runs: legacyRuns.filter((run) => active.has(run.status)),
+      plans: planRuns.filter((run) => active.has(run.status)),
+    },
     {
       label: 'Recent jobs',
-      runs: feed.data.runs.filter((run) => !waiting.has(run.status) && !active.has(run.status)),
+      runs: legacyRuns.filter((run) => !waiting.has(run.status) && !active.has(run.status)),
+      plans: planRuns.filter((run) => !waiting.has(run.status) && !active.has(run.status)),
     },
   ];
   return (
     <ActivityFrame>
-      {feed.refreshFailed === true ? (
+      {plans.feed.status === 'loading' ? (
+        <Text role="status">Loading prepared plans…</Text>
+      ) : plans.feed.status === 'error' ? (
+        <ErrorPanel
+          title="Prepared plans could not be loaded"
+          detail="The other activity shown here is still available."
+          action={<Button onClick={plans.retry}>Retry plans</Button>}
+        />
+      ) : null}
+      {(feed.status === 'ready' && feed.refreshFailed === true) ||
+      (plans.feed.status === 'ready' && plans.feed.refreshFailed === true) ? (
         <Text as="div" variant="note" tone="muted" role="status">
           Could not refresh the jobs. Nix will try again.
         </Text>
       ) : null}
-      {feed.data.runs.length === 0 ? (
+      {legacyRuns.length === 0 &&
+      planRuns.length === 0 &&
+      plans.feed.status !== 'loading' &&
+      plans.feed.status !== 'error' ? (
         <EmptyPanel
           title="No pet jobs yet"
           detail="Open the pet dialog on a task to hand your pet a job."
         />
       ) : (
         groups
-          .filter(({ runs }) => runs.length > 0)
-          .map(({ label, runs }) => (
+          .filter(({ runs, plans: entries }) => runs.length > 0 || entries.length > 0)
+          .map(({ label, runs, plans: entries }) => (
             <section key={label} aria-label={label} className="flex min-w-0 flex-col gap-2">
               <Text variant="h5" as="h2">
                 {label}
@@ -119,6 +169,9 @@ function PetActivity({ workspaceId }: { readonly workspaceId: string }): ReactEl
               <ul className="min-w-0">
                 {runs.map((run) => (
                   <ActivityRow key={run.id} run={run} />
+                ))}
+                {entries.map((run) => (
+                  <PlanActivityRow key={run.id} run={run} />
                 ))}
               </ul>
             </section>

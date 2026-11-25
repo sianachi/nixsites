@@ -37,7 +37,10 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [People](#people)
 - [Pet Connections](#pet-connections)
 - [Pet peers](#pet-peers)
+- [Pet Plans](#pet-plans)
 - [Pet Runs](#pet-runs)
+- [Pet Sharing](#pet-sharing)
+- [PetPlanSharingEndpoints](#petplansharingendpoints)
 - [Pets](#pets)
 - [PublicLinks](#publiclinks)
 - [Query](#query)
@@ -3097,6 +3100,410 @@ Parameters:
 
 Responses: `204`.
 
+## Pet Plans
+
+<a id="pet-plans"></a>
+
+### GET /api/v1/workspaces/{workspaceId}/pet-plans
+
+<a id="listpetplans"></a>
+
+List the caller's workspace plans.
+
+Operation id: `ListPetPlans`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans
+
+<a id="createpetplan"></a>
+
+Prepare a workspace plan for owner review.
+
+Operation id: `CreatePetPlan`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `StartPetPlanRequest`.
+
+Responses: `200`.
+
+### GET /api/v1/workspaces/{workspaceId}/pet-plans/{runId}
+
+<a id="getpetplan"></a>
+
+Inspect an owned plan and its observed results.
+
+Operation id: `GetPetPlan`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/answer
+
+<a id="answerpetplan"></a>
+
+Answer a clarification without approving effects.
+
+Operation id: `AnswerPetPlan`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `AnswerPetPlanRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/cancel
+
+<a id="cancelpetplan"></a>
+
+Cancel the plan's undispatched effects.
+
+Operation id: `CancelPetPlan`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `CancelPetPlanRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-contexts
+
+<a id="authorizepetplandecisioncontext"></a>
+
+Operation id: `AuthorizePetPlanDecisionContext`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `CreatePetPlanDecisionContextRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs
+
+<a id="createpetplandecisionhandoff"></a>
+
+Operation id: `CreatePetPlanDecisionHandoff`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `CreatePetPlanDecisionHandoffRequest`.
+
+Responses: `200`.
+
+### GET /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs/{handoffId}
+
+<a id="getpetplandecisionhandoff"></a>
+
+Operation id: `GetPetPlanDecisionHandoff`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `handoffId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### DELETE /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs/{handoffId}
+
+<a id="revokepetplandecisionhandoff"></a>
+
+Operation id: `RevokePetPlanDecisionHandoff`.
+
+**Can.** Delete or revoke what the summary names.
+
+**Cannot.** Edit a note, canvas, or spreadsheet body, and it does not change resources the summary does not name.
+
+**Token.** Requires a personal access token with the admin scope, or an interactive session. Admin covers sharing, membership, automations, sites, and moving an item.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `handoffId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/drafts
+
+<a id="revisepetplan"></a>
+
+Prepare a fresh plan from stored editable fields or feedback.
+
+Operation id: `RevisePetPlan`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `RevisePetPlanRequest`.
+
+Responses: `200`.
+
+### GET /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/io
+
+<a id="getpetplanclientintent"></a>
+
+Read the next server-prepared exact request for an owner client.
+
+Operation id: `GetPetPlanClientIntent`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/io/result
+
+<a id="recordpetplanclientioresult"></a>
+
+Return the response to the exact dispatched owner-client request.
+
+Operation id: `RecordPetPlanClientIoResult`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `PetPlanClientIoResult`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/decision
+
+<a id="decidepetplan"></a>
+
+Record exact owner or explicitly delegated consent for a prepared plan version.
+
+Operation id: `DecidePetPlan`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `planId` in path (required, string (uuid))
+
+Request body: `DecidePetPlanRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/claim
+
+<a id="claimpetplanstep"></a>
+
+Claim the next frozen effect requiring an owner client.
+
+Operation id: `ClaimPetPlanStep`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `planId` in path (required, string (uuid))
+- `stepId` in path (required, string (uuid))
+
+Request body: `ClaimPetPlanStepRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/result
+
+<a id="recordpetplanstep"></a>
+
+Record a bounded receipt for the exact active client claim.
+
+Operation id: `RecordPetPlanStep`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `planId` in path (required, string (uuid))
+- `stepId` in path (required, string (uuid))
+
+Request body: `RecordPetPlanStepRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/steps/{stepId}/undo
+
+<a id="undopetplanstep"></a>
+
+Queue the supported undo of one applied receipt.
+
+Operation id: `UndoPetPlanStep`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `planId` in path (required, string (uuid))
+- `stepId` in path (required, string (uuid))
+
+Request body: `UndoPetPlanStepRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision
+
+<a id="decidepetplansharing"></a>
+
+Operation id: `DecidePetPlanSharing`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+
+Request body: `DecidePetPlanSharingRequest`.
+
+Responses: `200`.
+
+### GET /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/watch
+
+<a id="watchpetplan"></a>
+
+Poll the current plan revision.
+
+Operation id: `WatchPetPlan`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+- `runId` in path (required, string (uuid))
+- `after` in query (optional, integer | string)
+
+Responses: `200`.
+
 ## Pet Runs
 
 <a id="pet-runs"></a>
@@ -3361,6 +3768,70 @@ Operation id: `ListWorkspacePetRuns`.
 Parameters:
 
 - `workspaceId` in path (required, string (uuid))
+
+Responses: `200`.
+
+## Pet Sharing
+
+<a id="pet-sharing"></a>
+
+### POST /api/v1/workspaces/{workspaceId}/pet-sharing/decision
+
+<a id="decidepetsharing"></a>
+
+Operation id: `DecidePetSharing`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `PetSharingDecisionRequest`.
+
+Responses: `200`.
+
+### POST /api/v1/workspaces/{workspaceId}/pet-sharing/question
+
+<a id="getpetsharingquestion"></a>
+
+Operation id: `GetPetSharingQuestion`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `workspaceId` in path (required, string (uuid))
+
+Request body: `PetSharingQuestionRequest`.
+
+Responses: `200`.
+
+## PetPlanSharingEndpoints
+
+<a id="petplansharingendpoints"></a>
+
+### POST /internal/pets/sharing/validate
+
+<a id="validatepetsharing"></a>
+
+Operation id: `ValidatePetSharing`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `ValidatePetSharingRequest`.
 
 Responses: `200`.
 

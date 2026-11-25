@@ -282,6 +282,7 @@ export default defineConfig({
     },
   },
   server: {
+    strictPort: true,
     port: Number(process.env.NIX_WEB_PORT ?? 5173),
     headers: { 'Content-Security-Policy': developmentBrowserPolicy },
     // The app consumes workspace packages as source. In the local browser this can cause the

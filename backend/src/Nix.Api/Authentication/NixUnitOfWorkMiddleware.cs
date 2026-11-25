@@ -10,6 +10,7 @@ using Nix.Domain.Items;
 using Nix.Domain.Provisioning;
 using Nix.Errors;
 using Nix.Features.Identity;
+using Nix.Features.PetRuns;
 using Nix.Http;
 using Nix.Messaging;
 using Nix.Persistence;
@@ -188,6 +189,8 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
         if (validated is ValidatedPetTurnToken petTurn
             && (!PetTurnPolicy.Allows(context.Request, petTurn)
                 || (petTurn.ActionBinding is { } binding
+                    && !(petTurn.PlanRequest is not null && (PetPlanDispatchService.IsConsumedCollabAuthorization(context.Request)
+                        || PetPlanDispatchService.IsTemplateContinuation(context.Request)))
                     && !await PetActionRequestBinding.MatchesAsync(context.Request, binding, context.RequestAborted).ConfigureAwait(false))))
         {
             await WriteProblemAsync(
@@ -493,7 +496,29 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
                 return;
             }
 
+            var planDispatch = context.RequestServices.GetRequiredService<PetPlanDispatchService>();
+            var planPet = validated as ValidatedPetTurnToken;
+            var collabPlanAuthorization = planPet?.PlanRequest is not null
+                && PetPlanDispatchService.IsConsumedCollabAuthorization(context.Request);
+            var templatePlanContinuation = planPet?.PlanRequest is not null
+                && PetPlanDispatchService.IsTemplateContinuation(context.Request);
+            if (planPet?.PlanRead is { } readScope
+                && !await planDispatch.AuthorizeReadAsync(context, readScope, context.RequestAborted).ConfigureAwait(false)
+                || collabPlanAuthorization && !await planDispatch.AuthorizeConsumedCollabAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false)
+                || templatePlanContinuation && !await planDispatch.AuthorizeTemplateContinuationAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false)
+                || !collabPlanAuthorization && !templatePlanContinuation && (planPet?.PlanRequest is not null
+                    || context.Request.Headers.ContainsKey("X-Nix-Pet-Plan-Request"))
+                    && !await planDispatch.ConsumeAsync(context, planPet, context.RequestAborted).ConfigureAwait(false))
+            {
+                await transaction.RollbackAsync(context.RequestAborted).ConfigureAwait(false);
+                await WriteProblemAsync(context, StatusCodes.Status409Conflict, "pet_plans.dispatch_refused", "Plan request changed",
+                    "The exact plan request is unavailable or has already been dispatched.").ConfigureAwait(false);
+                return;
+            }
+
             if (boundPetEdit
+                && !collabPlanAuthorization
+                && !templatePlanContinuation
                 && !await PetActionRequestBinding.RevisionsMatchAsync(context, context.RequestAborted).ConfigureAwait(false))
             {
                 await transaction.RollbackAsync(context.RequestAborted).ConfigureAwait(false);
@@ -560,6 +585,15 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
                 }
                 else
                 {
+                    if (templatePlanContinuation)
+                    {
+                        await planDispatch.CompleteTemplateContinuationAsync(context, planPet!, context.RequestAborted).ConfigureAwait(false);
+                    }
+                    else if (!collabPlanAuthorization && (planPet?.PlanRequest is not null
+                        || context.Request.Headers.ContainsKey("X-Nix-Pet-Plan-Request")))
+                    {
+                        await planDispatch.CompleteCoreAsync(context, planPet, context.RequestAborted).ConfigureAwait(false);
+                    }
                     await transaction.CommitAsync(context.RequestAborted).ConfigureAwait(false);
                 }
 

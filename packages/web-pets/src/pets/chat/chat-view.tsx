@@ -16,6 +16,7 @@ import { PetMessageText } from '../pet-message-text';
 import { earlierPieces } from '../../openui/fence';
 import { useAccessibleWorkspaces } from '@nix/web-workspaces/workspaces/workspace-context';
 import { isAborted } from '@nix/web-foundation/lib/guards';
+import { useSharingConsent } from '@nix/web-platform/api/use-pet-sharing-consent';
 
 export function ChatView({
   itemId,
@@ -43,7 +44,13 @@ export function ChatView({
   // null: the checklist shows the chat's current sources.
   const [sources, setSources] = useState<readonly string[] | null>(null);
   const lifetime = useRef<AbortController | null>(null);
-  const pending = useRef<{ text: string; requestId: string } | null>(null);
+  const pending = useRef<{ text: string; requestId: string; sourceKey: string } | null>(null);
+  const sharing = useSharingConsent({
+    client,
+    workspaceId,
+    petId: chat?.petId ?? '',
+    selectionKey: JSON.stringify([itemId, chat?.petId, chat?.sourceWorkspaceIds]),
+  });
   const tail = useRef<string | undefined>(undefined);
   const running = chat?.turn?.status === 'running';
   const streamedText = running ? (chat.turn?.text ?? '') : '';
@@ -108,21 +115,30 @@ export function ChatView({
     };
   }, [client, itemId]);
   async function send() {
-    if (!draft.trim() || running || busy) return;
+    if (!draft.trim() || running || busy || chat === null) return;
     setBusy(true);
     setError('');
     try {
+      const submittedDraft = draft;
       const text = draft.trim();
+      const sourceIds = [...chat.sourceWorkspaceIds].sort();
+      if (!(await sharing.ensure({ kind: 'workspace', readOnlyWorkspaceIds: sourceIds }))) return;
+      const sourceKey = sourceIds.join(',');
       const request =
-        pending.current?.text === text ? pending.current : { text, requestId: crypto.randomUUID() };
+        pending.current?.text === text && pending.current.sourceKey === sourceKey
+          ? pending.current
+          : { text, requestId: crypto.randomUUID(), sourceKey };
       pending.current = request;
       setChat(
-        await client.execute(conversations.send(itemId, request), {
-          signal: lifetime.current?.signal,
-        }),
+        await client.execute(
+          conversations.send(itemId, { text: request.text, requestId: request.requestId }),
+          {
+            signal: lifetime.current?.signal,
+          },
+        ),
       );
       pending.current = null;
-      setDraft('');
+      setDraft((current) => (current === submittedDraft ? '' : current));
     } catch {
       setError('The message could not be sent. Check source access and your pet connection.');
     } finally {
@@ -395,6 +411,7 @@ export function ChatView({
                   <Text variant="caption" tone="muted">
                     Chat note · {currentSources.map(nameOf).join(', ') || 'No available sources'}
                   </Text>
+                  {sharing.panel}
                   <div className="flex min-w-0 items-end gap-2">
                     <Textarea
                       aria-label="Message"

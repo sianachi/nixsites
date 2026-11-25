@@ -45,4 +45,16 @@ describe('pet capability coverage', () => {
     expect(petCapability('not_registered')).toBeUndefined();
     expect(petCapability('__proto__')).toBeUndefined();
   });
+
+  it('keeps plan, sharing and delegation operations outside model execution', () => {
+    const ownerOperations = OPERATIONS.filter((operation) =>
+      /^\/api\/v1\/workspaces\/[^/]+\/(pet-plans|pet-sharing)(\/|$)/.test(operation.path),
+    );
+    expect(ownerOperations.length).toBeGreaterThan(0);
+    for (const operation of ownerOperations) {
+      expect(isHumanOnlyOperation(operation), operation.id).toBe(true);
+      expect(petCapability(operation.id)?.mode, operation.id).toBe('human');
+      expect(petCapability(operation.id)?.executor, operation.id).toBeUndefined();
+    }
+  });
 });

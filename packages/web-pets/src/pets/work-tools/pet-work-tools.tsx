@@ -135,7 +135,7 @@ function PetWorkToolsView({
 
   const needsDecision = (runtime.tools ?? [])
     .filter((tool) => {
-      if (tool.status !== 'pending') return false;
+      if (tool.status !== 'pending' || tool.planBinding != null) return false;
       const key = decisionKey(tool);
       if (decisions[key] || readActionReceipt(key)) return false;
       if (hasProblems[tool.id]) return false;
@@ -186,7 +186,13 @@ function PetWorkToolsView({
     edited?: EditedRequest,
   ): Promise<boolean> {
     const key = decisionKey(tool);
-    if (lock.current || tool.status !== 'pending' || decisions[key] || readActionReceipt(key))
+    if (
+      lock.current ||
+      tool.status !== 'pending' ||
+      tool.planBinding != null ||
+      decisions[key] ||
+      readActionReceipt(key)
+    )
       return false;
     lock.current = true;
     const requestingChanges = !approved && revisionFeedback(refusalResult ?? '') !== undefined;
@@ -451,39 +457,58 @@ function PetWorkToolsView({
       aria-label={`${petName}'s activity`}
       className="flex min-w-0 flex-col gap-1 wrap-anywhere"
     >
-      {tools.map((tool) => (
-        <PetWorkToolCard
-          key={tool.id}
-          tool={tool}
-          client={client}
-          workspaceId={workspaceId}
-          noteScope={noteScope}
-          petName={petName}
-          busy={busy}
-          readWithoutAsking={readWithoutAsking}
-          memoryMode={memoryMode}
-          applyWithoutAsking={appliesWithoutAsking(tool)}
-          followsLockedRead={conversationReadLockedContent || held.has(tool.id)}
-          progress={progress[tool.id]}
-          onBuildProgress={(message) => {
-            setProgress((old) => ({ ...old, [tool.id]: message }));
-          }}
-          onProblemsChange={(problems) => {
-            setHasProblems((old) =>
-              old[tool.id] === problems ? old : { ...old, [tool.id]: problems },
-            );
-          }}
-          onPreviewFailedChange={(failed) => {
-            setPreviewFailed((old) =>
-              old[tool.id] === failed ? old : { ...old, [tool.id]: failed },
-            );
-          }}
-          submitted={decisions[decisionKey(tool)] ?? readActionReceipt(decisionKey(tool))}
-          ownerReason={ownerReasons[tool.id]}
-          onResolve={resolve}
-          scrollAnchor={needsDecision[0] === tool.id}
-        />
-      ))}
+      {tools.map((tool) =>
+        tool.status === 'planned' || tool.status === 'adopted' || tool.planBinding != null ? (
+          <Text key={tool.id} variant="note" tone="muted">
+            {tool.planBinding == null ? (
+              'Preparing the common plan review…'
+            ) : (
+              <a
+                href={`/w/${workspaceId}/pet/plans/${tool.planBinding.runId}/review`}
+                className="inline-flex min-h-(--control-lg) items-center underline"
+              >
+                {tool.status === 'completed' ||
+                tool.status === 'failed' ||
+                tool.status === 'interrupted'
+                  ? 'Open plan results'
+                  : 'Open the prepared plan'}
+              </a>
+            )}
+          </Text>
+        ) : (
+          <PetWorkToolCard
+            key={tool.id}
+            tool={tool}
+            client={client}
+            workspaceId={workspaceId}
+            noteScope={noteScope}
+            petName={petName}
+            busy={busy}
+            readWithoutAsking={readWithoutAsking}
+            memoryMode={memoryMode}
+            applyWithoutAsking={appliesWithoutAsking(tool)}
+            followsLockedRead={conversationReadLockedContent || held.has(tool.id)}
+            progress={progress[tool.id]}
+            onBuildProgress={(message) => {
+              setProgress((old) => ({ ...old, [tool.id]: message }));
+            }}
+            onProblemsChange={(problems) => {
+              setHasProblems((old) =>
+                old[tool.id] === problems ? old : { ...old, [tool.id]: problems },
+              );
+            }}
+            onPreviewFailedChange={(failed) => {
+              setPreviewFailed((old) =>
+                old[tool.id] === failed ? old : { ...old, [tool.id]: failed },
+              );
+            }}
+            submitted={decisions[decisionKey(tool)] ?? readActionReceipt(decisionKey(tool))}
+            ownerReason={ownerReasons[tool.id]}
+            onResolve={resolve}
+            scrollAnchor={needsDecision[0] === tool.id}
+          />
+        ),
+      )}
       {error ? <Text role="alert">{error}</Text> : null}
     </section>
   );

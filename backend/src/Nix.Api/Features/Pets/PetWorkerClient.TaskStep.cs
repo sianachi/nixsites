@@ -6,14 +6,18 @@ using Nix.Domain.Primitives;
 
 namespace Nix.Features.Pets;
 
-internal sealed record PetTaskStepInput(Guid RunId, Guid StepId, Guid WorkspaceId, Guid ItemId, string Goal,
-    IReadOnlyList<string> Context, IReadOnlyList<PetTaskCapability> Capabilities, IReadOnlyList<string>? ScopeAbilities = null);
+internal sealed record PetTaskStepInput(Guid RunId, Guid StepId, Guid WorkspaceId, Guid? ItemId, string Goal,
+    IReadOnlyList<string> Context, IReadOnlyList<PetTaskCapability> Capabilities, IReadOnlyList<string>? ScopeAbilities = null, bool PlanMode = false, string? SharingAttestation = null);
 
 internal sealed record PetTaskCapability(string Name, string Description, JsonElement? InputSchema = null);
 
-internal sealed record PetTaskStep(string Kind, string? Text, string? Capability, JsonElement? Arguments, string? Scope = null);
+internal sealed record PetTaskPlanStep(string Capability, JsonElement Arguments);
 
-internal sealed record PetTaskStepContext(Guid TaskId, IReadOnlyList<string> Observations,
+internal sealed record PetTaskStep(string Kind, string? Text, string? Capability, JsonElement? Arguments, string? Scope = null,
+    IReadOnlyList<PetTaskPlanStep>? Steps = null);
+
+internal sealed record PetTaskStepContext(Guid? TaskId, Guid WorkspaceId, IReadOnlyList<string> Observations,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool PlanMode,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? ScopeAbilities);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -22,9 +26,10 @@ internal sealed record PetTaskStepContext(Guid TaskId, IReadOnlyList<string> Obs
 internal sealed partial class PetTaskStepJsonContext : JsonSerializerContext;
 
 /// <summary>An in-memory credential and proposal context handed to the companion after authorization.</summary>
-internal sealed class PreparedPetTaskStep(PetInlineWorkerRequest request, HashSet<string> capabilities, HashSet<string>? scopeAbilities)
+internal sealed class PreparedPetTaskStep(PetInlineWorkerRequest request, HashSet<string> capabilities, HashSet<string>? scopeAbilities, bool planMode = false)
 {
     internal PetInlineWorkerRequest Request { get; } = request;
+    internal bool AllowsPlans => planMode;
     internal bool AllowsScopeRequests => scopeAbilities is not null;
     internal bool Offers(string name) => capabilities.Contains(name);
     internal bool OffersScopeAbility(string name) => scopeAbilities?.Contains(name) == true;
@@ -76,18 +81,18 @@ public sealed partial class PetWorkerClient
         }
 
         var capabilities = JsonSerializer.Serialize(input.Capabilities, PetTaskStepJsonContext.Default.Capabilities);
-        var context = JsonSerializer.Serialize(new PetTaskStepContext(input.ItemId, input.Context, input.ScopeAbilities),
+        var context = JsonSerializer.Serialize(new PetTaskStepContext(input.ItemId, input.WorkspaceId, input.Context, input.PlanMode, input.ScopeAbilities),
             PetTaskStepJsonContext.Default.PetTaskStepContext);
         if (Encoding.UTF8.GetByteCount(capabilities) > MaxTaskCapabilitiesBytes || Encoding.UTF8.GetByteCount(context) > MaxTaskContextBytes)
         {
             return Result.Failure<PreparedPetTaskStep>(InvalidTaskInput());
         }
 
-        var request = new PetInlineRequest(input.WorkspaceId, input.ItemId, input.StepId, "custom", capabilities, input.Goal, context);
-        var prepared = await PrepareToolFreeTurnAsync(request, pet, "plan_task_step", token).ConfigureAwait(false);
+        var prepared = await PrepareToolFreeTurnAsync(input.WorkspaceId, input.StepId, input.Goal, capabilities, context,
+            "plan_task_step", pet, token, input.SharingAttestation).ConfigureAwait(false);
         return prepared.IsFailure
             ? Result.Failure<PreparedPetTaskStep>(prepared.Error)
-            : Result.Success(new PreparedPetTaskStep(prepared.Value, offered, scopeAbilities));
+            : Result.Success(new PreparedPetTaskStep(prepared.Value, offered, scopeAbilities, input.PlanMode));
     }
 
     internal async Task<Result<PetTaskStep>> PlanTaskStepAsync(PreparedPetTaskStep prepared, CancellationToken token)
@@ -171,7 +176,28 @@ public sealed partial class PetWorkerClient
             return new PetTaskStep(kind, null, name, arguments.Clone());
         }
 
-        if (kind == "scope" && prepared.AllowsScopeRequests && root.TryGetProperty("scope", out var scopeField)
+        if (kind == "plan" && prepared.AllowsPlans && members == 3
+            && root.TryGetProperty("summary", out var summaryField) && summaryField.ValueKind == JsonValueKind.String
+            && summaryField.GetString() is { Length: >= 1 and <= 1_600 } summary && !string.IsNullOrWhiteSpace(summary)
+            && root.TryGetProperty("steps", out var stepsField) && stepsField.ValueKind == JsonValueKind.Array
+            && stepsField.GetArrayLength() is >= 1 and <= 12)
+        {
+            var steps = new List<PetTaskPlanStep>();
+            foreach (var entry in stepsField.EnumerateArray())
+            {
+                if (entry.ValueKind != JsonValueKind.Object || entry.EnumerateObject().Count() != 2
+                    || !entry.TryGetProperty("capability", out var capabilityField) || capabilityField.ValueKind != JsonValueKind.String
+                    || capabilityField.GetString() is not { } capability || !prepared.Offers(capability)
+                    || !entry.TryGetProperty("arguments", out var argumentsField) || argumentsField.ValueKind != JsonValueKind.Object)
+                {
+                    return null;
+                }
+                steps.Add(new PetTaskPlanStep(capability, argumentsField.Clone()));
+            }
+            return new PetTaskStep("plan", summary, null, null, Steps: steps);
+        }
+
+        if (kind == "scope" && !prepared.AllowsPlans && prepared.AllowsScopeRequests && root.TryGetProperty("scope", out var scopeField)
             && scopeField.ValueKind == JsonValueKind.String && root.TryGetProperty("text", out var reasonField)
             && reasonField.ValueKind == JsonValueKind.String && reasonField.GetString() is { Length: <= MaxScopeRequestTextLength } reason
             && !string.IsNullOrWhiteSpace(reason))

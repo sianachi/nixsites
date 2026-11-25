@@ -335,6 +335,14 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `notifications.too_many_subscriptions`
 - `oauth.invalid_request`
 - `pet_peers.invalid_effect`
+- `pet_plans.conflict`
+- `pet_plans.dispatch_refused`
+- `pet_plans.execution_uncertain`
+- `pet_plans.invalid`
+- `pet_plans.invalid_fields`
+- `pet_plans.outcome_unknown`
+- `pet_plans.preview_unavailable`
+- `pet_plans.source_changed`
 - `pet_runs.action_refused`
 - `pet_runs.browser_required`
 - `pet_runs.canvas_refused`

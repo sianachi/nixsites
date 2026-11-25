@@ -6,7 +6,9 @@ import { PetCompanion } from '../../pets/pet-companion';
 import { PetConnectionPanel } from '../../pets/pet-connection-panel';
 import { NixApiError, type PetProfile } from '@nix/api-client';
 import { clearPetDrafts } from '@nix/web-foundation/lib/pet-drafts';
+import { writeWorkspaceAccess } from '@nix/web-foundation/lib/device-preferences';
 import { z } from 'zod';
+import { petSharingFixture } from '../../testing/pet-sharing-fixture';
 
 const client = vi.hoisted(() => ({
   execute: vi.fn(),
@@ -14,7 +16,19 @@ const client = vi.hoisted(() => ({
   // No stream on this server: the hook falls back to the watch these tests drive.
   stream: vi.fn(() => Promise.resolve(new Response(null, { status: 501 }))),
 }));
-vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => client }));
+const sharing = petSharingFixture();
+const sharingClient = new Proxy(client, {
+  get(target, key) {
+    if (key === 'execute') return executeWithSharing;
+    const member: unknown = Reflect.get(target, key);
+    return member;
+  },
+});
+async function executeWithSharing(endpoint: unknown, options?: unknown): Promise<unknown> {
+  const response: unknown = await (sharing.reply(endpoint) ?? client.execute(endpoint, options));
+  return response;
+}
+vi.mock('@nix/web-platform/api/api-client-provider', () => ({ useApiClient: () => sharingClient }));
 vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
   useWorkspace: () => ({ workspaceId: '33333333-3333-4333-8333-333333333333' }),
 }));
@@ -78,6 +92,7 @@ async function chooseFromPlus(
 describe('companion workflow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sharing.reset();
     petSettings.provider = 'chatgpt';
     petSettings.applyWithoutAsking = false;
     const stored = new Map<string, string>();
@@ -94,6 +109,11 @@ describe('companion workflow', () => {
       },
     });
     sessionStorage.clear();
+    writeWorkspaceAccess(
+      '33333333-3333-4333-8333-333333333333',
+      '44444444-4444-4444-8444-444444444444',
+      false,
+    );
     client.execute.mockResolvedValue(connected);
     client.query.mockResolvedValue(connected);
   });
@@ -195,6 +215,7 @@ describe('companion workflow', () => {
   });
 
   it('maps the workspace on the first message with workspace access, and never again', async () => {
+    sharing.requireReview();
     const container = '55555555-5555-4555-8555-555555555555';
     const paginate = vi.fn(async function* (endpoint: { query: { parentId?: string } }) {
       await Promise.resolve();
@@ -221,6 +242,8 @@ describe('companion workflow', () => {
     await chooseFromPlus(user, 'Use workspace');
     await user.type(screen.getByRole('textbox', { name: 'Message Cat' }), 'What is due?');
     await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(paginate).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole('button', { name: 'Continue' }));
     const sends = () =>
       client.execute.mock.calls
         .map(([endpoint]) => (endpoint as { body?: Record<string, unknown> }).body)
@@ -255,6 +278,7 @@ describe('companion workflow', () => {
   });
 
   it('shows preparation while the first workspace map is held and preserves a refused draft', async () => {
+    sharing.requireReview();
     let releaseMap: (() => void) | undefined;
     const heldMap = new Promise<void>((resolve) => {
       releaseMap = resolve;
@@ -285,6 +309,8 @@ describe('companion workflow', () => {
       await user.clear(field);
       await user.type(field, 'What is due?');
       await user.click(screen.getByRole('button', { name: 'Send' }));
+      expect(paginate).not.toHaveBeenCalled();
+      await user.click(await screen.findByRole('button', { name: 'Continue' }));
 
       expect(screen.getByRole('status', { name: 'Message preparation' })).toHaveTextContent(
         'Preparing message…',
@@ -844,7 +870,10 @@ describe('companion workflow', () => {
         .map(([endpoint]) => (endpoint as { body?: Record<string, unknown> }).body)
         .filter((body) => body?.operation === 'send');
 
-    function openNote(lock: { locked: boolean; unlockedUntil: string | null }) {
+    function openNote(
+      lock: { locked: boolean; unlockedUntil: string | null },
+      withholdFromPets = false,
+    ) {
       Object.assign(client, {
         paginate: async function* () {
           await Promise.resolve();
@@ -857,7 +886,7 @@ describe('companion workflow', () => {
           endpoint.operation === 'locks.get'
             ? lock
             : endpoint.operation === 'items.get'
-              ? { id: note, title: 'Weekly plan' }
+              ? { id: note, title: 'Weekly plan', settings: { withholdFromPets } }
               : connected,
         ),
       );
@@ -902,6 +931,20 @@ describe('companion workflow', () => {
     it('sends nothing about a locked note', async () => {
       const user = userEvent.setup();
       const view = openNote({ locked: true, unlockedUntil: null });
+      await user.click(await screen.findByRole('button', { name: 'Talk with Cat' }));
+      await chooseFromPlus(user, 'Use workspace');
+      await sendMessage(user, 'What is due?');
+      await waitFor(() => {
+        expect(sends()).toHaveLength(1);
+      });
+      expect(screen.queryByText('This page: Weekly plan')).not.toBeInTheDocument();
+      expect(sends()[0]?.itemId ?? null).toBeNull();
+      view.unmount();
+    });
+
+    it('does not automatically attach an unlocked note withheld from companions', async () => {
+      const user = userEvent.setup();
+      const view = openNote({ locked: false, unlockedUntil: null }, true);
       await user.click(await screen.findByRole('button', { name: 'Talk with Cat' }));
       await chooseFromPlus(user, 'Use workspace');
       await sendMessage(user, 'What is due?');
