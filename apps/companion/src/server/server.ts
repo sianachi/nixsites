@@ -106,6 +106,7 @@ export function createCompanion(config: CompanionConfig, deps: CompanionDeps = {
   const manager = new Manager(config, {
     executeConversationTool: core.executeConversationTool,
     validateSharing: core.validateSharing,
+    reportUsage: core.reportUsage,
     serverTools: createServerTools(config),
     ...deps,
   });

@@ -67,6 +67,7 @@ import {
   supersedePlanToolsSchema,
 } from '../tools/plan-rpc.ts';
 import { TurnTiming } from '../providers/turn-timing.ts';
+import { estimateCostUsd } from '../shared/pricing.ts';
 import {
   emptyRequest,
   type ConversationToolExecutor,
@@ -75,6 +76,8 @@ import {
   type Message,
   type Model,
   type ModelInfo,
+  type ProviderUsage,
+  type ReportUsage,
   type Request,
   type Response,
   type ToolCall,
@@ -190,6 +193,7 @@ export interface AccountOptions {
   executeConversationTool?: ConversationToolExecutor | undefined;
   serverTools?: ServerTools | undefined;
   validateSharing?: ValidateSharing | undefined;
+  reportUsage?: ReportUsage | undefined;
 }
 
 const publicTool = (t: ToolState): ToolCall => ({
@@ -300,6 +304,7 @@ export function turnPrompt(
     prompt.sourceWorkspaceIds = r.sourceWorkspaceIds;
     prompt.readOnly = true;
   }
+  if (r.budgetLine !== '') prompt.budget = r.budgetLine;
   if (r.items.length > 1) prompt.sharedItems = r.items;
   if (r.conversationItemId !== '' && newThread) prompt.earlierMessages = r.earlierMessages;
   if (earlier !== '' && newThread) prompt.earlierMessages = earlier;
@@ -332,6 +337,7 @@ export class Account {
   private readonly sourceScopes = new Map<string, PetPlanSourceScope>();
   private readonly recipientRevisions = new Map<string, string>();
   private readonly validateSharing: ValidateSharing | undefined;
+  private readonly reportUsage: ReportUsage | undefined;
   private readonly serverTools: ServerTools | undefined;
   models: ModelInfo[] = [];
   private modelsListedAt = 0;
@@ -349,6 +355,7 @@ export class Account {
   constructor(options: AccountOptions) {
     this.provider = options.provider;
     this.validateSharing = options.validateSharing;
+    this.reportUsage = options.reportUsage;
     this.home = options.home;
     this.transport = options.transport;
     this.chatEffort = options.chatEffort;
@@ -1112,6 +1119,8 @@ export class Account {
     }
     if (run !== undefined) {
       this.routeInline(run, method, itemType, str(p.delta), str(turn.status), failure);
+      if (method === 'turn/completed' && run.request !== undefined)
+        this.reportTurn(run.request, turn, run.started);
       return;
     }
     for (const [key, c] of this.conversations) {
@@ -1177,6 +1186,29 @@ export class Account {
     }
   }
 
+  /** Tells Core a finished turn's tokens and estimated cost; nothing when the wire counted none. */
+  reportTurn(r: Request, turn: Record<string, unknown>, startedAt: number): void {
+    if (this.reportUsage === undefined || r.usageSource === '' || !isRecord(turn.usage)) return;
+    const usage = turn.usage as unknown as ProviderUsage;
+    const model = str(turn.model);
+    this.reportUsage({
+      tenantId: r.tenantId,
+      principalId: r.principalId,
+      petId: r.petId,
+      workspaceId: r.workspaceId,
+      provider: this.provider,
+      model,
+      source: r.usageSource,
+      inputTokens: usage.input_tokens,
+      cacheReadTokens: usage.cache_read_input_tokens,
+      cacheWriteTokens: usage.cache_creation_input_tokens,
+      outputTokens: usage.output_tokens,
+      costUsd: estimateCostUsd(this.provider, model, usage),
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs: Math.max(Date.now() - startedAt, 0),
+    });
+  }
+
   private completeTurn(
     key: string,
     c: Conversation,
@@ -1190,6 +1222,7 @@ export class Account {
       ? (turn.usage as unknown as typeof c.timing.usage)
       : undefined;
     c.timing.log(this.diag.logger, key, status);
+    if (c.timing.started !== 0) this.reportTurn(c.actor, turn, c.timing.started);
     if (status !== 'completed' && status !== 'interrupted') {
       const meta: Record<string, unknown> = { status };
       if (failure !== '' && turnError !== undefined) {

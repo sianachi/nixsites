@@ -116,6 +116,9 @@ export interface InlineEvent {
 
 /** The routing target for one inline thread. deliver never blocks. */
 export class InlineRun {
+  /** The request this run answers and when it began, for the usage report. */
+  request: Request | undefined;
+  started = Date.now();
   private queue: InlineEvent[] = [];
   private queued = 0;
   private wake: (() => void) | undefined;
@@ -284,7 +287,11 @@ export async function serveInline(
     sendError(res, 422, `Invalid inline request: ${reason}`);
     return;
   }
-  const input = planning ? taskPlanInput(request) : inlineInput(request);
+  const base = planning ? taskPlanInput(request) : inlineInput(request);
+  const input =
+    base === undefined || request.budgetLine === ''
+      ? base
+      : `${base}\n\nBUDGET: ${request.budgetLine} Keep the work lean when little is left.`;
   if (input === undefined) {
     sendError(res, 422, 'Invalid pet task plan request');
     return;
@@ -315,6 +322,7 @@ export async function serveInline(
       instruction_bytes: bytes(request.text),
     });
     const run = new InlineRun();
+    run.request = request;
     let thread: string;
     let turn: string;
     try {

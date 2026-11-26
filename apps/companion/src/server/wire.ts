@@ -513,7 +513,13 @@ export const openrouterWire: ProviderWire = {
       type: 'function',
       function: { name: t.name, description: t.description, parameters: t.inputSchema },
     }));
-    const body: Record<string, unknown> = { model: thread.model, messages, stream: true };
+    // `usage.include` makes the last chunk carry the token counts and the price OpenRouter charged.
+    const body: Record<string, unknown> = {
+      model: thread.model,
+      messages,
+      stream: true,
+      usage: { include: true },
+    };
     if (tools.length > 0) body.tools = tools;
     let response: Response;
     try {
@@ -538,6 +544,17 @@ export const openrouterWire: ProviderWire = {
       if (!isRecord(chunk)) return;
       if (isRecord(chunk.error))
         throw new Error('OpenRouter reported an error during the response');
+      if (isRecord(chunk.usage)) {
+        const cached = isRecord(chunk.usage.prompt_tokens_details)
+          ? Number(chunk.usage.prompt_tokens_details.cached_tokens ?? 0) || 0
+          : 0;
+        const prompt = Number(chunk.usage.prompt_tokens ?? 0) || 0;
+        thread.usage.input_tokens += Math.max(prompt - cached, 0);
+        thread.usage.cache_read_input_tokens += cached;
+        thread.usage.output_tokens += Number(chunk.usage.completion_tokens ?? 0) || 0;
+        if (typeof chunk.usage.cost === 'number')
+          thread.usage.cost_usd = (thread.usage.cost_usd ?? 0) + chunk.usage.cost;
+      }
       for (const choice of Array.isArray(chunk.choices) ? (chunk.choices as unknown[]) : []) {
         if (!isRecord(choice)) continue;
         if (choice.finish_reason === 'length') throw new ResponseTooLongError();

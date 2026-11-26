@@ -1,6 +1,6 @@
 import { petPlans } from '@nix/api-client';
 import { readBounded } from '../providers/provider-errors.ts';
-import type { ConversationToolExecutor, ValidateSharing } from '../shared/types.ts';
+import type { ConversationToolExecutor, ReportUsage, ValidateSharing } from '../shared/types.ts';
 import { isRecord, UUID } from '../shared/util.ts';
 
 export interface CoreClientOptions {
@@ -61,6 +61,30 @@ export class CoreClient {
       return false;
     }
   }
+
+  /**
+   * Tells Core one turn finished. Fire and forget: a lost report must never fail the person's
+   * turn, and the turn is already over.
+   */
+  readonly reportUsage: ReportUsage = (report) => {
+    void (async () => {
+      try {
+        const response = await (this.options.fetch ?? fetch)(
+          `${this.options.baseUrl}/internal/pets/usage`,
+          {
+            method: 'POST',
+            headers: this.headers(),
+            body: JSON.stringify(report),
+            redirect: 'manual',
+            signal: AbortSignal.timeout(10_000),
+          },
+        );
+        void response.body?.cancel();
+      } catch {
+        // dropped on purpose: usage is an estimate, not a ledger
+      }
+    })();
+  };
 
   readonly validateSharing: ValidateSharing = async (input, signal) => {
     if (

@@ -57,6 +57,8 @@ const FIELDS: Readonly<Record<keyof Request, Kind>> = {
   automatic: 'boolean',
   approvedOperation: 'string',
   thinkHarder: 'boolean',
+  usageSource: 'string',
+  budgetLine: 'string',
 };
 
 /** Decodes an object whose every key is in `keys` and whose values pass `check`; null otherwise. */

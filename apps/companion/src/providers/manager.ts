@@ -15,6 +15,7 @@ import {
   type ConversationToolExecutor,
   type Launch,
   type Logger,
+  type ReportUsage,
   type Request,
   type ValidateSharing,
 } from '../shared/types.ts';
@@ -41,6 +42,7 @@ export function removeChatGptCredentials(dataDir: string): void {
 export interface ManagerDeps {
   logger?: Logger | undefined;
   validateSharing?: ValidateSharing | undefined;
+  reportUsage?: ReportUsage | undefined;
   /** Replaces the default launcher, the in-process HTTPS transport. */
   launch?: Launch | undefined;
   executeConversationTool?: ConversationToolExecutor | undefined;
@@ -60,6 +62,7 @@ export class Manager {
   private readonly launch: Launch;
   private readonly executeConversationTool: ConversationToolExecutor | undefined;
   private readonly validateSharing: ValidateSharing | undefined;
+  private readonly reportUsage: ReportUsage | undefined;
   private readonly serverTools: ServerTools | undefined;
   private readonly timer: NodeJS.Timeout;
 
@@ -69,6 +72,7 @@ export class Manager {
     this.executeConversationTool = deps.executeConversationTool;
     this.serverTools = deps.serverTools;
     this.validateSharing = deps.validateSharing;
+    this.reportUsage = deps.reportUsage;
     mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
     removeChatGptCredentials(config.dataDir);
     this.launch =
@@ -169,6 +173,7 @@ export class Manager {
       executeConversationTool: this.executeConversationTool,
       serverTools: this.serverTools,
       validateSharing: this.validateSharing,
+      reportUsage: this.reportUsage,
     });
     ref.account = account;
     try {

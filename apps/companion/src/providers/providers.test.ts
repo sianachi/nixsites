@@ -23,7 +23,7 @@ import {
   tempDir,
   type FakeServer,
 } from '../testing/testing.ts';
-import type { Notify } from '../shared/types.ts';
+import type { Notify, UsageReport } from '../shared/types.ts';
 import type { HttpThread, ProviderMessage } from '../server/wire.ts';
 
 const servers: FakeServer[] = [];
@@ -81,6 +81,7 @@ function keyAccount(
   home = tempDir(),
   apiKey = 'sk-test',
   authorizeSharing = true,
+  reportUsage?: (report: UsageReport) => void,
 ) {
   const events: { method: string; params: Record<string, unknown> }[] = [];
   const ref: { account?: Account } = {};
@@ -96,6 +97,7 @@ function keyAccount(
     chatEffort: 'low',
     logger: undefined,
     trace: false,
+    ...(reportUsage === undefined ? {} : { reportUsage }),
     ...(authorizeSharing
       ? {
           validateSharing: () =>
@@ -128,6 +130,48 @@ const failure = (events: { method: string; params: Record<string, unknown> }[]):
   )?.error?.message ?? '';
 
 describe('Anthropic', () => {
+  it('reports the finished turn to Core with its source and an estimated price, and sends the budget line', async () => {
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url.startsWith('/v1/models'))
+          return jsonResponse(res, 200, { data: [{ id: 'claude-x', display_name: 'Claude X' }] });
+        sse(res, anthropicTurn('Hello there'));
+      }),
+    );
+    const reports: UsageReport[] = [];
+    const k = keyAccount('anthropic', server, tempDir(), 'sk-test', true, (r) => reports.push(r));
+    await k.send({ usageSource: 'plan', budgetLine: 'Budget: $1 of $20 used this month.' });
+    await eventually(() => reports.length === 1);
+    expect(reports[0]).toMatchObject({
+      provider: 'anthropic',
+      model: 'claude-x',
+      source: 'plan',
+      inputTokens: 10,
+      cacheReadTokens: 5,
+      cacheWriteTokens: 2,
+      outputTokens: 7,
+    });
+    // An unlisted Claude model is priced as the larger one: 10*2 + 5*0.1 + 2*2.5 + 7*10 per million.
+    expect(reports[0]?.costUsd).toBeCloseTo(95.5 / 1_000_000);
+    const post = server.seen.find((s) => s.method === 'POST');
+    expect(post?.body).toContain('Budget: $1 of $20 used this month.');
+  });
+
+  it('reports nothing for a turn with no source', async () => {
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url.startsWith('/v1/models'))
+          return jsonResponse(res, 200, { data: [{ id: 'claude-x', display_name: 'Claude X' }] });
+        sse(res, anthropicTurn('Hello there'));
+      }),
+    );
+    const reports: UsageReport[] = [];
+    const k = keyAccount('anthropic', server, tempDir(), 'sk-test', true, (r) => reports.push(r));
+    await k.send();
+    await eventually(() => k.account.snapshot(key).state === 'success');
+    expect(reports).toEqual([]);
+  });
+
   it('streams text into Codex-shaped notifications, with cache breakpoints and counted usage', async () => {
     const server = await track(
       startServer((seen, res) => {
@@ -649,6 +693,42 @@ describe('OpenRouter', () => {
   };
   const chunk = (delta: object, finish?: string): string =>
     JSON.stringify({ choices: [{ delta, finish_reason: finish ?? null }] });
+
+  it('counts OpenRouter usage and keeps the price it charged', async () => {
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url === '/models') return jsonResponse(res, 200, models);
+        sse(res, [
+          chunk({ content: 'Hi.' }),
+          chunk({}, 'stop'),
+          JSON.stringify({
+            choices: [],
+            usage: {
+              prompt_tokens: 30,
+              completion_tokens: 4,
+              cost: 0.0021,
+              prompt_tokens_details: { cached_tokens: 10 },
+            },
+          }),
+          '[DONE]',
+        ]);
+      }),
+    );
+    const reports: UsageReport[] = [];
+    const k = keyAccount('openrouter', server, tempDir(), 'sk-test', true, (r) => reports.push(r));
+    await k.send({ usageSource: 'app' });
+    await eventually(() => reports.length === 1);
+    expect(reports[0]).toMatchObject({
+      provider: 'openrouter',
+      inputTokens: 20,
+      cacheReadTokens: 10,
+      outputTokens: 4,
+      costUsd: 0.0021,
+    });
+    expect(JSON.parse(server.seen.find((s) => s.method === 'POST')?.body ?? '{}')).toMatchObject({
+      usage: { include: true },
+    });
+  });
 
   it('lists models marking tool support, the first as default', async () => {
     const server = await track(

@@ -72,6 +72,10 @@ export interface Request {
   approvedOperation: string;
   /** send and plan steps: run this one on the provider's larger model. */
   thinkHarder: boolean;
+  /** Core's label for what started this turn (app, plan, run, routine, inline); echoed in the usage report. */
+  usageSource: string;
+  /** One line on the month's pet budget, appended to the turn's input after the cached prefix; empty with no limit. */
+  budgetLine: string;
 }
 
 export function emptyRequest(): Request {
@@ -123,6 +127,8 @@ export function emptyRequest(): Request {
     automatic: false,
     approvedOperation: '',
     thinkHarder: false,
+    usageSource: '',
+    budgetLine: '',
   };
 }
 
@@ -201,7 +207,29 @@ export interface ProviderUsage {
   cache_read_input_tokens: number;
   cache_creation_input_tokens: number;
   output_tokens: number;
+  /** The provider's own price for the turn (OpenRouter), when it sent one. */
+  cost_usd?: number;
 }
+
+/** One finished turn, as Core stores it. */
+export interface UsageReport {
+  tenantId: string;
+  principalId: string;
+  petId: string;
+  workspaceId: string;
+  provider: string;
+  model: string;
+  source: string;
+  inputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  outputTokens: number;
+  costUsd: number | null;
+  startedAt: string;
+  durationMs: number;
+}
+
+export type ReportUsage = (report: UsageReport) => void;
 
 export type Level = 'debug' | 'info' | 'warn' | 'error';
 

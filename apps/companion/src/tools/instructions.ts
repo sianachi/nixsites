@@ -44,8 +44,12 @@ export function capabilityRules(): string {
   return ` You can read an item's structure with nix_read_structure, inspect a view's bounded results with nix_read_view, review an existing setup with the shared review workflow, and create or refine structure with ${joinWithAnd(names)}; each one's own parameters describe fields and views in plain terms and Nix builds them. To change text already in a note, read it with nix_read_note, then use nix_replace_section to rewrite the blocks under one heading or nix_replace_passage to change a short passage inside one paragraph, list item or code block; use nix_append_note to add. You cannot administer workspaces, replace a whole note body, publish links, delete permanently, remove or retype fields, or delete views; say so immediately if asked.`;
 }
 
+/** The standing rule behind the per-turn budget line; static, so it stays in the cached prefix. */
+export const BUDGET_RULE =
+  " When the input carries a budget line, it says how much of the owner's monthly pet budget is used. When little is left, keep work lean: fewer reads, shorter answers, no optional extras. If you decline or trim something expensive because of the budget, say so plainly. Never change model yourself and never mention the budget otherwise.";
+
 export function instructions(): string {
-  return `${baseSharedRules}${capabilityRules()}${conversionRules}${designRules} Nix capabilities: ${chatCatalog()}\n\n${openUiCatalog()}`;
+  return `${baseSharedRules}${BUDGET_RULE}${capabilityRules()}${conversionRules}${designRules} Nix capabilities: ${chatCatalog()}\n\n${openUiCatalog()}`;
 }
 
 export function noteScopeRules(r: Request): string {

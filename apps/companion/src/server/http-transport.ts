@@ -377,8 +377,8 @@ export class HttpTransport implements Transport {
     const signal = context.signal;
     thread.usage = emptyUsage();
     const finish = (status: string, failure?: unknown): void => {
-      const turn: Record<string, unknown> = { status };
-      // Only the Anthropic wire reports counts; zeros from the others would read as free turns.
+      const turn: Record<string, unknown> = { status, model: thread.model };
+      // Only a wire that counted reports; zeros would read as free turns.
       if (Object.values(thread.usage).some((n) => n !== 0)) turn.usage = thread.usage;
       if (failure !== undefined)
         turn.error = {

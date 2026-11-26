@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CoreClient } from './core-client.ts';
 import { IDS, jsonResponse, startServer, type FakeServer } from '../testing/testing.ts';
@@ -114,5 +114,44 @@ describe('Core client', () => {
     });
     expect(await wrong.ping(signal())).toBe(false);
     expect(await client('http://127.0.0.1:1').ping(signal())).toBe(false);
+  });
+});
+
+describe('usage report', () => {
+  const report = {
+    tenantId: IDS.tenant,
+    principalId: IDS.principal,
+    petId: IDS.item,
+    workspaceId: '',
+    provider: 'anthropic',
+    model: 'claude-haiku-5-5',
+    source: 'app',
+    inputTokens: 1,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    outputTokens: 2,
+    costUsd: 0.5,
+    startedAt: '2026-11-26T10:00:00.000Z',
+    durationMs: 5,
+  };
+
+  it('posts the report with the secret to the internal route', async () => {
+    server = await startServer((_seen, res) => {
+      jsonResponse(res, 200, {});
+    });
+    client(server.url).reportUsage(report);
+    const seen = server.seen;
+    await vi.waitFor(() => {
+      expect(seen).toHaveLength(1);
+    });
+    expect(seen[0]?.url).toBe('/internal/pets/usage');
+    expect(seen[0]?.headers['x-nix-internal-secret']).toBe('s3cret');
+    expect(JSON.parse(seen[0]?.body ?? '')).toMatchObject({ source: 'app', outputTokens: 2 });
+  });
+
+  it('never throws when Core is unreachable', () => {
+    expect(() => {
+      client('http://127.0.0.1:1').reportUsage(report);
+    }).not.toThrow();
   });
 });
