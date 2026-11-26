@@ -100,6 +100,7 @@ function setup(initialPlanMode = true, currentItemId?: string) {
     }),
     models: [],
     busy: false,
+    sending: '',
     error: '',
     errorKind: null,
     send,

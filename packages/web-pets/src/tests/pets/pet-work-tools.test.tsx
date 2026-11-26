@@ -398,6 +398,7 @@ describe('companion work approvals', () => {
       workspaceId: '11111111-1111-4111-8111-111111111111',
       petName: 'Cat',
       busy: false,
+      sending: '',
       readWithoutAsking: false,
       applyWithoutAsking: false,
       progress: undefined,

@@ -48,6 +48,7 @@ function Tick({ tick }: { tick: number }): ReactElement {
         piecesBefore={piecesBefore}
         running
         busy={false}
+        sending=""
         hasDraft
         approvalPending={false}
         workspaceAccess
@@ -138,6 +139,7 @@ describe('message list turn error', () => {
           piecesBefore={[]}
           running={false}
           busy={false}
+          sending=""
           hasDraft={false}
           approvalPending={false}
           workspaceAccess
@@ -164,5 +166,65 @@ describe('message list turn error', () => {
     );
     for (const name of ['Save as note', 'Regenerate', 'Edit message'])
       expect(screen.getAllByRole('button', { name })).toHaveLength(1);
+  });
+
+  function renderList(
+    messages: { id: string; role: string; text: string }[],
+    props: { running: boolean; sending: string },
+  ) {
+    return render(
+      <MemoryRouter>
+        <MessageList
+          client={{} as never}
+          workspaceId="11111111-1111-4111-8111-111111111111"
+          pet={pet}
+          settings={settings}
+          runtime={
+            { state: props.running ? 'thinking' : 'idle', status: 'connected', tools: [] } as never
+          }
+          messages={messages as never}
+          piecesBefore={[]}
+          running={props.running}
+          busy={props.sending !== ''}
+          sending={props.sending}
+          hasDraft={false}
+          approvalPending={false}
+          workspaceAccess
+          suggestions={[]}
+          onPick={noop}
+          onAsk={noop}
+          setRuntime={noop}
+          reportNeedsDecision={noop}
+          applyWithoutAsking={false}
+          applyExemptToolIds={[]}
+          noteScope={undefined}
+          editing={null}
+          setEditing={noop}
+          enterToSend
+          resendTurn={noop}
+          retryLastTurn={noop}
+          onSaveInsight={noop}
+        />
+      </MemoryRouter>,
+    );
+  }
+
+  it('shows a message being sent and the working line before the server answers', () => {
+    renderList([], { running: false, sending: 'Hello there' });
+    expect(screen.getByText('Hello there')).toBeTruthy();
+    expect(screen.getByText(/is thinking/)).toBeTruthy();
+  });
+
+  it('shows reasoning as the one muted line, never as a message', () => {
+    renderList(
+      [
+        { id: 'u1', role: 'user', text: 'Hi' },
+        { id: 'r:draft:reasoning:abc', role: 'assistant', text: 'Checking the notes' },
+      ],
+      { running: true, sending: '' },
+    );
+    expect(screen.getAllByText('Checking the notes')).toHaveLength(1);
+    expect(screen.queryByText(/is thinking/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save as note' })).toBeNull();
   });
 });

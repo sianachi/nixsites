@@ -71,6 +71,8 @@ export interface UsePetRuntimeResult {
   readonly error: string;
   readonly errorKind: PetRuntimeErrorKind | null;
   readonly busy: boolean;
+  /** The text of a message being sent, until the server answers: shown at once, before the round trip. */
+  readonly sending: string;
   /** Applies a newer snapshot received elsewhere (a tool claim or result round trip). Ignored
    * once the pet or workspace this snapshot belongs to has moved on - see the generation
    * guard in the runtime effect below. */
@@ -178,6 +180,7 @@ export function usePetRuntime(
     setErrorKind(kind);
   }, []);
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState('');
   const requestId = useRef(crypto.randomUUID());
   const lifetime = useRef<AbortController | null>(null);
   const revision = useRef(0);
@@ -531,6 +534,7 @@ export function usePetRuntime(
       const myGeneration = generation.current;
       if (busy || !controller || isAborted(controller.signal)) return false;
       setBusy(true);
+      if (operation === 'send' && input && !input.replaceFromMessageId) setSending(input.text);
       reportError('', null);
       try {
         const result = await client.execute(
@@ -596,7 +600,10 @@ export function usePetRuntime(
         }
         return false;
       } finally {
-        if (!isAborted(controller.signal) && myGeneration === generation.current) setBusy(false);
+        if (!isAborted(controller.signal) && myGeneration === generation.current) {
+          setBusy(false);
+          setSending('');
+        }
       }
     },
     [
@@ -618,6 +625,7 @@ export function usePetRuntime(
     error,
     errorKind,
     busy,
+    sending,
     setRuntime,
     regenerateRequestId: () => {
       requestId.current = crypto.randomUUID();

@@ -60,6 +60,7 @@ function setup({ autoJob = false, accepted = true, sendResult = Promise.resolve(
     error: '',
     errorKind: null,
     busy: false,
+    sending: '',
     setRuntime: vi.fn(),
     regenerateRequestId: vi.fn(),
     send,

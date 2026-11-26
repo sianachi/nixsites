@@ -115,6 +115,7 @@ export function Conversation({
     runtime,
     models,
     busy,
+    sending,
     error,
     errorKind,
     setRuntime,
@@ -190,7 +191,9 @@ export function Conversation({
       .filter((tool) => tool.status === 'pending')
       .map((tool) => tool.id),
   });
-  const hasDraft = messages.some((message) => message.id.includes(':draft:'));
+  const hasDraft = messages.some(
+    (message) => message.id.includes(':draft:') && !message.id.includes(':draft:reasoning:'),
+  );
   const animation: PetAnimationState = approvalPending
     ? 'awaiting-approval'
     : running || busy
@@ -671,6 +674,7 @@ export function Conversation({
               piecesBefore={piecesBefore}
               running={running}
               busy={busy}
+              sending={sending}
               hasDraft={hasDraft}
               approvalPending={approvalPending}
               workspaceAccess={workspaceAccess}

@@ -135,6 +135,7 @@ it.each(cases)(
       },
       models: [],
       busy: false,
+      sending: '',
       error: '',
       errorKind: null,
       send,

@@ -29,6 +29,7 @@ function setup({ allowed = false, sent = true } = {}) {
     error: '',
     errorKind: null,
     busy: false,
+    sending: '',
     setRuntime: vi.fn(),
     regenerateRequestId: vi.fn(),
     send,

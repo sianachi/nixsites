@@ -21,10 +21,11 @@ export function MessageList({
   pet,
   settings,
   runtime,
-  messages,
+  messages: stored,
   piecesBefore,
   running,
   busy,
+  sending,
   hasDraft,
   approvalPending,
   workspaceAccess,
@@ -54,6 +55,8 @@ export function MessageList({
   readonly piecesBefore: readonly (readonly ProgramPiece[] | undefined)[];
   readonly running: boolean;
   readonly busy: boolean;
+  /** A message on its way to the server: shown now, so the send never looks ignored. */
+  readonly sending: string;
   readonly hasDraft: boolean;
   readonly approvalPending: boolean;
   readonly workspaceAccess: boolean;
@@ -75,6 +78,12 @@ export function MessageList({
   readonly jobEntries?: readonly ConversationJobEntry[] | undefined;
   readonly onAttachToJob?: ((text: string) => void) | undefined;
 }): ReactElement {
+  // The model's reasoning is one transient line in place of "is thinking", never a message.
+  const reasoning = stored.findLast((m) => m.id.includes(':draft:reasoning:'))?.text ?? '';
+  const reasoningLine = reasoning.trim().split('\n').at(-1) ?? '';
+  const shown = stored.filter((m) => !m.id.includes(':draft:reasoning:'));
+  const messages: readonly Message[] =
+    sending === '' ? shown : [...shown, { id: 'sending-user', role: 'user', text: sending }];
   // The watch hands over a new runtime up to four times a second. Rows are memoised, so the
   // callbacks they receive must keep one identity; they read the latest props through a ref.
   const latestProps = useRef({ onAsk, retryLastTurn, onSaveInsight, setEditing, onAttachToJob });
@@ -253,7 +262,7 @@ export function MessageList({
           </Button>
         </div>
       ) : null}
-      {running && !hasDraft && !approvalPending ? (
+      {(running || sending !== '') && !hasDraft && !approvalPending ? (
         // The pet itself, in its thinking pose: the avatar owns the motion preference and
         // shows a still frame under reduced motion. The header status carries the label.
         <div className="flex items-center gap-2" aria-hidden="true">
@@ -263,8 +272,8 @@ export function MessageList({
             label={`${pet.name}: thinking`}
             size="compact"
           />
-          <Text variant="note" tone="muted">
-            {pet.name} is thinking
+          <Text variant="note" tone="muted" className="min-w-0 truncate">
+            {reasoningLine === '' ? `${pet.name} is thinking` : reasoningLine}
           </Text>
         </div>
       ) : null}
