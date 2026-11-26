@@ -245,6 +245,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- **Saved chats no longer save the model's reasoning as the reply.** Core now skips the companion's transient reasoning line when it reads the running turn text.
 - Companion chat asks for sharing consent on the sources the message really sends. With workspace
   context on and a page open, it asked about the page alone and then refused every message with
   "Review the selected sources and provider before sharing content".

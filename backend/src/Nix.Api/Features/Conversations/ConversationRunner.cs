@@ -9,6 +9,10 @@ namespace Nix.Features.Conversations;
 /// <summary>Turn work owns independent transactions and survives browser disconnects.</summary>
 public sealed class ConversationRunner(IIsolatedUnitOfWork units, IHostApplicationLifetime? lifetime = null)
 {
+    /// <summary>The companion's reasoning drafts are transient display lines; they are never the saved reply.</summary>
+    public static string ReplyText(IReadOnlyList<PetMessage>? messages) =>
+        messages?.LastOrDefault(message => message.Role == "assistant" && !message.Id.Contains(":draft:reasoning:", StringComparison.Ordinal))?.Text ?? "";
+
     internal async Task<Result<ConversationResponse>> Send(NixSessionContext context, Guid id, SendConversationRequest request, CancellationToken cancellationToken)
     {
         var result = await units.RunAsync(context, async (services, token) =>
@@ -127,7 +131,7 @@ public sealed class ConversationRunner(IIsolatedUnitOfWork units, IHostApplicati
                         return new IsolatedOutcome<bool>(false, true);
                     }
                     var value = response.Value;
-                    var text = value.Messages?.LastOrDefault(message => message.Role == "assistant")?.Text ?? "";
+                    var text = ReplyText(value.Messages);
                     var running = value.State is "working" or "running" or "thinking" or "sending" or "busy";
                     var status = running ? "running" : value.State == "success" ? "completed" : value.State == "idle" ? "interrupted" : "failed";
                     await service.UpdateTurn(id, request.RequestId, status, text, status == "failed" ? value.Reason : null, token).ConfigureAwait(false);
