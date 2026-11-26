@@ -22,7 +22,7 @@ internal sealed partial class PetRunService
 
     private sealed record Work(NixSessionContext Context, WorkerExecution Job, WorkerExecutionAuthorization Authorization, Guid RunId);
     private sealed record Step(PetRunRecord Run, PetRunCheckpoint State);
-    private sealed record PreparedTurn(PreparedPetTaskStep Request, List<PetRunProposal> Observed, string? PreviousDraft, string SharingAttestation);
+    private sealed record PreparedTurn(PreparedPetTaskStep? Request, List<PetRunProposal> Observed, string? PreviousDraft, string SharingAttestation, NixError? Refusal = null);
     private sealed record ExternalStep(Step Step, PetRunProposal Proposal, bool Undo);
 
     internal async Task<string?> AdvanceAsync(WorkerExecution execution, CancellationToken cancellationToken)
@@ -153,7 +153,11 @@ internal sealed partial class PetRunService
         var prepared = await InWorkerScopeAsync(work, (handler, job, ct) => handler.PrepareTurnAsync(job, step, ct),
             cancellationToken).ConfigureAwait(false);
         Result<PetTaskStep> decision;
-        if (prepared is null
+        if (prepared?.Refusal is { } refusal)
+        {
+            decision = Result.Failure<PetTaskStep>(refusal);
+        }
+        else if (prepared is null
             || !await InWorkerScopeAsync(work, (handler, job, ct) => handler.CanSendTurnAsync(job, step, prepared, ct), cancellationToken)
                 .ConfigureAwait(false))
         {
@@ -161,7 +165,7 @@ internal sealed partial class PetRunService
         }
         else if (await dispatch.AuthorizeExecutionAsync(work.Job.Job.Id, work.Job.ExecutionId, cancellationToken).ConfigureAwait(false) is not null)
         {
-            decision = await services.GetRequiredService<PetWorkerClient>().PlanTaskStepAsync(prepared.Request, cancellationToken)
+            decision = await services.GetRequiredService<PetWorkerClient>().PlanTaskStepAsync(prepared.Request!, cancellationToken)
                 .ConfigureAwait(false);
         }
         else
@@ -340,7 +344,9 @@ internal sealed partial class PetRunService
             step.Run.Brief, BoundContext(observations), offered, scopeAbilities, step.State.PlanRequest is not null, pin.Value, step.State.Routine is not null);
         var prepared = await services.GetRequiredService<PetWorkerClient>().PrepareTaskStepAsync(pet, input, cancellationToken)
             .ConfigureAwait(false);
-        return new IsolatedOutcome<PreparedTurn?>(prepared.IsSuccess ? new PreparedTurn(prepared.Value, observed, previousDraft, pin.Value) : null, false);
+        // Only the budget refusal is carried through; any other preparation failure stays the generic "could not continue".
+        return new IsolatedOutcome<PreparedTurn?>(prepared.IsSuccess ? new PreparedTurn(prepared.Value, observed, previousDraft, pin.Value)
+            : prepared.Error.Code == PetUsageService.BudgetExhausted ? new PreparedTurn(null, [], null, pin.Value, prepared.Error) : null, false);
     }
 
     private async Task<IsolatedOutcome<bool>> CanSendTurnAsync(
@@ -766,6 +772,7 @@ internal sealed partial class PetRunService
                 "pets.task_step_invalid" => "The pet returned a planning step that Nix could not use. Retry the job.",
                 "pets.task_context_invalid" => "The selected job context is invalid or too large. Use a smaller scope.",
                 "pet_runs.preview_unavailable" => "The draft could not be prepared. Refresh the job and try again.",
+                PetUsageService.BudgetExhausted => PetUsageService.BudgetExhaustedMessage,
                 _ => stage switch
                 {
                     "planning" => "The pet could not finish planning this step. Check the connection and retry.",

@@ -428,6 +428,114 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         Assert.Equal(string.Empty, handler.Body);
     }
 
+    private static PetWorkerClient UsageGateway(HttpClient http, PetUsageService usage, bool inlineWriting = false, ScopedNixSessionContextAccessor? session = null) =>
+        new(http, Configuration(), session ?? Session(), Dispatcher(inlineWriting: inlineWriting), new StubPermissions(), new KeyedCredentials(), Protector,
+            disclosure: new GrantedDisclosure(), usage: usage);
+
+    // The task-step types are internal and the repo grants tests no InternalsVisibleTo, so reflection reaches them as the other pet-run tests do.
+    private static async Task<(string? Code, string? Ticket)> PrepareTaskStepAsync(PetWorkerClient gateway, bool plan, bool routine)
+    {
+        var product = typeof(PetWorkerClient).Assembly;
+        var capabilities = Activator.CreateInstance(typeof(List<>).MakeGenericType(product.GetType("Nix.Features.Pets.PetTaskCapability")!))!;
+        var input = Activator.CreateInstance(product.GetType("Nix.Features.Pets.PetTaskStepInput")!, Guid.NewGuid(), Guid.NewGuid(), WorkspaceGuid,
+            (Guid?)Guid.NewGuid(), "Tidy the notes", new List<string>(), capabilities, null, plan, "granted", routine)!;
+        var call = (Task)typeof(PetWorkerClient).GetMethod("PrepareTaskStepAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(gateway, [new PetProfile(PetGuid, "Sani", "", ""), input, Cancellation])!;
+        await call;
+        var result = call.GetType().GetProperty("Result")!.GetValue(call)!;
+        var type = result.GetType();
+        if ((bool)type.GetProperty("IsFailure")!.GetValue(result)!)
+        {
+            return (((NixError)type.GetProperty("Error")!.GetValue(result)!).Code, null);
+        }
+
+        var prepared = type.GetProperty("Value")!.GetValue(result)!;
+        var request = prepared.GetType().GetProperty("Request", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!.GetValue(prepared)!;
+        return (null, (string?)request.GetType().GetProperty("UsageTicket")!.GetValue(request));
+    }
+
+    [Theory]
+    [InlineData(false, false, "run")]
+    [InlineData(true, false, "plan")]
+    [InlineData(false, true, "routine")]
+    public async Task A_task_step_is_refused_at_the_limit_and_otherwise_signs_its_own_source(bool plan, bool routine, string source)
+    {
+        using var handler = new RecordingWorker();
+        using var http = new HttpClient(handler);
+        var open = PetUsageTests.Service(20m, 12.4m);
+
+        var (code, ticket) = await PrepareTaskStepAsync(UsageGateway(http, open), plan, routine);
+
+        Assert.Null(code);
+        Assert.Equal(source, open.Open(ticket)?.Source);
+        Assert.Equal("pets.budget_exhausted", (await PrepareTaskStepAsync(UsageGateway(http, PetUsageTests.Service(20m, 20m)), plan, routine)).Code);
+    }
+
+    [Fact]
+    public void A_budget_refusal_reaches_a_run_as_its_own_code_and_message()
+    {
+        var failure = typeof(PetWorkerClient).Assembly.GetType("Nix.Features.PetRuns.PetRunService")!
+            .GetMethod("RunFailure", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(null, ["planning", new NixError("pets.budget_exhausted", "ignored")])!;
+
+        Assert.Equal("pets.budget_exhausted", failure.GetType().GetProperty("Code")!.GetValue(failure));
+        Assert.Equal("This month's pet budget is used up. Raise it in Settings > Pets.", failure.GetType().GetProperty("Message")!.GetValue(failure));
+    }
+
+    [Fact]
+    public async Task Inline_writing_signs_the_inline_source()
+    {
+        using var handler = new RecordingWorker(inline: true);
+        using var http = new HttpClient(handler);
+        var open = PetUsageTests.Service(20m, 12.4m);
+        var session = Session();
+        using var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.AddSingleton(UsageGateway(http, open, inlineWriting: true, session));
+            services.AddSingleton(Dispatcher(inlineWriting: true));
+            services.AddSingleton<INixSessionContextAccessor>(session);
+            services.AddSingleton<IItemLocks>(new OpenLocks());
+        }));
+        using var client = host.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/me/pets/inline", UriKind.Relative),
+            new PetInlineRequest(WorkspaceGuid, Guid.NewGuid(), Guid.NewGuid(), "improve", "Selected text"), Cancellation);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(handler.Body);
+        Assert.Equal("inline", open.Open(body.RootElement.GetProperty("usageTicket").GetString())?.Source);
+    }
+
+    [Fact]
+    public async Task Runtime_and_inline_answer_403_once_the_months_budget_is_used_up()
+    {
+        using var handler = new RecordingWorker(inline: true);
+        using var http = new HttpClient(handler);
+        var session = Session();
+        var gateway = UsageGateway(http, PetUsageTests.Service(20m, 20m), inlineWriting: true, session);
+        using var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.AddSingleton(gateway);
+            services.AddSingleton(Dispatcher(inlineWriting: true));
+            services.AddSingleton<INixSessionContextAccessor>(session);
+            services.AddSingleton<IItemLocks>(new OpenLocks());
+        }));
+        using var client = host.CreateClient();
+
+        using var runtime = await client.PostAsJsonAsync(new Uri("/api/v1/me/pets/runtime", UriKind.Relative),
+            new PetRuntimeRequest("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Hello"), Cancellation);
+        using var inline = await client.PostAsJsonAsync(new Uri("/api/v1/me/pets/inline", UriKind.Relative),
+            new PetInlineRequest(WorkspaceGuid, Guid.NewGuid(), Guid.NewGuid(), "improve", "Selected text"), Cancellation);
+
+        foreach (var response in new[] { runtime, inline })
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Cancellation));
+            Assert.Equal("pets.budget_exhausted", problem.RootElement.GetProperty("code").GetString());
+        }
+        Assert.Equal(0, handler.Calls);
+    }
+
     [Theory]
     [InlineData("anthropic", true)]
     [InlineData("openrouter", true)]

@@ -23,6 +23,9 @@ follows semantic versioning (`0.x` pre-1.0).
   Raise it in Settings > Pets."); a turn already running finishes. Each turn carries one line with
   the amount used and left, after the cached prompt, and the pet is told to keep work lean when
   little is left; it never changes model by itself.
+  A task run, routine or plan stopped by the limit now says so (`pets.budget_exhausted`, same
+  message) instead of "The pet could not continue this job". An OpenRouter turn cut off before its
+  price arrived is counted from an estimate rather than as free.
 - `nixctl health --check-session` checks anonymous browser-session availability in addition to
   process liveness. It fails when the session endpoint fails, reports no session data, and leaves
   the default health output unchanged.
