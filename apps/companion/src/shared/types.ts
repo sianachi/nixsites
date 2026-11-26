@@ -70,6 +70,8 @@ export interface Request {
   editNote: string;
   automatic: boolean;
   approvedOperation: string;
+  /** send and plan steps: run this one on the provider's larger model. */
+  thinkHarder: boolean;
 }
 
 export function emptyRequest(): Request {
@@ -120,6 +122,7 @@ export function emptyRequest(): Request {
     editNote: '',
     automatic: false,
     approvedOperation: '',
+    thinkHarder: false,
   };
 }
 
@@ -170,8 +173,6 @@ export interface Response {
   status: string;
   reason: string;
   canConnect: boolean;
-  verificationUrl: string;
-  userCode: string;
   state: string;
   messages: Message[];
   models: Model[];
@@ -216,7 +217,7 @@ export type RequestHandler = (
 ) => boolean;
 export type Notify = (method: string, params: unknown) => void;
 
-/** The narrow provider seam: the Codex app-server vocabulary, spoken by a child or in process. */
+/** The narrow provider seam: a small app-server vocabulary, spoken in process over the provider's HTTPS API. */
 export interface Transport {
   call(method: string, params: unknown, signal?: AbortSignal): Promise<unknown>;
   close(): void;
@@ -229,11 +230,9 @@ export interface Transport {
 
 export type Launch = (
   provider: string,
-  binary: string,
   home: string,
   apiKey: string,
   notify: Notify,
-  trace: boolean,
 ) => Promise<Transport>;
 
 export type ConversationToolExecutor = (

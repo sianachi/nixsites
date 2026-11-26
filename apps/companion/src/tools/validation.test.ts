@@ -106,9 +106,12 @@ describe('request boundary', () => {
     ).toBe(false);
   });
 
-  it('keeps the connection operations to status, connect, disconnect and models', () => {
-    for (const operation of ['status', 'connect', 'disconnect', 'models']) {
+  it('keeps the connection operations to status and models', () => {
+    for (const operation of ['status', 'models']) {
       expect(validRequest(request({ operation, workspaceId: '', petId: '' }))).toBe(true);
+    }
+    for (const operation of ['connect', 'disconnect']) {
+      expect(validRequest(request({ operation, workspaceId: '', petId: '' }))).toBe(false);
     }
   });
 

@@ -480,6 +480,20 @@ describe('inline stream', () => {
     expect(b.fake.last('thread/start').model).toBe('gpt-x');
     ok.abort();
   });
+
+  it("runs on the provider's larger model when asked to think harder", async () => {
+    const b = await up();
+    b.fake.models = [
+      { model: 'claude-haiku-5-5', displayName: 'Fast', isDefault: true },
+      { model: 'claude-sonnet-5-5', displayName: 'Deep' },
+    ];
+    const ok = new AbortController();
+    expect(
+      (await stream(b, { model: 'claude-haiku-5-5', thinkHarder: true }, ok.signal)).status,
+    ).toBe(200);
+    expect(b.fake.last('thread/start').model).toBe('claude-sonnet-5-5');
+    ok.abort();
+  });
 });
 
 describe('pumpInline', () => {

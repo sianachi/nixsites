@@ -209,7 +209,7 @@ Node 22 collaboration service (CRDT over WebSocket) · background jobs inside Co
 ```
 apps/web         React app, installable as a PWA
 apps/collab      Collaboration service
-apps/companion   Companion (codex app-server)
+apps/companion   Companion (Claude and OpenRouter)
 apps/node-host   One process for collab, companion and the sites worker
 apps/cli         nixctl and the MCP server
 apps/mobile      iOS and Android shell (Capacitor)

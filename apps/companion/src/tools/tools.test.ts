@@ -396,7 +396,7 @@ describe('saved cross-workspace conversations', () => {
 
   it('always starts a fresh thread from the Core transcript and never takes a model change', async () => {
     const { h, r, key } = await start(chat);
-    expect(h.transport.methods()[0]).toBe('thread/start');
+    expect(h.transport.methods().find((method) => method !== 'model/list')).toBe('thread/start');
     expect(String(h.transport.last('thread/start').baseInstructions)).toContain(
       'saved, read-only cross-workspace analysis conversation',
     );

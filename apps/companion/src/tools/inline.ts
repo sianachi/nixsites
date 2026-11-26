@@ -185,11 +185,14 @@ export async function inlineStart(
     baseInstructions,
     ephemeral: true,
   };
-  if (r.model !== '') {
+  if (r.model !== '' || r.thinkHarder) {
     await account.listModels(signal);
-    if (!account.models.some((model) => model.id === r.model))
-      throw new Error('model is unavailable');
-    params.model = r.model;
+    const model = account.deepModel(r) ?? r.model;
+    if (model !== '') {
+      if (!account.models.some((candidate) => candidate.id === model))
+        throw new Error('model is unavailable');
+      params.model = model;
+    }
   }
   if (!(await account.canDisclose(r)))
     throw new Error('Sharing consent must be reviewed before sending this content.');

@@ -17,15 +17,12 @@ import {
 } from '../spec/index.js';
 import { validateBlueprint } from '../blueprint/validate.js';
 import { validateSpec } from '../validate/spec.js';
-import { buildPetTools, normalizeForCodex, omitCustomViews } from './tools.js';
+import { buildPetTools, normalizeToolSchema, omitCustomViews } from './tools.js';
 import { WORKSPACE_OPERATIONS, LIMITS } from './tables.js';
 import { flattenToolExample, TOOL_EXAMPLES } from './tool-examples.js';
 
-/**
- * The Codex 0.153.4 dynamic-tool byte budget (Codex caps a dynamic tool schema at 4800
- * normalized bytes): a schema at or under this size is never compacted.
- */
-const CODEX_SCHEMA_BUDGET = 4800;
+/** The size a tool schema stays under once normalized: a schema at or under it is never compacted. */
+const TOOL_SCHEMA_BUDGET = 4800;
 
 function toolNames(): string[] {
   return buildPetTools().map((tool) => tool.name);
@@ -154,15 +151,15 @@ describe('buildPetTools', () => {
     }
   });
 
-  it('keeps every tool schema at or under the Codex 4800-byte budget once normalized', () => {
+  it('keeps every tool schema at or under the 4800-byte budget once normalized', () => {
     const sizes: Record<string, number> = {};
     for (const tool of buildPetTools()) {
-      const size = JSON.stringify(normalizeForCodex(tool.inputSchema)).length;
+      const size = JSON.stringify(normalizeToolSchema(tool.inputSchema)).length;
       sizes[tool.name] = size;
       expect(
         size,
-        `${tool.name} is ${String(size)} bytes, want <= ${String(CODEX_SCHEMA_BUDGET)}`,
-      ).toBeLessThanOrEqual(CODEX_SCHEMA_BUDGET);
+        `${tool.name} is ${String(size)} bytes, want <= ${String(TOOL_SCHEMA_BUDGET)}`,
+      ).toBeLessThanOrEqual(TOOL_SCHEMA_BUDGET);
     }
     // nix_build_blueprint carries the largest schema in the catalog (the
     // recursive blueprint tree) - printed here as a record of the measured size after L1.2's
@@ -170,7 +167,7 @@ describe('buildPetTools', () => {
     // blueprint schema only; blueprintSchema itself, and what validateBlueprint accepts, is
     // unchanged). Before that reduction the wrapped tool was over budget (5823 bytes for the
     // blueprint sub-schema alone, per the plan's own measurement).
-    expect(sizes.nix_build_blueprint).toBeLessThanOrEqual(CODEX_SCHEMA_BUDGET);
+    expect(sizes.nix_build_blueprint).toBeLessThanOrEqual(TOOL_SCHEMA_BUDGET);
   });
 
   it('generates each spec parameter from the exact schema object run.ts parses with (import identity)', () => {
@@ -189,7 +186,7 @@ describe('buildPetTools', () => {
     for (const [operation, property, schema] of bySpecSchema) {
       const tool = tools.get(`nix_${operation}`);
       expect(tool, `nix_${operation} is missing`).toBeDefined();
-      const full = normalizeForCodex(
+      const full = normalizeToolSchema(
         z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any', cycles: 'ref' }),
       );
       const expected = z

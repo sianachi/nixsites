@@ -1,12 +1,7 @@
 import { providerResponseError, readBounded } from '../providers/provider-errors.ts';
+import { ANTHROPIC_CHAT_MODEL, THINKING_OFF } from '../shared/models.ts';
 import type { ModelInfo, ProviderUsage } from '../shared/types.ts';
 import { isRecord, str } from '../shared/util.ts';
-import {
-  discardIncompatibleReasoning,
-  requiresResponses,
-  streamResponses,
-  type ResponsesReplay,
-} from './responses-wire.ts';
 
 export interface ProviderToolCall {
   id: string;
@@ -28,7 +23,6 @@ export interface ProviderMessage {
   toolCalls?: ProviderToolCall[] | undefined;
   /** Answers the previous assistant message's toolCalls, in order. */
   toolResults?: ProviderToolResult[] | undefined;
-  responses?: ResponsesReplay | undefined;
 }
 
 export interface HttpThread {
@@ -51,11 +45,9 @@ export const emptyUsage = (): ProviderUsage => ({
 });
 
 export interface WireContext {
-  kind: string;
   fetch: typeof fetch;
   base: string;
   apiKey: string;
-  recipientRevision?: string | undefined;
   signal: AbortSignal;
 }
 
@@ -71,7 +63,6 @@ export interface ProviderWire {
 export interface ProviderStreamResult {
   text: string;
   calls: ProviderToolCall[];
-  responses?: ResponsesReplay | undefined;
 }
 
 /** Bounds one provider request; the 15-minute thinking expiry is the outer guard. */
@@ -175,34 +166,21 @@ const ANTHROPIC_BASE = 'https://api.anthropic.com';
 // lowest cap among the models a key may list (Opus 4/4.1).
 const ANTHROPIC_MAX_TOKENS = 32000;
 
+const anthropicModel = (id: string, name: string): ModelInfo => ({
+  id,
+  name,
+  default: id === ANTHROPIC_CHAT_MODEL,
+  supportsTools: true,
+  supportedEfforts: [],
+  defaultEffort: '',
+  textOnly: false,
+});
+
+// What the model list answers when the key cannot list models.
 const ANTHROPIC_MODELS: readonly ModelInfo[] = [
-  {
-    id: 'claude-sonnet-4-5',
-    name: 'Claude Sonnet 4.5',
-    default: true,
-    supportsTools: true,
-    supportedEfforts: [],
-    defaultEffort: '',
-    textOnly: false,
-  },
-  {
-    id: 'claude-opus-4-1',
-    name: 'Claude Opus 4.1',
-    default: false,
-    supportsTools: true,
-    supportedEfforts: [],
-    defaultEffort: '',
-    textOnly: false,
-  },
-  {
-    id: 'claude-haiku-4-5',
-    name: 'Claude Haiku 4.5',
-    default: false,
-    supportsTools: true,
-    supportedEfforts: [],
-    defaultEffort: '',
-    textOnly: false,
-  },
+  anthropicModel(ANTHROPIC_CHAT_MODEL, 'Claude Haiku 5.5'),
+  anthropicModel('claude-sonnet-5-5', 'Claude Sonnet 5.5'),
+  anthropicModel('claude-opus-5-5', 'Claude Opus 5.5'),
 ];
 
 function anthropicInit(apiKey: string, signal: AbortSignal, body?: unknown): RequestInit {
@@ -255,20 +233,15 @@ export const anthropicWire: ProviderWire = {
     }
     const data = isRecord(page) && Array.isArray(page.data) ? (page.data as unknown[]) : [];
     const models: ModelInfo[] = [];
-    data.forEach((entry, index) => {
-      if (!isRecord(entry)) return;
+    for (const entry of data) {
+      if (!isRecord(entry)) continue;
       const id = str(entry.id);
-      if (id === '' || Buffer.byteLength(id) > 160) return;
-      models.push({
-        id,
-        name: str(entry.display_name) || id,
-        default: index === 0,
-        supportsTools: true,
-        supportedEfforts: [],
-        defaultEffort: '',
-        textOnly: false,
-      });
-    });
+      if (id === '' || Buffer.byteLength(id) > 160) continue;
+      models.push(anthropicModel(id, str(entry.display_name) || id));
+    }
+    // The fast model when the key lists it, else the newest the key lists.
+    const first = models[0];
+    if (first !== undefined && !models.some((m) => m.default)) first.default = true;
     return models.length === 0 ? ANTHROPIC_MODELS.map((m) => ({ ...m })) : models;
   },
 
@@ -327,6 +300,8 @@ export const anthropicWire: ProviderWire = {
       messages,
       stream: true,
     };
+    const thinking = THINKING_OFF[thread.model];
+    if (thinking !== undefined) body.thinking = thinking;
     if (thread.system !== '')
       body.system = [{ type: 'text', text: thread.system, cache_control: EPHEMERAL }];
     if (tools.length > 0) body.tools = tools;
@@ -426,33 +401,17 @@ export const anthropicWire: ProviderWire = {
   },
 };
 
-// ---- OpenRouter and OpenAI: both speak the chat completions API ----
+// ---- OpenRouter: the chat completions API ----
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
-const OPENAI_BASE = 'https://api.openai.com/v1';
 
-// OpenAI lists every model it serves; these are the ones chat completions can run. Dated
-// snapshots and previews pass too, which is what the picker should show.
-const OPENAI_CHAT = /^(gpt-|chatgpt-|o\d)/;
-const OPENAI_NOT_CHAT =
-  /audio|realtime|transcribe|tts|image|embedding|moderation|search|instruct|codex|-pro\b|deep-research/;
-
-const chatName = (kind: string): string => (kind === 'openai' ? 'OpenAI' : 'OpenRouter');
-const chatBase = (kind: string, base: string): string =>
-  base !== '' ? base : kind === 'openai' ? OPENAI_BASE : OPENROUTER_BASE;
-
-function openrouterInit(
-  kind: string,
-  apiKey: string,
-  signal: AbortSignal,
-  body?: unknown,
-): RequestInit {
+function openrouterInit(apiKey: string, signal: AbortSignal, body?: unknown): RequestInit {
   return {
     method: body === undefined ? 'GET' : 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'content-type': 'application/json',
-      ...(kind === 'openrouter' ? { 'X-Title': 'Nix companion' } : {}),
+      'X-Title': 'Nix companion',
     },
     redirect: 'manual',
     signal,
@@ -460,51 +419,28 @@ function openrouterInit(
   };
 }
 
-/** Serves both providers; `context.kind` picks the origin, the name in errors and the model filter. */
 export const openrouterWire: ProviderWire = {
-  async listModels({ kind, fetch: doFetch, base, apiKey, signal }) {
+  async listModels({ fetch: doFetch, base, apiKey, signal }) {
     const timed = AbortSignal.any([signal, AbortSignal.timeout(LIST_TIMEOUT_MS)]);
     let response: Response;
     try {
       response = await doFetch(
-        `${chatBase(kind, base)}/models`,
-        openrouterInit(kind, apiKey, timed),
+        `${base === '' ? OPENROUTER_BASE : base}/models`,
+        openrouterInit(apiKey, timed),
       );
     } catch {
-      throw new Error(`${chatName(kind)} could not be reached`);
+      throw new Error('OpenRouter could not be reached');
     }
-    if (response.status !== 200) throw await providerResponseError(kind, response, true);
+    if (response.status !== 200) throw await providerResponseError('openrouter', response, true);
     let page: unknown;
     try {
       page = JSON.parse(await readBounded(response, 4 << 20));
     } catch {
-      throw new Error(`${chatName(kind)} returned an unreadable model list`);
+      throw new Error('OpenRouter returned an unreadable model list');
     }
     const data = isRecord(page) && Array.isArray(page.data) ? (page.data as unknown[]) : [];
     const models: ModelInfo[] = [];
-    if (kind === 'openai') {
-      // The list carries no capabilities: every chat model takes tools and pictures.
-      const chat = data
-        .filter(isRecord)
-        .map((entry) => ({ id: str(entry.id), created: Number(entry.created) || 0 }))
-        .filter(
-          ({ id }) =>
-            OPENAI_CHAT.test(id) && !OPENAI_NOT_CHAT.test(id) && Buffer.byteLength(id) <= 160,
-        )
-        .sort((a, b) => b.created - a.created);
-      for (const { id } of chat.slice(0, 100)) {
-        models.push({
-          id,
-          name: id,
-          default: false,
-          supportsTools: true,
-          supportedEfforts: [],
-          defaultEffort: '',
-          textOnly: false,
-        });
-      }
-    }
-    for (const entry of kind === 'openai' ? [] : data) {
+    for (const entry of data) {
       if (!isRecord(entry)) continue;
       const id = str(entry.id);
       if (id === '' || Buffer.byteLength(id) > 160 || models.length === 100) continue;
@@ -528,21 +464,12 @@ export const openrouterWire: ProviderWire = {
       });
     }
     const first = models[0];
-    if (first === undefined) throw new Error(`${chatName(kind)} listed no models for this key`);
+    if (first === undefined) throw new Error('OpenRouter listed no models for this key');
     first.default = true;
     return models;
   },
 
-  async stream({ kind, fetch: doFetch, base, apiKey, signal, recipientRevision }, thread, onDelta) {
-    if (kind === 'openai') {
-      discardIncompatibleReasoning(thread, recipientRevision);
-      if (requiresResponses(thread.model))
-        return streamResponses(
-          { kind, fetch: doFetch, base, apiKey, signal, recipientRevision },
-          thread,
-          onDelta,
-        );
-    }
+  async stream({ fetch: doFetch, base, apiKey, signal }, thread, onDelta) {
     const ctx = AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]);
     const system: Block = { role: 'system', content: thread.system };
     // OpenRouter passes Anthropic's cache breakpoints through, and only Claude models need one.
@@ -591,14 +518,14 @@ export const openrouterWire: ProviderWire = {
     let response: Response;
     try {
       response = await doFetch(
-        `${chatBase(kind, base)}/chat/completions`,
-        openrouterInit(kind, apiKey, ctx, body),
+        `${base === '' ? OPENROUTER_BASE : base}/chat/completions`,
+        openrouterInit(apiKey, ctx, body),
       );
     } catch {
       if (ctx.aborted) throw ctx.reason instanceof Error ? ctx.reason : new Error('aborted');
-      throw new Error(`${chatName(kind)} could not be reached`);
+      throw new Error('OpenRouter could not be reached');
     }
-    if (response.status !== 200) throw await providerResponseError(kind, response, false);
+    if (response.status !== 200) throw await providerResponseError('openrouter', response, false);
     let text = '';
     const partials = new Map<number, { id: string; name: string; arguments: string }>();
     await readSse(ctx, response, (data) => {
@@ -610,7 +537,7 @@ export const openrouterWire: ProviderWire = {
       }
       if (!isRecord(chunk)) return;
       if (isRecord(chunk.error))
-        throw new Error(`${chatName(kind)} reported an error during the response`);
+        throw new Error('OpenRouter reported an error during the response');
       for (const choice of Array.isArray(chunk.choices) ? (chunk.choices as unknown[]) : []) {
         if (!isRecord(choice)) continue;
         if (choice.finish_reason === 'length') throw new ResponseTooLongError();

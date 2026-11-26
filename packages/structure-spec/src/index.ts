@@ -47,7 +47,7 @@ export {
   READ_ONLY_OPERATION_NAMES,
   WORKSPACE_OPERATIONS,
 } from './catalog/tables.js';
-export { buildPetTools, normalizeForCodex } from './catalog/tools.js';
+export { buildPetTools, normalizeToolSchema } from './catalog/tools.js';
 export { flattenToolExample as flattenToolCall } from './catalog/tool-examples.js';
 export * from './compile/index.js';
 export * from './describe/index.js';

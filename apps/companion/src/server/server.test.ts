@@ -1,13 +1,9 @@
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Response as CompanionResponse } from '../shared/types.ts';
 import {
   boot,
   eventually,
-  fakeCodexBinary,
   FakeTransport,
   IDS,
   jsonResponse,
@@ -123,8 +119,6 @@ describe('request handling', () => {
       'status',
       'title',
       'tools',
-      'userCode',
-      'verificationUrl',
     ]);
   });
 
@@ -153,7 +147,7 @@ describe('request handling', () => {
   it('serves a second conversation for the same account without relaunching', async () => {
     let launches = 0;
     const b = await up({
-      launch: (_p, _b, _h, _k, notify) => {
+      launch: (_p, _h, _k, notify) => {
         launches++;
         b.notifications.push(notify);
         return Promise.resolve(b.fake);
@@ -185,6 +179,7 @@ describe('request handling', () => {
     expect((await b.call({ operation: 'watch', after: 0 })).status).toBe(200);
     release();
     expect((await slow).status).toBe(200);
+    b.fake.script = () => undefined;
     expect((await b.call({ operation: 'send' })).status).toBe(200);
     expect(b.logger.lines.some((l) => l.message === 'companion request.busy')).toBe(true);
   });
@@ -265,13 +260,13 @@ describe('request handling', () => {
   });
 
   it('answers 503 and logs the cause when the runtime cannot start, and at the account cap', async () => {
-    const b = await up({ launch: () => Promise.reject(new Error('spawn codex ENOENT')) });
+    const b = await up({ launch: () => Promise.reject(new Error('the provider could not start')) });
     const response = await b.call({ operation: 'status', workspaceId: '', petId: '' });
     expect(response.status).toBe(503);
     expect(await response.text()).toBe('Companion runtime unavailable\n');
     expect(
       b.logger.lines.find((l) => l.message === 'companion runtime unavailable')?.attrs,
-    ).toMatchObject({ operation: 'status', error: 'spawn codex ENOENT' });
+    ).toMatchObject({ operation: 'status', error: 'the provider could not start' });
     const capped = await up();
     for (let i = 0; i < 4; i++) {
       expect(
@@ -359,7 +354,7 @@ describe('providers over HTTP', () => {
     );
     expect(status).toMatchObject({
       status: 'disconnected',
-      reason: 'Add an API key for this provider in Settings > Pets.',
+      reason: 'Add a Claude or OpenRouter key in Settings > Pets.',
       provider: 'anthropic',
     });
   });
@@ -391,150 +386,6 @@ describe('providers over HTTP', () => {
     }
     expect(latest).toMatchObject({ state: 'success' });
     expect(latest.messages.at(-1)?.text).toBe('Done.');
-  });
-});
-
-describe('the real Codex launcher', () => {
-  it('starts the app server with the exact flags and a bare environment, and runs a turn', async () => {
-    const b = await up({ real: true, config: { binary: fakeCodexBinary(), chatEffort: 'low' } });
-    const sent = await json(await b.call({ operation: 'send', text: 'hello' }));
-    expect(sent.status).toBe('connected');
-    const home = join(b.config.dataDir, `${IDS.tenant}-${IDS.principal}`);
-    const launch = JSON.parse(readFileSync(join(home, 'launch.json'), 'utf8')) as {
-      args: string[];
-      env: Record<string, string>;
-      cwd: string;
-    };
-    expect(launch.args.slice(0, 3)).toEqual(['app-server', '--listen', 'stdio://']);
-    const flags = launch.args.filter((_, i) => launch.args[i - 1] === '-c');
-    expect(flags).toEqual([
-      'cli_auth_credentials_store="file"',
-      'web_search="disabled"',
-      'tools.view_image=false',
-      'sandbox_mode="read-only"',
-      'approval_policy="on-request"',
-      'forced_login_method="chatgpt"',
-      ...[
-        'shell_tool',
-        'unified_exec',
-        'shell_snapshot',
-        'code_mode',
-        'multi_agent',
-        'multi_agent_v2',
-        'apps',
-        'hooks',
-        'browser_use',
-        'computer_use',
-        'image_generation',
-        'skill_search',
-        'skill_mcp_dependency_install',
-        'tool_suggest',
-      ].map((f) => `features.${f}=false`),
-      'features.code_mode_host=true',
-    ]);
-    expect(launch.args).toHaveLength(3 + flags.length * 2);
-    // Only the five variables the launcher sets, plus what the shell wrapper adds on its own.
-    expect(
-      Object.keys(launch.env)
-        .filter((k) => !['PWD', 'SHLVL', '_', 'OLDPWD', '__CF_USER_TEXT_ENCODING'].includes(k))
-        .sort(),
-    ).toEqual(['CODEX_HOME', 'HOME', 'LANG', 'PATH', 'TMPDIR']);
-    expect(launch.env).toMatchObject({
-      HOME: home,
-      CODEX_HOME: home,
-      TMPDIR: join(home, 'empty'),
-      PATH: '/usr/local/bin:/usr/bin:/bin',
-      LANG: 'C.UTF-8',
-    });
-    expect(launch.env.RUST_LOG).toBeUndefined();
-    expect(launch.cwd.endsWith('/empty')).toBe(true);
-    await eventually(() => b.manager.accounts.size === 1);
-    let latest = sent;
-    for (let i = 0; i < 20 && latest.state === 'thinking'; i++)
-      latest = await json(
-        await b.call({ operation: 'watch', after: latest.revision, text: 'hello' }),
-      );
-    expect(latest.state).toBe('success');
-    expect(latest.messages.at(-1)?.text).toBe('echo: hello');
-    // The provider's stderr is discarded unless tracing.
-    expect(readdirSync(home)).not.toContain('traces');
-  });
-
-  it('routes a provider tool call through approval and answers it', async () => {
-    const b = await up({ real: true, config: { binary: fakeCodexBinary() } });
-    const sent = await json(
-      await b.call({ operation: 'send', text: 'tool', workspaceAccess: true }),
-    );
-    await eventually(() => b.manager.accounts.size === 1);
-    let latest = sent;
-    for (let i = 0; i < 20 && latest.tools.length === 0; i++)
-      latest = await json(
-        await b.call({
-          operation: 'watch',
-          after: latest.revision,
-          text: 'tool',
-          workspaceAccess: true,
-        }),
-      );
-    expect(latest.tools).toMatchObject([{ id: 'call-1', status: 'pending' }]);
-    await b.call({ operation: 'tool_claim', toolId: 'call-1', requestId: IDS.other });
-    await b.call({
-      operation: 'tool_result',
-      toolId: 'call-1',
-      requestId: IDS.other,
-      toolResult: 'note text',
-      toolSuccess: true,
-    });
-    for (let i = 0; i < 20 && latest.state === 'thinking'; i++)
-      latest = await json(
-        await b.call({
-          operation: 'watch',
-          after: latest.revision,
-          text: 'tool',
-          workspaceAccess: true,
-        }),
-      );
-    expect(latest.state).toBe('success');
-    expect(latest.messages.at(-1)?.text).toContain('note text');
-  });
-
-  it('answers a request the provider should not make with a JSON-RPC refusal and keeps the turn alive', async () => {
-    const b = await up({ real: true, config: { binary: fakeCodexBinary() } });
-    await b.call({ operation: 'send', text: 'tool-forbidden', workspaceAccess: true });
-    await eventually(() => b.manager.accounts.size === 1);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    expect((await json(await b.call({ operation: 'read', text: 'x' }))).tools).toEqual([]);
-  });
-
-  it('notices a provider process that died and starts a fresh one on the next request', async () => {
-    const b = await up({ real: true, config: { binary: fakeCodexBinary() } });
-    await b.call({ operation: 'send', text: 'crash' });
-    const [dead] = [...b.manager.accounts.values()];
-    await eventually(() => dead?.transport.alive?.() === false);
-    await expect(dead?.transport.call('account/read', {})).rejects.toThrow(
-      'companion process stopped',
-    );
-    expect((await b.call({ operation: 'status', workspaceId: '', petId: '' })).status).toBe(200);
-    const [fresh] = [...b.manager.accounts.values()];
-    expect(fresh).not.toBe(dead);
-    expect(fresh?.transport.alive?.()).toBe(true);
-  });
-
-  it('answers 503 when the binary does not exist', async () => {
-    const b = await up({ real: true, config: { binary: '/nonexistent/codex' } });
-    const response = await b.call({ operation: 'status', workspaceId: '', petId: '' });
-    expect(response.status).toBe(503);
-  });
-
-  it('interrupts a running turn', async () => {
-    const b = await up({ real: true, config: { binary: fakeCodexBinary() } });
-    await b.call({ operation: 'send', text: 'hang' });
-    const stopped = await json(await b.call({ operation: 'interrupt' }));
-    expect(stopped.state === 'thinking' || stopped.state === 'idle').toBe(true);
-    let latest = stopped;
-    for (let i = 0; i < 20 && latest.state === 'thinking'; i++)
-      latest = await json(await b.call({ operation: 'watch', after: latest.revision }));
-    expect(latest.state).toBe('idle');
   });
 });
 

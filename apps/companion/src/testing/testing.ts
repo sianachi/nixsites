@@ -33,6 +33,7 @@ export function request(overrides: Partial<Request> = {}): Request {
     petId: IDS.pet,
     requestId: IDS.request,
     operation: 'send',
+    provider: 'anthropic',
     text: 'Help me write',
     instructions: 'Be calm and concise',
     ...overrides,
@@ -66,14 +67,16 @@ export interface Call {
   params: Record<string, unknown>;
 }
 
-/** The scripted Codex peer the Go tests call fakeTransport. */
+/** A scripted provider transport. */
 export class FakeTransport implements Transport {
   readonly calls: Call[] = [];
   handler: RequestHandler | undefined;
   readonly replies: { id: unknown; result: unknown }[] = [];
   /** Per-method override; return undefined to fall through to the default answer. */
   script: (method: string, params: Record<string, unknown>) => unknown = () => undefined;
-  models: unknown[] = [];
+  models: unknown[] = [
+    { model: 'fake-model', displayName: 'Fake model', isDefault: true, supportsTools: true },
+  ];
   supportsReply = true;
 
   call(method: string, params: unknown): Promise<unknown> {
@@ -83,14 +86,8 @@ export class FakeTransport implements Transport {
     if (scripted instanceof Error) return Promise.reject(scripted);
     if (scripted !== undefined) return Promise.resolve(scripted);
     switch (method) {
-      case 'account/login/start':
-        return Promise.resolve({
-          loginId: 'login',
-          verificationUrl: 'https://auth.openai.com/codex/device',
-          userCode: '1234-ABCD',
-        });
       case 'account/read':
-        return Promise.resolve({ account: { type: 'chatgpt' } });
+        return Promise.resolve({ account: { type: 'apiKey' } });
       case 'thread/start':
       case 'thread/resume':
         return Promise.resolve({ thread: { id: 'provider-thread' } });
@@ -157,7 +154,7 @@ export function harness(
   const logger = new MemoryLogger();
   const account = new Account({
     home,
-    provider: 'chatgpt',
+    provider: 'anthropic',
     chatEffort: '',
     logger,
     trace: false,
@@ -272,7 +269,6 @@ export function jsonResponse(
 
 // ---- the whole service on a local port ----
 
-import { chmodSync, writeFileSync } from 'node:fs';
 import { createCompanion, type CompanionDeps } from '../server/server.ts';
 import type { CompanionConfig } from '../core/config.ts';
 import type { Launch } from '../shared/types.ts';
@@ -294,6 +290,7 @@ export interface Booted {
 
 export async function boot(
   options: {
+    /** Use the manager's own launcher (the in-process HTTPS transport) instead of the fake. */
     real?: boolean;
     launch?: Launch | undefined;
     config?: Partial<CompanionConfig>;
@@ -306,7 +303,6 @@ export async function boot(
   const notifications: Notify[] = [];
   const config: CompanionConfig = {
     dataDir: tempDir(),
-    binary: 'codex',
     chatEffort: '',
     trace: false,
     idleSeconds: 300,
@@ -321,7 +317,7 @@ export async function boot(
   const launch: Launch | undefined = options.real
     ? undefined
     : (options.launch ??
-      ((_provider, _binary, _home, _key, notify) => {
+      ((_provider, _home, _key, notify) => {
         notifications.push(notify);
         return Promise.resolve(fake);
       }));
@@ -370,18 +366,3 @@ export async function boot(
       }),
   };
 }
-
-/** A shell wrapper that runs the scripted Codex peer, so the real launcher can spawn it. */
-export function fakeCodexBinary(): string {
-  const dir = tempDir();
-  const path = join(dir, 'codex');
-  const script = fileURLToPath(new URL('./fake-codex.ts', import.meta.url));
-  writeFileSync(
-    path,
-    `#!/bin/sh\nexec "${process.execPath}" --experimental-strip-types --no-warnings "${script}" "$@"\n`,
-  );
-  chmodSync(path, 0o755);
-  return path;
-}
-
-import { fileURLToPath } from 'node:url';

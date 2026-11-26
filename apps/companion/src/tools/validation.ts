@@ -56,6 +56,7 @@ const FIELDS: Readonly<Record<keyof Request, Kind>> = {
   editNote: 'string',
   automatic: 'boolean',
   approvedOperation: 'string',
+  thinkHarder: 'boolean',
 };
 
 /** Decodes an object whose every key is in `keys` and whose values pass `check`; null otherwise. */
@@ -295,7 +296,7 @@ const CONTEXT_OPERATIONS = [
 
 export function validRequest(r: Request): boolean {
   if (!UUID.test(r.tenantId) || !UUID.test(r.principalId)) return false;
-  if (['status', 'connect', 'disconnect', 'models'].includes(r.operation)) return true;
+  if (['status', 'models'].includes(r.operation)) return true;
   if (!CONTEXT_OPERATIONS.includes(r.operation)) return false;
   return (
     validHistoryOp(r) &&

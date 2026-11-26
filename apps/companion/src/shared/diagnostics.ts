@@ -16,7 +16,6 @@ import { truncateUtf8 } from './util.ts';
  */
 
 export const MAX_TRACE_BYTES = 32 << 20;
-export const MAX_STDERR_BYTES = 8 << 20;
 const MAX_TRACE_CONTENT_BYTES = 64 << 10;
 
 export function stdoutLogger(): Logger {
@@ -164,23 +163,9 @@ export const valueOrDefault = (model: string): string => (model === '' ? 'defaul
 export interface TurnError {
   message: string;
   nixProviderError: string;
-  codexErrorInfo: unknown;
 }
 
-/**
- * Only what is safe for the shared log. The structured code is always logged; the free-text
- * message only when the code is a plain name or absent, since an upstream HTTP failure's message
- * can carry the response body.
- */
+/** Only what is safe for the shared log: a provider failure's message is one of Nix's fixed strings, never the upstream body. */
 export function turnErrorAttrs(e: TurnError | undefined): Record<string, unknown> {
-  if (e === undefined) return {};
-  const attrs: Record<string, unknown> = {};
-  const info =
-    e.codexErrorInfo === undefined || e.codexErrorInfo === null
-      ? ''
-      : JSON.stringify(e.codexErrorInfo);
-  const hasInfo = info !== '' && info !== 'null';
-  if (hasInfo) attrs.code = truncateUtf8(info, 200);
-  if (!hasInfo || info.startsWith('"')) attrs.error = truncateUtf8(e.message, 500);
-  return attrs;
+  return e === undefined ? {} : { error: truncateUtf8(e.message, 500) };
 }

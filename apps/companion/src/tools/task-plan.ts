@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { assertScreened } from '../sani/vendor/screen.ts';
+import { PROVIDERS } from '../shared/models.ts';
 import type { Request } from '../shared/types.ts';
 import { byteLen, UUID } from '../shared/util.ts';
 
@@ -68,7 +69,7 @@ function screenPlannerText(text: string, apiKey: string): string {
 export function taskPlanInput(request: Request): string | undefined {
   if (
     ![request.workspaceId, request.petId, request.requestId].every((id) => UUID.test(id)) ||
-    !['', 'chatgpt', 'anthropic', 'openrouter', 'openai'].includes(request.provider) ||
+    !PROVIDERS.includes(request.provider) ||
     byteLen(request.model) > 160 ||
     request.text.trim() === '' ||
     byteLen(request.text) > 8_000 ||

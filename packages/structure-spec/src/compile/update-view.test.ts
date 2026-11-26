@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { normalizeForCodex } from '../catalog/tools.js';
+import { normalizeToolSchema } from '../catalog/tools.js';
 import { updateViewSpecSchema } from '../spec/update-view.js';
 import { validateSpec } from '../validate/spec.js';
 import type { ValidationContext } from '../validate/report.js';
@@ -140,9 +140,9 @@ describe('narrow update-view schema', () => {
     ).toBe(false);
   });
 
-  it('fits the dynamic-tool budget with both kinds of filter and all chart options', () => {
+  it('fits the tool schema budget with both kinds of filter and all chart options', () => {
     const schema = z.object({ itemId: z.string(), spec: updateViewSpecSchema }).strict();
-    const normalized = normalizeForCodex(
+    const normalized = normalizeToolSchema(
       z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' }),
     );
     expect(Buffer.byteLength(JSON.stringify(normalized), 'utf8')).toBeLessThanOrEqual(4800);

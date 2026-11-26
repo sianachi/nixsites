@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Writes THIRD-PARTY-NOTICES.txt: the licence and notice texts of the third-party code and assets Nix
 // ships. npm: production dependencies of every workspace package. NuGet: the runtime closure of Core and
-// the migrator. Plus what the build bundles by hand (fonts, the embedding model, the Codex binary).
+// the migrator. Plus what the build bundles by hand (fonts, the embedding model).
 // Needs `pnpm install` and a `dotnet restore` of backend/src first. Run after dependency changes and
 // before each release; `--check` exits 1 when the committed file is out of date.
 import { execFileSync } from 'node:child_process';
@@ -119,16 +119,6 @@ function bundled() {
       source: 'bundled',
       texts: [
         `Copyright (c) Beijing Academy of Artificial Intelligence (BAAI)\nhttps://huggingface.co/BAAI/bge-small-en-v1.5\n${standard('MIT')}`,
-      ],
-    },
-    {
-      name: 'OpenAI Codex CLI native binary',
-      version: 'deploy/docker/node.Dockerfile CODEX_VERSION',
-      licence: 'Apache-2.0',
-      source: 'bundled',
-      texts: [
-        'OpenAI Codex\nCopyright 2025 OpenAI\n\nThis project includes code derived from Ratatui (https://github.com/ratatui/ratatui), licensed under the MIT license.\nCopyright (c) 2016-2022 Florian Dehau\nCopyright (c) 2023-2025 The Ratatui Developers\n\nhttps://github.com/openai/codex\n' +
-          standard('Apache-2.0'),
       ],
     },
   ];

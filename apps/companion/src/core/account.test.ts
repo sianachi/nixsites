@@ -25,8 +25,8 @@ describe('conversation protocol', () => {
     expect(first.state).toBe('thinking');
     expect(first.messages).toHaveLength(1);
     await h.account.handle(h.signal, r);
-    expect(h.transport.methods()).toEqual(['thread/start', 'turn/start']);
-    const start = h.transport.calls[0]?.params ?? {};
+    expect(h.transport.methods()).toEqual(['model/list', 'thread/start', 'turn/start']);
+    const start = h.transport.last('thread/start');
     expect(start).toMatchObject({
       sandbox: 'read-only',
       approvalPolicy: 'on-request',
@@ -39,7 +39,7 @@ describe('conversation protocol', () => {
     const done = await h.account.handle(h.signal, request({ operation: 'read' }));
     expect(done.state).toBe('success');
     expect(done.messages.map((m) => m.text)).toEqual(['Help me write', 'Here is a suggestion.']);
-    expect(h.transport.methods()).toHaveLength(2);
+    expect(h.transport.methods()).toHaveLength(3);
 
     const path = join(h.home, `${keyOf(r)}.json`);
     expect(statSync(path).mode & 0o777).toBe(0o600);
@@ -299,44 +299,17 @@ describe('conversation protocol', () => {
 });
 
 describe('connection', () => {
-  it('walks the device login and disconnect', async () => {
+  it('reports a saved key as connected and none as disconnected', async () => {
     const h = harness();
-    h.account.status = 'disconnected';
-    const connecting = await send(h, { operation: 'connect' });
-    expect(connecting).toMatchObject({
-      status: 'connecting',
-      verificationUrl: 'https://auth.openai.com/codex/device',
-      userCode: '1234-ABCD',
-      canConnect: true,
-    });
-    await send(h, { operation: 'connect' });
-    expect(h.transport.methods().filter((m) => m === 'account/login/start')).toHaveLength(1);
-    h.notify('account/login/completed', { success: true });
-    expect(h.account.snapshot('')).toMatchObject({
+    expect(await send(h, { operation: 'status' })).toMatchObject({
       status: 'connected',
       canConnect: false,
-      userCode: '',
     });
-    const gone = await send(h, { operation: 'disconnect' });
-    expect(gone).toMatchObject({ status: 'disconnected', reason: 'ChatGPT disconnected.' });
-    expect(h.transport.methods()).toContain('account/logout');
-  });
-
-  it('refuses a device login that is not the OpenAI page', async () => {
-    const h = harness();
-    h.transport.script = (m) =>
-      m === 'account/login/start'
-        ? { loginId: 'l', verificationUrl: 'https://evil.example/device', userCode: 'X' }
-        : undefined;
-    await expect(send(h, { operation: 'connect' })).rejects.toThrow('invalid device login');
-  });
-
-  it('reports a failed sign-in', () => {
-    const h = harness();
-    h.notify('account/login/completed', { success: false });
-    expect(h.account.snapshot('')).toMatchObject({
-      status: 'error',
-      reason: 'Sign-in did not complete. Try connecting again.',
+    h.transport.script = (m) => (m === 'account/read' ? { account: null } : undefined);
+    expect(await send(h, { operation: 'status' })).toMatchObject({
+      status: 'disconnected',
+      reason: 'Add a Claude or OpenRouter key in Settings > Pets.',
+      canConnect: true,
     });
   });
 
@@ -384,11 +357,11 @@ describe('model choice and effort', () => {
     expect(none.transport.last('turn/start').effort).toBeUndefined();
   });
 
-  it('never fails the turn when the model list cannot be read for effort', async () => {
+  it('fails the turn when the model list cannot be read, since the model cannot be chosen', async () => {
     const h = harness({ chatEffort: 'low' });
     h.transport.script = (m) =>
       m === 'model/list' ? new Error('provider refused model/list') : undefined;
-    await expect(send(h)).resolves.toMatchObject({ state: 'thinking' });
+    await expect(send(h)).rejects.toThrow('provider refused model/list');
   });
 
   it('refuses an unlisted model', async () => {
@@ -629,14 +602,14 @@ describe('Account type', () => {
   it('is constructed with a transport that may omit the tool seam', () => {
     const account = new Account({
       home: tempDir(),
-      provider: 'chatgpt',
+      provider: 'anthropic',
       transport: new FakeTransport(),
       chatEffort: '',
       logger: undefined,
       trace: false,
     });
     expect(account.snapshot('')).toMatchObject({
-      provider: 'chatgpt',
+      provider: 'anthropic',
       status: 'disconnected',
       canConnect: true,
     });

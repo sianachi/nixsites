@@ -1,4 +1,3 @@
-import { responsesReplaySchema } from './responses-wire.ts';
 import { HISTORY_SHARING_RECOVERY } from '../core/context-provenance.ts';
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -28,8 +27,8 @@ class HistoryDisclosureError extends Error {
 }
 
 /**
- * Serves the Codex app-server vocabulary the account already speaks over a provider's HTTPS API:
- * Anthropic's Messages API or the chat completions of OpenRouter or OpenAI. The API key lives in memory for the
+ * Serves the small app-server vocabulary the account speaks over a provider's HTTPS API:
+ * Anthropic's Messages API or the chat completions of OpenRouter. The API key lives in memory for the
  * account's life and is never written to disk or logs. Thread history is kept per thread under
  * the account home so a resumed thread survives a restart; it is bounded like the conversation.
  */
@@ -61,7 +60,6 @@ const THREAD_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 function messageBytes(message: ProviderMessage): number {
   let size = Buffer.byteLength(message.text ?? '');
-  if (message.responses !== undefined) size += Buffer.byteLength(JSON.stringify(message.responses));
   for (const call of message.toolCalls ?? [])
     size += Buffer.byteLength(JSON.stringify(call.arguments ?? {}));
   for (const result of message.toolResults ?? [])
@@ -106,9 +104,6 @@ export function trimThread(thread: HttpThread): void {
   if (opening !== '' && head !== undefined) {
     head.text = `The conversation began with this message; its earlier turns were dropped to save space:\n${opening}\n\nThe message now:\n${head.text ?? ''}`;
   }
-  for (const message of kept)
-    if (message.responses !== undefined)
-      message.responses.items = message.responses.items.filter((item) => item.type !== 'reasoning');
   thread.messages = kept;
 }
 
@@ -134,7 +129,7 @@ export class HttpTransport implements Transport {
     const wire =
       options.kind === 'anthropic'
         ? anthropicWire
-        : options.kind === 'openrouter' || options.kind === 'openai'
+        : options.kind === 'openrouter'
           ? openrouterWire
           : undefined;
     if (wire === undefined) throw new Error(`unknown provider "${options.kind}"`);
@@ -167,7 +162,6 @@ export class HttpTransport implements Transport {
 
   private context(signal: AbortSignal | undefined): WireContext {
     return {
-      kind: this.kind,
       fetch: this.doFetch,
       base: this.baseUrl,
       apiKey: this.apiKey,
@@ -306,18 +300,6 @@ export class HttpTransport implements Transport {
     }
     if (!isRecord(parsed) || parsed.id !== id)
       throw new Error("that conversation's thread could not be read");
-    if (Array.isArray(parsed.messages)) {
-      for (const message of parsed.messages) {
-        if (
-          isRecord(message) &&
-          message.responses !== undefined &&
-          !responsesReplaySchema.safeParse(message.responses).success
-        )
-          throw new Error(
-            'The saved provider response could not be restored. Start a fresh conversation.',
-          );
-      }
-    }
     const loaded: HttpThread = {
       id,
       model: str(parsed.model),
@@ -394,8 +376,6 @@ export class HttpTransport implements Transport {
   ): Promise<void> {
     const signal = context.signal;
     thread.usage = emptyUsage();
-    const activeStart = thread.messages.length - 1;
-    let nativeActive = false;
     const finish = (status: string, failure?: unknown): void => {
       const turn: Record<string, unknown> = { status };
       // Only the Anthropic wire reports counts; zeros from the others would read as free turns.
@@ -415,15 +395,6 @@ export class HttpTransport implements Transport {
         const itemId = `${turnId}-${String(round)}`;
         let result: Awaited<ReturnType<ProviderWire['stream']>>;
         try {
-          if (
-            nativeActive &&
-            thread.messages
-              .slice(activeStart)
-              .reduce((sum, message) => sum + messageBytes(message), 0) > MAX_THREAD_BYTES
-          )
-            throw new Error(
-              'The active response exceeded its safe continuation size. Start a smaller task.',
-            );
           if (disclosureGuard !== undefined && !(await disclosureGuard()))
             throw new HistoryDisclosureError();
           result = await this.wire.stream(context, thread, (delta) => {
@@ -436,33 +407,15 @@ export class HttpTransport implements Transport {
           return;
         }
         const { text, calls } = result;
-        nativeActive ||= result.responses !== undefined;
         // A reply with neither words nor tool calls would show as a blank bubble and read as success.
         if (calls.length === 0 && text.trim() === '') {
           finish('failed', new Error('The model finished without an answer. Try again'));
-          return;
-        }
-        if (
-          result.responses !== undefined &&
-          thread.messages
-            .slice(activeStart)
-            .reduce((sum, message) => sum + messageBytes(message), 0) +
-            Buffer.byteLength(JSON.stringify(result.responses)) >
-            MAX_THREAD_BYTES
-        ) {
-          finish(
-            'failed',
-            new Error(
-              'The active response exceeded its safe continuation size. Start a smaller task.',
-            ),
-          );
           return;
         }
         thread.messages.push({
           role: 'assistant',
           text,
           toolCalls: calls,
-          ...(result.responses === undefined ? {} : { responses: result.responses }),
         });
         if (calls.length === 0) {
           this.save(thread);

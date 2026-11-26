@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
@@ -9,9 +9,7 @@ import { readBody } from '../shared/http.ts';
 import { HttpTransport } from '../server/http-transport.ts';
 import { sendError, serveInline, writeProviderFailure } from '../tools/inline.ts';
 import { privatePlanToolOperations } from '../tools/plan-rpc.ts';
-import { recipientMetadata } from '../tools/plan-recipient.ts';
 import { TASK_PLAN_OPERATION } from '../tools/task-plan.ts';
-import { launchCodex } from '../server/rpc.ts';
 import {
   emptyRequest,
   type ConversationToolExecutor,
@@ -20,6 +18,7 @@ import {
   type Request,
   type ValidateSharing,
 } from '../shared/types.ts';
+import { PROVIDERS } from '../shared/models.ts';
 import { UUID } from '../shared/util.ts';
 import { serveWatchStream } from '../tools/watch-stream.ts';
 import { parseRequest, validRequest } from '../tools/validation.ts';
@@ -30,15 +29,24 @@ export const MAX_ACCOUNTS = 4;
 const MAX_BODY_BYTES = 1200 << 10;
 const REQUEST_TIMEOUT_MS = 25_000;
 
+/** Deletes what the retired ChatGPT link left in each person's home: its saved sign-in and its recipient record. */
+export function removeChatGptCredentials(dataDir: string): void {
+  for (const entry of readdirSync(dataDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    for (const name of ['auth.json', 'chatgpt-recipient.json'])
+      rmSync(join(dataDir, entry.name, name), { force: true });
+  }
+}
+
 export interface ManagerDeps {
   logger?: Logger | undefined;
   validateSharing?: ValidateSharing | undefined;
-  /** Replaces the default launcher (the Codex child, or the in-process HTTPS transport). */
+  /** Replaces the default launcher, the in-process HTTPS transport. */
   launch?: Launch | undefined;
   executeConversationTool?: ConversationToolExecutor | undefined;
   serverTools?: ServerTools | undefined;
   /** Provider origin overrides, for tests. */
-  providerBaseUrls?: Partial<Record<'anthropic' | 'openrouter' | 'openai', string>> | undefined;
+  providerBaseUrls?: Partial<Record<'anthropic' | 'openrouter', string>> | undefined;
   fetch?: typeof fetch | undefined;
   /** How often idle accounts are looked for; default the smaller of a minute and half the idle time. */
   reapIntervalMs?: number | undefined;
@@ -62,23 +70,20 @@ export class Manager {
     this.serverTools = deps.serverTools;
     this.validateSharing = deps.validateSharing;
     mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
+    removeChatGptCredentials(config.dataDir);
     this.launch =
       deps.launch ??
-      ((provider, binary, home, apiKey, notify, trace) => {
-        if (provider !== '' && provider !== 'chatgpt') {
-          return Promise.resolve(
-            new HttpTransport({
-              kind: provider,
-              apiKey,
-              home,
-              notify,
-              baseUrl: deps.providerBaseUrls?.[provider as 'anthropic' | 'openrouter' | 'openai'],
-              fetch: deps.fetch,
-            }),
-          );
-        }
-        return launchCodex(binary, home, notify, trace);
-      });
+      ((provider, home, apiKey, notify) =>
+        Promise.resolve(
+          new HttpTransport({
+            kind: provider,
+            apiKey,
+            home,
+            notify,
+            baseUrl: deps.providerBaseUrls?.[provider as 'anthropic' | 'openrouter'],
+            fetch: deps.fetch,
+          }),
+        ));
     const interval = deps.reapIntervalMs ?? Math.min(60_000, (config.idleSeconds * 1000) / 2);
     this.timer = setInterval(() => {
       this.reap();
@@ -116,9 +121,10 @@ export class Manager {
 
   /** One account per provider: conversation files share the principal's home, the process is the provider's own. */
   async account(signal: AbortSignal, r: Request): Promise<Account> {
-    const provider = r.provider === '' ? 'chatgpt' : r.provider;
-    let key = `${r.tenantId}-${r.principalId}`;
-    if (provider !== 'chatgpt') key += `-${provider}`;
+    const provider = r.provider;
+    // A request without a provider is from a Core that predates the retirement of the ChatGPT account.
+    if (!PROVIDERS.includes(provider)) throw new Error('unknown provider');
+    const key = `${r.tenantId}-${r.principalId}-${provider}`;
     for (;;) {
       const starting = this.pending.get(key);
       if (starting === undefined) break;
@@ -126,7 +132,7 @@ export class Manager {
     }
     const existing = this.accounts.get(key);
     if (existing !== undefined) {
-      if (existing.provider !== 'chatgpt') existing.transport.setApiKey?.(r.apiKey);
+      existing.transport.setApiKey?.(r.apiKey);
       if (existing.transport.alive?.() === false) {
         this.accounts.delete(key);
       } else {
@@ -150,13 +156,8 @@ export class Manager {
   private async start(signal: AbortSignal, r: Request, provider: string): Promise<Account> {
     const home = join(this.config.dataDir, `${r.tenantId}-${r.principalId}`);
     const ref: { account?: Account } = {};
-    const transport = await this.launch(
-      provider,
-      this.config.binary,
-      home,
-      r.apiKey,
-      (method, params) => ref.account?.notify(method, params),
-      this.config.trace,
+    const transport = await this.launch(provider, home, r.apiKey, (method, params) =>
+      ref.account?.notify(method, params),
     );
     const account = new Account({
       home,
@@ -193,20 +194,6 @@ export class Manager {
       sendError(res, 400, 'Invalid companion request');
       return;
     }
-    if (request.operation === 'recipient_metadata') {
-      const provider = request.provider === '' ? 'chatgpt' : request.provider;
-      if (
-        !UUID.test(request.tenantId) ||
-        !UUID.test(request.principalId) ||
-        !['chatgpt', 'anthropic', 'openrouter', 'openai'].includes(provider)
-      ) {
-        sendError(res, 400, 'Invalid companion request');
-        return;
-      }
-      const home = join(this.config.dataDir, `${request.tenantId}-${request.principalId}`);
-      res.end(`${JSON.stringify(recipientMetadata(home, provider))}\n`);
-      return;
-    }
     if (privatePlanToolOperations.has(request.operation)) {
       if (
         ![
@@ -221,9 +208,9 @@ export class Manager {
         sendError(res, 400, 'Invalid plan request');
         return;
       }
-      const provider = request.provider === '' ? 'chatgpt' : request.provider;
-      const key = `${request.tenantId}-${request.principalId}${provider === 'chatgpt' ? '' : `-${provider}`}`;
-      const account = this.accounts.get(key);
+      const account = this.accounts.get(
+        `${request.tenantId}-${request.principalId}-${request.provider}`,
+      );
       if (account === undefined) {
         sendError(res, 409, 'The planned provider turn is no longer active');
         return;

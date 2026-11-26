@@ -2,7 +2,6 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { z } from 'zod';
 
 import { Account } from '../core/account.ts';
 import {
@@ -77,7 +76,7 @@ const anthropicTool = (id: string, name: string, args: string, text = ''): objec
 ];
 
 function keyAccount(
-  kind: 'anthropic' | 'openrouter' | 'openai',
+  kind: 'anthropic' | 'openrouter',
   server: FakeServer,
   home = tempDir(),
   apiKey = 'sk-test',
@@ -175,29 +174,63 @@ describe('Anthropic', () => {
     expect(body.tools[0]).toHaveProperty('input_schema');
   });
 
-  it('connects by proving the key with one model listing, and uses the advertised default model', async () => {
+  it("lists the key's models and defaults to the fast one when it is listed", async () => {
     const server = await track(
       startServer((seen, res) => {
         if (seen.url.startsWith('/v1/models'))
           return jsonResponse(res, 200, {
-            data: [{ id: 'claude-first' }, { id: 'claude-second' }],
+            data: [{ id: 'claude-first' }, { id: 'claude-haiku-5-5' }, { id: 'claude-sonnet-5-5' }],
           });
         sse(res, anthropicTurn('ok'));
       }),
     );
     const k = keyAccount('anthropic', server);
-    const connected = await k.account.handle(k.signal, request({ operation: 'connect' }));
-    expect(connected).toMatchObject({
-      status: 'connected',
-      reason: 'API key accepted.',
-      provider: 'anthropic',
-    });
-    expect(connected.models.map((m) => m.id)).toEqual(['claude-first', 'claude-second']);
+    const listed = await k.account.handle(k.signal, request({ operation: 'models' }));
+    expect(listed.models.filter((m) => m.default).map((m) => m.id)).toEqual(['claude-haiku-5-5']);
     await k.send();
     await eventually(() => server.seen.some((s) => s.method === 'POST'));
+    // Haiku 5.5 thinks by default; the tool rounds are replayed without thinking blocks, so it is turned off.
     expect(JSON.parse(server.seen.find((s) => s.method === 'POST')?.body ?? '{}')).toMatchObject({
-      model: 'claude-first',
+      model: 'claude-haiku-5-5',
+      thinking: { type: 'disabled' },
     });
+  });
+
+  it('defaults to the first listed model when the fast one is not listed', async () => {
+    const server = await track(
+      startServer((_seen, res) => {
+        jsonResponse(res, 200, { data: [{ id: 'claude-first' }, { id: 'claude-second' }] });
+      }),
+    );
+    const k = keyAccount('anthropic', server);
+    const listed = await k.account.handle(k.signal, request({ operation: 'models' }));
+    expect(listed.models.filter((m) => m.default).map((m) => m.id)).toEqual(['claude-first']);
+  });
+
+  it('runs one message on the larger model when asked to think harder, and a pet model otherwise', async () => {
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url.startsWith('/v1/models'))
+          return jsonResponse(res, 200, {
+            data: [{ id: 'claude-haiku-5-5' }, { id: 'claude-sonnet-5-5' }, { id: 'claude-pet' }],
+          });
+        sse(res, anthropicTurn('ok'));
+      }),
+    );
+    const bodies = () =>
+      server.seen.filter((s) => s.method === 'POST').map((s) => JSON.parse(s.body) as object);
+    const harder = keyAccount('anthropic', server);
+    await harder.send({ model: 'claude-pet', thinkHarder: true });
+    await eventually(() => bodies().length === 1);
+    expect(bodies()[0]).toMatchObject({
+      model: 'claude-sonnet-5-5',
+      thinking: { type: 'between_tools' },
+    });
+    const own = keyAccount('anthropic', server);
+    await own.send({ model: 'claude-pet' });
+    await eventually(() => bodies().length === 2);
+    expect(bodies()[1]).toMatchObject({ model: 'claude-pet' });
+    expect(bodies()[1]).not.toHaveProperty('thinking');
   });
 
   it('falls back to the fixed catalog when models are not listed', async () => {
@@ -209,10 +242,11 @@ describe('Anthropic', () => {
     const k = keyAccount('anthropic', server);
     const models = await k.account.handle(k.signal, request({ operation: 'models' }));
     expect(models.models.map((m) => m.id)).toEqual([
-      'claude-sonnet-4-5',
-      'claude-opus-4-1',
-      'claude-haiku-4-5',
+      'claude-haiku-5-5',
+      'claude-sonnet-5-5',
+      'claude-opus-5-5',
     ]);
+    expect(models.models.find((m) => m.default)?.id).toBe('claude-haiku-5-5');
   });
 
   it('round-trips a tool call through the approval path', async () => {
@@ -405,15 +439,10 @@ describe('Anthropic', () => {
       }),
     );
     const k = keyAccount('anthropic', server);
-    const connected = await k.account.handle(k.signal, request({ operation: 'connect' }));
-    expect(connected.status).toBe('error');
-    expect(connected.reason).toBe(
-      'Claude rejected the API key. Update it in Settings > Pets. (HTTP 401)',
-    );
-    expect(JSON.stringify(connected)).not.toContain('secret detail');
-    await expect(
-      k.account.handle(k.signal, request({ operation: 'models' })),
-    ).rejects.toMatchObject({ message: expect.stringContaining('rejected') as string });
+    const rejected = k.account.handle(k.signal, request({ operation: 'models' }));
+    await expect(rejected).rejects.toMatchObject({
+      message: 'Claude rejected the API key. Update it in Settings > Pets. (HTTP 401)',
+    });
   });
 
   it('never follows a redirect with the key or the prompt', async () => {
@@ -429,9 +458,8 @@ describe('Anthropic', () => {
       }),
     );
     const k = keyAccount('anthropic', server);
-    await k.account.handle(k.signal, request({ operation: 'connect' }));
+    await k.account.handle(k.signal, request({ operation: 'models' })).catch(() => undefined);
     expect(target.seen).toEqual([]);
-    expect(k.account.snapshot('').status).toBe('error');
     const failing = keyAccount('anthropic', server);
     await failing.send().catch(() => undefined);
     expect(target.seen).toEqual([]);
@@ -855,415 +883,6 @@ describe('OpenRouter', () => {
   });
 });
 
-describe('OpenAI', () => {
-  it('continues native Responses tool calls and replays encrypted context after restart', async () => {
-    const reasoning = {
-      type: 'reasoning',
-      id: 'rs_fixture',
-      summary: [],
-      encrypted_content: 'enc_fixture_final',
-      status: 'completed',
-    };
-    const commentary = {
-      type: 'message',
-      id: 'msg_looking',
-      role: 'assistant',
-      phase: 'commentary',
-      status: 'completed',
-      content: [{ type: 'output_text', text: 'Looking.', annotations: [], logprobs: [] }],
-    };
-    const call = {
-      type: 'function_call',
-      id: 'fc_fixture',
-      call_id: 'call_fixture',
-      name: 'nix_search',
-      arguments: '{"query":"plan"}',
-      status: 'completed',
-    };
-    let round = 0;
-    const server = await track(
-      startServer((seen, res) => {
-        if (seen.url === '/models')
-          return jsonResponse(res, 200, { data: [{ id: 'gpt-6.2-sol', created: 1 }] });
-        if (seen.url !== '/responses')
-          return jsonResponse(res, 400, {
-            error: { code: 'unsupported_parameter', param: 'tools' },
-          });
-        const output =
-          round++ === 0
-            ? [reasoning, commentary, call]
-            : [
-                {
-                  ...commentary,
-                  id: `msg_${String(round)}`,
-                  phase: 'final_answer',
-                  content: [
-                    { type: 'output_text', text: 'Found it.', annotations: [], logprobs: [] },
-                  ],
-                },
-              ];
-        return sse(res, [
-          { type: 'response.completed', response: { status: 'completed', output } },
-        ]);
-      }),
-    );
-    const first = keyAccount('openai', server);
-    await first.send({ workspaceAccess: true });
-    await eventually(() => first.account.snapshot(key).tools.length === 1);
-    await first.account.handle(
-      first.signal,
-      request({ operation: 'tool_claim', toolId: 'call_fixture', requestId: IDS.other }),
-    );
-    await first.account.handle(
-      first.signal,
-      request({
-        operation: 'tool_result',
-        toolId: 'call_fixture',
-        requestId: IDS.other,
-        toolResult: 'one synthetic hit',
-        toolSuccess: true,
-      }),
-    );
-    await eventually(() => first.account.snapshot(key).state === 'success');
-    first.transport.close();
-    const resumed = keyAccount('openai', server, first.home);
-    resumed.account.load(key);
-    await resumed.send({ requestId: IDS.other, text: 'Synthetic follow-up.' });
-    await eventually(() => resumed.account.snapshot(key).state === 'success');
-    const posts = server.seen.filter((seen) => seen.method === 'POST');
-    expect(posts.map((post) => post.url)).toEqual(['/responses', '/responses', '/responses']);
-    const body = z
-      .object({ store: z.literal(false), input: z.array(z.unknown()) })
-      .parse(JSON.parse(posts[1]?.body ?? '{}'));
-    expect(body.input.slice(2)).toEqual([
-      reasoning,
-      commentary,
-      call,
-      { type: 'function_call_output', call_id: 'call_fixture', output: 'one synthetic hit' },
-    ]);
-    const afterRestart = z
-      .object({ input: z.array(z.unknown()) })
-      .parse(JSON.parse(posts[2]?.body ?? '{}'));
-    expect(afterRestart.input).toContainEqual(reasoning);
-    expect(afterRestart.input).toContainEqual(commentary);
-    expect(posts.every((post) => !post.body.includes('previous_response_id'))).toBe(true);
-  });
-
-  it('sends no content without a sharing validator', async () => {
-    const server = await track(
-      startServer((_seen, res) =>
-        jsonResponse(res, 200, { data: [{ id: 'gpt-6.2-sol', created: 1 }] }),
-      ),
-    );
-    const k = keyAccount('openai', server, tempDir(), 'sk-test', false);
-    await expect(k.send()).rejects.toThrow('Sharing consent must be reviewed');
-    expect(server.seen.filter((seen) => seen.method === 'POST')).toHaveLength(0);
-  });
-
-  const models = {
-    data: [
-      { id: 'text-embedding-3-small', created: 9 },
-      { id: 'gpt-4o', created: 3 },
-      { id: 'gpt-5-codex', created: 8 },
-      { id: 'o3-pro', created: 7 },
-      { id: 'gpt-4o-audio-preview', created: 6 },
-      { id: 'whisper-1', created: 5 },
-      { id: 'gpt-5', created: 4 },
-      { id: 'o4-mini', created: 2 },
-    ],
-  };
-  const chunk = (delta: object, finish?: string): string =>
-    JSON.stringify({ choices: [{ delta, finish_reason: finish ?? null }] });
-
-  it('lists only chat models, newest first, and bills the pasted key', async () => {
-    const server = await track(
-      startServer((_seen, res) => {
-        jsonResponse(res, 200, models);
-      }),
-    );
-    const k = keyAccount('openai', server);
-    const listed = await k.account.handle(k.signal, request({ operation: 'models' }));
-    expect(listed.models).toEqual([
-      { id: 'gpt-5', name: 'gpt-5', default: true, supportsTools: true },
-      { id: 'gpt-4o', name: 'gpt-4o', default: false, supportsTools: true },
-      { id: 'o4-mini', name: 'o4-mini', default: false, supportsTools: true },
-    ]);
-    expect(server.seen[0]?.headers.authorization).toBe('Bearer sk-test');
-    expect(server.seen[0]?.headers['x-title']).toBeUndefined();
-  });
-
-  it('streams a reply through chat completions', async () => {
-    const server = await track(
-      startServer((seen, res) => {
-        if (seen.url === '/models') return jsonResponse(res, 200, models);
-        sse(res, [chunk({ content: 'Hello.' }), chunk({}, 'stop'), '[DONE]']);
-      }),
-    );
-    const k = keyAccount('openai', server);
-    await k.send();
-    await eventually(() => k.events.some((e) => e.method === 'turn/completed'));
-    expect(server.seen.some((s) => s.url === '/chat/completions')).toBe(true);
-    expect(failure(k.events)).toBe('');
-  });
-
-  it.each([false, true])(
-    'uses a newly selected model while retaining conversation history after restart=%s',
-    async (restart) => {
-      const server = await track(
-        startServer((seen, res) => {
-          if (seen.url === '/models') return jsonResponse(res, 200, models);
-          sse(res, [chunk({ content: 'First answer.' }), chunk({}, 'stop'), '[DONE]']);
-        }),
-      );
-      const first = keyAccount('openai', server);
-      await first.send({ text: 'First question.' });
-      await eventually(() => first.account.snapshot(key).state === 'success');
-      if (restart) first.transport.close();
-      const resumed = restart ? keyAccount('openai', server, first.home) : first;
-      if (restart) resumed.account.load(key);
-      await resumed.send({ requestId: IDS.other, text: 'Second question.', model: 'gpt-4o' });
-      await eventually(() => resumed.account.snapshot(key).messages.length === 4);
-      const posts = server.seen.filter((seen) => seen.method === 'POST');
-      expect(posts).toHaveLength(2);
-      expect(JSON.parse(posts[0]?.body ?? '{}')).toMatchObject({ model: 'gpt-5' });
-      expect(JSON.parse(posts[1]?.body ?? '{}')).toMatchObject({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system' },
-          { role: 'user' },
-          { role: 'assistant', content: 'First answer.' },
-          { role: 'user' },
-        ],
-      });
-      expect(posts[1]?.body).toContain('First question.');
-      expect(posts[1]?.body).toContain('Second question.');
-    },
-  );
-
-  it.each([
-    {
-      status: 404,
-      error: { code: 'model_not_found', type: 'invalid_request_error' },
-      token: 'openai.model_unavailable.404',
-      reason:
-        'OpenAI could not use the selected model for this API key. Choose another model, then try again.',
-    },
-    {
-      status: 400,
-      error: { code: 'unsupported_parameter', type: 'invalid_request_error' },
-      token: 'openai.request_rejected.400',
-      reason:
-        'OpenAI rejected the request. Try another model, or report this problem if it continues.',
-    },
-    {
-      status: 404,
-      error: { code: 'unrecognized_fixture_code', type: 'unrecognized_fixture_type' },
-      token: 'openai.request_rejected.404',
-      reason:
-        'OpenAI could not find the requested model or endpoint. Check the selected model and API access, then try again.',
-    },
-    {
-      status: 400,
-      error: { code: 'unrecognized_fixture_code', type: 'unrecognized_fixture_type' },
-      token: 'openai.request_rejected.400',
-      reason:
-        'OpenAI rejected the request. Try another model, or report this problem if it continues.',
-    },
-  ])('shows a safe account failure for $status and $error.code', async (fixture) => {
-    const privateText = 'private prompt echo sk-test-secret';
-    const server = await track(
-      startServer((seen, res) => {
-        if (seen.url === '/models') return jsonResponse(res, 200, models);
-        jsonResponse(res, fixture.status, {
-          error: { ...fixture.error, message: privateText, param: privateText },
-        });
-      }),
-    );
-    const k = keyAccount('openai', server);
-    await k.send();
-    await eventually(() => k.account.snapshot(key).state === 'error');
-    expect(k.account.snapshot(key).reason).toBe(fixture.reason);
-    expect(JSON.stringify(k.events)).toContain(fixture.token);
-    expect(JSON.stringify(k.events)).not.toContain(privateText);
-    expect(JSON.stringify(k.account.snapshot(key))).not.toContain(privateText);
-  });
-
-  it.each([
-    { name: 'malformed', body: 'private fixture text, not JSON' },
-    {
-      name: 'oversized',
-      body: JSON.stringify({
-        error: { code: 'model_not_found', message: `private fixture text${'x'.repeat(4 << 10)}` },
-      }),
-    },
-  ])('uses the fixed 404 fallback for a $name response body', async ({ body }) => {
-    const error = await providerResponseError('openai', new Response(body, { status: 404 }), false);
-    expect(error.token()).toBe('openai.request_rejected.404');
-    expect(error.message).toBe(
-      'OpenAI could not find the requested model or endpoint. Check the selected model and API access, then try again. (HTTP 404)',
-    );
-    expect(error.message).not.toContain('private fixture text');
-  });
-
-  describe('local request diagnostics', () => {
-    const publicReason =
-      'OpenAI rejected the request. Try another model, or report this problem if it continues.';
-    const internalReason = `${publicReason} (HTTP 400)`;
-
-    it('keeps recognized details in the internal failure while the public reason stays fixed', async () => {
-      const privateText = 'private prompt echo sk-test-secret';
-      const server = await track(
-        startServer((seen, res) => {
-          if (seen.url === '/models') return jsonResponse(res, 200, models);
-          jsonResponse(res, 400, {
-            error: {
-              code: 'invalid_function_parameters',
-              type: 'invalid_request_error',
-              param: 'tools[27].function.parameters',
-              message: privateText,
-            },
-          });
-        }),
-      );
-      const k = keyAccount('openai', server);
-      await k.send();
-      await eventually(() => k.account.snapshot(key).state === 'error');
-      expect(k.account.snapshot(key).reason).toBe(publicReason);
-      expect(failure(k.events)).toBe(
-        `${internalReason} [code=invalid_function_parameters, type=invalid_request_error, param=tools[27].function.parameters]`,
-      );
-      expect(JSON.stringify(k.events)).toContain('openai.request_rejected.400');
-      expect(JSON.stringify(k.events)).not.toContain(privateText);
-      expect(JSON.stringify(k.account.snapshot(key))).not.toContain('invalid_function_parameters');
-      expect(JSON.stringify(k.account.snapshot(key))).not.toContain('tools[27]');
-    });
-
-    it.each([
-      'invalid_function_parameters',
-      'unsupported_parameter',
-      'unsupported_value',
-      'invalid_value',
-      'invalid_type',
-      'context_length_exceeded',
-      'model_not_found',
-    ])('accepts only the fixed diagnostic code %s', async (code) => {
-      const error = await providerResponseError(
-        'openai',
-        new Response(JSON.stringify({ error: { code } }), { status: 400 }),
-        false,
-      );
-      expect(error.token()).toBe('openai.request_rejected.400');
-      expect(error.message).toBe(`${internalReason} [code=${code}]`);
-    });
-
-    it.each([
-      'model',
-      'messages',
-      'tools',
-      'stream',
-      'tools[0].function',
-      'tools[4].function.name',
-      'tools[27].function.parameters',
-      'tools[99].function.description',
-    ])('accepts the canonical diagnostic parameter %s', async (param) => {
-      const error = await providerResponseError(
-        'openai',
-        new Response(JSON.stringify({ error: { type: 'invalid_request_error', param } }), {
-          status: 400,
-        }),
-        false,
-      );
-      expect(error.message).toBe(`${internalReason} [type=invalid_request_error, param=${param}]`);
-    });
-
-    it.each([
-      'tools[100].function.parameters',
-      'tools[00].function.parameters',
-      'tools[27].function.parameters\n',
-      'tools[27].function.parameters.private_prompt',
-      'tools[27].function.parameters\nprivate prompt sk-test-secret',
-    ])('discards a noncanonical diagnostic parameter %j', async (param) => {
-      const error = await providerResponseError(
-        'openai',
-        new Response(
-          JSON.stringify({
-            error: {
-              type: 'invalid_request_error',
-              code: 'private prompt sk-test-secret',
-              param,
-              message: 'private prompt sk-test-secret',
-            },
-          }),
-          { status: 400 },
-        ),
-        false,
-      );
-      expect(error.message).toBe(`${internalReason} [type=invalid_request_error]`);
-    });
-
-    it.each([
-      {
-        name: 'unknown',
-        body: JSON.stringify({
-          error: {
-            code: 'private sk-test-secret',
-            type: 'private sk-test-secret',
-            param: 'model',
-            message: 'private sk-test-secret',
-          },
-        }),
-      },
-      { name: 'malformed', body: 'private sk-test-secret, not JSON' },
-      { name: 'wrong shape', body: JSON.stringify({ error: ['invalid_request_error'] }) },
-      {
-        name: 'oversized',
-        body: JSON.stringify({
-          error: {
-            code: 'invalid_function_parameters',
-            type: 'invalid_request_error',
-            param: 'tools[27].function.parameters',
-            message: `private sk-test-secret${'x'.repeat(4 << 10)}`,
-          },
-        }),
-      },
-    ])('keeps the original fixed failure for a $name body', async ({ body }) => {
-      const error = await providerResponseError(
-        'openai',
-        new Response(body, { status: 400 }),
-        false,
-      );
-      expect(error.token()).toBe('openai.request_rejected.400');
-      expect(error.message).toBe(internalReason);
-    });
-  });
-
-  it('names OpenAI in failures and tells an exhausted quota from a rate limit', async () => {
-    const fake = (status: number, body: unknown): Response =>
-      new Response(JSON.stringify(body), { status });
-    expect((await providerResponseError('openai', fake(401, {}), true)).token()).toBe(
-      'openai.authentication.401',
-    );
-    expect((await providerResponseError('openai', fake(429, {}), false)).token()).toBe(
-      'openai.rate_limited.429',
-    );
-    expect(
-      (
-        await providerResponseError(
-          'openai',
-          fake(429, { error: { code: 'insufficient_quota' } }),
-          false,
-        )
-      ).token(),
-    ).toBe('openai.credit_balance.429');
-    expect(providerFailureMessage('openai', 'openai.authentication.401')).toContain(
-      'OpenAI rejected the API key',
-    );
-    expect(providerFailureMessage('openai', 'openai.credit_balance.429')).toContain(
-      'insufficient credit',
-    );
-  });
-});
-
 describe('provider failures', () => {
   const fake = (status: number, body: unknown): Response =>
     new Response(JSON.stringify(body), { status });
@@ -1320,18 +939,9 @@ describe('provider failures', () => {
     expect(providerFailureMessage('anthropic', 'anthropic.credit_balance.400')).toContain(
       'insufficient credit',
     );
-    expect(providerFailureMessage('openai', 'openai.model_unavailable.404')).toContain(
-      'selected model',
-    );
-    expect(providerFailureMessage('openai', 'openai.request_rejected.400')).toContain(
-      'rejected the request',
-    );
-    expect(providerFailureMessage('openai', 'openai.request_rejected.404')).toContain(
-      'model or endpoint',
-    );
+    expect(providerFailureMessage('openai', 'openai.authentication.401')).toBe('');
     expect(providerFailureMessage('anthropic', 'anthropic.model_unavailable.404')).toBe('');
     expect(providerFailureMessage('openrouter', 'openrouter.request_rejected.400')).toBe('');
-    expect(providerFailureMessage('openai', 'openai.unrecognized_fixture_code.404')).toBe('');
     expect(providerFailureMessage('anthropic', 'anthropic.made_up.500')).toBe('');
   });
 

@@ -66,7 +66,6 @@ import {
   resolvePlanToolSchema,
   supersedePlanToolsSchema,
 } from '../tools/plan-rpc.ts';
-import { observeRecipientConnection } from '../tools/plan-recipient.ts';
 import { TurnTiming } from '../providers/turn-timing.ts';
 import {
   emptyRequest,
@@ -86,7 +85,6 @@ import {
 import {
   aborted,
   byteLen,
-  errorMessage,
   goJson,
   isRecord,
   sleep,
@@ -94,6 +92,7 @@ import {
   truncateUtf8,
   UUID,
 } from '../shared/util.ts';
+import { DEEP_MODELS } from '../shared/models.ts';
 import { toolNamesChat } from '../tools/catalog.ts';
 
 /** Older provider threads restart on their next send to receive the current catalog and rules.
@@ -340,9 +339,6 @@ export class Account {
   status = 'disconnected';
   reason = '';
   last = Date.now();
-  private loginId = '';
-  private url = '';
-  private code = '';
   /** Serialises state transitions: a second mutating request is refused as busy, not queued. */
   opBusy = false;
   watchers = 0;
@@ -569,8 +565,6 @@ export class Account {
       status: this.status,
       reason: this.reason,
       canConnect: this.status !== 'connected',
-      verificationUrl: this.url,
-      userCode: this.code,
       state: 'idle',
       messages: [],
       models: this.models.map(publicModel),
@@ -686,74 +680,15 @@ export class Account {
     const op = r.operation;
     if (op === 'models') {
       await this.listModels(signal);
-    } else if (op === 'connect' && this.provider !== 'chatgpt') {
-      // A key provider "connects" by proving the key: one model listing, nothing stored here.
-      try {
-        await this.listModels(signal);
-      } catch (error) {
-        this.status = 'error';
-        this.reason = errorMessage(error);
-        return this.snapshot('');
-      }
-      this.status = 'connected';
-      this.reason = 'API key accepted.';
-    } else if (op === 'connect') {
-      if (this.loginId === '') {
-        const login = await this.transport.call(
-          'account/login/start',
-          { type: 'chatgptDeviceCode' },
-          signal,
-        );
-        const o = isRecord(login) ? login : {};
-        if (
-          o.verificationUrl !== 'https://auth.openai.com/codex/device' ||
-          str(o.userCode).length > 32 ||
-          byteLen(str(o.userCode)) > 32
-        ) {
-          throw new Error('invalid device login');
-        }
-        this.loginId = str(o.loginId);
-        this.url = str(o.verificationUrl);
-        this.code = str(o.userCode);
-        this.status = 'connecting';
-        this.reason =
-          'Open the sign-in page and enter the code. Device-code login must be enabled in ChatGPT security settings.';
-      }
-    } else if (op === 'disconnect') {
-      const active = [...this.conversations.values()]
-        .filter((c) => c.turnId !== '')
-        .map((c) => ({ threadId: c.threadId, turnId: c.turnId }));
-      for (const turn of active) await this.transport.call('turn/interrupt', turn, signal);
-      if (this.loginId !== '')
-        await this.transport.call('account/login/cancel', { loginId: this.loginId }, signal);
-      await this.transport.call('account/logout', {}, signal);
-      if (this.provider === 'chatgpt') observeRecipientConnection(this.home, null);
-      this.status = 'disconnected';
-      this.loginId = '';
-      this.url = '';
-      this.code = '';
-      this.reason = 'ChatGPT disconnected.';
     } else if (op === 'status') {
       const result = await this.transport.call('account/read', { refreshToken: false }, signal);
       if (!isRecord(result)) throw new Error('invalid account status');
-      const type = isRecord(result.account) ? str(result.account.type) : undefined;
-      if (this.provider === 'chatgpt')
-        observeRecipientConnection(this.home, type === 'chatgpt' ? result.account : null);
-      if (type === 'chatgpt') {
-        this.status = 'connected';
-        this.reason = "ChatGPT connected. Messages use your account's Codex allowance.";
-        this.loginId = '';
-        this.url = '';
-        this.code = '';
-      } else if (type === 'apiKey') {
+      if (isRecord(result.account) && str(result.account.type) === 'apiKey') {
         this.status = 'connected';
         this.reason = 'API key saved. Messages are billed to that key.';
-      } else if (this.provider !== 'chatgpt') {
+      } else {
         this.status = 'disconnected';
-        this.reason = 'Add an API key for this provider in Settings > Pets.';
-      } else if (this.loginId === '') {
-        this.status = 'disconnected';
-        this.reason = 'Connect your ChatGPT account to talk with your companion.';
+        this.reason = 'Add a Claude or OpenRouter key in Settings > Pets.';
       }
     } else {
       return this.handleConversation(signal, r);
@@ -824,6 +759,14 @@ export class Account {
   }
 
   // ---- models ----
+
+  /** The provider's larger model when this request asks to think harder and the key lists it. */
+  deepModel(r: { thinkHarder: boolean }): string | undefined {
+    const id = DEEP_MODELS[this.provider];
+    return r.thinkHarder && id !== undefined && this.models.some((m) => m.id === id)
+      ? id
+      : undefined;
+  }
 
   async listModels(signal: AbortSignal): Promise<void> {
     const page = await this.transport.call(
@@ -945,40 +888,38 @@ export class Account {
       developerInstructions: r.instructions,
     };
     let supportsTools = true;
-    if (r.model !== '' || (this.provider !== '' && this.provider !== 'chatgpt')) {
-      const fetched = await this.freshModels(signal, r.apiKey);
-      const pick = () => {
-        const selected =
-          r.model !== ''
-            ? r.model
-            : ((this.models.find((m) => m.default) ?? this.models[0])?.id ?? '');
-        return this.models.find((m) => m.id === selected);
-      };
-      let found = pick();
-      if (found === undefined && !fetched) {
-        // The cached list may be stale: list once more before refusing.
-        await this.listModels(signal);
-        found = pick();
-      }
-      if (found === undefined) throw new Error('model is unavailable');
-      supportsTools = found.supportsTools;
-      if (!supportsTools && r.workspaceAccess) {
-        // Said rather than silently dropping the tools: a reply that never reads or writes anything
-        // while claiming it did would be worse.
-        c.state = 'error';
-        c.reason =
-          'This model cannot use tools. Pick another model, or turn Workspace access off for this message.';
-        this.bump(c);
-        throw new Error('model does not support tools');
-      }
-      params.model = found.id;
+    const fetched = await this.freshModels(signal, r.apiKey);
+    const pick = () => {
+      const selected =
+        this.deepModel(r) ??
+        (r.model !== ''
+          ? r.model
+          : ((this.models.find((m) => m.default) ?? this.models[0])?.id ?? ''));
+      return this.models.find((m) => m.id === selected);
+    };
+    let found = pick();
+    if (found === undefined && !fetched) {
+      // The cached list may be stale: list once more before refusing.
+      await this.listModels(signal);
+      found = pick();
     }
+    if (found === undefined) throw new Error('model is unavailable');
+    supportsTools = found.supportsTools;
+    if (!supportsTools && r.workspaceAccess) {
+      // Said rather than silently dropping the tools: a reply that never reads or writes anything
+      // while claiming it did would be worse.
+      c.state = 'error';
+      c.reason =
+        'This model cannot use tools. Pick another model, or turn Workspace access off for this message.';
+      this.bump(c);
+      throw new Error('model does not support tools');
+    }
+    params.model = found.id;
     let method = thread === '' ? 'thread/start' : 'thread/resume';
     let started: unknown;
     try {
       if (method === 'thread/resume') {
-        if (this.provider !== '' && this.provider !== 'chatgpt')
-          params.dynamicTools = supportsTools ? workspaceToolsForRequest(r) : [];
+        params.dynamicTools = supportsTools ? workspaceToolsForRequest(r) : [];
         try {
           started = await this.transport.call(method, { ...params, threadId: thread }, signal);
         } catch (error) {
@@ -1116,7 +1057,7 @@ export class Account {
       c.state = 'error';
       if (!disclosureConfirmed) c.disclosureBlocked = true;
       c.reason = disclosureConfirmed
-        ? 'The response could not start. Check the selected model and ChatGPT connection, then retry.'
+        ? 'The response could not start. Check the selected model and your API key, then retry.'
         : HISTORY_SHARING_RECOVERY;
       this.trySave(key);
       throw error;
@@ -1127,26 +1068,9 @@ export class Account {
 
   // ---- notifications ----
 
-  /** Handles one notification from the provider (a Codex notification or its in-process twin). */
+  /** Handles one notification from the provider's in-process transport. */
   notify(method: string, params: unknown): void {
     const p = isRecord(params) ? params : {};
-    if (this.provider === 'chatgpt' && method === 'account/updated')
-      observeRecipientConnection(this.home, isRecord(p.account) ? p.account : null);
-    if (method === 'account/login/completed') {
-      this.loginId = '';
-      this.url = '';
-      this.code = '';
-      if (p.success === true) {
-        if (this.provider === 'chatgpt')
-          observeRecipientConnection(this.home, { connection: randomUUID() });
-        this.status = 'connected';
-        this.reason = 'ChatGPT connected.';
-      } else {
-        this.status = 'error';
-        this.reason = 'Sign-in did not complete. Try connecting again.';
-      }
-      return;
-    }
     const threadId = str(p.threadId);
     const item = isRecord(p.item) ? p.item : {};
     const itemType = str(item.type);
@@ -2343,7 +2267,6 @@ function turnErrorOf(value: unknown): TurnError | undefined {
   return {
     message: str(value.message),
     nixProviderError: str(value.nixProviderError),
-    codexErrorInfo: value.codexErrorInfo,
   };
 }
 

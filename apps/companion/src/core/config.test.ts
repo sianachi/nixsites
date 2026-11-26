@@ -12,7 +12,6 @@ describe('configuration', () => {
   it('reads defaults', () => {
     const config = readConfig(base);
     expect(config).toMatchObject({
-      binary: 'codex',
       chatEffort: 'low',
       trace: false,
       idleSeconds: 300,

@@ -1,10 +1,9 @@
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  MAX_STDERR_BYTES,
   MAX_TRACE_BYTES,
   conversationTag,
   logSafeError,
@@ -14,17 +13,7 @@ import {
   turnErrorAttrs,
 } from './diagnostics.ts';
 import { argumentRefusalCode } from '../tools/flatten.ts';
-import {
-  boot,
-  completed,
-  eventually,
-  fakeCodexBinary,
-  harness,
-  IDS,
-  keyOf,
-  request,
-  type Booted,
-} from '../testing/testing.ts';
+import { boot, completed, harness, IDS, keyOf, request, type Booted } from '../testing/testing.ts';
 
 const open: Booted[] = [];
 afterEach(async () => {
@@ -226,24 +215,10 @@ describe('the shared log', () => {
     expect(logSafeError(undefined)).toBe('');
   });
 
-  it('logs a provider free-text message only for a plain named code', () => {
-    expect(
-      turnErrorAttrs({
-        message: 'Usage limit reached',
-        nixProviderError: '',
-        codexErrorInfo: 'usageLimitExceeded',
-      }),
-    ).toEqual({ code: '"usageLimitExceeded"', error: 'Usage limit reached' });
-    expect(
-      turnErrorAttrs({
-        message: 'upstream body: private prompt',
-        nixProviderError: '',
-        codexErrorInfo: { httpConnectionFailed: { httpStatusCode: 502 } },
-      }),
-    ).toEqual({ code: '{"httpConnectionFailed":{"httpStatusCode":502}}' });
-    expect(
-      turnErrorAttrs({ message: 'no code', nixProviderError: '', codexErrorInfo: undefined }),
-    ).toEqual({ error: 'no code' });
+  it('logs a bounded turn error message and nothing for no error', () => {
+    expect(turnErrorAttrs({ message: 'Usage limit reached', nixProviderError: '' })).toEqual({
+      error: 'Usage limit reached',
+    });
     expect(turnErrorAttrs(undefined)).toEqual({});
   });
 
@@ -256,27 +231,15 @@ describe('the shared log', () => {
       turn: {
         status: 'failed',
         durationMs: 1234,
-        error: {
-          message: 'upstream private text',
-          codexErrorInfo: { httpConnectionFailed: { httpStatusCode: 502 } },
-        },
+        error: { message: 'Anthropic could not be reached' },
       },
     });
     const failed = h.logger.lines.find((l) => l.message === 'companion turn.failed');
     expect(failed?.attrs).toMatchObject({
       status: 'failed',
       provider_duration_ms: 1234,
-      code: '{"httpConnectionFailed":{"httpStatusCode":502}}',
+      error: 'Anthropic could not be reached',
     });
-    expect(h.logger.text()).not.toContain('upstream private text');
-    h.notify('error', {
-      threadId: 'provider-thread',
-      willRetry: true,
-      error: { message: 'Reconnecting', codexErrorInfo: 'serverOverloaded' },
-    });
-    expect(
-      h.logger.lines.find((l) => l.message === 'companion provider.error')?.attrs,
-    ).toMatchObject({ will_retry: true, code: '"serverOverloaded"' });
   });
 
   it('writes provider failure tokens to the log for a key provider failure', async () => {
@@ -395,34 +358,5 @@ describe('the trace', () => {
     const big = traceRaw({ text: 'é'.repeat(70000) }) as string;
     expect(big.startsWith('(')).toBe(true);
     expect(Buffer.byteLength(big)).toBeLessThan(65700);
-  });
-
-  it('captures the provider stderr privately only while tracing, with one rotation', async () => {
-    const quiet = await boot({ real: true, config: { binary: fakeCodexBinary() } });
-    open.push(quiet);
-    await quiet.call({ operation: 'status', workspaceId: '', petId: '' });
-    const quietHome = join(quiet.config.dataDir, `${IDS.tenant}-${IDS.principal}`);
-    expect(existsSync(join(quietHome, 'traces'))).toBe(false);
-
-    const traced = await boot({ real: true, config: { binary: fakeCodexBinary(), trace: true } });
-    open.push(traced);
-    const home = join(traced.config.dataDir, `${IDS.tenant}-${IDS.principal}`);
-    mkdirSync(join(home, 'traces'), { recursive: true });
-    writeFileSync(join(home, 'traces', 'codex-stderr.log'), 'x'.repeat(MAX_STDERR_BYTES + 1));
-    await traced.call({ operation: 'status', workspaceId: '', petId: '' });
-    await eventually(() =>
-      readFileSync(join(home, 'traces', 'codex-stderr.log'), 'utf8').includes('stderr noise'),
-    );
-    expect(statSync(join(home, 'traces', 'codex-stderr.log')).mode & 0o777).toBe(0o600);
-    expect(readdirSync(join(home, 'traces')).sort()).toEqual([
-      'codex-stderr.log',
-      'codex-stderr.log.1',
-    ]);
-    const launch = JSON.parse(readFileSync(join(home, 'launch.json'), 'utf8')) as {
-      env: Record<string, string>;
-    };
-    expect(launch.env.RUST_LOG).toBe('info');
-    // The provider's stderr never reaches the shared log.
-    expect(traced.logger.text()).not.toContain('stderr noise');
   });
 });

@@ -26,7 +26,7 @@ export type QueryOperator = z.infer<typeof queryOperatorSchema>;
  *
  * Plain conditions only: a stored view may also hold one level of "any of" groups (Core's
  * `QueryRules`, `StructureFilterGroup` here), but the group shape would push the pet's largest
- * tool schemas past the Codex 4800-byte budget (`catalog/tools.test.ts`), so the pet proposes
+ * tool schemas past the 4800-byte budget (`catalog/tools.test.ts`), so the pet proposes
  * ANDed conditions and a person adds groups in the editor.
  */
 const viewFilterSpecSchema = z

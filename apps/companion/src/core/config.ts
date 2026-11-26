@@ -7,7 +7,6 @@
 export interface CompanionConfig {
   /** Absolute directory holding accounts, conversations and histories. */
   readonly dataDir: string;
-  readonly binary: string;
   readonly chatEffort: string;
   readonly trace: boolean;
   /** How long an account may sit unused before its provider process is stopped. */
@@ -89,7 +88,6 @@ export function readConfig(env: NodeJS.ProcessEnv): CompanionConfig {
     throw new Error('NIX_COMPANION_COLLAB_URL must be a valid Collab service origin.');
   return {
     dataDir,
-    binary: optional(env, 'NIX_COMPANION_BINARY', 'codex'),
     chatEffort: optional(env, 'NIX_COMPANION_CHAT_EFFORT', 'low'),
     trace: trace === 'true' || trace === '1',
     idleSeconds,

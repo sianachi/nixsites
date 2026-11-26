@@ -42,15 +42,12 @@ export interface PetToolDefinition {
 }
 
 /**
- * The JSON Schema keys Codex 0.153.4's dynamic-tool sanitizer keeps; every other key is dropped
- * before the schema ever reaches the model, and a boolean `true` sub-schema becomes a bare
- * string type (a `false` sub-schema has no stated replacement, so it is treated the same as "no
- * recognisable hint" and becomes `{}`, consistent with the sanitizer's fallback for a schema kind
- * it does not recognise). Keeping only these keys here - rather than trusting Codex to strip the
- * rest - is what lets the byte budget below be measured against the schema Codex actually uses,
- * not the fuller one Zod produces.
+ * The JSON Schema keys a tool schema keeps; every other key is dropped before the schema reaches
+ * the model, and a boolean `true` sub-schema becomes a bare string type (a `false` sub-schema
+ * becomes `{}`). Every provider and MCP client reads these keys, and leaving the rest out keeps the
+ * tool prompt small and the byte budget in `tools.test.ts` measured against what is sent.
  */
-const CODEX_SCHEMA_KEYS = new Set([
+const TOOL_SCHEMA_KEYS = new Set([
   '$ref',
   'type',
   'description',
@@ -66,13 +63,11 @@ const CODEX_SCHEMA_KEYS = new Set([
 ]);
 
 /**
- * Reduces an arbitrary JSON Schema (as `z.toJSONSchema` produces it) to exactly the shape
- * Codex 0.153.4 keeps for a dynamic tool's `inputSchema`. Every tool schema in this module is
- * normalized before it is measured or shipped, so the 4800-byte budget in `tools.test.ts` is the
- * budget Codex itself applies (Codex caps a dynamic tool schema at 4800
- * normalized bytes), not a looser one this package might otherwise send.
+ * Reduces an arbitrary JSON Schema (as `z.toJSONSchema` produces it) to the keys in
+ * `TOOL_SCHEMA_KEYS`. Every tool schema in this module is normalized before it is measured or
+ * shipped, so the 4800-byte budget in `tools.test.ts` measures what is sent.
  */
-export function normalizeForCodex(schema: unknown): unknown {
+export function normalizeToolSchema(schema: unknown): unknown {
   if (schema === true) return { type: 'string' };
   if (schema === false || schema === null || typeof schema !== 'object') return {};
   const input = schema as JsonObject;
@@ -83,18 +78,18 @@ export function normalizeForCodex(schema: unknown): unknown {
   }
 
   for (const key of Object.keys(input)) {
-    if (key === 'const' || !CODEX_SCHEMA_KEYS.has(key)) continue;
+    if (key === 'const' || !TOOL_SCHEMA_KEYS.has(key)) continue;
     const value = input[key];
     if (key === 'items' || key === 'additionalProperties') {
-      output[key] = typeof value === 'boolean' ? value : normalizeForCodex(value);
+      output[key] = typeof value === 'boolean' ? value : normalizeToolSchema(value);
     } else if (key === 'properties') {
       const properties: JsonObject = {};
       for (const [propertyName, propertySchema] of Object.entries(value as JsonObject)) {
-        properties[propertyName] = normalizeForCodex(propertySchema);
+        properties[propertyName] = normalizeToolSchema(propertySchema);
       }
       output[key] = properties;
     } else if (key === 'anyOf' || key === 'oneOf' || key === 'allOf') {
-      output[key] = (value as unknown[]).map((entry) => normalizeForCodex(entry));
+      output[key] = (value as unknown[]).map((entry) => normalizeToolSchema(entry));
     } else {
       output[key] = value;
     }
@@ -104,7 +99,7 @@ export function normalizeForCodex(schema: unknown): unknown {
   if (defsSource) {
     const defs: JsonObject = {};
     for (const [defName, defSchema] of Object.entries(defsSource)) {
-      defs[defName] = normalizeForCodex(defSchema);
+      defs[defName] = normalizeToolSchema(defSchema);
     }
     output.$defs = defs;
   }
@@ -113,7 +108,7 @@ export function normalizeForCodex(schema: unknown): unknown {
 }
 
 function jsonSchemaOf(schema: z.ZodType): unknown {
-  return normalizeForCodex(
+  return normalizeToolSchema(
     z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any', cycles: 'ref' }),
   );
 }
@@ -152,7 +147,7 @@ function propertiesValueProperty(): JsonObject {
  * node tree it is the single largest contributor to the schema's size (roughly 1790 of 5823
  * bytes before this reduction - measured with `z.toJSONSchema`'s default `reused: 'inline'`;
  * `reused: 'ref'` was tried first per L1.2's step 1 and made the schema larger, not smaller,
- * because Codex's normalized keys leave little duplication for `$ref` extraction to remove once
+ * because the normalized keys leave little duplication for `$ref` extraction to remove once
  * `pattern`/`minLength`/`maxLength` are already stripped - so this tactic is applied instead).
  * `blueprintSchema` itself is unchanged: a pet-authored `interactive_form` view still parses and
  * validates; the model is simply not shown that one kind's detail when designing a whole
@@ -187,7 +182,7 @@ function omitBlueprintInteractiveFormDetail(schema: unknown): unknown {
 
 /**
  * Removes the `custom` view kind and its `program` wherever a view schema appears. The two
- * create tools are at the Codex budget, so a custom view is advertised on `add_view` and
+ * create tools are at the size budget, so a custom view is advertised on `add_view` and
  * `update_view` only; the specs still accept one.
  */
 export function omitCustomViews(schema: unknown): unknown {

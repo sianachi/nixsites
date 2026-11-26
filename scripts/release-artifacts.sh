@@ -25,7 +25,7 @@ case "$kind" in
     # the consumer bundles it. Give the package a build when something needs it unbundled.
     pnpm --filter @nix/sync-core --filter @nix/api-client exec pnpm pack --pack-destination "$out"
 
-    # The same tree deploy/docker/node.Dockerfile ships, without the codex binary. Start with:
+    # The same tree deploy/docker/node.Dockerfile ships. Start with:
     #   node --experimental-strip-types apps/node-host/src/index.ts
     find . -name node_modules -type d -prune -exec rm -rf {} +
     pnpm install --prod --frozen-lockfile --ignore-scripts --offline \

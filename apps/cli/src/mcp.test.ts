@@ -676,7 +676,7 @@ describe('nixctl mcp workspace tools', () => {
       });
       return Promise.resolve(
         Response.json({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: 'Connected',
           canConnect: false,
@@ -729,7 +729,7 @@ describe('nixctl mcp workspace tools', () => {
       requests.push({ method: init?.method ?? 'GET', url, body });
       return Promise.resolve(
         Response.json({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: 'Connected',
           canConnect: false,
@@ -800,7 +800,7 @@ describe('nixctl mcp workspace tools', () => {
       requests.push({ method: init?.method ?? 'GET', url });
       return Promise.resolve(
         Response.json({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: 'Connected',
           canConnect: false,
@@ -934,7 +934,7 @@ describe('nixctl mcp notification, reminder and automation tools', () => {
     return { fetchImpl, calls };
   }
 
-  it('keeps every new tool input schema within the 4800-byte companion budget', async () => {
+  it('keeps every new tool input schema within the 4800-byte tool budget', async () => {
     const connected = await connect('owner', async () => unexpectedRequest());
     try {
       const tools = (await connected.client.listTools()).tools.filter((tool) =>
