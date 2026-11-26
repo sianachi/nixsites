@@ -397,7 +397,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
     }
 
     [Fact]
-    public async Task A_send_carries_Cores_source_label_and_one_budget_line_when_a_limit_is_set()
+    public async Task A_send_carries_Cores_signed_usage_ticket_and_one_budget_line_when_a_limit_is_set()
     {
         using var handler = new RecordingWorker();
         using var http = new HttpClient(handler);
@@ -408,7 +408,8 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
 
         Assert.True(result.IsSuccess);
         using var body = JsonDocument.Parse(handler.Body);
-        Assert.Equal("app", body.RootElement.GetProperty("usageSource").GetString());
+        Assert.False(body.RootElement.TryGetProperty("usageSource", out _));
+        Assert.False(string.IsNullOrEmpty(body.RootElement.GetProperty("usageTicket").GetString()));
         Assert.Equal("Budget: $12.40 of $20.00 used this month, $7.60 left.", body.RootElement.GetProperty("budgetLine").GetString());
     }
 

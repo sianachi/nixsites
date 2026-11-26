@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Nix.Abstractions;
 using Nix.Domain.Identity;
@@ -96,23 +97,47 @@ public sealed class PetUsageTests
         Assert.Empty(none.Created);
     }
 
+    [Fact]
+    public void A_ticket_names_who_which_pet_and_source_and_a_forged_or_changed_one_opens_nothing()
+    {
+        var service = Service(null, 0);
+        var opened = service.Open(service.Ticket(PetId, "plan"));
+        Assert.NotNull(opened);
+        Assert.Equal(PetId, opened.Value.PetId);
+        Assert.Equal("plan", opened.Value.Source);
+        Assert.Null(service.Open(null));
+        Assert.Null(service.Open("forged"));
+        var ticket = service.Ticket(PetId, "app");
+        Assert.Null(service.Open(ticket[..^2] + "AA"));
+    }
+
+    [Fact]
+    public void A_ticket_for_an_unknown_source_or_past_its_two_hours_opens_nothing()
+    {
+        var service = Service(null, 0);
+        Assert.Null(service.Open(service.Ticket(PetId, "admin")));
+        Assert.Null(Service(null, 0, now: Now.AddHours(3)).Open(service.Ticket(PetId, "app")));
+    }
+
     private static PetUsageRow Row() => new(PetId, null, "anthropic", "claude-haiku-5-5", "app", 1, 0, 0, 1, 0.01m, Now, 5);
 
-    internal static PetUsageService Service(decimal? limit, decimal spent) => Service(limit, spent, out _);
+    internal static PetUsageService Service(decimal? limit, decimal spent, DateTimeOffset? now = null) => Service(limit, spent, out _, now);
 
-    private static PetUsageService Service(decimal? limit, decimal spent, out Notices notices)
+    private static PetUsageService Service(decimal? limit, decimal spent, out Notices notices, DateTimeOffset? now = null)
     {
         var session = new ScopedNixSessionContextAccessor();
         session.Set(new NixSessionContext(TenantId.Create(), null, PrincipalId.Create()));
         var services = new ServiceCollection();
         services.AddSingleton<IQueryHandler<GetPetSettings, PetSettingsResponse>>(new Settings(limit));
         notices = new Notices();
-        return new PetUsageService(new Store(spent), new NoPreferences(), new NixDispatcher(services.BuildServiceProvider()), session, new Clock());
+        return new PetUsageService(new Store(spent), new NoPreferences(), new NixDispatcher(services.BuildServiceProvider()), session, new Clock(now ?? Now), Provider);
     }
 
-    private sealed class Clock : TimeProvider
+    private static readonly EphemeralDataProtectionProvider Provider = new();
+
+    private sealed class Clock(DateTimeOffset at) : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => Now;
+        public override DateTimeOffset GetUtcNow() => at;
     }
 
     private sealed class Settings(decimal? limit) : IQueryHandler<GetPetSettings, PetSettingsResponse>

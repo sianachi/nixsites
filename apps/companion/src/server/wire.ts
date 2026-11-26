@@ -177,7 +177,7 @@ const anthropicModel = (id: string, name: string): ModelInfo => ({
 });
 
 // What the model list answers when the key cannot list models.
-const ANTHROPIC_MODELS: readonly ModelInfo[] = [
+export const ANTHROPIC_MODELS: readonly ModelInfo[] = [
   anthropicModel(ANTHROPIC_CHAT_MODEL, 'Claude Haiku 5.5'),
   anthropicModel('claude-sonnet-5-5', 'Claude Sonnet 5.5'),
   anthropicModel('claude-opus-5-5', 'Claude Opus 5.5'),

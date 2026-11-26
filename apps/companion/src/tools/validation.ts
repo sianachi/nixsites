@@ -57,7 +57,7 @@ const FIELDS: Readonly<Record<keyof Request, Kind>> = {
   automatic: 'boolean',
   approvedOperation: 'string',
   thinkHarder: 'boolean',
-  usageSource: 'string',
+  usageTicket: 'string',
   budgetLine: 'string',
 };
 

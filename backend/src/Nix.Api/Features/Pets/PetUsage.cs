@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Nix.Abstractions;
@@ -19,10 +20,10 @@ public sealed record PetBudgetStatus(decimal? LimitUsd, decimal SpentUsd, decima
 public sealed record PetUsageResponse(PetBudgetStatus Budget, PetUsageGroup Total, IReadOnlyList<PetUsageGroup> Days,
     IReadOnlyList<PetUsageGroup> ByPet, IReadOnlyList<PetUsageGroup> ByModel, IReadOnlyList<PetUsageGroup> BySource);
 
-/// <summary>One finished turn, as the companion reports it. The tenant and person select the session; there is no source claim to trust beyond Core's own label.</summary>
+/// <summary>One finished turn, as the companion reports it. Who, which pet and the source label come only from the ticket Core signed when it started the turn.</summary>
 [SuppressMessage("Performance", "CA1812", Justification = "Bound from trusted service HTTP requests.")]
-internal sealed record RecordPetUsageRequest(Guid TenantId, Guid PrincipalId, Guid PetId, string? WorkspaceId,
-    string Provider, string Model, string Source, long InputTokens, long CacheReadTokens, long CacheWriteTokens,
+internal sealed record RecordPetUsageRequest(string Ticket, string? WorkspaceId,
+    string Provider, string Model, long InputTokens, long CacheReadTokens, long CacheWriteTokens,
     long OutputTokens, decimal? CostUsd, DateTimeOffset StartedAt, int DurationMs);
 
 /// <summary>The labels Core gives a turn's usage. A label is chosen from the session that started the turn, never from a request body.</summary>
@@ -49,14 +50,48 @@ public static class PetUsageSources
 
 /// <summary>The month's spending against the person's limit, and the refusal when it is used up.</summary>
 public sealed class PetUsageService(IPetUsageStore store, IPrincipalPreferencesStore preferences, NixDispatcher dispatcher,
-    INixSessionContextAccessor session, TimeProvider clock)
+    INixSessionContextAccessor session, TimeProvider clock, IDataProtectionProvider protection)
 {
+    private readonly IDataProtector _tickets = protection.CreateProtector("Nix.PetUsage.v1");
+    private static readonly TimeSpan TicketLife = TimeSpan.FromHours(2);
+
     /// <summary>The refusal code when the month's limit is reached.</summary>
     public const string BudgetExhausted = "pets.budget_exhausted";
 
     internal const string BudgetExhaustedMessage = "This month's pet budget is used up. Raise it in Settings > Pets.";
 
     private NixSessionContext Caller => session.Current ?? throw new InvalidOperationException("A session is required.");
+
+    /// <summary>
+    /// A signed ticket binding one turn's usage report to the caller, pet and source label. The companion echoes it back;
+    /// Core trusts nothing else in the report. shortcut: not single-use, so a leaked ticket can repeat reports for its
+    /// two hours; add a per-turn nonce row if that matters.
+    /// </summary>
+    public string Ticket(Guid petId, string source) => _tickets.Protect(string.Create(CultureInfo.InvariantCulture,
+        $"{Caller.TenantId.Value}|{Caller.PrincipalId.Value}|{petId}|{clock.GetUtcNow().Add(TicketLife).ToUnixTimeSeconds()}|{source}"));
+
+    /// <summary>The tenant, person, pet and source a live ticket was signed for; <see langword="null"/> when forged, expired or malformed.</summary>
+    public (Guid TenantId, Guid PrincipalId, Guid PetId, string Source)? Open(string? ticket)
+    {
+        if (string.IsNullOrEmpty(ticket) || ticket.Length > 1024)
+        {
+            return null;
+        }
+
+        try
+        {
+            var parts = _tickets.Unprotect(ticket).Split('|', 5);
+            return parts.Length == 5 && Guid.TryParse(parts[0], out var tenant) && Guid.TryParse(parts[1], out var person)
+                && Guid.TryParse(parts[2], out var pet) && long.TryParse(parts[3], CultureInfo.InvariantCulture, out var expires)
+                && expires > clock.GetUtcNow().ToUnixTimeSeconds() && PetUsageSources.IsValid(parts[4])
+                ? (tenant, person, pet, parts[4])
+                : null;
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>The calendar month containing <paramref name="at"/> in <paramref name="zone"/>, as UTC bounds.</summary>
     public static (DateTimeOffset From, DateTimeOffset To, string Month) MonthOf(DateTimeOffset at, string zone, string? month = null)
@@ -168,7 +203,8 @@ internal static class PetUsageEndpoints
         return TypedResults.Ok(await usage.GetAsync(month, http.RequestAborted).ConfigureAwait(false));
     }
 
-    private static async Task<IResult> Record(RecordPetUsageRequest request, HttpContext http, [FromServices] IIsolatedUnitOfWork isolated)
+    private static async Task<IResult> Record(RecordPetUsageRequest request, HttpContext http, [FromServices] IIsolatedUnitOfWork isolated,
+        [FromServices] PetUsageService usage)
     {
         Guid? workspace = null;
         if (!string.IsNullOrEmpty(request.WorkspaceId))
@@ -181,9 +217,13 @@ internal static class PetUsageEndpoints
             workspace = parsed;
         }
 
-        if (request.TenantId == Guid.Empty || request.PrincipalId == Guid.Empty || request.PetId == Guid.Empty
-            || request.Provider is not (PetProviders.Anthropic or PetProviders.OpenRouter) || request.Model.Length > 160
-            || !PetUsageSources.IsValid(request.Source)
+        var ticket = usage.Open(request.Ticket);
+        if (ticket is not { } bound)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        if (request.Provider is not (PetProviders.Anthropic or PetProviders.OpenRouter) || request.Model.Length > 160
             || request.InputTokens is < 0 or > 1_000_000_000 || request.CacheReadTokens is < 0 or > 1_000_000_000
             || request.CacheWriteTokens is < 0 or > 1_000_000_000 || request.OutputTokens is < 0 or > 1_000_000_000
             || request.CostUsd is < 0 or > 10_000 || request.DurationMs < 0)
@@ -191,9 +231,9 @@ internal static class PetUsageEndpoints
             return TypedResults.BadRequest();
         }
 
-        var row = new PetUsageRow(request.PetId, workspace, request.Provider, request.Model, request.Source, request.InputTokens,
+        var row = new PetUsageRow(bound.PetId, workspace, request.Provider, request.Model, bound.Source, request.InputTokens,
             request.CacheReadTokens, request.CacheWriteTokens, request.OutputTokens, request.CostUsd, request.StartedAt, request.DurationMs);
-        var context = new NixSessionContext(TenantId.From(request.TenantId), null, Nix.Domain.Identity.PrincipalId.From(request.PrincipalId));
+        var context = new NixSessionContext(TenantId.From(bound.TenantId), null, Nix.Domain.Identity.PrincipalId.From(bound.PrincipalId));
         _ = await isolated.RunAsync(context, async (services, token) =>
         {
             await services.GetRequiredService<PetUsageService>()

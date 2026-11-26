@@ -1188,17 +1188,14 @@ export class Account {
 
   /** Tells Core a finished turn's tokens and estimated cost; nothing when the wire counted none. */
   reportTurn(r: Request, turn: Record<string, unknown>, startedAt: number): void {
-    if (this.reportUsage === undefined || r.usageSource === '' || !isRecord(turn.usage)) return;
+    if (this.reportUsage === undefined || r.usageTicket === '' || !isRecord(turn.usage)) return;
     const usage = turn.usage as unknown as ProviderUsage;
     const model = str(turn.model);
     this.reportUsage({
-      tenantId: r.tenantId,
-      principalId: r.principalId,
-      petId: r.petId,
+      ticket: r.usageTicket,
       workspaceId: r.workspaceId,
       provider: this.provider,
       model,
-      source: r.usageSource,
       inputTokens: usage.input_tokens,
       cacheReadTokens: usage.cache_read_input_tokens,
       cacheWriteTokens: usage.cache_creation_input_tokens,

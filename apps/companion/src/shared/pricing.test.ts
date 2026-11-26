@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ANTHROPIC_MODELS } from '../server/wire.ts';
 import { ANTHROPIC_CHAT_MODEL, DEEP_MODELS, THINKING_OFF } from './models.ts';
 import { ANTHROPIC_PRICES, estimateCostUsd } from './pricing.ts';
 
@@ -16,6 +17,7 @@ describe('pricing', () => {
       ANTHROPIC_CHAT_MODEL,
       ...Object.values(DEEP_MODELS),
       ...Object.keys(THINKING_OFF),
+      ...ANTHROPIC_MODELS.map((m) => m.id),
     ];
     for (const model of chosen) expect(ANTHROPIC_PRICES[model], model).toBeDefined();
   });
@@ -26,8 +28,17 @@ describe('pricing', () => {
     );
   });
 
-  it('prices an unlisted Claude model as the larger one', () => {
-    expect(estimateCostUsd('anthropic', 'claude-future', usage)).toBeCloseTo(2 + 0.1 + 2.5 + 10);
+  it('prices an unlisted Claude model as the dearest one, never below any listed model', () => {
+    const unlisted = estimateCostUsd('anthropic', 'claude-future', usage) ?? 0;
+    expect(unlisted).toBeCloseTo(10 + 1 + 12.5 + 50);
+    for (const model of Object.keys(ANTHROPIC_PRICES))
+      expect(unlisted, model).toBeGreaterThanOrEqual(
+        estimateCostUsd('anthropic', model, usage) ?? 0,
+      );
+  });
+
+  it('charges Opus 5.5 at its own rate, not Sonnet 5.5', () => {
+    expect(estimateCostUsd('anthropic', 'claude-opus-5-5', usage)).toBeCloseTo(4 + 0.2 + 5 + 20);
   });
 
   it('takes the cost OpenRouter reports, or none', () => {

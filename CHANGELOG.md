@@ -9,7 +9,10 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - **Pet usage and a monthly spending limit.** Every finished pet turn (chat, note chat, inline
   writing, plans, task runs and routines) is recorded with its tokens, model, source and an
-  estimated cost: a price table for Claude models, and OpenRouter's own price when it reports one.
+  estimated cost: a price table for the Claude models (a model not in it is charged at the dearest
+  rate, so spend is never under-counted), and OpenRouter's own price when it reports one. The
+  companion reports a turn with a ticket Core signed when it started it, which names the person,
+  pet and source, so a report cannot be filed for someone else.
   Rows are private to the person who spent them and kept 13 months. Settings > Pets shows this
   month's total against the limit with a breakdown by model, source and pet, and a day-by-day list.
   `GET /api/v1/me/pets/usage` (Read scope; `month=yyyy-MM` for an earlier month) returns the same

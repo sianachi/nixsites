@@ -169,8 +169,8 @@ internal sealed record PetWorkerRequest(string TenantId, string PrincipalId, str
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ConsentMode = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false,
-    // Core's own label for the turn's usage and the one budget line the turn carries; see PetUsageService.
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? UsageSource = null,
+    // Core's signed ticket for the turn's usage report and the one budget line the turn carries; see PetUsageService.
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? UsageTicket = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? BudgetLine = null);
 
 /// <summary>One inline writing request from the editor: the person's selection and what to do with it.</summary>
@@ -194,7 +194,7 @@ internal sealed record PetInlineWorkerRequest(string TenantId, string PrincipalI
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ApiKey = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? UsageSource = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? UsageTicket = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? BudgetLine = null);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]

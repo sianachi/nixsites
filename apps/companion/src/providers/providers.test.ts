@@ -140,19 +140,19 @@ describe('Anthropic', () => {
     );
     const reports: UsageReport[] = [];
     const k = keyAccount('anthropic', server, tempDir(), 'sk-test', true, (r) => reports.push(r));
-    await k.send({ usageSource: 'plan', budgetLine: 'Budget: $1 of $20 used this month.' });
+    await k.send({ usageTicket: 'plan', budgetLine: 'Budget: $1 of $20 used this month.' });
     await eventually(() => reports.length === 1);
     expect(reports[0]).toMatchObject({
       provider: 'anthropic',
       model: 'claude-x',
-      source: 'plan',
+      ticket: 'plan',
       inputTokens: 10,
       cacheReadTokens: 5,
       cacheWriteTokens: 2,
       outputTokens: 7,
     });
-    // An unlisted Claude model is priced as the larger one: 10*2 + 5*0.1 + 2*2.5 + 7*10 per million.
-    expect(reports[0]?.costUsd).toBeCloseTo(95.5 / 1_000_000);
+    // An unlisted Claude model is priced as the dearest one: 10*10 + 5*1 + 2*12.5 + 7*50 per million.
+    expect(reports[0]?.costUsd).toBeCloseTo(480 / 1_000_000);
     const post = server.seen.find((s) => s.method === 'POST');
     expect(post?.body).toContain('Budget: $1 of $20 used this month.');
   });
@@ -716,7 +716,7 @@ describe('OpenRouter', () => {
     );
     const reports: UsageReport[] = [];
     const k = keyAccount('openrouter', server, tempDir(), 'sk-test', true, (r) => reports.push(r));
-    await k.send({ usageSource: 'app' });
+    await k.send({ usageTicket: 'app' });
     await eventually(() => reports.length === 1);
     expect(reports[0]).toMatchObject({
       provider: 'openrouter',

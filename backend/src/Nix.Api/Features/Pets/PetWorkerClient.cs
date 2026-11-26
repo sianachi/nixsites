@@ -394,7 +394,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             request.ToolImage.Length > 0 ? request.ToolImage : null, turnToken,
             request.Operation == "send" && (request.ConsentMode == "plan" ? request.ReadWithoutAsking : turnToken is not null),
             NullIfEmpty(request.Fingerprint), NullIfEmpty(request.EditedArguments), NullIfEmpty(request.EditNote), request.Automatic,
-            NullIfEmpty(request.ApprovedOperation), sharingAttestation, NullIfEmpty(request.ConsentMode), request.ThinkHarder, usageSource, budgetLine), PetJsonContext.Default.PetWorkerRequest);
+            NullIfEmpty(request.ApprovedOperation), sharingAttestation, NullIfEmpty(request.ConsentMode), request.ThinkHarder, pet is null ? null : usage?.Ticket(pet.Id, usageSource), budgetLine), PetJsonContext.Default.PetWorkerRequest);
         try
         {
             if (slot is not null)
@@ -661,7 +661,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         return Result.Success(new PetInlineWorkerRequest(context.TenantId.Value.ToString(), context.PrincipalId.Value.ToString(),
             workspaceId.ToString(), pet.Id.ToString(), operation, requestId.ToString(), text,
             sharedText, contextText, inlineKind, language, model.Length > 0 ? model : pet.Model,
-            provider, apiKey, sharingAttestation, thinkHarder, usageSource, budgetLine));
+            provider, apiKey, sharingAttestation, thinkHarder, usage?.Ticket(pet.Id, usageSource), budgetLine));
     }
 
     private async Task<Result<HttpResponseMessage>> OpenToolFreeTurnAsync(PetInlineWorkerRequest request, CancellationToken cancellationToken)

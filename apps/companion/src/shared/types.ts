@@ -72,8 +72,8 @@ export interface Request {
   approvedOperation: string;
   /** send and plan steps: run this one on the provider's larger model. */
   thinkHarder: boolean;
-  /** Core's label for what started this turn (app, plan, run, routine, inline); echoed in the usage report. */
-  usageSource: string;
+  /** Core's signed ticket for this turn's usage report; echoed back, never read. */
+  usageTicket: string;
   /** One line on the month's pet budget, appended to the turn's input after the cached prefix; empty with no limit. */
   budgetLine: string;
 }
@@ -127,7 +127,7 @@ export function emptyRequest(): Request {
     automatic: false,
     approvedOperation: '',
     thinkHarder: false,
-    usageSource: '',
+    usageTicket: '',
     budgetLine: '',
   };
 }
@@ -213,13 +213,11 @@ export interface ProviderUsage {
 
 /** One finished turn, as Core stores it. */
 export interface UsageReport {
-  tenantId: string;
-  principalId: string;
-  petId: string;
+  /** Core's signed ticket from the turn's request; it names the person, pet and source. */
+  ticket: string;
   workspaceId: string;
   provider: string;
   model: string;
-  source: string;
   inputTokens: number;
   cacheReadTokens: number;
   cacheWriteTokens: number;

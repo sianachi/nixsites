@@ -119,13 +119,10 @@ describe('Core client', () => {
 
 describe('usage report', () => {
   const report = {
-    tenantId: IDS.tenant,
-    principalId: IDS.principal,
-    petId: IDS.item,
+    ticket: 'signed-ticket',
     workspaceId: '',
     provider: 'anthropic',
     model: 'claude-haiku-5-5',
-    source: 'app',
     inputTokens: 1,
     cacheReadTokens: 0,
     cacheWriteTokens: 0,
@@ -146,7 +143,9 @@ describe('usage report', () => {
     });
     expect(seen[0]?.url).toBe('/internal/pets/usage');
     expect(seen[0]?.headers['x-nix-internal-secret']).toBe('s3cret');
-    expect(JSON.parse(seen[0]?.body ?? '')).toMatchObject({ source: 'app', outputTokens: 2 });
+    expect(JSON.parse(seen[0]?.body ?? '')).toEqual(
+      expect.objectContaining({ ticket: 'signed-ticket', outputTokens: 2 }),
+    );
   });
 
   it('never throws when Core is unreachable', () => {

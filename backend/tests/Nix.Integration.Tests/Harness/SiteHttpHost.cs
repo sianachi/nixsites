@@ -39,6 +39,15 @@ internal sealed class SiteHttpHost : IAsyncDisposable
     /// <summary>Routes worker loopback calls through this host without opening a socket.</summary>
     public HttpMessageHandler CreateLoopbackHandler() => _factory.Server.CreateHandler();
 
+    /// <summary>A pet usage ticket Core would sign for this person's turn.</summary>
+    public string PetUsageTicket(Guid tenant, Guid principal, Guid pet, string source)
+    {
+        using var scope = _factory.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<Nix.Persistence.ScopedNixSessionContextAccessor>().Set(
+            new Nix.Abstractions.NixSessionContext(Nix.Domain.Tenancy.TenantId.From(tenant), null, Nix.Domain.Identity.PrincipalId.From(principal)));
+        return scope.ServiceProvider.GetRequiredService<Nix.Features.Pets.PetUsageService>().Ticket(pet, source);
+    }
+
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
 
     /// <summary>Starts the application.</summary>
