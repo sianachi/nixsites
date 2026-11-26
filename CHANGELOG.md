@@ -248,6 +248,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- A pet addressed in a message thread now replies to the message that addressed it, not to whichever message comes last in the thread, and long threads no longer hide it.
+- Messages under a published site's pages no longer become site pages or appear in the build.
+- Stopping a "Think harder" turn in the middle of a tool step no longer makes the next message in that conversation fail.
 - A Claude turn on OpenRouter that is cut off before its price arrives is now estimated at that
   Claude model's price instead of the dearest one. The sending line no longer lingers when the pet
   or provider key changes mid-send, and a sent message no longer shows twice once the server holds it.

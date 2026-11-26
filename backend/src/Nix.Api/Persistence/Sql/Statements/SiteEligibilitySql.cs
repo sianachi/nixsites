@@ -81,6 +81,7 @@ public static class SiteEligibilitySql
             WHERE walk.depth < 128
               AND child.workspace_id = @workspace_id
               AND child.lifecycle_state = 'active'
+              AND child.type <> 'message'
               AND child.template_id IS NULL
               AND NOT EXISTS (SELECT 1 FROM barred WHERE barred.item_id = child.id)
               AND NOT EXISTS (
@@ -176,6 +177,7 @@ public static class SiteEligibilitySql
             WHERE walk.depth < 128
               AND child.workspace_id = @workspace_id
               AND child.lifecycle_state = 'active'
+              AND child.type <> 'message'
               AND child.template_id IS NULL
               AND NOT EXISTS (SELECT 1 FROM barred WHERE barred.item_id = child.id)
               AND NOT EXISTS (
@@ -195,6 +197,7 @@ public static class SiteEligibilitySql
          AND child.parent_id = walk.id
         WHERE child.workspace_id = @workspace_id
           AND child.lifecycle_state = 'active'
+          AND child.type <> 'message'
           AND child.template_id IS NULL
           AND NOT EXISTS (SELECT 1 FROM barred WHERE barred.item_id = child.id)
           AND COALESCE(nix_safe_timestamptz(split_part(child.properties ->> dated.date_property, '[', 1)) > @now, true)

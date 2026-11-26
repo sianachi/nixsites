@@ -47,6 +47,12 @@ public sealed class SiteEligibilityTests(NixPostgresFixture fixture) : IAsyncLif
     }
 
     [Fact]
+    public async Task A_message_under_a_site_page_is_never_a_page()
+    {
+        Assert.DoesNotContain("A message", (await EligibleAsync()).Select(Name));
+    }
+
+    [Fact]
     public async Task A_locked_item_and_everything_under_it_is_withheld_even_when_the_publisher_unlocked_it()
     {
         var eligible = (await EligibleAsync()).Select(Name).ToHashSet();
@@ -270,6 +276,8 @@ public sealed class SiteEligibilityTests(NixPostgresFixture fixture) : IAsyncLif
         _items["root"] = Root;
         var guide = await Item("Guide", Root);
         await Item("Install", guide);
+        var message = await Item("A message", guide);
+        await Sql($"UPDATE item SET type = 'message' WHERE id = '{message.Value}'");
 
         var locked = await Item("Locked", Root);
         await Item("Under the lock", locked);
