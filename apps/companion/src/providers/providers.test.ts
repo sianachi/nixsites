@@ -730,6 +730,21 @@ describe('OpenRouter', () => {
     });
   });
 
+  it('counts a stream that ends before its usage chunk as an estimate, never free', async () => {
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url === '/models') return jsonResponse(res, 200, models);
+        sse(res, [chunk({ content: 'Hi.' }), chunk({}, 'stop'), '[DONE]']);
+      }),
+    );
+    const reports: UsageReport[] = [];
+    const k = keyAccount('openrouter', server, tempDir(), 'sk-test', true, (r) => reports.push(r));
+    await k.send({ usageTicket: 'app' });
+    await eventually(() => reports.length === 1);
+    expect(reports[0]?.inputTokens).toBeGreaterThan(0);
+    expect(reports[0]?.costUsd).toBeGreaterThan(0);
+  });
+
   it('lists models marking tool support, the first as default', async () => {
     const server = await track(
       startServer((_seen, res) => {

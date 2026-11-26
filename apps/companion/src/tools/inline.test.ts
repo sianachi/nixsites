@@ -2,6 +2,8 @@ import type { ServerResponse } from 'node:http';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { UsageReport } from '../shared/types.ts';
+
 import {
   inlineInput,
   inlineValid,
@@ -157,6 +159,29 @@ describe('inline stream', () => {
       b.logger.lines.filter((l) => l.message.startsWith('companion inline')).map((l) => l.message),
     ).toEqual(['companion inline.started', 'companion inline.finished']);
     expect(b.logger.text()).not.toContain('Selected text');
+  });
+
+  it('reports the finished inline turn to Core under its ticket, and a turn without a ticket reports nothing', async () => {
+    const reports: UsageReport[] = [];
+    const b = await boot({ deps: { reportUsage: (report) => reports.push(report) } });
+    open.push(b);
+    const usage = {
+      input_tokens: 3,
+      cache_read_input_tokens: 0,
+      cache_creation_input_tokens: 0,
+      output_tokens: 2,
+    };
+    const first = await stream(b, { usageTicket: 'inline-ticket' });
+    notify(b, 'item/agentMessage/delta', { delta: 'Better' });
+    notify(b, 'turn/completed', { turn: { status: 'completed', model: 'claude-x', usage } });
+    await first.text();
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toMatchObject({ ticket: 'inline-ticket', inputTokens: 3, outputTokens: 2 });
+
+    const second = await stream(b);
+    notify(b, 'turn/completed', { turn: { status: 'completed', model: 'claude-x', usage } });
+    await second.text();
+    expect(reports).toHaveLength(1);
   });
 
   it('refuses at once when the model tries to use a tool, and interrupts it', async () => {

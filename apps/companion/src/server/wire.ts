@@ -1,5 +1,6 @@
 import { providerResponseError, readBounded } from '../providers/provider-errors.ts';
 import { ANTHROPIC_CHAT_MODEL, THINKING_OFF } from '../shared/models.ts';
+import { estimateCostUsd } from '../shared/pricing.ts';
 import type { ModelInfo, ProviderUsage } from '../shared/types.ts';
 import { isRecord, str } from '../shared/util.ts';
 
@@ -533,6 +534,7 @@ export const openrouterWire: ProviderWire = {
     }
     if (response.status !== 200) throw await providerResponseError('openrouter', response, false);
     let text = '';
+    let counted = false;
     const partials = new Map<number, { id: string; name: string; arguments: string }>();
     await readSse(ctx, response, (data) => {
       let chunk: unknown;
@@ -545,6 +547,7 @@ export const openrouterWire: ProviderWire = {
       if (isRecord(chunk.error))
         throw new Error('OpenRouter reported an error during the response');
       if (isRecord(chunk.usage)) {
+        counted = true;
         const cached = isRecord(chunk.usage.prompt_tokens_details)
           ? Number(chunk.usage.prompt_tokens_details.cached_tokens ?? 0) || 0
           : 0;
@@ -577,6 +580,22 @@ export const openrouterWire: ProviderWire = {
           partial.arguments += str(fn.arguments);
         }
       }
+    }).finally(() => {
+      if (counted) return;
+      // shortcut: a stream that ends before its usage chunk is estimated at 4 characters a token, priced as the
+      // model's own Claude price or else the dearest one, so it never counts as free; upgrade if OpenRouter
+      // offers a generation lookup by id.
+      const input = Math.ceil(JSON.stringify(body).length / 4);
+      const output = Math.ceil(text.length / 4);
+      thread.usage.input_tokens += input;
+      thread.usage.output_tokens += output;
+      const cost = estimateCostUsd('anthropic', thread.model, {
+        input_tokens: input,
+        cache_read_input_tokens: 0,
+        cache_creation_input_tokens: 0,
+        output_tokens: output,
+      });
+      thread.usage.cost_usd = (thread.usage.cost_usd ?? 0) + (cost ?? 0);
     });
     const calls: ProviderToolCall[] = [];
     for (const partial of partials.values()) {
