@@ -19,7 +19,7 @@ describe('pet boundary schemas', () => {
     (rootItemId) => {
       const scope = { rootItemId, readOnly: false };
       const parsed = petConnectionSchema.parse({
-        provider: 'openai',
+        provider: 'anthropic',
         status: 'connected',
         reason: '',
         canConnect: false,
@@ -44,7 +44,7 @@ describe('pet boundary schemas', () => {
       }),
     ).toEqual({
       ...settings,
-      profiles: [{ ...pet, applyWithoutAsking: false, provider: 'chatgpt' }],
+      profiles: [{ ...pet, applyWithoutAsking: false, provider: 'anthropic', model: '' }],
       inlineWriting: false,
     });
   });
@@ -108,10 +108,10 @@ describe('pet boundary schemas', () => {
       petSettingsSchema.safeParse({ ...settings, activePetId: null, enabled: true }).success,
     ).toBe(false);
   });
-  it('accepts connected accounts and rejects untrusted sign-in destinations', () => {
+  it('accepts connected accounts and rejects the retired providers', () => {
     expect(
       petConnectionSchema.safeParse({
-        provider: 'chatgpt',
+        provider: 'anthropic',
         status: 'connected',
         reason: '',
         canConnect: false,
@@ -119,7 +119,7 @@ describe('pet boundary schemas', () => {
     ).toBe(true);
     expect(
       petConnectionSchema.parse({
-        provider: 'chatgpt',
+        provider: 'anthropic',
         status: 'connected',
         reason: '',
         canConnect: false,
@@ -127,7 +127,7 @@ describe('pet boundary schemas', () => {
     ).toBe(0);
     expect(
       petConnectionSchema.parse({
-        provider: 'chatgpt',
+        provider: 'anthropic',
         status: 'connected',
         reason: '',
         canConnect: false,
@@ -137,10 +137,9 @@ describe('pet boundary schemas', () => {
     expect(
       petConnectionSchema.safeParse({
         provider: 'chatgpt',
-        status: 'connecting',
+        status: 'connected',
         reason: '',
-        canConnect: true,
-        verificationUrl: 'https://attacker.example/login',
+        canConnect: false,
       }).success,
     ).toBe(false);
   });

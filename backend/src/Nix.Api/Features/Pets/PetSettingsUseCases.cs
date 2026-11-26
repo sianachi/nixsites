@@ -81,7 +81,8 @@ public static class PetSettingsValidation
                     or "origami-crane" or "jumping-spider" or "lantern-spirit" or "hermit-crab" or "kirin-fawn"
                     or "gecko" or "pocket-whale" or "crystal-golem" or "fruit-bat" or "dust-bunny")
                 || profile.Instructions is null || profile.Instructions.Length > 2000
-                || !PetProviders.IsValid(profile.Provider))
+                || !PetProviders.IsValid(profile.Provider)
+                || profile.Model is null || profile.Model.Length > 160 || profile.Model.Any(char.IsControl))
             {
                 return false;
             }

@@ -114,7 +114,7 @@ public sealed partial class PetPlanSharingHttpTests(NixPostgresFixture fixture) 
         using var settings = await SiteHttpHost.JsonAsync(settingsResponse);
         using (var saved = await host.SendAsync(HttpMethod.Put, "/api/v1/me/pets/settings", browser,
             new SavePetSettingsRequest(settings.RootElement.GetProperty("revision").GetInt64(),
-                new PetSettings(true, pet, [new(pet, "Fixture", "owl", "", Provider: "openai")]))))
+                new PetSettings(true, pet, [new(pet, "Fixture", "owl", "", Provider: "anthropic")]))))
         {
             saved.EnsureSuccessStatusCode();
         }
@@ -169,7 +169,7 @@ public sealed partial class PetPlanSharingHttpTests(NixPostgresFixture fixture) 
         Assert.True(await Validate(host, values));
         foreach (var field in new[] { "tenantId", "principalId", "workspaceId", "petId", "provider", "turnId" })
         {
-            var changed = new Dictionary<string, object?>(values) { [field] = field == "provider" ? "openai" : Guid.NewGuid() };
+            var changed = new Dictionary<string, object?>(values) { [field] = field == "provider" ? "openrouter" : Guid.NewGuid() };
             Assert.False(await Validate(host, changed));
         }
         var forged = new Dictionary<string, object?>(values) { ["attestation"] = "forged" };
@@ -357,7 +357,7 @@ public sealed partial class PetPlanSharingHttpTests(NixPostgresFixture fixture) 
             Assert.Equal(HttpStatusCode.Conflict, held.StatusCode);
         }
 
-        await Configure(host, browser, pet, "openai");
+        await Configure(host, browser, pet, "openrouter");
         var changedProvider = await Question(host, browser, route, pet, scope);
         Assert.NotEqual(question.GetProperty("recipientRevision").GetString(), changedProvider.GetProperty("recipientRevision").GetString());
         using (var held = await Runtime(host, browser, pet))

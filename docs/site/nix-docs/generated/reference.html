@@ -2199,19 +2199,7 @@
 <p>Request body: <code>PetSharingQuestionRequest</code>.</p>
 <p>Responses: <code>200</code>.</p>
 </article></section>
-<section id="pets"><h2>Pets</h2><article id="getpetconnection" data-search="get /api/v1/me/pets/connection getpetconnection   pets">
-<h3><span class="verb">GET</span> <code>/api/v1/me/pets/connection</code></h3>
-<p></p>
-<p class="id">Operation id: <code>GetPetConnection</code></p>
-<p><strong>Can.</strong> Read the resource named in the summary.</p>
-<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
-<p><strong>Token.</strong> A personal access token cannot call this. Only an interactive browser session can.</p>
-
-
-
-<p>Responses: <code>200</code>.</p>
-</article>
-<article id="petinlinewrite" data-search="post /api/v1/me/pets/inline petinlinewrite stream an inline writing result for text selected in a note sends the selected text to the companion and streams the answer back as server-sent events, unchanged from the worker. 'delta' events carry {&quot;text&quot;: &quot;...&quot;} for each piece as it is written; the stream then ends with exactly one 'done' event carrying {&quot;text&quot;: &quot;&lt;the whole text&gt;&quot;} or one 'error' event carrying {&quot;code&quot;: &quot;inline.provider_failed | inline.timeout | inline.too_long | inline.refused | inline.cancelled&quot;, &quot;message&quot;: &quot;...&quot;}. comment lines ': keep-alive' arrive after 15 seconds of silence. closing the connection cancels the model's turn. the request is refused before anything is sent when it is malformed (422 'pets.invalid_request', byte limits apply to the utf-8 encoding), when inline writing is not turned on in the caller's pet settings (409 'pets.inline_disabled'), when the item is not readable in that workspace (404 'pets.not_found'), when the item is locked or under a locked ancestor even if this credential has it unlocked (409 'pets.inline_item_locked'), or when two requests are already open (429 'pets.inline_busy'). a companion that cannot answer is 503 'pets.unavailable'. the server does not read the item's body: 'selection' and 'context' come from the client and are not verified to belong to 'itemid'. pets">
+<section id="pets"><h2>Pets</h2><article id="petinlinewrite" data-search="post /api/v1/me/pets/inline petinlinewrite stream an inline writing result for text selected in a note sends the selected text to the companion and streams the answer back as server-sent events, unchanged from the worker. 'delta' events carry {&quot;text&quot;: &quot;...&quot;} for each piece as it is written; the stream then ends with exactly one 'done' event carrying {&quot;text&quot;: &quot;&lt;the whole text&gt;&quot;} or one 'error' event carrying {&quot;code&quot;: &quot;inline.provider_failed | inline.timeout | inline.too_long | inline.refused | inline.cancelled&quot;, &quot;message&quot;: &quot;...&quot;}. comment lines ': keep-alive' arrive after 15 seconds of silence. closing the connection cancels the model's turn. the request is refused before anything is sent when it is malformed (422 'pets.invalid_request', byte limits apply to the utf-8 encoding), when inline writing is not turned on in the caller's pet settings (409 'pets.inline_disabled'), when the item is not readable in that workspace (404 'pets.not_found'), when the item is locked or under a locked ancestor even if this credential has it unlocked (409 'pets.inline_item_locked'), or when two requests are already open (429 'pets.inline_busy'). a companion that cannot answer is 503 'pets.unavailable'. the server does not read the item's body: 'selection' and 'context' come from the client and are not verified to belong to 'itemid'. pets">
 <h3><span class="verb">POST</span> <code>/api/v1/me/pets/inline</code></h3>
 <p>Stream an inline writing result for text selected in a note</p>
 <p class="id">Operation id: <code>PetInlineWrite</code></p>

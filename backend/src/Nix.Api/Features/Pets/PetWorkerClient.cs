@@ -35,17 +35,11 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
     /// </summary>
     private async Task<Result<(string Provider, string? ApiKey)>> ProviderFor(PetProfile? pet, NixSessionContext context, CancellationToken cancellationToken)
     {
-        var provider = pet?.Provider ?? PetProviders.ChatGpt;
-        if (!PetProviders.NeedsKey(provider))
-        {
-            return Result.Success<(string, string?)>((provider, null));
-        }
-
+        var provider = pet?.Provider ?? PetProviders.Anthropic;
         var credential = await credentials.FindAsync(context.TenantId, context.PrincipalId, provider, cancellationToken).ConfigureAwait(false);
         if (credential is null)
         {
-            return Result.Failure<(string, string?)>(new("pets.no_provider_key",
-                $"No API key is saved for {ProviderName(provider)}. Add one in Settings > Pets."));
+            return Result.Failure<(string, string?)>(new("pets.no_provider_key", NoKeyMessage));
         }
 
         try
@@ -58,8 +52,10 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         }
     }
 
+    public const string NoKeyMessage = "Add a Claude or OpenRouter key in Settings > Pets.";
+
     private static string ProviderName(string provider) =>
-        provider == PetProviders.Anthropic ? "Claude" : provider == PetProviders.OpenAi ? "OpenAI" : "OpenRouter";
+        provider == PetProviders.Anthropic ? "Claude" : "OpenRouter";
 
     private static NixError? ProviderFailure(HttpResponseMessage response, string provider)
     {
@@ -88,7 +84,6 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             "credit_balance.402" => new("pets.provider_credit_balance", $"{name} reports that this API key has insufficient credit. Check API billing for the key, then try again."),
             "authentication.401" => new("pets.provider_authentication", $"{name} rejected the API key. Update it in Settings > Pets."),
             "permission.403" => new("pets.provider_permission", $"{name} refused access for this API key. Check the key's permissions and API access."),
-            "credit_balance.429" when provider == PetProviders.OpenAi => new("pets.provider_credit_balance", $"{name} reports that this API key has insufficient credit. Check API billing for the key, then try again."),
             "rate_limited.429" => new("pets.provider_rate_limited", $"{name} is rate limiting this API key. Wait briefly, then try again."),
             "models_rejected.400" when provider == PetProviders.Anthropic => new("pets.provider_models_rejected", $"{name} rejected model discovery for this API key. Check its API access and billing, then try again."),
             _ => null,
@@ -141,7 +136,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         Guid? conversationItemId = null, IReadOnlyList<Guid>? sourceWorkspaceIds = null, IReadOnlyList<PetMessage>? earlierMessages = null, StreamSlot? slot = null)
     {
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");
-        if (request.Operation is not ("status" or "connect" or "disconnect" or "models" or "read" or "watch" or "watch_stream" or "send" or "interrupt" or "reset" or "tool_claim" or "tool_result" or "tool_approve" or "history" or "read_history" or "delete_history" or "rename" or "resume_history")
+        if (request.Operation is not ("status" or "models" or "read" or "watch" or "watch_stream" or "send" or "interrupt" or "reset" or "tool_claim" or "tool_result" or "tool_approve" or "history" or "read_history" or "delete_history" or "rename" or "resume_history")
             || request.Text is null || request.SharedText is null || request.Text.Length > 8000 || request.SharedText.Length > 16000
             || request.Model is null || request.Model.Length > 160 || request.ToolId is null || request.ToolId.Length > 200
             || request.ToolResult is null || request.ToolResult.Length > 32000
@@ -182,7 +177,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         string? sharingAttestation = null;
         var ownerTextOnly = false;
         PetProfile? pet = null;
-        if (request.Operation is "status" or "connect" or "disconnect" or "models")
+        if (request.Operation is "status" or "models")
         {
             // A connection question about a particular pet is about that pet's provider.
             if (request.PetId is { } askedPet)
@@ -334,8 +329,8 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         {
             // A missing key is a settings state, not a worker failure: shown as a connection the
             // person can fix rather than a 4xx that reads as a broken pet.
-            return request.Operation is "status" or "connect" or "models" or "read" or "watch" or "watch_stream"
-                ? Result.Success(new PetConnectionResponse(pet?.Provider ?? PetProviders.ChatGpt, "disconnected", resolved.Error.Message, false, Messages: []))
+            return request.Operation is "status" or "models" or "read" or "watch" or "watch_stream"
+                ? Result.Success(new PetConnectionResponse(pet?.Provider ?? PetProviders.Anthropic, "disconnected", resolved.Error.Message, false, Messages: []))
                 : Result.Failure<PetConnectionResponse>(resolved.Error);
         }
 
@@ -376,15 +371,15 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         outgoing.Content = JsonContent.Create(new PetWorkerRequest(context.TenantId.Value.ToString(), context.PrincipalId.Value.ToString(),
             request.WorkspaceId?.ToString() ?? "", request.PetId?.ToString() ?? "", request.Operation,
             request.RequestId?.ToString() ?? "", request.Text, instructions, sharedItems.Count > 0 ? sharedItems[0].Id : request.ItemId?.ToString() ?? "", title, request.SharedText,
-            request.Model, request.WorkspaceAccess, request.ToolId, request.ToolResult, request.ToolSuccess, request.HistoryId?.ToString() ?? "",
+            request.Model.Length > 0 ? request.Model : pet?.Model ?? "", request.WorkspaceAccess, request.ToolId, request.ToolResult, request.ToolSuccess, request.HistoryId?.ToString() ?? "",
             request.Mode, after, request.Today, request.TimeZone, workspaceMap, request.ToolLockedContent,
             request.RootItemId?.ToString(), request.ReadOnly, sharedItems.Count > 0 ? sharedItems : null,
-            request.ReplaceFromMessageId?.ToString(), provider == PetProviders.ChatGpt ? null : provider, apiKey, conversationItemId?.ToString(),
+            request.ReplaceFromMessageId?.ToString(), provider, apiKey, conversationItemId?.ToString(),
             sourceWorkspaceIds?.Select(id => id.ToString()).ToArray(), earlierMessages,
             request.ToolImage.Length > 0 ? request.ToolImage : null, turnToken,
             request.Operation == "send" && (request.ConsentMode == "plan" ? request.ReadWithoutAsking : turnToken is not null),
             NullIfEmpty(request.Fingerprint), NullIfEmpty(request.EditedArguments), NullIfEmpty(request.EditNote), request.Automatic,
-            NullIfEmpty(request.ApprovedOperation), sharingAttestation, NullIfEmpty(request.ConsentMode)), PetJsonContext.Default.PetWorkerRequest);
+            NullIfEmpty(request.ApprovedOperation), sharingAttestation, NullIfEmpty(request.ConsentMode), request.ThinkHarder), PetJsonContext.Default.PetWorkerRequest);
         try
         {
             if (slot is not null)
@@ -621,7 +616,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
 
     private async Task<Result<PetInlineWorkerRequest>> PrepareToolFreeTurnAsync(Guid workspaceId, Guid requestId,
         string text, string sharedText, string contextText, string operation, PetProfile pet,
-        CancellationToken cancellationToken, string? sharingAttestation = null, string inlineKind = "", string language = "", string model = "")
+        CancellationToken cancellationToken, string? sharingAttestation = null, string inlineKind = "", string language = "", string model = "", bool thinkHarder = false)
     {
         if (disclosure is null || string.IsNullOrEmpty(sharingAttestation)
             || !await disclosure.ValidateAsync(sharingAttestation, cancellationToken).ConfigureAwait(false))
@@ -638,8 +633,8 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         var (provider, apiKey) = resolved.Value;
         return Result.Success(new PetInlineWorkerRequest(context.TenantId.Value.ToString(), context.PrincipalId.Value.ToString(),
             workspaceId.ToString(), pet.Id.ToString(), operation, requestId.ToString(), text,
-            sharedText, contextText, inlineKind, language, model,
-            provider == PetProviders.ChatGpt ? null : provider, apiKey, sharingAttestation));
+            sharedText, contextText, inlineKind, language, model.Length > 0 ? model : pet.Model,
+            provider, apiKey, sharingAttestation, thinkHarder));
     }
 
     private async Task<Result<HttpResponseMessage>> OpenToolFreeTurnAsync(PetInlineWorkerRequest request, CancellationToken cancellationToken)
@@ -674,7 +669,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
                 return Result.Success(opened);
             }
 
-            var failure = ProviderFailure(response, request.Provider ?? PetProviders.ChatGpt) ?? (response.StatusCode switch
+            var failure = ProviderFailure(response, request.Provider ?? PetProviders.Anthropic) ?? (response.StatusCode switch
             {
                 HttpStatusCode.UnprocessableEntity => new NixError("pets.invalid_request", "The companion refused this request. Check the text and try again."),
                 HttpStatusCode.TooManyRequests => new NixError("pets.inline_busy", "Too many writing requests are open. Wait for one to finish."),

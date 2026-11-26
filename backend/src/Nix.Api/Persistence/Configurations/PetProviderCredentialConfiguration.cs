@@ -13,7 +13,7 @@ internal sealed class PetProviderCredentialConfiguration : IEntityTypeConfigurat
         ArgumentNullException.ThrowIfNull(builder);
         builder.ToTable(NixTables.PetProviderCredential, table => table.HasCheckConstraint(
             "pet_provider_credential_bounded",
-            "provider IN ('anthropic', 'openrouter', 'openai') AND octet_length(protected_key) <= 4096 AND char_length(key_hint) <= 8"));
+            "provider IN ('anthropic', 'openrouter') AND octet_length(protected_key) <= 4096 AND char_length(key_hint) <= 8"));
         builder.HasKey(row => new { row.TenantId, row.PrincipalId, row.Provider });
         builder.Property(row => row.TenantId).HasColumnName("tenant_id");
         builder.Property(row => row.PrincipalId).HasColumnName("principal_id");

@@ -62,7 +62,7 @@ export const providers = (): QueryEndpoint<PetProvidersResponse> =>
 
 /** Stores or replaces the owner's key for a provider; the key is never returned. */
 export const saveProviderKey = (
-  provider: 'anthropic' | 'openrouter' | 'openai',
+  provider: 'anthropic' | 'openrouter',
   key: string,
 ): CommandEndpoint<PetProviderKey> =>
   defineCommand({
@@ -75,7 +75,7 @@ export const saveProviderKey = (
   });
 
 export const removeProviderKey = (
-  provider: 'anthropic' | 'openrouter' | 'openai',
+  provider: 'anthropic' | 'openrouter',
 ): CommandEndpoint<undefined> =>
   defineCommand({
     operation: 'pets.removeProviderKey',
@@ -85,19 +85,9 @@ export const removeProviderKey = (
     invalidates: [providersKey],
   });
 
-export const connection = (): QueryEndpoint<PetConnection> =>
-  defineQuery({
-    operation: 'pets.connection',
-    path: '/api/v1/me/pets/connection',
-    schema: petConnectionSchema,
-    cacheKey: ['me', 'pets', 'connection'],
-  });
-
 export interface RuntimeInput {
   readonly operation:
     | 'status'
-    | 'connect'
-    | 'disconnect'
     | 'models'
     | 'read'
     | 'send'
@@ -122,6 +112,8 @@ export interface RuntimeInput {
   /** With a send: the user message this turn replaces. It and everything after it is dropped. */
   readonly replaceFromMessageId?: string;
   readonly model?: string;
+  /** With a send: run this one message on the provider's larger model. */
+  readonly thinkHarder?: boolean;
   readonly workspaceAccess?: boolean;
   /** Limits this conversation to one item and its descendants. */
   readonly rootItemId?: string;
@@ -178,6 +170,7 @@ export const runtime = (input: RuntimeInput): CommandEndpoint<PetConnection> =>
       text: input.text ?? '',
       sharedText: input.sharedText ?? '',
       model: input.model ?? '',
+      thinkHarder: input.thinkHarder ?? false,
       workspaceAccess: input.workspaceAccess ?? false,
       rootItemId: input.rootItemId ?? null,
       itemIds: input.itemIds === undefined ? null : [...input.itemIds],

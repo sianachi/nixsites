@@ -13,7 +13,7 @@ public sealed class PetProviderCredential
 
     public required PrincipalId PrincipalId { get; init; }
 
-    /// <summary>The provider: <c>anthropic</c>, <c>openrouter</c> or <c>openai</c>.</summary>
+    /// <summary>The provider: <c>anthropic</c> or <c>openrouter</c>.</summary>
     public required string Provider { get; init; }
 
     /// <summary>The key, protected with Data Protection.</summary>

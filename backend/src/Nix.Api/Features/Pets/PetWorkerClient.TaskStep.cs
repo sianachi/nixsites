@@ -89,7 +89,7 @@ public sealed partial class PetWorkerClient
         }
 
         var prepared = await PrepareToolFreeTurnAsync(input.WorkspaceId, input.StepId, input.Goal, capabilities, context,
-            "plan_task_step", pet, token, input.SharingAttestation).ConfigureAwait(false);
+            "plan_task_step", pet, token, input.SharingAttestation, thinkHarder: true).ConfigureAwait(false);
         return prepared.IsFailure
             ? Result.Failure<PreparedPetTaskStep>(prepared.Error)
             : Result.Success(new PreparedPetTaskStep(prepared.Value, offered, scopeAbilities, input.PlanMode));

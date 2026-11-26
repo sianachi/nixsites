@@ -25,7 +25,6 @@ internal static class PetPlanSharingEndpoints
         services.AddScoped<PetPlanDecisionContextService>();
         services.AddScoped(service => new PetDisclosureConsentGuard(service.GetRequiredService<PetPlanSharingService>()));
         services.AddScoped<IPetDisclosureConsentGuard>(service => service.GetRequiredService<PetDisclosureConsentGuard>());
-        services.AddHttpClient<PetRecipientMetadataClient>();
     }
 
     internal static void MapPetPlanSharingEndpoints(this IEndpointRouteBuilder endpoints)

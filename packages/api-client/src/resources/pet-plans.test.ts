@@ -38,8 +38,8 @@ describe('whole-plan operator contracts', () => {
         recipientRevision: 'recipient',
         sourceScope: { kind: 'workspace' },
         recipient: {
-          provider: 'openai',
-          destination: 'https://api.openai.com',
+          provider: 'anthropic',
+          destination: 'https://api.anthropic.com',
           routingPolicy: 'direct',
           connectionRevision: 'revision',
         },

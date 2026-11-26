@@ -232,8 +232,8 @@ public sealed partial class PetRunStoreTests
             ["Nix:Workers:Families:0"] = "pet-plan",
         }, services =>
         {
+            services.AddSingleton(PetTestKeys.Protector);
             services.AddHttpClient<PetWorkerClient>().ConfigurePrimaryHttpMessageHandler(() => adapter);
-            services.AddHttpClient("PetRecipientMetadataClient").ConfigurePrimaryHttpMessageHandler(() => new PreparedRecipientMetadata());
         });
 
     private static async Task<string> StartReadBatchAsync(SiteHttpHost host, string browser, ReadBatchAdapter adapter, Guid pet, bool approveSharing = true)

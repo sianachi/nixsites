@@ -18,7 +18,7 @@ namespace Nix.Features.PetRuns;
 [SuppressMessage("Performance", "CA1812", Justification = "Created by dependency injection.")]
 internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSessionContextAccessor session,
     NixDispatcher dispatcher, IPermissionResolver permissions, IPetProviderCredentialStore credentials,
-    PetRecipientMetadataClient metadata, IDataProtectionProvider protection, BrowserAccess browser,
+    IDataProtectionProvider protection, BrowserAccess browser,
     IHttpContextAccessor httpContext, TimeProvider clock, IIsolatedUnitOfWork isolated, IIdentityDirectory identities)
 {
     private readonly IDataProtector _protector = protection.CreateProtector("Nix.PetDisclosure.v1");
@@ -66,24 +66,14 @@ internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSess
         }
 
         var provider = pet.Provider;
-        string revision;
-        if (PetProviders.NeedsKey(provider))
-        {
-            var credential = await credentials.FindAsync(Caller.TenantId, Caller.PrincipalId, provider, cancellationToken).ConfigureAwait(false);
-            revision = credential is null ? "unknown" : Hash(string.Join('\n', "credential-v1", Caller.TenantId.Value,
-                Caller.PrincipalId.Value, provider, credential.SavedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)));
-        }
-        else
-        {
-            revision = await metadata.ConnectionRevisionAsync(provider, cancellationToken).ConfigureAwait(false) ?? "unknown";
-        }
+        var credential = await credentials.FindAsync(Caller.TenantId, Caller.PrincipalId, provider, cancellationToken).ConfigureAwait(false);
+        var revision = credential is null ? "unknown" : Hash(string.Join('\n', "credential-v1", Caller.TenantId.Value,
+            Caller.PrincipalId.Value, provider, credential.SavedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)));
 
         var destination = provider switch
         {
             PetProviders.Anthropic => "https://api.anthropic.com",
-            PetProviders.OpenAi => "https://api.openai.com",
             PetProviders.OpenRouter => "https://openrouter.ai/api/v1",
-            PetProviders.ChatGpt => "https://chatgpt.com/backend-api/codex",
             _ => "unknown",
         };
         var routing = provider == PetProviders.OpenRouter ? "openrouter-provider-routing" : "direct";

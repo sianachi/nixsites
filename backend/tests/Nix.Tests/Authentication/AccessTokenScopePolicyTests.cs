@@ -216,7 +216,6 @@ public sealed class AccessTokenScopePolicyTests
         ["SaveCanvasLibrary"] = Requirement.Write,
         ["GetPetSettings"] = Requirement.Read,
         ["SavePetSettings"] = Requirement.Write,
-        ["GetPetConnection"] = Requirement.InteractiveOnly,
         ["ListPetProviderKeys"] = Requirement.Read,
         ["SavePetProviderKey"] = Requirement.InteractiveOnly,
         ["RemovePetProviderKey"] = Requirement.InteractiveOnly,
@@ -560,7 +559,6 @@ public sealed class AccessTokenScopePolicyTests
 
     [Theory]
     [InlineData("GET", "/api/v1/me/tokens")]
-    [InlineData("GET", "/api/v1/me/pets/connection")]
     [InlineData("POST", "/api/v1/me/pets/runtime")]
     [InlineData("POST", "/api/v1/me/pets/runtime/note")]
     [InlineData("GET", "/api/v1/me/pets/runtime/note/watch")]

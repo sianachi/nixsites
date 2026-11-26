@@ -109,7 +109,7 @@ describe('the pets resource', () => {
       toolLockedContent: true,
     });
     expect(runtime({ operation: 'read' }).body).toMatchObject({ toolLockedContent: false });
-    const base = { provider: 'chatgpt', status: 'connected', reason: '', canConnect: false };
+    const base = { provider: 'anthropic', status: 'connected', reason: '', canConnect: false };
     expect(petConnectionSchema.parse(base).lockedRead).toBe(false);
     expect(petConnectionSchema.parse({ ...base, lockedRead: true }).lockedRead).toBe(true);
   });

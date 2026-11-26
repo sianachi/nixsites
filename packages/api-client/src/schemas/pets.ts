@@ -28,8 +28,10 @@ const petProfileFields = z.object({
   instructions: z.string().max(2000),
   /** Default for the conversation's "Apply without asking" switch; stored pets without it read as off. */
   applyWithoutAsking: z.boolean().default(false),
-  /** Which model provider this pet speaks to; stored pets without it read as ChatGPT. */
-  provider: z.enum(['chatgpt', 'anthropic', 'openrouter', 'openai']).default('chatgpt'),
+  /** Which model provider this pet speaks to; stored pets without one read as Claude. */
+  provider: z.enum(['anthropic', 'openrouter']).default('anthropic'),
+  /** The model chat uses; empty is the provider's default (Claude Haiku class for Anthropic). */
+  model: z.string().max(160).default(''),
 });
 
 const petProfileSchema = z.preprocess((value) => {
@@ -54,7 +56,7 @@ export const petProviderSchema = petProfileFields.shape.provider;
 
 /** One stored provider key as the owner may see it: never the key, only its last characters. */
 export const petProviderKeySchema = z.object({
-  provider: z.enum(['anthropic', 'openrouter', 'openai']),
+  provider: z.enum(['anthropic', 'openrouter']),
   keyHint: z.string().max(8),
   savedAt: z.iso.datetime({ offset: true }),
 });
@@ -103,14 +105,10 @@ export const petMessageSchema = z.object({
 });
 
 export const petConnectionSchema = z.object({
-  provider: z.enum(['chatgpt', 'anthropic', 'openrouter', 'openai']).default('chatgpt'),
+  provider: z.enum(['anthropic', 'openrouter']).default('anthropic'),
   status: z.enum(['unavailable', 'disconnected', 'connecting', 'connected', 'error']),
   reason: z.string(),
   canConnect: z.boolean(),
-  verificationUrl: z
-    .union([z.literal(''), z.literal('https://auth.openai.com/codex/device')])
-    .default(''),
-  userCode: z.string().max(32).default(''),
   state: z.enum(['idle', 'thinking', 'success', 'error']).default('idle'),
   messages: z.array(petMessageSchema).max(41).nullable().default([]),
   history: z

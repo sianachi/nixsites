@@ -1918,22 +1918,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/me/pets/connection': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: operations['GetPetConnection'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/me/pets/providers': {
     parameters: {
       query?: never;
@@ -5919,10 +5903,6 @@ export interface components {
       status: string;
       reason: string;
       canConnect: boolean;
-      /** @default  */
-      verificationUrl: string;
-      /** @default  */
-      userCode: string;
       /** @default idle */
       state: string;
       messages?: null | components['schemas']['PetMessage'][];
@@ -6216,8 +6196,10 @@ export interface components {
       instructions: string;
       /** @default false */
       applyWithoutAsking: boolean;
-      /** @default chatgpt */
+      /** @default anthropic */
       provider: string;
+      /** @default  */
+      model: string;
     };
     PetProviderKeyResponse: {
       provider: string;
@@ -6363,6 +6345,8 @@ export interface components {
       approvedOperation: string;
       /** @default  */
       consentMode: string;
+      /** @default false */
+      thinkHarder: boolean;
     };
     PetSettings: {
       enabled: boolean;
@@ -12943,26 +12927,6 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PetSettingsResponse'];
-        };
-      };
-    };
-  };
-  GetPetConnection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PetConnectionResponse'];
         };
       };
     };

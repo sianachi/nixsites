@@ -15,12 +15,13 @@ public sealed class PetProviderKeyTests
     [Fact]
     public void Only_keyed_providers_take_keys_and_a_key_must_look_like_one()
     {
-        Assert.True(PetProviders.IsValid("chatgpt"));
+        Assert.True(PetProviders.IsValid("anthropic"));
         Assert.True(PetProviders.NeedsKey("anthropic"));
         Assert.True(PetProviders.NeedsKey("openrouter"));
-        Assert.True(PetProviders.NeedsKey("openai"));
-        Assert.True(PetProviders.IsValid("openai"));
-        Assert.False(PetProviders.NeedsKey("chatgpt"));
+        // Retired providers are unknown now: the migration moves profiles off them.
+        Assert.False(PetProviders.IsValid("chatgpt"));
+        Assert.False(PetProviders.IsValid("openai"));
+        Assert.False(PetProviders.NeedsKey("openai"));
         Assert.False(PetProviders.IsValid("gemini"));
         Assert.True(PetProviders.IsPlausibleKey("sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789"));
         Assert.False(PetProviders.IsPlausibleKey("short"));
@@ -65,7 +66,7 @@ public sealed class PetProviderKeyTests
         Assert.Equal("anthropic", Assert.Single(listed.Keys).Provider);
         Assert.DoesNotContain("sk-ant", System.Text.Json.JsonSerializer.Serialize(listed), StringComparison.Ordinal);
 
-        var unknown = await new SavePetProviderKeyHandler(store, protector, session).HandleAsync(new("chatgpt", "sk-xxxxxxxxxxxxxxxxxxxxxxxx"), Cancellation);
+        var unknown = await new SavePetProviderKeyHandler(store, protector, session).HandleAsync(new("openai", "sk-xxxxxxxxxxxxxxxxxxxxxxxx"), Cancellation);
         Assert.True(unknown.IsFailure);
         Assert.Equal("pets.unknown_provider", unknown.Error.Code);
         var bad = await new SavePetProviderKeyHandler(store, protector, session).HandleAsync(new("openrouter", "nope"), Cancellation);

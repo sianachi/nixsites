@@ -121,7 +121,7 @@ public sealed partial class PetRunStoreTests
         using var checkpoint = JsonDocument.Parse(JsonSerializer.Serialize(new
         {
             petId,
-            provider = "chatgpt",
+            provider = "anthropic",
             proposals = Array.Empty<object>(),
             results = Array.Empty<object>(),
             answers = Array.Empty<string>(),

@@ -283,7 +283,7 @@ public sealed partial class PetRunStoreTests
         using var checkpoint = JsonDocument.Parse(JsonSerializer.Serialize(new
         {
             petId = prepared.Run.State.GetProperty("petId").GetGuid(),
-            provider = "chatgpt",
+            provider = "anthropic",
             proposals = Array.Empty<object>(),
             results = Array.Empty<object>(),
             answers = Array.Empty<string>(),
@@ -386,7 +386,7 @@ public sealed partial class PetRunStoreTests
         using var state = JsonDocument.Parse(JsonSerializer.Serialize(new
         {
             petId,
-            provider = "chatgpt",
+            provider = "anthropic",
             proposals = Array.Empty<object>(),
             results = Array.Empty<object>(),
             answers = Array.Empty<string>(),
@@ -488,8 +488,8 @@ public sealed partial class PetRunStoreTests
             ["Nix:Pets:WorkerUrl"] = "https://prepared-client.invalid/",
         }, services =>
         {
+            services.AddSingleton(PetTestKeys.Protector);
             services.AddHttpClient<PetWorkerClient>().ConfigurePrimaryHttpMessageHandler(() => adapter);
-            services.AddHttpClient("PetRecipientMetadataClient").ConfigurePrimaryHttpMessageHandler(() => new PreparedRecipientMetadata());
         });
 #pragma warning restore CA2000
         adapter.Host = host;

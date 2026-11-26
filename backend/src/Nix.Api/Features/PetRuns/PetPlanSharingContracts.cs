@@ -33,13 +33,9 @@ internal sealed record ValidatePetSharingRequest(string Attestation, Guid Tenant
     IReadOnlyList<Guid>? ContextSourceItemIds = null, bool ContextProtected = false,
     bool ContextUnbounded = false, string? PriorRecipientRevision = null, PetPlanSourceScope? PriorSourceScope = null);
 internal sealed record ValidatePetSharingResponse(bool Allowed, string? RecipientRevision = null, PetPlanSourceScope? SourceScope = null);
-internal sealed record PetRecipientMetadataRequest(string Operation, string TenantId, string PrincipalId, string Provider);
-internal sealed record PetRecipientMetadataResponse(string Provider, string? ConnectionRevision);
 
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
 [JsonSerializable(typeof(PetSharingAttestation))]
-[JsonSerializable(typeof(PetRecipientMetadataRequest))]
-[JsonSerializable(typeof(PetRecipientMetadataResponse))]
 [JsonSerializable(typeof(PetSharingQuestionRequest))]
 [JsonSerializable(typeof(PetSharingDecisionRequest))]
 [JsonSerializable(typeof(PetSharingQuestionResponse))]

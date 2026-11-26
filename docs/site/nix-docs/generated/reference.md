@@ -3818,20 +3818,6 @@ Responses: `200`.
 
 <a id="pets"></a>
 
-### GET /api/v1/me/pets/connection
-
-<a id="getpetconnection"></a>
-
-Operation id: `GetPetConnection`.
-
-**Can.** Read the resource named in the summary.
-
-**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
-
-**Token.** A personal access token cannot call this. Only an interactive browser session can.
-
-Responses: `200`.
-
 ### POST /api/v1/me/pets/inline
 
 <a id="petinlinewrite"></a>

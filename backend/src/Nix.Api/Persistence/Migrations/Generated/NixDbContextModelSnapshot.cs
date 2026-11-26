@@ -2769,7 +2769,7 @@ namespace Nix.Persistence.Migrations.Generated
 
                     b.ToTable("pet_provider_credential", null, t =>
                         {
-                            t.HasCheckConstraint("pet_provider_credential_bounded", "provider IN ('anthropic', 'openrouter', 'openai') AND octet_length(protected_key) <= 4096 AND char_length(key_hint) <= 8");
+                            t.HasCheckConstraint("pet_provider_credential_bounded", "provider IN ('anthropic', 'openrouter') AND octet_length(protected_key) <= 4096 AND char_length(key_hint) <= 8");
                         });
                 });
 

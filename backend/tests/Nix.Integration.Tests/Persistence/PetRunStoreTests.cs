@@ -8,6 +8,7 @@ using Nix.Abstractions.PetRuns;
 using Nix.Authentication;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
+using Nix.Domain.Pets;
 using Nix.Domain.Tenancy;
 using Nix.Features.Items;
 using Nix.Features.Pets;
@@ -533,6 +534,16 @@ public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyn
         var saved = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(preferences.Revision,
             new PetSettings(true, petId, [new PetProfile(petId, "Owl", "owl", "")])), Cancellation);
         Assert.True(saved.IsSuccess);
+        // The recipient revision of a key provider is its key's save time, so the pet needs a key.
+        await work.Resolve<IPetProviderCredentialStore>().SaveAsync(new PetProviderCredential
+        {
+            TenantId = TenantId.From(TestTenants.Alpha),
+            PrincipalId = PrincipalId.From(TestTenants.AlphaPrincipal),
+            Provider = "anthropic",
+            ProtectedKey = PetTestKeys.ProtectedKey,
+            KeyHint = "-key",
+            SavedAt = DateTimeOffset.UtcNow,
+        }, Cancellation);
         await work.CommitAsync(Cancellation);
         return (item.Value.Id, petId);
     }
@@ -581,7 +592,7 @@ public sealed partial class PetRunStoreTests(NixPostgresFixture fixture) : IAsyn
             ["Nix:Workers:Families:0"] = planner is null ? "notify" : "pet",
         }, services =>
         {
-            services.AddHttpClient("PetRecipientMetadataClient").ConfigurePrimaryHttpMessageHandler(() => new PreparedRecipientMetadata());
+            services.AddSingleton(PetTestKeys.Protector);
             if (planner is not null)
             {
                 services.AddHttpClient<PetWorkerClient>().ConfigurePrimaryHttpMessageHandler(() => planner);

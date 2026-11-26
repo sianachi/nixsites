@@ -8,8 +8,9 @@ namespace Nix.Features.Pets;
 /// changes without an approval click (moves, trash, template saves and external links still ask).
 /// It is a client-side convenience with no server authority: every change still runs under the
 /// owner's own permissions. Last and defaulted so stored profiles without it read as off.
+/// <c>Model</c> is the model chat uses; empty means the provider's default (Haiku class for Anthropic).
 /// </remarks>
-public sealed record PetProfile(Guid Id, string Name, string Appearance, string Instructions, bool ApplyWithoutAsking = false, string Provider = PetProviders.ChatGpt);
+public sealed record PetProfile(Guid Id, string Name, string Appearance, string Instructions, bool ApplyWithoutAsking = false, string Provider = PetProviders.Anthropic, string Model = "");
 
 /// <summary>Account preferences. Device placement is deliberately absent.</summary>
 /// <remarks>
@@ -44,7 +45,7 @@ public sealed record PetSettingsResponse(long Revision, PetSettings Settings);
 /// <summary>Replaces the owner's preferences only at the version they edited.</summary>
 public sealed record SavePetSettingsRequest(long ExpectedRevision, PetSettings Settings);
 
-/// <summary>Truthful provider availability without credentials or inferred entitlements.</summary>
+/// <summary>The pet's provider availability and conversation state, without credentials or inferred entitlements.</summary>
 /// <remarks>
 /// <c>LockedRead</c> says the conversation's model thread holds a tool result read from under a
 /// lock. The client holds every write for the owner while it is set; only a new thread clears it.
@@ -53,7 +54,7 @@ public sealed record SavePetSettingsRequest(long ExpectedRevision, PetSettings S
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1054", Justification = "The wire contract uses an empty string when no device login is pending; clients allowlist the provider URL.")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056", Justification = "The wire contract uses an empty string when no device login is pending; clients allowlist the provider URL.")]
 public sealed record PetConnectionResponse(string Provider, string Status, string Reason, bool CanConnect,
-    string VerificationUrl = "", string UserCode = "", string State = "idle", IReadOnlyList<PetMessage>? Messages = null,
+    string State = "idle", IReadOnlyList<PetMessage>? Messages = null,
     IReadOnlyList<PetModel>? Models = null, IReadOnlyList<PetToolCall>? Tools = null, IReadOnlyList<PetHistoryEntry>? History = null,
     long Revision = 0, bool LockedRead = false, string Title = "", bool ServerWrites = false, string TurnId = "",
     string ConversationId = "", PetPlannedBatch? PlannedBatch = null);
@@ -75,7 +76,7 @@ public sealed record PetSourceScopeDescriptor(string Kind, IReadOnlyList<Guid>? 
 /// <summary>A private archived conversation in this workspace and pet.</summary>
 public sealed record PetHistoryEntry(string Id, string Title, string CreatedAt);
 
-/// <summary>A model offered by the connected Codex runtime.</summary>
+/// <summary>A model offered by the pet's provider.</summary>
 public sealed record PetModel(string Id, string Name, bool Default, bool SupportsTools = true);
 
 /// <summary>A bounded tool request and its private execution receipt.</summary>
@@ -121,6 +122,7 @@ public sealed record PetWorkspaceMapEntry(Guid Id, string Title, string Type, IR
 /// <c>ApprovedOperation</c> (the tool operation on the card the owner approved), the preview <c>Fingerprint</c>
 /// the owner saw, <c>EditedArguments</c> and <c>EditNote</c> when the owner changed the request, and
 /// <c>Automatic</c> when "Apply without asking" sent it. Core mints the write token only for this operation.
+/// <c>ThinkHarder</c> (send only) runs this one message on the provider's larger model, over the pet's own pick.
 /// </remarks>
 public sealed record PetRuntimeRequest(string Operation, Guid? WorkspaceId = null, Guid? PetId = null,
     Guid? RequestId = null, string Text = "", Guid? ItemId = null, string SharedText = "",
@@ -129,7 +131,7 @@ public sealed record PetRuntimeRequest(string Operation, Guid? WorkspaceId = nul
     bool ToolLockedContent = false, Guid? RootItemId = null, bool ReadOnly = false,
     IReadOnlyList<Guid>? ItemIds = null, Guid? ReplaceFromMessageId = null, string ToolImage = "",
     bool ReadWithoutAsking = false, string Fingerprint = "", string EditedArguments = "", string EditNote = "",
-    bool Automatic = false, string ApprovedOperation = "", string ConsentMode = "");
+    bool Automatic = false, string ApprovedOperation = "", string ConsentMode = "", bool ThinkHarder = false);
 
 /// <summary>Opens a chat event stream: the conversation is the workspace, the pet and, for a note chat, the note.</summary>
 public sealed record PetStreamRequest(Guid WorkspaceId, Guid PetId, string Mode = "", Guid? RootItemId = null);
@@ -164,7 +166,8 @@ internal sealed record PetWorkerRequest(string TenantId, string PrincipalId, str
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Automatic = false,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? ApprovedOperation = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ConsentMode = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ConsentMode = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false);
 
 /// <summary>One inline writing request from the editor: the person's selection and what to do with it.</summary>
 /// <param name="WorkspaceId">The workspace the item is in.</param>
@@ -185,7 +188,8 @@ internal sealed record PetInlineWorkerRequest(string TenantId, string PrincipalI
     string InlineKind, string Language, string Model,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Provider = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ApiKey = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(PetSettings))]

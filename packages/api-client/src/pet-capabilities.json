@@ -584,11 +584,6 @@
     "method": "GET",
     "path": "/api/v1/items/{itemId}/passages"
   },
-  "GetPetConnection": {
-    "mode": "human",
-    "method": "GET",
-    "path": "/api/v1/me/pets/connection"
-  },
   "GetPetPlan": {
     "mode": "human",
     "method": "GET",

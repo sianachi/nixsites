@@ -195,8 +195,8 @@ public sealed partial class PetRunStoreTests
             ["Nix:Pets:WorkerUrl"] = "https://prepared-plan.invalid/",
         }, services =>
         {
+            services.AddSingleton(PetTestKeys.Protector);
             services.AddHttpClient<PetWorkerClient>().ConfigurePrimaryHttpMessageHandler(() => provider);
-            services.AddHttpClient("PetRecipientMetadataClient").ConfigurePrimaryHttpMessageHandler(() => new PreparedRecipientMetadata());
             services.AddHttpClient(WorkerLoopbackClient.HttpClientName).ConfigurePrimaryHttpMessageHandler(() =>
             {
                 transport.InnerHandler = target!.CreateLoopbackHandler();
@@ -346,14 +346,5 @@ public sealed partial class PetRunStoreTests
                 }
             }
         }
-    }
-
-    private sealed class PreparedRecipientMetadata : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("{\"provider\":\"chatgpt\",\"connectionRevision\":\"prepared-local-connection\"}", Encoding.UTF8, "application/json"),
-            });
     }
 }

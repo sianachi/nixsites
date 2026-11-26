@@ -15,8 +15,6 @@ internal static class PetEndpoints
         group.MapGet("/settings", Get).WithName("GetPetSettings");
         group.MapPut("/settings", Save).WithName("SavePetSettings")
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
-        group.MapGet("/connection", Connection)
-            .WithName("GetPetConnection");
         // Provider API keys: stored protected, shown as hints, never returned. Interactive only
         // (AccessTokenScopePolicy): a personal access token must not be able to swap the key a
         // person's pets bill to.
@@ -146,9 +144,6 @@ internal static class PetEndpoints
             deadline?.Dispose();
         }
     }
-
-    private static Task<Results<Ok<PetConnectionResponse>, ProblemHttpResult>> Connection(
-        HttpContext context, [FromServices] PetWorkerClient worker) => Runtime(new("status"), context, worker);
 
     private static async Task<Results<Ok<PetConnectionResponse>, ProblemHttpResult>> Runtime(
         PetRuntimeRequest request, HttpContext context, [FromServices] PetWorkerClient worker)

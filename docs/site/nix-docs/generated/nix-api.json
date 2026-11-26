@@ -6969,26 +6969,6 @@
         }
       }
     },
-    "/api/v1/me/pets/connection": {
-      "get": {
-        "tags": [
-          "Pets"
-        ],
-        "operationId": "GetPetConnection",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PetConnectionResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/me/pets/providers": {
       "get": {
         "tags": [
@@ -22235,14 +22215,6 @@
           "canConnect": {
             "type": "boolean"
           },
-          "verificationUrl": {
-            "type": "string",
-            "default": ""
-          },
-          "userCode": {
-            "type": "string",
-            "default": ""
-          },
           "state": {
             "type": "string",
             "default": "idle"
@@ -23373,7 +23345,11 @@
           },
           "provider": {
             "type": "string",
-            "default": "chatgpt"
+            "default": "anthropic"
+          },
+          "model": {
+            "type": "string",
+            "default": ""
           }
         }
       },
@@ -23878,6 +23854,10 @@
           "consentMode": {
             "type": "string",
             "default": ""
+          },
+          "thinkHarder": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

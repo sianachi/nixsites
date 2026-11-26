@@ -6,6 +6,9 @@ using Microsoft.Extensions.Configuration;
 using Nix.Abstractions;
 using Nix.Abstractions.PetRuns;
 using Nix.Domain.Content;
+using Nix.Domain.Identity;
+using Nix.Domain.Pets;
+using Nix.Domain.Tenancy;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Features.Items;
@@ -108,6 +111,16 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             Result<PetSettingsResponse> saved = await work.Resolve<NixDispatcher>()
                 .SendAsync<SavePetSettings, PetSettingsResponse>(new(0, settings), Cancellation);
             Assert.True(saved.IsSuccess);
+            // The pet's provider needs a key the gateway can read back.
+            await work.Resolve<IPetProviderCredentialStore>().SaveAsync(new PetProviderCredential
+            {
+                TenantId = TenantId.From(TestTenants.Alpha),
+                PrincipalId = PrincipalId.From(TestTenants.AlphaPrincipal),
+                Provider = "anthropic",
+                ProtectedKey = PetTestKeys.ProtectedKey,
+                KeyHint = "wxyz",
+                SavedAt = DateTimeOffset.UtcNow,
+            }, Cancellation);
             await work.CommitAsync(Cancellation);
         }
     }
@@ -347,7 +360,7 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             ["Nix:InternalSecret"] = "test-secret",
         }).Build(), work.Resolve<INixSessionContextAccessor>(), work.Resolve<NixDispatcher>(),
         work.Resolve<IPermissionResolver>(), work.Resolve<IPetProviderCredentialStore>(),
-        new PetProviderKeyProtector(new EphemeralDataProtectionProvider()), disclosure: disclosure);
+        PetTestKeys.Protector, disclosure: disclosure);
 
     private sealed class NoteDisclosure(Guid expectedPet, Guid expectedRoot) : IPetDisclosureConsentGuard
     {
@@ -386,7 +399,7 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             Secret = request.Headers.GetValues("X-Nix-Internal-Secret").Single();
             return new(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"provider\":\"chatgpt\",\"status\":\"connected\",\"reason\":\"Connected\",\"canConnect\":false,\"messages\":[]}", System.Text.Encoding.UTF8, "application/json"),
+                Content = new StringContent("{\"provider\":\"anthropic\",\"status\":\"connected\",\"reason\":\"Connected\",\"canConnect\":false,\"messages\":[]}", System.Text.Encoding.UTF8, "application/json"),
             };
         }
     }

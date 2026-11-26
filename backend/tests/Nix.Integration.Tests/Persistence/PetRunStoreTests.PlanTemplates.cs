@@ -224,7 +224,7 @@ public sealed partial class PetRunStoreTests
         var state = JsonSerializer.SerializeToElement(new
         {
             petId = pet,
-            provider = "chatgpt",
+            provider = "anthropic",
             proposals = Array.Empty<object>(),
             results = Array.Empty<object>(),
             answers = Array.Empty<string>(),
@@ -258,8 +258,8 @@ public sealed partial class PetRunStoreTests
             ["Nix:Pets:WorkerUrl"] = "https://prepared-template.invalid/",
         }, services =>
         {
+            services.AddSingleton(PetTestKeys.Protector);
             services.AddHttpClient<PetWorkerClient>().ConfigurePrimaryHttpMessageHandler(() => adapter);
-            services.AddHttpClient("PetRecipientMetadataClient").ConfigurePrimaryHttpMessageHandler(() => new PreparedRecipientMetadata());
         });
 
     private async Task<Item?> ReadVisibleTemplateTargetAsync(ItemId item)
