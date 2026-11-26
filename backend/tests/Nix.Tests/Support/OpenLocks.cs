@@ -6,9 +6,9 @@ namespace Nix.Tests.Support;
 
 /// <summary>
 /// Item locks that cover nothing, for handler tests that wire the real visible-item gate over their
-/// own tree and permission doubles. A call other than the body-open check fails the test.
+/// own tree and permission doubles. Optionally the given items count as locked. A call other than the body-open and locked-among checks fails the test.
 /// </summary>
-internal sealed class OpenLocks : IItemLocks
+internal sealed class OpenLocks(params ItemId[] locked) : IItemLocks
 {
     public ValueTask<bool> MayReadBodyAsync(ItemId itemId, CancellationToken cancellationToken) => ValueTask.FromResult(true);
 
@@ -16,7 +16,8 @@ internal sealed class OpenLocks : IItemLocks
 
     public ValueTask<bool> AnyInSubtreeAsync(ItemId itemId, CancellationToken cancellationToken) => throw new NotSupportedException();
 
-    public ValueTask<IReadOnlySet<ItemId>> LockedAmongAsync(IReadOnlyList<ItemId> itemIds, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public ValueTask<IReadOnlySet<ItemId>> LockedAmongAsync(IReadOnlyList<ItemId> itemIds, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlySet<ItemId>>(itemIds.Where(locked.Contains).ToHashSet());
 
     public ValueTask<string?> FindVerifierAsync(ItemId itemId, CancellationToken cancellationToken) => throw new NotSupportedException();
 

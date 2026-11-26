@@ -26,4 +26,13 @@ public static class MessageItem
 
     /// <summary>The refusal for a generic edit of a posted message.</summary>
     public static NixError Immutable => new("items.read_only", "A posted message cannot be edited.");
+
+    /// <summary>The refusal for creating a message any way but the post-message route.</summary>
+    public static NixError Reserved => new("items.reserved_type", "Post a message with the messages route.");
+
+    /// <summary>The refusal for moving a message out of its thread or an item into one.</summary>
+    public static NixError Fixed => new("items.read_only", "A message stays where it was posted.");
+
+    /// <summary>The refusal for removing somebody else's message.</summary>
+    public static NixError NotYours => new("items.read_only", "Only the person who posted a message can delete it.");
 }

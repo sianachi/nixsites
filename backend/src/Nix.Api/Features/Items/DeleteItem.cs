@@ -105,6 +105,12 @@ public sealed class DeleteItemHandler(
             return Result.Success(itemId);
         }
 
+        // The poster's own pet replies are posted as the poster, so one check covers both.
+        if (item.Type == MessageItem.Type && item.CreatedBy != context.PrincipalId)
+        {
+            return Result.Failure<ItemId>(MessageItem.NotYours);
+        }
+
         // A pin is created under this same lock, so the pin check below cannot miss a pin being added.
         var workspaceId = item.WorkspaceId;
         await topology.AcquireWorkspaceTopologyAsync(workspaceId, cancellationToken).ConfigureAwait(false);

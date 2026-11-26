@@ -250,6 +250,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 - A pet addressed in a message thread now replies to the message that addressed it, not to whichever message comes last in the thread, and long threads no longer hide it.
 - Messages under a published site's pages no longer become site pages or appear in the build.
+- Messages are safer: only the person who posted a message can delete it, and a message cannot be moved out of its thread or an item moved into one. A pet addressed in a thread reads the item's text as well as the thread, never an item withheld from pets or locked, and never sees a message written to pose as another speaker; a pet cannot be addressed in a password-protected workspace, which now says so. Message text in the app shows as plain Markdown and never as generated UI, and messages no longer count as rows in queries, charts and rollups. An older client no longer breaks on a notification kind it does not know.
 - Stopping a "Think harder" turn in the middle of a tool step no longer makes the next message in that conversation fail.
 - A Claude turn on OpenRouter that is cut off before its price arrives is now estimated at that
   Claude model's price instead of the dearest one. The sending line no longer lingers when the pet

@@ -20,7 +20,9 @@ public sealed class MessageHandler(
     AccessTokenSessionContext scope,
     CredentialSessionContext credential,
     NixDispatcher dispatcher,
-    MessagePetRunner pets)
+    MessagePetRunner pets,
+    IItemLocks itemLocks,
+    IWorkspaceLocks workspaceLocks)
     : ICommandHandler<PostMessage, Item>, IQueryHandler<GetMessageDirectory, Result<MessageDirectoryResponse>>
 {
     private const int DirectoryLimit = 100;
@@ -67,6 +69,11 @@ public sealed class MessageHandler(
         }
 
         var parent = found.Value;
+        if (petIds.Length > 0 && await PetRefusal(parent, cancellationToken).ConfigureAwait(false) is { } refusal)
+        {
+            return Result.Failure<Item>(refusal);
+        }
+
         var author = await identities.FindPrincipalByIdAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
         string? via = null;
         if (scope.IsTokenSession && credential.CredentialId is { } tokenId)
@@ -87,6 +94,20 @@ public sealed class MessageHandler(
         }
 
         return result;
+    }
+
+    // The turn runs later as the poster with no workspace unlock, so refuse here, where the person is looking.
+    private async Task<NixError?> PetRefusal(Item parent, CancellationToken cancellationToken)
+    {
+        if ((await workspaceLocks.GetStateAsync(parent.WorkspaceId, cancellationToken).ConfigureAwait(false)).PasswordProtected)
+        {
+            return new NixError("messages.workspace_protected", "Pets are not available in a password-protected workspace. Remove the workspace password to use them.");
+        }
+
+        return ItemSettings.Read(parent.Settings).WithholdFromPets
+            || (await itemLocks.LockedAmongAsync([parent.Id], cancellationToken).ConfigureAwait(false)).Contains(parent.Id)
+            ? new NixError("messages.pet_unavailable", "This item is withheld from pets or locked.")
+            : null;
     }
 
     /// <summary>

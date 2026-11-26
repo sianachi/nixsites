@@ -118,7 +118,7 @@ public sealed class CreateItemHandler(
         // A message is created only by the post-message route, which names its author and addressees.
         if ((command.Type == MessageItem.Type) != command.MessageWrite)
         {
-            return Result.Failure<Item>(new NixError("items.reserved_type", "Post a message with the messages route."));
+            return Result.Failure<Item>(MessageItem.Reserved);
         }
 
         if (properties?.Any(pair => SchedulingReservedProperties.IsRefused(pair.Key, command.HabitWrite, command.CalendarWrite)) == true)

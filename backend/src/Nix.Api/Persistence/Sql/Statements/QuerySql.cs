@@ -286,6 +286,7 @@ public static class QuerySql
               AND item.workspace_id = ANY(@workspace_ids)
               AND item.lifecycle_state = 'active'
               AND item.template_id IS NULL
+              AND item.type <> 'message'
             """);
 
         if (spec.ExcludedItemId is not null)

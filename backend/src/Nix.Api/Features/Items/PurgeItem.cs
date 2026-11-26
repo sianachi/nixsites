@@ -34,6 +34,11 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
             return Result.Failure<ItemId>(ItemErrors.LifecycleConflict("Only an item in Trash can be permanently deleted."));
         }
 
+        if (item.Type == MessageItem.Type && item.CreatedBy != _session.Current?.PrincipalId)
+        {
+            return Result.Failure<ItemId>(MessageItem.NotYours);
+        }
+
         // The root of a live site, or of one whose files are still being deleted, stays until the
         // site is unpublished and drained, as a workspace purge does.
         if (_sites is not null && await _sites.HasLiveOrStoredSiteAsync(item.WorkspaceId, item.Id, cancellationToken).ConfigureAwait(false))

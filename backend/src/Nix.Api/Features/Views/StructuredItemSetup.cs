@@ -81,6 +81,11 @@ public sealed class CreateStructuredItemHandler(
             return Result.Failure<Item>(PropertyErrors.InvalidViews("A structured item needs a name and type."));
         }
 
+        if (command.Type == MessageItem.Type)
+        {
+            return Result.Failure<Item>(MessageItem.Reserved);
+        }
+
         if (command.Views.IsDefaultOrEmpty)
         {
             return Result.Failure<Item>(PropertyErrors.InvalidViews(

@@ -187,6 +187,7 @@ public static class RollupSql
               AND c.parent_id = container.id
               AND c.lifecycle_state = 'active'
               AND c.template_id IS NULL
+              AND c.type <> 'message'
             GROUP BY k.key
         ) AS fold
         WHERE {ItemVisibilitySql.NoHiddenStoredAncestor("container.id", includeSelf: true)}
@@ -232,6 +233,7 @@ public static class RollupSql
           AND c.parent_id = @parent_id
           AND c.lifecycle_state = 'active'
           AND c.template_id IS NULL
+          AND c.type <> 'message'
           AND {ItemVisibilitySql.NoHiddenStoredAncestor("@parent_id", includeSelf: true)}
         GROUP BY c.properties ->> @group_key
         ORDER BY count(*) DESC, bucket ASC NULLS LAST
@@ -283,6 +285,7 @@ public static class RollupSql
               AND c.parent_id = @parent_id
               AND c.lifecycle_state = 'active'
               AND c.template_id IS NULL
+              AND c.type <> 'message'
               AND {ItemVisibilitySql.NoHiddenStoredAncestor("@parent_id", includeSelf: true)}
         ),
         series_ranked AS (
@@ -379,6 +382,7 @@ public static class RollupSql
               AND c.parent_id = @parent_id
               AND c.lifecycle_state = 'active'
               AND c.template_id IS NULL
+              AND c.type <> 'message'
               AND {{ItemVisibilitySql.NoHiddenStoredAncestor("@parent_id", includeSelf: true)}}
         ),
         windowed AS (

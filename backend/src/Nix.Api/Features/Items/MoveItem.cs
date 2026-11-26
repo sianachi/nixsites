@@ -86,6 +86,12 @@ public sealed class MoveItemHandler(
         var item = lookup.Value;
         var workspaceId = item.WorkspaceId;
 
+        // A thread is its subtree: nothing leaves it and nothing joins it.
+        if (item.Type == MessageItem.Type)
+        {
+            return Result.Failure<Item>(MessageItem.Fixed);
+        }
+
         if (command.WorkspaceId is { } destinationWorkspace && destinationWorkspace != workspaceId)
         {
             return await TransferAsync(command, item, destinationWorkspace, cancellationToken).ConfigureAwait(false);
@@ -115,6 +121,11 @@ public sealed class MoveItemHandler(
             {
                 return Result.Failure<Item>(
                     ItemErrors.LifecycleConflict("An item cannot be moved into a deleted parent."));
+            }
+
+            if (parent.Type == MessageItem.Type)
+            {
+                return Result.Failure<Item>(MessageItem.Fixed);
             }
 
             // A reorder inside the same parent adds no child, so only a change of parent is asked.
