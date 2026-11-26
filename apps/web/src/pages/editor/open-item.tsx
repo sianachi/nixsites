@@ -821,6 +821,7 @@ export function OpenItem({
         }}
         tree={tree}
         itemId={itemId}
+        workspaceId={workspace?.workspaceId ?? null}
         title={title}
         lockNoun={lockNoun}
         lock={lock}

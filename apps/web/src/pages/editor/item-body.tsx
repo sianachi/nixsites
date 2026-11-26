@@ -4,6 +4,7 @@ import { Suspense, lazy, type ReactNode } from 'react';
 import { FileViewer } from '../../files/file-viewer';
 import { paneColumn, paneScroller } from '@nix/web-foundation/layout/regions';
 import { PaneViewport } from '@nix/web-foundation/layout/pane-viewport';
+import { MessageView } from '../../messages/message-view';
 import { LockedBody } from '../../locks/locked-body';
 import type { useItemLock } from '../../locks/use-item-lock';
 import { PaneProvider } from '@nix/web-platform/panes/pane-context';
@@ -133,6 +134,8 @@ export function ItemBody({
             itemId={itemId}
             itemControls={editorHostsControls ? mobileItemControls : undefined}
           />
+        ) : bodyKind === 'message' ? (
+          <MessageView itemId={itemId} />
         ) : bodyKind === 'artifact' ? (
           // An artifact draws the program stored in its body.
           <Suspense

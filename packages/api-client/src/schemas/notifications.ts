@@ -30,6 +30,7 @@ const notificationKindSchema = z.enum([
   'system',
   'invitation',
   'comment',
+  'message',
 ]);
 
 const notificationDtoSchema = z.object({

@@ -3,6 +3,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { ExportDialog } from '@nix/web-platform/export/export-dialog';
 import { MobileItemMove } from '../../items/mobile-item-move';
 import { LockDialog } from '../../locks/lock-dialog';
+import { MessageDialog } from '../../messages/message-dialog';
 import type { useItemLock } from '../../locks/use-item-lock';
 import type { ShellContext } from '../../shell/shell-context';
 
@@ -11,13 +12,14 @@ const ImportDialog = lazy(async () => ({
   default: (await import('@nix/web-workspaces/import/import-dialog')).ImportDialog,
 }));
 
-export type ItemDialogName = 'move' | 'export' | 'lock' | 'import';
+export type ItemDialogName = 'move' | 'export' | 'lock' | 'import' | 'message';
 
 interface ItemDialogsProps {
   readonly open: ItemDialogName | null;
   readonly onClose: () => void;
   readonly tree: ShellContext['tree'];
   readonly itemId: string;
+  readonly workspaceId: string | null;
   readonly title: string;
   readonly lockNoun: string;
   readonly lock: ReturnType<typeof useItemLock>;
@@ -30,6 +32,7 @@ export function ItemDialogs({
   onClose,
   tree,
   itemId,
+  workspaceId,
   title,
   lockNoun,
   lock,
@@ -57,6 +60,10 @@ export function ItemDialogs({
             onClose();
           }}
         />
+      ) : null}
+
+      {open === 'message' && workspaceId !== null ? (
+        <MessageDialog workspaceId={workspaceId} itemId={itemId} title={title} onClose={onClose} />
       ) : null}
 
       {open === 'lock' && lock.open ? (

@@ -7,6 +7,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- **Messages between people and pets.** A message is an item (up to 16,000 characters of Markdown, never edited after posting) that anyone who can write to an item can post under it; replies are its children, so the subtree is the thread. The author comes from the session, with the token's name shown as "<person> via <token>", and `to` is an explicit list of people who can read the item and your own pets, picked with @ in the composer. People addressed get a notification that links to the message and is marked read when they open it. In the app, each of your pets you address takes one turn in the order listed and replies as a child message; a pet's reply never starts another turn. A token can post to people but not to a pet yet. New: `POST /api/v1/items/{itemId}/messages`, `GET /api/v1/items/{itemId}/message-directory`, and "Send a message" in an item's menu.
 - **Pet usage and a monthly spending limit.** Every finished pet turn (chat, note chat, inline
   writing, plans, task runs and routines) is recorded with its tokens, model, source and an
   estimated cost: a price table for the Claude models (a model not in it is charged at the dearest

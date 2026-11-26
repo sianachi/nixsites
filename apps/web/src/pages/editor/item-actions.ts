@@ -7,6 +7,7 @@ import {
   LayoutTemplate,
   Lock,
   LockOpen,
+  MessageSquare,
   Network,
   PanelRightClose,
   Save,
@@ -104,6 +105,18 @@ export function itemActionEntries({
             label: 'Show for me',
             onSelect: () => {
               visibility.show(itemId, title);
+            },
+          },
+        ]
+      : []),
+    ...(workspace && lock.open
+      ? [
+          {
+            key: 'message',
+            label: 'Send a message',
+            icon: MessageSquare,
+            onSelect: () => {
+              openDialog('message');
             },
           },
         ]
