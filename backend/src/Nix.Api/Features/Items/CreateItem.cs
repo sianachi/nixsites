@@ -58,6 +58,12 @@ public sealed record CreateItem(
     internal bool CalendarWrite { get; init; }
 
     /// <summary>
+    /// Internal capability for the post-message route: the only way to create a <c>message</c> item
+    /// and to set its <c>$message</c> property. Never request-bound.
+    /// </summary>
+    internal bool MessageWrite { get; init; }
+
+    /// <summary>
     /// Refuse undeclared keys (built-in keys aside) and
     /// enforce required fields. Off for plain REST so existing callers keep working.
     /// </summary>
@@ -109,6 +115,12 @@ public sealed class CreateItemHandler(
         var parentId = command.ParentId;
         var properties = command.Properties;
 
+        // A message is created only by the post-message route, which names its author and addressees.
+        if ((command.Type == MessageItem.Type) != command.MessageWrite)
+        {
+            return Result.Failure<Item>(new NixError("items.reserved_type", "Post a message with the messages route."));
+        }
+
         if (properties?.Any(pair => SchedulingReservedProperties.IsRefused(pair.Key, command.HabitWrite, command.CalendarWrite)) == true)
         {
             return Result.Failure<Item>(SchedulingReservedProperties.Error);
@@ -117,6 +129,7 @@ public sealed class CreateItemHandler(
         // Any other '$' key: reserved for the server and the structural query fields. A create
         // supplying null for one sets nothing, so only a value is refused.
         if (properties?.FirstOrDefault(pair => pair.Value is not null
+                && !(command.MessageWrite && pair.Key == MessageItem.Key)
                 && ReservedPropertyKeys.IsRefused(pair.Key, command.HabitWrite, command.CalendarWrite)) is { Key: { } reserved })
         {
             return Result.Failure<Item>(ReservedPropertyKeys.Refusal(reserved));

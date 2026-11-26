@@ -16,6 +16,7 @@ public static class NotificationKindStorage
         NotificationKind.System => "system",
         NotificationKind.Invitation => "invitation",
         NotificationKind.Comment => "comment",
+        NotificationKind.Message => "message",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown notification kind."),
     };
 
@@ -28,6 +29,7 @@ public static class NotificationKindStorage
         "system" => NotificationKind.System,
         "invitation" => NotificationKind.Invitation,
         "comment" => NotificationKind.Comment,
+        "message" => NotificationKind.Message,
         _ => throw new InvalidOperationException($"Unknown stored notification kind '{text}'."),
     };
 }

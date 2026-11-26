@@ -145,6 +145,8 @@ public sealed class AccessTokenScopePolicyTests
         ["GetCurrentPrincipal"] = Requirement.Read,
         ["GetBookmarks"] = Requirement.Read,
         ["ListComments"] = Requirement.Read,
+        ["PostMessage"] = Requirement.Write,
+        ["GetMessageDirectory"] = Requirement.Read,
         ["WatchComments"] = Requirement.Read,
         ["AddComment"] = Requirement.Write,
         ["ReplyComment"] = Requirement.Write,

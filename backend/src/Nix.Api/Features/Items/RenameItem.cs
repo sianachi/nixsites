@@ -60,6 +60,10 @@ public sealed class RenameItemHandler(
         }
 
         var item = lookup.Value;
+        if (item.Type == MessageItem.Type)
+        {
+            return Result.Failure<Item>(MessageItem.Immutable);
+        }
 
         // An event the owner cannot edit at its source is not editable here either: the provider
         // would overwrite the change on the next pull, and until then the mirror would lie.

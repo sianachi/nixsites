@@ -574,6 +574,11 @@
     "method": "GET",
     "path": "/api/v1/me/security"
   },
+  "GetMessageDirectory": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/message-directory"
+  },
   "GetOperation": {
     "mode": "read",
     "method": "GET",
@@ -1201,6 +1206,11 @@
     "mode": "human",
     "method": "POST",
     "path": "/api/v1/me/pets/runtime"
+  },
+  "PostMessage": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/messages"
   },
   "PreflightTemplateApplication": {
     "mode": "review",

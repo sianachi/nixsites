@@ -21,7 +21,8 @@ public sealed class WorkspacePrincipalDirectoryStore(
         string? search,
         PrincipalId? afterPrincipalId,
         int limit,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Guid[]? only = null)
     {
         var context = session.Current
             ?? throw new InvalidOperationException("No session context was established for workspace principal search.");
@@ -40,6 +41,8 @@ public sealed class WorkspacePrincipalDirectoryStore(
                 Uuid("after_principal_id", afterPrincipalId?.Value),
                 Text("query", search),
                 Integer("limit", limit),
+                Boolean("everyone", only is null),
+                UuidArray("ids", only ?? []),
             ],
             cancellationToken);
         await foreach (var row in query.ConfigureAwait(false))
@@ -66,6 +69,7 @@ public static class WorkspacePrincipalDirectorySql
         WHERE principal.tenant_id = @tenant_id
           AND principal.status = 'active'
           AND (@after_principal_id IS NULL OR principal.principal_id > @after_principal_id)
+          AND (@everyone OR principal.principal_id = ANY(@ids))
           AND (@query IS NULL OR position(lower(@query) in lower(principal.display_name)) > 0)
           AND (
               EXISTS (

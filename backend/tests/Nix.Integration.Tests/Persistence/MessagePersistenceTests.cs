@@ -1,0 +1,232 @@
+using System.Text.Json.Nodes;
+using Nix.Abstractions;
+using Nix.Abstractions.Scheduling;
+using Nix.Domain.Identity;
+using Nix.Domain.Items;
+using Nix.Domain.Primitives;
+using Nix.Domain.Scheduling;
+using Nix.Domain.Tenancy;
+using Nix.Features.Items;
+using Nix.Features.Messages;
+using Nix.Features.Properties;
+using Nix.Integration.Tests.Harness;
+using Nix.Messaging;
+
+namespace Nix.Integration.Tests.Persistence;
+
+/// <summary>Messages as items: who may post, who may be addressed, who is told, and that a posted message never changes.</summary>
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
+public sealed class MessagePersistenceTests : IAsyncLifetime
+{
+    private static readonly Guid Note = new("c0c0c000-5555-4555-8555-c0c0c0000001");
+    private static readonly Guid Viewer = new("c0c0c000-5555-4555-8555-c0c0c0000011");
+    private static readonly Guid Editor = new("c0c0c000-5555-4555-8555-c0c0c0000013");
+    private static readonly Guid Friend = new("c0c0c000-5555-4555-8555-c0c0c0000014");
+    private static readonly Guid Stranger = new("c0c0c000-5555-4555-8555-c0c0c0000015");
+
+    private readonly NixPostgresFixture _fixture;
+
+    public MessagePersistenceTests(NixPostgresFixture fixture) => _fixture = fixture;
+
+    private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
+
+    private static NixSessionContext As(Guid principal) =>
+        TestTenants.ContextFor(M0SchemaSeed.Alpha.TenantId, M0SchemaSeed.Alpha.WorkspaceId, principal);
+
+    public async ValueTask InitializeAsync()
+    {
+        await _fixture.ResetAsync();
+        await M0SchemaSeed.SeedBothTenantsAsync(_fixture);
+        await SeedAsync();
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    [Fact]
+    public async Task A_posted_message_carries_its_author_and_addressees_and_a_reply_is_its_child()
+    {
+        var first = (await PostAsync(Editor, Note, "  hello  ", new MessageAddress(Friend, "person"))).Value;
+        Assert.Equal("message", first.Type);
+        Assert.Equal(Note, first.ParentId?.Value);
+        var stored = JsonNode.Parse(JsonNode.Parse(first.Properties!)![MessageItem.Key]!.GetValue<string>())!;
+        Assert.Equal("hello", stored["text"]!.GetValue<string>());
+        Assert.Equal("Editor", stored["author"]!["name"]!.GetValue<string>());
+        Assert.Equal("person", stored["author"]!["kind"]!.GetValue<string>());
+        Assert.Equal(Friend, stored["to"]![0]!["id"]!.GetValue<Guid>());
+
+        var reply = (await PostAsync(Friend, first.Id.Value, "hi back")).Value;
+        Assert.Equal(first.Id, reply.ParentId);
+    }
+
+    [Fact]
+    public async Task The_request_never_names_the_author_and_a_viewer_cannot_post()
+    {
+        Assert.Equal("items.not_found", (await PostAsync(Viewer, Note, "no")).Error.Code);
+        var message = (await PostAsync(Editor, Note, "mine")).Value;
+        Assert.Equal(Editor, message.CreatedBy.Value);
+    }
+
+    [Fact]
+    public async Task Text_must_be_one_to_sixteen_thousand_characters_and_addressees_must_be_readers_or_own_pets()
+    {
+        Assert.Equal("messages.invalid", (await PostAsync(Editor, Note, "   ")).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsync(Editor, Note, new string('x', 16_001))).Error.Code);
+        Assert.True((await PostAsync(Editor, Note, new string('x', 16_000))).IsSuccess);
+        Assert.Equal("messages.invalid", (await PostAsync(Editor, Note, "hi", new MessageAddress(Stranger, "person"))).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsync(Editor, Note, "hi", new MessageAddress(Friend, "robot"))).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsync(Editor, Note, "hi", new MessageAddress(Guid.NewGuid(), "pet"), interactive: true)).Error.Code);
+    }
+
+    [Fact]
+    public async Task A_session_that_is_not_the_app_cannot_address_a_pet()
+    {
+        Assert.Equal("messages.pets_interactive_only", (await PostAsync(Editor, Note, "hi", new MessageAddress(Guid.NewGuid(), "pet"))).Error.Code);
+    }
+
+    [Fact]
+    public async Task A_posted_message_cannot_be_renamed_or_changed_and_a_message_cannot_be_created_the_generic_way()
+    {
+        var message = (await PostAsync(Editor, Note, "fixed")).Value;
+        Assert.Equal("items.read_only", (await SendAsync<RenameItem, Item>(Editor, new RenameItem(message.Id, "new"))).Error.Code);
+        Assert.Equal("items.read_only", (await SendAsync<SetItemProperties, Item>(Editor, new SetItemProperties(message.Id, """{"note":"x"}"""))).Error.Code);
+        Assert.Equal("items.reserved_type", (await SendAsync<CreateItem, Item>(Editor, new CreateItem(WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId), "message", "m", ItemId.From(Note), null))).Error.Code);
+        Assert.NotEqual("items.reserved_type", (await SendAsync<CreateItem, Item>(Editor, new CreateItem(WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId), "note", "n", ItemId.From(Note), null))).Error.Code);
+    }
+
+    [Fact]
+    public async Task Only_addressed_people_are_told_never_the_poster_and_a_pet_reply_tells_nobody()
+    {
+        var message = (await PostAsync(Editor, Note, "ping", new MessageAddress(Friend, "person"), new MessageAddress(Editor, "person"))).Value;
+        Assert.Equal([Friend], await RecipientsAsync(message.Id.Value));
+
+        Assert.Equal(TriggerFireStatus.Fired, (await FireAsync(Friend, message.Id.Value)).Status);
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            Assert.Equal(1, await RawSql.CountAsync(connection, null,
+                $"SELECT count(*) FROM notification WHERE kind = 'message' AND item_id = {RawSql.Literal(message.Id.Value)} AND principal_id = {RawSql.Literal(Friend)} AND title = 'Editor sent you a message'"));
+        }
+
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var parent = (await work.Resolve<IItemTree>().FindAsync(message.Id, Cancellation))!;
+            var reply = await work.Resolve<MessageHandler>().Post(parent, "from the pet", new MessageAuthor(Guid.NewGuid(), "pet", "Pip", null), [], Cancellation);
+            await work.CommitAsync(Cancellation);
+            Assert.True(reply.IsSuccess);
+            Assert.Empty(await RecipientsAsync(reply.Value.Id.Value));
+        }
+    }
+
+    [Fact]
+    public async Task The_directory_lists_readers_and_not_strangers_and_no_pets_outside_the_app()
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var directory = (await work.Resolve<NixDispatcher>().QueryAsync<GetMessageDirectory, Result<MessageDirectoryResponse>>(new(ItemId.From(Note), null), Cancellation)).Value;
+            Assert.Contains(directory.Addressees, a => a.Id == Friend && a.Kind == "person");
+            Assert.DoesNotContain(directory.Addressees, a => a.Id == Stranger);
+            Assert.DoesNotContain(directory.Addressees, a => a.Kind == "pet");
+        }
+    }
+
+    private Task<Result<Item>> PostAsync(Guid who, Guid parent, string text, params MessageAddress[] to) =>
+        PostAsync(who, parent, text, to, interactive: false);
+
+    private Task<Result<Item>> PostAsync(Guid who, Guid parent, string text, MessageAddress address, bool interactive) =>
+        PostAsync(who, parent, text, [address], interactive);
+
+    private async Task<Result<Item>> PostAsync(Guid who, Guid parent, string text, MessageAddress[] to, bool interactive)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(who), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            if (interactive)
+            {
+                work.Resolve<AccessTokenSessionContext>().SetInteractive();
+            }
+
+            var result = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, Item>(new(ItemId.From(parent), new(text, to)), Cancellation);
+            if (result.IsSuccess)
+            {
+                await work.CommitAsync(Cancellation);
+            }
+
+            return result;
+        }
+    }
+
+    private async Task<Result<TValue>> SendAsync<TCommand, TValue>(Guid who, TCommand command)
+        where TCommand : ICommand<TValue>
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(who), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var result = await work.Resolve<NixDispatcher>().SendAsync<TCommand, TValue>(command, Cancellation);
+            if (result.IsSuccess)
+            {
+                await work.CommitAsync(Cancellation);
+            }
+
+            return result;
+        }
+    }
+
+    private async Task<List<Guid>> RecipientsAsync(Guid messageId)
+    {
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            return [.. await RawSql.GuidListAsync(connection, null,
+                $"SELECT principal_id FROM scheduled_trigger WHERE source = 'message.posted' AND source_item_id = {RawSql.Literal(messageId)}")];
+        }
+    }
+
+    private async Task<TriggerOutcome> FireAsync(Guid recipient, Guid messageId)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(recipient), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var source = work.Resolve<IEnumerable<ITriggerSource>>().Single(candidate => candidate.Name == "message.posted");
+            var outcome = await source.FireAsync(new DueTrigger(
+                TenantId.From(M0SchemaSeed.Alpha.TenantId), Guid.NewGuid(), WorkspaceId.From(M0SchemaSeed.Alpha.WorkspaceId),
+                PrincipalId.From(recipient), TriggerKind.System, "message.posted", messageId, messageId, DateTimeOffset.UtcNow,
+                "message:" + messageId, 0), Cancellation);
+            await work.CommitAsync(Cancellation);
+            return outcome;
+        }
+    }
+
+    private async Task SeedAsync()
+    {
+        var tenant = RawSql.Literal(M0SchemaSeed.Alpha.TenantId);
+        var workspace = RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId);
+        var granter = RawSql.Literal(M0SchemaSeed.Alpha.PrincipalId);
+        var sql = $$"""
+            INSERT INTO principal (principal_id, tenant_id, external_subject, kind, display_name, email, status, deprovisioned_at)
+            VALUES
+                ({{RawSql.Literal(Viewer)}}, {{tenant}}, 'm-viewer', 'user', 'Viewer', 'mviewer@example.test', 'active', NULL),
+                ({{RawSql.Literal(Editor)}}, {{tenant}}, 'm-editor', 'user', 'Editor', 'meditor@example.test', 'active', NULL),
+                ({{RawSql.Literal(Friend)}}, {{tenant}}, 'm-friend', 'user', 'Friend', 'mfriend@example.test', 'active', NULL),
+                ({{RawSql.Literal(Stranger)}}, {{tenant}}, 'm-stranger', 'user', 'Stranger', 'mstranger@example.test', 'active', NULL);
+
+            INSERT INTO workspace_member (workspace_id, subject_type, subject_id, tenant_id, role, granted_by, granted_at)
+            VALUES
+                ({{workspace}}, 'principal', {{RawSql.Literal(Viewer)}}, {{tenant}}, 'viewer', {{granter}}, now()),
+                ({{workspace}}, 'principal', {{RawSql.Literal(Editor)}}, {{tenant}}, 'editor', {{granter}}, now()),
+                ({{workspace}}, 'principal', {{RawSql.Literal(Friend)}}, {{tenant}}, 'editor', {{granter}}, now());
+
+            INSERT INTO item (id, tenant_id, workspace_id, type, parent_id, seq, properties, settings, lifecycle_state, purge_after, created_by, last_modified_by, created_at, last_modified_at)
+            VALUES ({{RawSql.Literal(Note)}}, {{tenant}}, {{workspace}}, 'note', NULL, 1000, '{"title": "Plan"}'::jsonb, NULL, 'active', NULL, {{granter}}, {{granter}}, now(), now());
+
+            INSERT INTO item_closure (descendant_id, ancestor_id, tenant_id, workspace_id, depth)
+            VALUES ({{RawSql.Literal(Note)}}, {{RawSql.Literal(Note)}}, {{tenant}}, {{workspace}}, 0);
+            """;
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(connection, transaction: null, sql);
+        }
+    }
+}

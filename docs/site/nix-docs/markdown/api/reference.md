@@ -30,6 +30,7 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Items](#items)
 - [LocalSecurity](#localsecurity)
 - [Me](#me)
+- [Messages](#messages)
 - [NativeSync](#nativesync)
 - [Notifications](#notifications)
 - [OAuth](#oauth)
@@ -2573,6 +2574,49 @@ Operation id: `PatchUiSettings`.
 Request body: `PatchUiSettingsRequest`.
 
 Responses: `200`, `422`.
+
+## Messages
+
+<a id="messages"></a>
+
+### GET /api/v1/items/{itemId}/message-directory
+
+<a id="getmessagedirectory"></a>
+
+Operation id: `GetMessageDirectory`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `query` in query (optional, string)
+
+Responses: `200`, `404`.
+
+### POST /api/v1/items/{itemId}/messages
+
+<a id="postmessage"></a>
+
+Operation id: `PostMessage`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Request body: `PostMessageRequest`.
+
+Responses: `201`, `403`, `404`, `409`, `422`.
 
 ## NativeSync
 

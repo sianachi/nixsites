@@ -9,7 +9,8 @@ public sealed record ListWorkspaceAssignablePrincipals(
     WorkspaceId WorkspaceId,
     string? Search,
     PrincipalId? AfterPrincipalId,
-    int Limit) : IQuery<IReadOnlyList<WorkspacePrincipalSnapshot>>;
+    int Limit,
+    IReadOnlyList<Guid>? Only = null) : IQuery<IReadOnlyList<WorkspacePrincipalSnapshot>>;
 
 public sealed class ListWorkspaceAssignablePrincipalsHandler(WorkspacePrincipalDirectoryStore store)
     : IQueryHandler<ListWorkspaceAssignablePrincipals, IReadOnlyList<WorkspacePrincipalSnapshot>>
@@ -24,6 +25,7 @@ public sealed class ListWorkspaceAssignablePrincipalsHandler(WorkspacePrincipalD
             query.Search,
             query.AfterPrincipalId,
             query.Limit,
-            cancellationToken);
+            cancellationToken,
+            query.Only?.ToArray());
     }
 }

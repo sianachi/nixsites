@@ -100,6 +100,10 @@ public sealed class SetItemPropertiesHandler(
         }
 
         var item = lookup.Value;
+        if (item.Type == MessageItem.Type)
+        {
+            return Result.Failure<Item>(MessageItem.Immutable);
+        }
 
         // An event the owner cannot edit at its source keeps its mirrored fields: the provider
         // would overwrite them on the next pull. Everything else on it, a reminder say, is the

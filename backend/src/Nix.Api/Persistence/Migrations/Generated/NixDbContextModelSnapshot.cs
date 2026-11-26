@@ -2592,7 +2592,7 @@ namespace Nix.Persistence.Migrations.Generated
 
                     b.ToTable("notification", null, t =>
                         {
-                            t.HasCheckConstraint("notification_bounded", "char_length(title) <= 200 AND char_length(body) <= 1000 AND kind IN ('reminder', 'automation', 'calendar', 'system', 'invitation', 'comment')");
+                            t.HasCheckConstraint("notification_bounded", "char_length(title) <= 200 AND char_length(body) <= 1000 AND kind IN ('reminder', 'automation', 'calendar', 'system', 'invitation', 'comment', 'message')");
 
                             t.HasCheckConstraint("notification_pet_decision", "(pet_run_id IS NULL AND pet_decision_id IS NULL AND pet_decision_is_question IS NULL) OR (pet_run_id IS NOT NULL AND pet_decision_id IS NOT NULL AND pet_decision_is_question IS NOT NULL AND kind = 'system' AND item_id IS NOT NULL AND workspace_id IS NOT NULL)");
                         });

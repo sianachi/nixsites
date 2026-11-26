@@ -24,6 +24,9 @@ public enum NotificationKind
 
     /// <summary>A reply or mention in a note's comment thread.</summary>
     Comment,
+
+    /// <summary>A message another person (or one of their pets) addressed to the recipient.</summary>
+    Message,
 }
 
 /// <summary>The exact question or proposal a pet is waiting on.</summary>

@@ -320,6 +320,7 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `items.body_too_large`
 - `items.invalid_idempotency_key`
 - `items.read_only`
+- `items.reserved_type`
 - `items.schema_base_changed`
 - `items.sibling_not_in_destination`
 - `locks.busy`
@@ -328,6 +329,8 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `locks.too_many_attempts`
 - `me.invalid_ui_settings`
 - `me.ui_settings_too_large`
+- `messages.interactive_only`
+- `messages.pets_interactive_only`
 - `notifications.invalid_preferences`
 - `notifications.invalid_subscription`
 - `notifications.not_found`
