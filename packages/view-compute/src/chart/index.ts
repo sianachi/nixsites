@@ -186,7 +186,7 @@ export const computeChart: ViewCompute = async (source, request, match) => {
   const splitBy = options.splitBy;
 
   const children = (await childrenOf(source, item.workspaceId, itemId)).filter(
-    (child) => child.lifecycleState === 'active',
+    (child) => child.lifecycleState === 'active' && child.type !== 'message',
   );
   if (children.some((child) => child.locked)) return null;
   const rows = children.map((child) => child.properties);

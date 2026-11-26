@@ -23,15 +23,10 @@ export const principalPreferencesResponseSchema = z.object({
   mutedContainerIds: z.array(z.uuid()),
 });
 
-const notificationKindSchema = z.enum([
-  'reminder',
-  'automation',
-  'calendar',
-  'system',
-  'invitation',
-  'comment',
-  'message',
-]);
+// A kind this client does not know reads as a system notice, so a newer server never breaks the inbox.
+const notificationKindSchema = z
+  .enum(['reminder', 'automation', 'calendar', 'system', 'invitation', 'comment', 'message'])
+  .catch('system');
 
 const notificationDtoSchema = z.object({
   id: z.uuid(),

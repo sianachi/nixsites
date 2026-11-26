@@ -227,4 +227,18 @@ describe('pet result links', () => {
       expect(container.querySelector('.hljs-keyword')).toBeNull();
     },
   );
+
+  it('shows an openui-lang fence as code when generated UI is off', async () => {
+    const { container } = render(
+      <PetMessageText
+        workspaceId={workspace}
+        generatedUi={false}
+        text={'```openui-lang\nroot = Stack([])\n```'}
+      />,
+    );
+    await waitFor(() => {
+      expect(container.querySelector('code')?.textContent).toBe('root = Stack([])');
+    });
+    expect(screen.getByRole('button', { name: 'Copy code' })).toBeInTheDocument();
+  });
 });

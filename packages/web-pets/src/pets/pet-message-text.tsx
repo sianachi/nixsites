@@ -145,6 +145,8 @@ interface OpenUiContext {
   readonly followsLockedRead: boolean;
   readonly noteScope: { readonly rootItemId: string; readonly readOnly: boolean } | undefined;
   readonly readOnly: boolean;
+  /** False renders every openui fence as the plain code it is. */
+  readonly generatedUi: boolean;
 }
 
 /** Render a validated document through React; model HTML, images and external URLs stay inert. */
@@ -227,7 +229,7 @@ function messageNode(
       const language = typeof node.attrs.language === 'string' ? node.attrs.language : null;
       const code = <CodeBlock code={node.textContent} language={language} />;
       const kind = pieceKind(language);
-      if (kind === null) return code;
+      if (kind === null || !openUi.generatedUi) return code;
       const block = openUi.blocks++;
       const base = kind === 'patch' ? [...openUi.pieces] : undefined;
       openUi.pieces.push({ patch: kind === 'patch', source: node.textContent });
@@ -299,6 +301,7 @@ export function PetMessageText({
   followsLockedRead = false,
   noteScope,
   readOnly = false,
+  generatedUi = true,
 }: {
   readonly text: string;
   readonly workspaceId: string;
@@ -320,6 +323,8 @@ export function PetMessageText({
   readonly noteScope?: { readonly rootItemId: string; readonly readOnly: boolean } | undefined;
   /** Components here only read: they never offer a write. */
   readonly readOnly?: boolean;
+  /** Off for text that other people or agents wrote: a fence of generated UI then shows as code. */
+  readonly generatedUi?: boolean;
 }): ReactElement {
   const sourceKey = sourceWorkspaceIds.join(',');
   const parsed = useMemo(
@@ -341,6 +346,7 @@ export function PetMessageText({
       followsLockedRead,
       noteScope,
       readOnly,
+      generatedUi,
     });
   }, [
     parsed,
@@ -354,6 +360,7 @@ export function PetMessageText({
     followsLockedRead,
     noteScope,
     readOnly,
+    generatedUi,
   ]);
   if (!tree) {
     return (

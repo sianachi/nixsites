@@ -70,7 +70,8 @@ export function candidates(
   };
   const rows = new Map<string, Row>();
   for (const item of all) {
-    if (!isVisible(item)) continue;
+    // Messages stay in the tree and the mirror's visibility walk, but are never rows.
+    if (!isVisible(item) || item.type === 'message') continue;
     rows.set(item.id, {
       item,
       props: item.properties,

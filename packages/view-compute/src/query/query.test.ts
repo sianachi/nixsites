@@ -84,6 +84,19 @@ describe('query semantics', () => {
     }
   });
 
+  it('never returns a message as a row', async () => {
+    const fixture = {
+      ...base,
+      items: [
+        ...base.items,
+        { key: 'm', parent: 'a', type: 'message', title: 'hi', properties: { title: 'hi', n: 1 } },
+      ],
+    };
+    const answer = (await ask(fixture)) as { body: { results: { id: string }[] } };
+    expect(answer.body.results.map((r) => r.id)).not.toContain(fixtureId('m'));
+    expect(answer.body.results).toHaveLength(2);
+  });
+
   it('hides an item whose unlock grant has lapsed, and withholds what a lock hides', async () => {
     const items = fixtureItems(base).map((item, i) => ({
       ...item,

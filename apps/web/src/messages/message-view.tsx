@@ -58,7 +58,7 @@ function Bubble({ item, unread }: { readonly item: Item; readonly unread: boolea
         {formatRelativeTime(new Date(item.createdAt))}
         {unread ? ' · New' : ''}
       </Text>
-      <PetMessageText text={message.text} workspaceId={item.workspaceId} readOnly />
+      <PetMessageText text={message.text} workspaceId={item.workspaceId} generatedUi={false} />
     </article>
   );
 }
