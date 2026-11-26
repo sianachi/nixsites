@@ -391,6 +391,7 @@ export class HttpTransport implements Transport {
         };
       this.notify('turn/completed', { threadId: thread.id, turn });
     };
+    let interruptedRound: ProviderMessage | undefined;
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS_PER_TURN; round++) {
         const itemId = `${turnId}-${String(round)}`;
@@ -424,13 +425,14 @@ export class HttpTransport implements Transport {
           finish('failed', new Error('The model finished without an answer. Try again'));
           return;
         }
-        thread.messages.push({
+        const assistant: ProviderMessage = {
           role: 'assistant',
           text,
           toolCalls: calls,
           // Only a tool round needs them back; a final answer's are dropped.
           ...(calls.length > 0 && thinking?.length ? { thinking } : {}),
-        });
+        };
+        thread.messages.push(assistant);
         if (calls.length === 0) {
           this.save(thread);
           this.notify('item/completed', {
@@ -493,6 +495,8 @@ export class HttpTransport implements Transport {
               });
             }
             thread.messages.push({ role: 'user', toolResults: results });
+            // The thread now ends in this tool round, so the next turn must replay its thinking.
+            interruptedRound = assistant;
             this.save(thread);
             finish('interrupted');
             return;
@@ -519,7 +523,8 @@ export class HttpTransport implements Transport {
         new Error('The model kept calling tools without answering; the turn was stopped.'),
       );
     } finally {
-      for (const message of thread.messages) delete message.thinking;
+      for (const message of thread.messages)
+        if (message !== interruptedRound) delete message.thinking;
       if (thread.ephemeral) this.threads.delete(thread.id);
       this.turns.get(turnId)?.abort();
       this.turns.delete(turnId);

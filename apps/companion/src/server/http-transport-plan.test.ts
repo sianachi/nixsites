@@ -475,6 +475,54 @@ describe('plan recipient credential pinning', () => {
       }
     });
 
+    it('keeps the thinking of a tool round the owner interrupted, for the next turn', async () => {
+      const bodies: Record<string, unknown>[] = [];
+      let completed = false;
+      let asked = false;
+      const transport = new HttpTransport({
+        kind: 'anthropic',
+        apiKey: 'synthetic-key',
+        home: tempDir(),
+        notify: (method) => {
+          if (method === 'turn/completed') completed = true;
+        },
+        fetch: (_url, init) => {
+          bodies.push(
+            JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as Record<
+              string,
+              unknown
+            >,
+          );
+          return Promise.resolve(events(bodies.length === 1 ? thoughtRound : answer));
+        },
+      });
+      transport.setRequestHandler(() => {
+        asked = true;
+        return true;
+      });
+      try {
+        const started = (await transport.call('thread/start', { model: 'claude-sonnet-5-5' })) as {
+          thread: { id: string };
+        };
+        const turn = (await transport.call('turn/start', {
+          threadId: started.thread.id,
+          input: [{ type: 'text', text: 'First' }],
+        })) as { turn: { id: string } };
+        await eventually(() => asked);
+        await transport.call('turn/interrupt', { turnId: turn.turn.id });
+        await eventually(() => completed);
+        completed = false;
+        await transport.call('turn/start', {
+          threadId: started.thread.id,
+          input: [{ type: 'text', text: 'Again' }],
+        });
+        await eventually(() => completed);
+        expect(JSON.stringify(bodies[1])).toContain('sig-1');
+      } finally {
+        transport.close();
+      }
+    });
+
     it('keeps thinking off for Haiku chat', async () => {
       const t = await run('claude-haiku-5-5');
       try {

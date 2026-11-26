@@ -268,7 +268,7 @@ describe('Anthropic', () => {
     await eventually(() => bodies().length === 1);
     expect(bodies()[0]).toMatchObject({
       model: 'claude-sonnet-5-5',
-      thinking: { type: 'between_tools' },
+      thinking: { type: 'adaptive', display: 'summarized' },
     });
     const own = keyAccount('anthropic', server);
     await own.send({ model: 'claude-pet' });
