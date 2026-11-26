@@ -7,6 +7,7 @@ import {
   ProviderThreadUnavailableError,
   providerFailureToken,
 } from '../providers/provider-errors.ts';
+import { isParallelRead } from '../tools/flatten.ts';
 import type { ModelInfo, Notify, RequestHandler, Transport } from '../shared/types.ts';
 import { errorMessage, isRecord, str } from '../shared/util.ts';
 import {
@@ -397,9 +398,20 @@ export class HttpTransport implements Transport {
         try {
           if (disclosureGuard !== undefined && !(await disclosureGuard()))
             throw new HistoryDisclosureError();
-          result = await this.wire.stream(context, thread, (delta) => {
-            this.notify('item/agentMessage/delta', { threadId: thread.id, itemId, delta });
-          });
+          result = await this.wire.stream(
+            context,
+            thread,
+            (delta) => {
+              this.notify('item/agentMessage/delta', { threadId: thread.id, itemId, delta });
+            },
+            (delta) => {
+              this.notify('item/reasoning/summaryTextDelta', {
+                threadId: thread.id,
+                itemId,
+                delta,
+              });
+            },
+          );
         } catch (error) {
           // An interrupted turn can surface as a cancelled signal or as the provider closing the
           // stream early; either way the owner asked for it to stop.
@@ -446,9 +458,28 @@ export class HttpTransport implements Transport {
               ),
             )
           : undefined;
+        // A run of read-only calls is asked together; a write waits for the calls before it, and
+        // the results are still replayed in the model's order.
+        const asked = new Map<number, Promise<ToolReply | undefined>>();
+        const ask = (i: number): Promise<ToolReply | undefined> => {
+          const call = calls[i];
+          if (call === undefined) return Promise.resolve(undefined);
+          let p = asked.get(i);
+          if (p === undefined) {
+            p = this.askTool(signal, thread.id, call.id, call.name, call.arguments);
+            asked.set(i, p);
+          }
+          return p;
+        };
+        const reads = (i: number): boolean => {
+          const call = calls[i];
+          return call !== undefined && isParallelRead(call.name, call.arguments);
+        };
         for (const [i, call] of calls.entries()) {
-          const reply = await (pending?.[i] ??
-            this.askTool(signal, thread.id, call.id, call.name, call.arguments));
+          if (pending === undefined && reads(i)) {
+            for (let j = i; j < calls.length && reads(j); j++) void ask(j);
+          }
+          const reply = await (pending?.[i] ?? ask(i));
           if (reply === undefined) {
             // Every call still gets an answer: an assistant tool call with no result after it
             // makes the provider refuse the thread's next message.

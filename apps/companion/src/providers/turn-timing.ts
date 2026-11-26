@@ -15,6 +15,8 @@ export class TurnTiming {
   firstToolAt = 0;
   /** When the first nonempty reply text arrived; 0 for a turn that showed none. */
   firstTextAt = 0;
+  /** The first reasoning, tool or text, whichever came first: when the person first saw progress. */
+  firstVisibleAt = 0;
   toolCount = 0;
   pendingMs = 0;
   usage: ProviderUsage | undefined;
@@ -25,6 +27,7 @@ export class TurnTiming {
     this.effort = effort;
     this.firstToolAt = 0;
     this.firstTextAt = 0;
+    this.firstVisibleAt = 0;
     this.toolCount = 0;
     this.pendingMs = 0;
     this.usage = undefined;
@@ -33,10 +36,17 @@ export class TurnTiming {
   /** Once per turn: separates a slow provider start from a delay after text begins. */
   textArrived(): void {
     if (this.firstTextAt === 0) this.firstTextAt = Date.now();
+    this.progressShown();
+  }
+
+  /** Also called for the first text and the first tool, so it marks the first visible progress. */
+  progressShown(): void {
+    if (this.firstVisibleAt === 0) this.firstVisibleAt = Date.now();
   }
 
   toolRecorded(): void {
     if (this.firstToolAt === 0) this.firstToolAt = Date.now();
+    this.progressShown();
     this.toolCount++;
   }
 
@@ -54,6 +64,7 @@ export class TurnTiming {
       status,
       total_ms: Date.now() - this.started,
       first_text_ms: this.firstTextAt === 0 ? -1 : this.firstTextAt - this.started,
+      first_visible_ms: this.firstVisibleAt === 0 ? -1 : this.firstVisibleAt - this.started,
       first_tool_ms: this.firstToolAt === 0 ? -1 : this.firstToolAt - this.started,
       tool_calls: this.toolCount,
       pending_ms: this.pendingMs,

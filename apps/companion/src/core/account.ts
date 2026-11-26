@@ -38,7 +38,14 @@ import {
   valueOrDefault,
   type TurnError,
 } from '../shared/diagnostics.ts';
-import { applyDelta, draftId, trimMessages, withoutDrafts } from '../providers/drafts.ts';
+import {
+  applyDelta,
+  applyReasoning,
+  clearReasoning,
+  draftId,
+  trimMessages,
+  withoutDrafts,
+} from '../providers/drafts.ts';
 import { SERVER_READ_MS, SERVER_WRITE_MS, type ServerTools } from '../tools/server-tools.ts';
 import {
   argumentRefusalCode,
@@ -1125,13 +1132,18 @@ export class Account {
     }
     for (const [key, c] of this.conversations) {
       if (c.threadId !== threadId) continue;
-      if (
-        method === 'item/agentMessage/delta' &&
-        c.state === 'thinking' &&
-        applyDelta(c.messages, c.requestId, str(p.itemId), str(p.delta))
-      ) {
-        if (str(p.delta) !== '') c.timing.textArrived();
-        this.bump(c);
+      if (method === 'item/reasoning/summaryTextDelta' && c.state === 'thinking') {
+        if (applyReasoning(c.messages, c.requestId, str(p.itemId), str(p.delta))) {
+          c.timing.progressShown();
+          this.bump(c);
+        }
+      } else if (method === 'item/agentMessage/delta' && c.state === 'thinking') {
+        // Text replaces the reasoning line.
+        const cleared = clearReasoning(c.messages);
+        if (applyDelta(c.messages, c.requestId, str(p.itemId), str(p.delta)) || cleared) {
+          if (str(p.delta) !== '') c.timing.textArrived();
+          this.bump(c);
+        }
       }
       this.recordNotification(
         key,
@@ -1215,6 +1227,7 @@ export class Account {
     params: unknown,
   ): void {
     const status = str(turn.status);
+    clearReasoning(c.messages);
     c.timing.usage = isRecord(turn.usage)
       ? (turn.usage as unknown as typeof c.timing.usage)
       : undefined;
@@ -1534,6 +1547,7 @@ export class Account {
       call.hasRpcId = true;
       call.pendingSince = Date.now();
       c.tools.push(call);
+      clearReasoning(c.messages);
       c.timing.toolRecorded();
       if (call.status === 'planned') {
         // Core adopts the complete frozen batch before any executor can claim it.

@@ -26,6 +26,12 @@ follows semantic versioning (`0.x` pre-1.0).
   A task run, routine or plan stopped by the limit now says so (`pets.budget_exhausted`, same
   message) instead of "The pet could not continue this job". An OpenRouter turn cut off before its
   price arrived is counted from an estimate rather than as free.
+- **Faster-feeling pet chat.** A message you send shows at once with the working line, before the
+  server answers. When the model reports reasoning (Claude thinking summaries, OpenRouter reasoning),
+  one muted line in the chat shows it until the reply text or a tool card replaces it; it is never
+  saved, kept in the conversation or sent back to the model. Independent read-only tool calls in one
+  round now run together (writes and `remember` stay in order, and results reach the model in its
+  order). The turn log gains `first_visible_ms`, the first reasoning, tool or text.
 - `nixctl health --check-session` checks anonymous browser-session availability in addition to
   process liveness. It fails when the session endpoint fails, reports no session data, and leaves
   the default health output unchanged.

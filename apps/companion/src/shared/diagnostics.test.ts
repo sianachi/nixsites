@@ -114,6 +114,7 @@ describe('the shared log', () => {
       'status',
       'total_ms',
       'first_text_ms',
+      'first_visible_ms',
       'first_tool_ms',
       'tool_calls',
       'pending_ms',
@@ -149,6 +150,33 @@ describe('the shared log', () => {
     for (const [method, params] of completed()) spoken.notify(method, params);
     expect(timing(spoken).first_text_ms).toBeGreaterThanOrEqual(0);
     expect(JSON.stringify(timing(spoken))).not.toContain('Hel');
+  });
+
+  it('shows reasoning as one transient line that text replaces, and logs first_visible_ms', async () => {
+    const h = harness();
+    await h.account.handle(h.signal, request());
+    const send = (method: string, delta: string, itemId = 'm1'): void => {
+      h.notify(method, { threadId: 'provider-thread', itemId, delta });
+    };
+    const messages = (): { id: string; text: string }[] =>
+      h.account.conversations.values().next().value?.messages ?? [];
+    const timing = (): { firstVisibleAt: number; firstTextAt: number } | undefined =>
+      h.account.conversations.values().next().value?.timing;
+    send('item/reasoning/summaryTextDelta', 'Checking ');
+    send('item/reasoning/summaryTextDelta', 'the notes');
+    expect(messages().filter((m) => m.id.includes(':draft:reasoning:'))).toMatchObject([
+      { text: 'Checking the notes' },
+    ]);
+    expect(timing()?.firstVisibleAt).toBeGreaterThan(0);
+    expect(timing()?.firstTextAt).toBe(0);
+    send('item/reasoning/summaryTextDelta', 'Next round', 'm2');
+    expect(messages().map((m) => m.text)).toEqual(['Help me write', 'Next round']);
+    send('item/agentMessage/delta', 'Hello');
+    expect(messages().map((m) => m.text)).toEqual(['Help me write', 'Hello']);
+    for (const [method, params] of completed()) h.notify(method, params);
+    const line = h.logger.lines.find((l) => l.message === 'companion turn completed');
+    expect(line?.attrs.first_visible_ms).toBeGreaterThanOrEqual(0);
+    expect(JSON.stringify(messages())).not.toContain('Next round');
   });
 
   it('logs refused and rejected tool calls with a reason but never the arguments', async () => {

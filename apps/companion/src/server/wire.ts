@@ -58,6 +58,7 @@ export interface ProviderWire {
     context: WireContext,
     thread: HttpThread,
     onDelta: (delta: string) => void,
+    onReasoning?: (delta: string) => void,
   ): Promise<ProviderStreamResult>;
 }
 
@@ -246,7 +247,7 @@ export const anthropicWire: ProviderWire = {
     return models.length === 0 ? ANTHROPIC_MODELS.map((m) => ({ ...m })) : models;
   },
 
-  async stream({ fetch: doFetch, base, apiKey, signal }, thread, onDelta) {
+  async stream({ fetch: doFetch, base, apiKey, signal }, thread, onDelta, onReasoning) {
     const ctx = AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]);
     const messages: { role: string; content: string | Block[] }[] = [];
     for (const message of thread.messages) {
@@ -376,6 +377,9 @@ export const anthropicWire: ProviderWire = {
             text += str(delta.text);
             onDelta(str(delta.text));
           }
+          // Shown while the model works, then dropped: never kept in the thread or sent back.
+          if (delta.type === 'thinking_delta' && str(delta.thinking) !== '')
+            onReasoning?.(str(delta.thinking));
           if (delta.type === 'input_json_delta') {
             const block = blocks.get(index);
             if (block !== undefined) block.json += str(delta.partial_json);
@@ -470,7 +474,7 @@ export const openrouterWire: ProviderWire = {
     return models;
   },
 
-  async stream({ fetch: doFetch, base, apiKey, signal }, thread, onDelta) {
+  async stream({ fetch: doFetch, base, apiKey, signal }, thread, onDelta, onReasoning) {
     const ctx = AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]);
     const system: Block = { role: 'system', content: thread.system };
     // OpenRouter passes Anthropic's cache breakpoints through, and only Claude models need one.
@@ -562,6 +566,8 @@ export const openrouterWire: ProviderWire = {
         if (!isRecord(choice)) continue;
         if (choice.finish_reason === 'length') throw new ResponseTooLongError();
         const delta = isRecord(choice.delta) ? choice.delta : {};
+        const reasoning = str(delta.reasoning);
+        if (reasoning !== '') onReasoning?.(reasoning);
         if (str(delta.content) !== '') {
           text += str(delta.content);
           onDelta(str(delta.content));

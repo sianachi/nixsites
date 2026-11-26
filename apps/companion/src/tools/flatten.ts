@@ -208,6 +208,14 @@ function canonicalField(args: Record<string, unknown>, field: string): void {
   }
 }
 
+/** A call with no side effect, so it may run beside its neighbours; `remember` saves a memory, so it never does. */
+export function isParallelRead(tool: string, raw: unknown): boolean {
+  const flattened = flattenToolCall(tool, raw);
+  if (flattened.flat === undefined) return false;
+  const operation = toolOperation(flattened.flat);
+  return operation !== 'remember' && READ_ONLY.has(operation);
+}
+
 /**
  * Identity is scoped to one user turn and includes every argument; canonical JSON handles
  * reordered keys without treating a changed target or payload as approved. Empty fingerprint when

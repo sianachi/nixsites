@@ -410,7 +410,7 @@ describe('Anthropic', () => {
     );
     const k = keyAccount('anthropic', server);
     await k.send({ workspaceAccess: true });
-    await eventually(() => k.account.snapshot(key).tools.length === 1);
+    await eventually(() => k.account.snapshot(key).tools.length === 2);
     await k.account.handle(k.signal, request({ operation: 'interrupt' }));
     await eventually(() => k.account.snapshot(key).state === 'idle');
     const saved = JSON.parse(
@@ -743,6 +743,25 @@ describe('OpenRouter', () => {
     await eventually(() => reports.length === 1);
     expect(reports[0]?.inputTokens).toBeGreaterThan(0);
     expect(reports[0]?.costUsd).toBeGreaterThan(0);
+  });
+
+  it('passes OpenRouter reasoning deltas out as transient progress', async () => {
+    const server = await track(
+      startServer((seen, res) => {
+        if (seen.url === '/models') return jsonResponse(res, 200, models);
+        sse(res, [
+          chunk({ reasoning: 'Thinking it over' }),
+          chunk({ content: 'Hi.' }),
+          chunk({}, 'stop'),
+          '[DONE]',
+        ]);
+      }),
+    );
+    const k = keyAccount('openrouter', server, tempDir(), 'sk-test', true);
+    await k.send({});
+    await eventually(() => k.account.snapshot(key).state === 'success');
+    expect(k.events.some((e) => e.method === 'item/reasoning/summaryTextDelta')).toBe(true);
+    expect(JSON.stringify(k.account.snapshot(key).messages)).not.toContain('Thinking it over');
   });
 
   it('lists models marking tool support, the first as default', async () => {

@@ -68,3 +68,40 @@ export function applyDelta(
   existing.text += truncateUtf8(delta, remaining);
   return true;
 }
+
+const MAX_REASONING_BYTES = 2000;
+
+export const isReasoning = (m: Message): boolean => m.id.includes(':draft:reasoning:');
+
+/**
+ * The model's reasoning summary as one transient draft (so it is never saved or sent back): each
+ * new reasoning item replaces the last. Returns whether it changed.
+ */
+export function applyReasoning(
+  messages: Message[],
+  requestId: string,
+  itemId: string,
+  delta: string,
+): boolean {
+  if (itemId === '' || byteLen(itemId) > 200 || delta === '') return false;
+  const id = `${requestId}:draft:reasoning:${createHash('sha256').update(itemId).digest('hex').slice(0, 32)}`;
+  const kept = messages.filter((m) => !isReasoning(m) || m.id === id);
+  messages.splice(0, messages.length, ...kept);
+  const existing = messages.find((m) => m.id === id);
+  if (existing === undefined) {
+    messages.push({ id, role: 'assistant', text: truncateUtf8(delta, MAX_REASONING_BYTES) });
+    return true;
+  }
+  const room = MAX_REASONING_BYTES - byteLen(existing.text);
+  if (room <= 0) return false;
+  existing.text += truncateUtf8(delta, room);
+  return true;
+}
+
+/** Drops the reasoning line once text, a tool or the end of the turn replaces it. */
+export function clearReasoning(messages: Message[]): boolean {
+  const kept = messages.filter((m) => !isReasoning(m));
+  if (kept.length === messages.length) return false;
+  messages.splice(0, messages.length, ...kept);
+  return true;
+}
