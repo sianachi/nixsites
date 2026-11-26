@@ -200,6 +200,7 @@ export function usePetRuntime(
     runtimeRef.current = null;
     setRuntimeState(null);
     setBusy(false);
+    setSending('');
     reportError(
       'This note is no longer available. Reopen it before continuing the conversation.',
       'load',
@@ -262,6 +263,7 @@ export function usePetRuntime(
         setExposedGeneration(generation.current);
         setModels([]);
         setBusy(false);
+        setSending('');
         reportError('', null);
       }
       revision.current = value.revision;
@@ -306,6 +308,7 @@ export function usePetRuntime(
       if (cancelled || myGeneration !== generation.current) return;
       setRuntimeState(null);
       setModels([]);
+      setSending('');
       reportError('', null);
       setExposedGeneration(myGeneration);
     });
@@ -506,6 +509,7 @@ export function usePetRuntime(
       dropStream();
       setExposedGeneration(generation.current);
       setBusy(false);
+      setSending('');
       void refreshProvider();
     };
     window.addEventListener('nix-pet-provider-keys-changed', providerKeysChanged);

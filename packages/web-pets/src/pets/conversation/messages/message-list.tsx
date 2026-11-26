@@ -1,7 +1,7 @@
 import { memoryModeOf } from '../../memory-mode';
 import { type PetConnection, type PetProfile, type PetSettings } from '@nix/api-client';
 import { Button, Text } from '@nix/ui';
-import { Fragment, useLayoutEffect, useMemo, useRef, type ReactElement } from 'react';
+import { Fragment, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { type NixClient } from '@nix/api-client';
 import { type ProgramPiece } from '../../../openui/fence';
 import { PetAvatar } from '../../pet-avatar';
@@ -82,8 +82,18 @@ export function MessageList({
   const reasoning = stored.findLast((m) => m.id.includes(':draft:reasoning:'))?.text ?? '';
   const reasoningLine = reasoning.trim().split('\n').at(-1) ?? '';
   const shown = stored.filter((m) => !m.id.includes(':draft:reasoning:'));
+  // The optimistic row stands in until the runtime holds the real message: a user message with this
+  // text that was not there when sending began (an earlier turn may have said the same).
+  const [sentWhen, setSentWhen] = useState<{ text: string; ids: ReadonlySet<string> } | null>(null);
+  if ((sentWhen?.text ?? '') !== sending)
+    setSentWhen(sending === '' ? null : { text: sending, ids: new Set(shown.map((m) => m.id)) });
+  const arrived =
+    sentWhen?.text === sending &&
+    shown.some((m) => m.role === 'user' && m.text === sending && !sentWhen.ids.has(m.id));
   const messages: readonly Message[] =
-    sending === '' ? shown : [...shown, { id: 'sending-user', role: 'user', text: sending }];
+    sending === '' || arrived
+      ? shown
+      : [...shown, { id: 'sending-user', role: 'user', text: sending }];
   // The watch hands over a new runtime up to four times a second. Rows are memoised, so the
   // callbacks they receive must keep one identity; they read the latest props through a ref.
   const latestProps = useRef({ onAsk, retryLastTurn, onSaveInsight, setEditing, onAttachToJob });

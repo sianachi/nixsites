@@ -31,7 +31,9 @@ follows semantic versioning (`0.x` pre-1.0).
   one muted line in the chat shows it until the reply text or a tool card replaces it; it is never
   saved, kept in the conversation or sent back to the model. Independent read-only tool calls in one
   round now run together (writes and `remember` stay in order, and results reach the model in its
-  order). The turn log gains `first_visible_ms`, the first reasoning, tool or text.
+  order). The turn log gains `first_visible_ms`, the first reasoning, tool or text. Claude Sonnet
+  (think harder, plans, task runs) now thinks adaptively so there is reasoning to show; Haiku chat
+  stays off. Thinking blocks go back to Anthropic only inside the turn's own tool rounds.
 - `nixctl health --check-session` checks anonymous browser-session availability in addition to
   process liveness. It fails when the session endpoint fails, reports no session data, and leaves
   the default health output unchanged.
@@ -245,6 +247,9 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- A Claude turn on OpenRouter that is cut off before its price arrives is now estimated at that
+  Claude model's price instead of the dearest one. The sending line no longer lingers when the pet
+  or provider key changes mid-send, and a sent message no longer shows twice once the server holds it.
 - **Saved chats no longer save the model's reasoning as the reply.** Core now skips the companion's transient reasoning line when it reads the running turn text.
 - Companion chat asks for sharing consent on the sources the message really sends. With workspace
   context on and a page open, it asked about the page alone and then refused every message with

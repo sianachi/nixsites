@@ -172,7 +172,14 @@ describe('message list turn error', () => {
     messages: { id: string; role: string; text: string }[],
     props: { running: boolean; sending: string },
   ) {
-    return render(
+    return render(listElement(messages, props));
+  }
+
+  function listElement(
+    messages: { id: string; role: string; text: string }[],
+    props: { running: boolean; sending: string },
+  ) {
+    return (
       <MemoryRouter>
         <MessageList
           client={{} as never}
@@ -205,7 +212,7 @@ describe('message list turn error', () => {
           retryLastTurn={noop}
           onSaveInsight={noop}
         />
-      </MemoryRouter>,
+      </MemoryRouter>
     );
   }
 
@@ -213,6 +220,27 @@ describe('message list turn error', () => {
     renderList([], { running: false, sending: 'Hello there' });
     expect(screen.getByText('Hello there')).toBeTruthy();
     expect(screen.getByText(/is thinking/)).toBeTruthy();
+  });
+
+  it('drops the sending row once the real message arrives, even when an earlier turn said the same', () => {
+    const earlier = [
+      { id: 'u0', role: 'user', text: 'Hello there' },
+      { id: 'a0', role: 'assistant', text: 'Hi' },
+    ];
+    const props = { running: true, sending: 'Hello there' };
+    const view = renderList(earlier, props);
+    expect(screen.getAllByText('Hello there')).toHaveLength(2);
+    view.rerender(
+      listElement([...earlier, { id: 'req-1', role: 'user', text: 'Hello there' }], props),
+    );
+    expect(screen.getAllByText('Hello there')).toHaveLength(2);
+    view.rerender(
+      listElement([...earlier, { id: 'req-1', role: 'user', text: 'Hello there' }], {
+        running: true,
+        sending: '',
+      }),
+    );
+    expect(screen.getAllByText('Hello there')).toHaveLength(2);
   });
 
   it('shows reasoning as the one muted line, never as a message', () => {

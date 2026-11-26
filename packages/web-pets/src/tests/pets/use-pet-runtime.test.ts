@@ -585,6 +585,31 @@ describe('usePetRuntime errorKind and retryWatch', () => {
     expect(result.current.errorKind).toBe('send');
   });
 
+  it('clears the sending line when the generation changes while a send is in flight', async () => {
+    client.query.mockImplementation(() => new Promise<never>(() => undefined));
+    client.execute.mockImplementation((endpoint: unknown) => {
+      const operation = (endpoint as { body?: { operation?: string } }).body?.operation;
+      return operation === 'send'
+        ? new Promise<never>(() => undefined)
+        : Promise.resolve(connection());
+    });
+    const { result } = renderHook(() => usePetRuntime(WORKSPACE_ID, PET_ID, true));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0); // the mount's deferred reset runs first
+    });
+    await act(async () => {
+      void result.current.send({ text: 'hi there', model: '', workspaceAccess: false });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.sending).toBe('hi there');
+    await act(async () => {
+      window.dispatchEvent(new Event('nix-pet-provider-keys-changed'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.sending).toBe('');
+    expect(result.current.busy).toBe(false);
+  });
+
   it('keeps a safe provider credit problem visible and retries the untouched request', async () => {
     const problem = NixApiError.fromProblemDetails(402, {
       code: 'pets.provider_credit_balance',
