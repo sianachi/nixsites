@@ -614,6 +614,11 @@
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/pet-sharing/question"
   },
+  "GetPetUsage": {
+    "mode": "human",
+    "method": "GET",
+    "path": "/api/v1/me/pets/usage"
+  },
   "GetPreferences": {
     "mode": "read",
     "method": "GET",

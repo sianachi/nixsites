@@ -99,6 +99,11 @@ public static class PetSettingsValidation
             }
         }
 
+        if (settings.MonthlyBudgetUsd is { } budget && (budget <= 0 || budget > 100_000 || decimal.Round(budget, 2) != budget))
+        {
+            return false;
+        }
+
         return memoryIds.Count <= MaxMemories
             && settings.MemoryMode is PetMemoryModes.Off or PetMemoryModes.Ask or PetMemoryModes.Always
             && (!settings.Enabled || settings.ActivePetId is not null)

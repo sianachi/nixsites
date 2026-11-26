@@ -316,6 +316,12 @@ internal static class M0SchemaSeed
                     {Literal(rows.WorkspaceId)}, {Literal(rows.ItemId)}, repeat('a', 64), repeat('b', 64),
                     {Literal(rows.AclEntryId)}, {Literal(rows.PrincipalId)}, now(), now() + interval '1 day');
 
+                INSERT INTO pet_usage
+                    (id, tenant_id, principal_id, pet_id, provider, model, source, input_tokens, cache_read_tokens,
+                     cache_write_tokens, output_tokens, cost_usd, started_at, duration_ms)
+                VALUES ({Literal(rows.ItemId)}, {Literal(rows.TenantId)}, {Literal(rows.PrincipalId)},
+                    {Literal(rows.ItemId)}, 'anthropic', 'claude-haiku-5-5', 'app', 1, 0, 0, 1, 0.01, now(), 1);
+
                 INSERT INTO pet_plan_decision_context
                     (id, tenant_id, owner_id, workspace_id, run_id, plan_id, plan_version, review_digest,
                      grantee_credential_id, client_name, approve, secret_hash, expires_at)

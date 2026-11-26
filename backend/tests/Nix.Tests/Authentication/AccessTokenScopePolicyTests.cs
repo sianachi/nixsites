@@ -215,6 +215,7 @@ public sealed class AccessTokenScopePolicyTests
         ["SetContainerViews"] = Requirement.Write,
         ["SaveCanvasLibrary"] = Requirement.Write,
         ["GetPetSettings"] = Requirement.Read,
+        ["GetPetUsage"] = Requirement.Read,
         ["SavePetSettings"] = Requirement.Write,
         ["ListPetProviderKeys"] = Requirement.Read,
         ["SavePetProviderKey"] = Requirement.InteractiveOnly,
@@ -537,6 +538,10 @@ public sealed class AccessTokenScopePolicyTests
         Assert.False(Satisfies([AccessTokenScopes.Write], Classify("POST", "/api/v1/search/mentions")));
         Assert.True(Satisfies([AccessTokenScopes.Read], Classify("POST", "/api/v1/search/mentions")));
     }
+
+    [Fact]
+    public void Reading_pet_usage_is_a_read_and_the_pet_runtime_stays_interactive() =>
+        Assert.Equal(Requirement.Read, Classify("GET", "/api/v1/me/pets/usage"));
 
     [Theory]
     [InlineData("/api/v1/workspaces/00000000-0000-0000-0000-000000000001/automations")]

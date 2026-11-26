@@ -265,6 +265,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<ICommandHandler<CancelConversation, ConversationResponse>, ConversationHandlers>();
         services.AddScoped<ICommandHandler<ChangeConversationSources, ConversationResponse>, ConversationHandlers>();
         services.AddScoped<IPetPreferencesStore, PetPreferencesStore>();
+        services.AddScoped<IPetUsageStore, PetUsageStore>();
         services.AddScoped<IQueryHandler<GetPetSettings, PetSettingsResponse>, GetPetSettingsHandler>();
         services.AddScoped<ICommandHandler<SavePetSettings, PetSettingsResponse>, SavePetSettingsHandler>();
         services.AddScoped<IPetProviderCredentialStore, PetProviderCredentialStore>();

@@ -161,6 +161,9 @@ public static class NixTables
     /// <summary>An owner's source-sharing challenge and provider-bound consent.</summary>
     public const string PetPlanConsent = "pet_plan_consent";
 
+    /// <summary>One finished pet turn; private to the person, kept 13 months.</summary>
+    public const string PetUsage = "pet_usage";
+
     /// <summary>An owner's expiring, credential-bound plan decision handoff.</summary>
     public const string PetPlanDecisionContext = "pet_plan_decision_context";
 
@@ -352,6 +355,7 @@ public static class NixTables
         PetProviderCredential,
         PetPlanConsent,
         PetPlanDecisionContext,
+        PetUsage,
         Notification,
         PushSubscription,
         NotificationInbox,
@@ -566,6 +570,8 @@ public static class NixTables
             [PetProviderCredential] = FullDml,
             [PetPlanConsent] = FullDml,
             [PetPlanDecisionContext] = FullDml,
+            // Rows are only ever added and read as the person; the retention function deletes them.
+            [PetUsage] = ImmutableRegistration,
             [Notification] = FullDml,
             [PushSubscription] = FullDml,
             [NotificationInbox] = FullDml,

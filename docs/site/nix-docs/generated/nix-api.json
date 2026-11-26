@@ -335,6 +335,47 @@
         }
       }
     },
+    "/api/v1/me/pets/usage": {
+      "get": {
+        "tags": [
+          "Pets"
+        ],
+        "summary": "The caller's own pet usage and spending limit",
+        "description": "Daily totals for the month with a breakdown by pet, model and source, and the monthly budget (limit, spent, remaining) the pets are held to. Costs are estimates. 'month' (yyyy-MM) reads an earlier month within the 13 months kept; the budget is always the current month's.",
+        "operationId": "GetPetUsage",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetUsageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/pet-runs": {
       "get": {
         "tags": [
@@ -7093,6 +7134,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PetConnectionResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -22194,6 +22245,50 @@
           }
         }
       },
+      "PetBudgetStatus": {
+        "required": [
+          "limitUsd",
+          "spentUsd",
+          "remainingUsd",
+          "month",
+          "timeZone"
+        ],
+        "type": "object",
+        "properties": {
+          "limitUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "spentUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "remainingUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "month": {
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string"
+          }
+        }
+      },
       "PetConnectionResponse": {
         "required": [
           "provider",
@@ -23901,6 +23996,15 @@
           "memoryMode": {
             "type": "string",
             "default": "ask"
+          },
+          "monthlyBudgetUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -24133,6 +24237,114 @@
           "stepId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PetUsageGroup": {
+        "required": [
+          "key",
+          "turns",
+          "inputTokens",
+          "cacheReadTokens",
+          "cacheWriteTokens",
+          "outputTokens",
+          "costUsd"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "turns": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "inputTokens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheReadTokens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheWriteTokens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "outputTokens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "costUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "PetUsageResponse": {
+        "required": [
+          "budget",
+          "total",
+          "days",
+          "byPet",
+          "byModel",
+          "bySource"
+        ],
+        "type": "object",
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/PetBudgetStatus"
+          },
+          "total": {
+            "$ref": "#/components/schemas/PetUsageGroup"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetUsageGroup"
+            }
+          },
+          "byPet": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetUsageGroup"
+            }
+          },
+          "byModel": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetUsageGroup"
+            }
+          },
+          "bySource": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetUsageGroup"
+            }
           }
         }
       },
@@ -30338,6 +30550,9 @@
       "name": "Canvas"
     },
     {
+      "name": "Pets"
+    },
+    {
       "name": "Pet Runs"
     },
     {
@@ -30393,9 +30608,6 @@
     },
     {
       "name": "Search"
-    },
-    {
-      "name": "Pets"
     },
     {
       "name": "Pet Plans"

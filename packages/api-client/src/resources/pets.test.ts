@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { runtime, streamRuntimeRequest, watchRuntime } from './pets.js';
+import { petUsageResponseSchema } from '../schemas/pets.js';
+import { runtime, saveSettings, streamRuntimeRequest, usage, watchRuntime } from './pets.js';
 
 const WORKSPACE_ID = 'a1000000-0000-4000-8000-000000000001';
 const PET_ID = 'a2000000-0000-4000-8000-000000000002';
@@ -144,5 +145,43 @@ describe('the pets resource', () => {
     expect(watchRuntime({ workspaceId: WORKSPACE_ID, petId: PET_ID }).query).not.toHaveProperty(
       'mode',
     );
+  });
+
+  it('reads usage for the current month or a named one', () => {
+    expect(usage()).toMatchObject({ path: '/api/v1/me/pets/usage', query: undefined });
+    expect(usage('2026-10').query).toEqual({ month: '2026-10' });
+    const group = {
+      key: 'app',
+      turns: 1,
+      inputTokens: 2,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      outputTokens: 3,
+      costUsd: 0.5,
+    };
+    expect(
+      petUsageResponseSchema.parse({
+        budget: {
+          limitUsd: null,
+          spentUsd: 0.5,
+          remainingUsd: null,
+          month: '2026-11',
+          timeZone: 'Etc/UTC',
+        },
+        total: group,
+        days: [group],
+        byPet: [group],
+        byModel: [group],
+        bySource: [group],
+      }).budget.limitUsd,
+    ).toBeNull();
+  });
+
+  it('sends the monthly limit, or none, when settings are saved', () => {
+    const base = { enabled: false, activePetId: null, profiles: [], inlineWriting: false };
+    expect(saveSettings(1, base).body).toMatchObject({ settings: { monthlyBudgetUsd: null } });
+    expect(saveSettings(1, { ...base, monthlyBudgetUsd: 20 }).body).toMatchObject({
+      settings: { monthlyBudgetUsd: 20 },
+    });
   });
 });

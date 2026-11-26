@@ -7,7 +7,7 @@ using Nix.Domain.Primitives;
 namespace Nix.Features.Pets;
 
 internal sealed record PetTaskStepInput(Guid RunId, Guid StepId, Guid WorkspaceId, Guid? ItemId, string Goal,
-    IReadOnlyList<string> Context, IReadOnlyList<PetTaskCapability> Capabilities, IReadOnlyList<string>? ScopeAbilities = null, bool PlanMode = false, string? SharingAttestation = null);
+    IReadOnlyList<string> Context, IReadOnlyList<PetTaskCapability> Capabilities, IReadOnlyList<string>? ScopeAbilities = null, bool PlanMode = false, string? SharingAttestation = null, bool Routine = false);
 
 internal sealed record PetTaskCapability(string Name, string Description, JsonElement? InputSchema = null);
 
@@ -89,7 +89,8 @@ public sealed partial class PetWorkerClient
         }
 
         var prepared = await PrepareToolFreeTurnAsync(input.WorkspaceId, input.StepId, input.Goal, capabilities, context,
-            "plan_task_step", pet, token, input.SharingAttestation, thinkHarder: true).ConfigureAwait(false);
+            "plan_task_step", pet, token, input.SharingAttestation, thinkHarder: true,
+            usageSource: input.PlanMode ? PetUsageSources.Plan : input.Routine ? PetUsageSources.Routine : PetUsageSources.Run).ConfigureAwait(false);
         return prepared.IsFailure
             ? Result.Failure<PreparedPetTaskStep>(prepared.Error)
             : Result.Success(new PreparedPetTaskStep(prepared.Value, offered, scopeAbilities, input.PlanMode));

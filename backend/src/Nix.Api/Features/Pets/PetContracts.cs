@@ -17,11 +17,12 @@ public sealed record PetProfile(Guid Id, string Name, string Appearance, string 
 /// <c>InlineWriting</c> is the separate opt-in for sending text the person selects in a note to
 /// the model provider from the editor. It defaults to off, and settings stored before it existed
 /// read as off. <c>Memories</c> are what the pet has learned about the owner, which the owner sees and
-/// edits in Settings. <c>MemoryMode</c> is <c>off</c> (nothing reaches the model and nothing is saved),
+/// edits in Settings. <c>MonthlyBudgetUsd</c> is the person's optional limit on what their pets may cost in a calendar month (their time zone), in USD
+/// (<see langword="null"/> is no limit); at the limit new turns are refused. <c>MemoryMode</c> is <c>off</c> (nothing reaches the model and nothing is saved),
 /// <c>ask</c> (each new memory waits for the owner's click) or <c>always</c> (saved without asking, with
 /// Undo). All three trail and default so a stored document without them still deserialises.
 /// </remarks>
-public sealed record PetSettings(bool Enabled, Guid? ActivePetId, IReadOnlyList<PetProfile> Profiles, bool InlineWriting = false, IReadOnlyList<PetMemory>? Memories = null, string MemoryMode = PetMemoryModes.Ask);
+public sealed record PetSettings(bool Enabled, Guid? ActivePetId, IReadOnlyList<PetProfile> Profiles, bool InlineWriting = false, IReadOnlyList<PetMemory>? Memories = null, string MemoryMode = PetMemoryModes.Ask, decimal? MonthlyBudgetUsd = null);
 
 /// <summary>How the pet may save memories.</summary>
 public static class PetMemoryModes
@@ -167,7 +168,10 @@ internal sealed record PetWorkerRequest(string TenantId, string PrincipalId, str
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] string? ApprovedOperation = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ConsentMode = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false,
+    // Core's own label for the turn's usage and the one budget line the turn carries; see PetUsageService.
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? UsageSource = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? BudgetLine = null);
 
 /// <summary>One inline writing request from the editor: the person's selection and what to do with it.</summary>
 /// <param name="WorkspaceId">The workspace the item is in.</param>
@@ -189,7 +193,9 @@ internal sealed record PetInlineWorkerRequest(string TenantId, string PrincipalI
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Provider = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ApiKey = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SharingAttestation = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? UsageSource = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? BudgetLine = null);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(PetSettings))]
@@ -204,4 +210,6 @@ internal sealed record PetInlineWorkerRequest(string TenantId, string PrincipalI
 [JsonSerializable(typeof(PetInlineRequest))]
 [JsonSerializable(typeof(PetWorkerRequest))]
 [JsonSerializable(typeof(PetInlineWorkerRequest))]
+[JsonSerializable(typeof(PetUsageResponse))]
+[JsonSerializable(typeof(RecordPetUsageRequest))]
 internal sealed partial class PetJsonContext : JsonSerializerContext;

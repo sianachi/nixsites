@@ -3904,7 +3904,7 @@ Operation id: `PetRuntime`.
 
 Request body: `PetRuntimeRequest`.
 
-Responses: `200`, `409`.
+Responses: `200`, `403`, `409`.
 
 ### POST /api/v1/me/pets/runtime/note
 
@@ -4035,6 +4035,28 @@ Operation id: `SavePetSettings`.
 Request body: `SavePetSettingsRequest`.
 
 Responses: `200`.
+
+### GET /api/v1/me/pets/usage
+
+<a id="getpetusage"></a>
+
+The caller's own pet usage and spending limit
+
+Operation id: `GetPetUsage`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Daily totals for the month with a breakdown by pet, model and source, and the monthly budget (limit, spent, remaining) the pets are held to. Costs are estimates. 'month' (yyyy-MM) reads an earlier month within the 13 months kept; the budget is always the current month's.
+
+Parameters:
+
+- `month` in query (optional, string)
+
+Responses: `200`, `422`.
 
 ## PublicLinks
 

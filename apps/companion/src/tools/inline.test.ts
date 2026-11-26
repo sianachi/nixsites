@@ -172,6 +172,18 @@ describe('inline stream', () => {
     });
   });
 
+  it('adds the budget line to the end of the input', async () => {
+    const b = await up();
+    const response = await stream(b, {
+      budgetLine: 'Budget: $1.00 of $2.00 used this month, $1.00 left.',
+    });
+    expect(response.status).toBe(200);
+    const input = b.fake.last('turn/start').input as { text: string }[];
+    expect(input[0]?.text).toMatch(
+      /\n\nBUDGET: Budget: \$1\.00 of \$2\.00 used this month, \$1\.00 left\. Keep the work lean when little is left\.$/,
+    );
+  });
+
   it('plans a durable task step in a fresh tool-free turn using approved observations', async () => {
     const b = await up();
     const capabilities = [{ name: 'comment.add', description: 'Propose a comment on this task' }];

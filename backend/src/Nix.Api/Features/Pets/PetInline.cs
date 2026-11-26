@@ -319,6 +319,7 @@ internal static class PetInlineEndpoint
                 {
                     "pets.invalid_request" => StatusCodes.Status422UnprocessableEntity,
                     "pets.inline_busy" => StatusCodes.Status429TooManyRequests,
+                    PetUsageService.BudgetExhausted => StatusCodes.Status403Forbidden,
                     _ => StatusCodes.Status503ServiceUnavailable,
                 };
                 return Refuse(context, status, opened.Error.Code, "Inline writing request failed", opened.Error.Message);

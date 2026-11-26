@@ -9,6 +9,8 @@ import { noContentSchema } from '../schemas/index.js';
 import {
   petConnectionSchema,
   petSettingsResponseSchema,
+  petUsageResponseSchema,
+  type PetUsageResponse,
   type PetSettings,
   type PetSettingsResponse,
   type PetConnection,
@@ -44,9 +46,20 @@ export const saveSettings = (
         ...value,
         memories: value.memories ?? null,
         memoryMode: value.memoryMode ?? 'ask',
+        monthlyBudgetUsd: value.monthlyBudgetUsd ?? null,
       },
     } satisfies components['schemas']['SavePetSettingsRequest'],
     invalidates: [settingsKey],
+  });
+
+/** The owner's pet usage for the current month, or an earlier one (yyyy-MM), with the budget. */
+export const usage = (month?: string): QueryEndpoint<PetUsageResponse> =>
+  defineQuery({
+    operation: 'pets.usage',
+    path: '/api/v1/me/pets/usage',
+    ...(month === undefined ? {} : { query: { month } }),
+    schema: petUsageResponseSchema,
+    cacheKey: ['me', 'pets', 'usage', month ?? 'current'] as const,
   });
 
 const providersKey = ['me', 'pets', 'providers'] as const;

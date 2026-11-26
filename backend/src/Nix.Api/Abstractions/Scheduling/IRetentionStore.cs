@@ -22,4 +22,7 @@ public interface IRetentionStore
     /// caller repeating while a full batch comes back drains both.
     /// </summary>
     public Task<int> PurgeCalendarSyncLogAsync(int limit, CancellationToken cancellationToken);
+
+    /// <summary>Deletes up to <paramref name="limit"/> pet usage rows older than 13 months. Returns how many were removed.</summary>
+    public Task<int> PurgePetUsageAsync(int limit, CancellationToken cancellationToken);
 }

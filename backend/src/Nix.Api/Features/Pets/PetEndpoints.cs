@@ -28,6 +28,7 @@ internal static class PetEndpoints
         group.MapPost("/runtime", Runtime).WithName("PetRuntime")
             .WithRequestBodyLimit(PetWorkerClient.MaxRuntimeRequestBytes)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict);
         group.MapPost("/runtime/note", RuntimeNote).WithName("PetNoteRuntime")
             .WithRequestBodyLimit(PetWorkerClient.MaxRuntimeRequestBytes)
@@ -95,6 +96,7 @@ internal static class PetEndpoints
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status501NotImplemented)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        endpoints.MapPetUsageEndpoints();
         return endpoints;
     }
 
@@ -185,6 +187,7 @@ internal static class PetEndpoints
                 error.Code == "pets.not_found" ? 404
                     : error.Code == "pets.invalid_request" ? 422
                     : error.Code is "pets.busy" or "pets.sharing_required" ? 409
+                    : error.Code == PetUsageService.BudgetExhausted ? 403
                     : error.Code == "pets.too_many_watches" ? 429
                     : 503,
                 error.Code, "Companion request failed", error.Message)));

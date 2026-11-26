@@ -144,6 +144,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/me/pets/usage': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The caller's own pet usage and spending limit
+     * @description Daily totals for the month with a breakdown by pet, model and source, and the monthly budget (limit, spent, remaining) the pets are held to. Costs are estimates. 'month' (yyyy-MM) reads an earlier month within the 13 months kept; the budget is always the current month's.
+     */
+    get: operations['GetPetUsage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/workspaces/{workspaceId}/pet-runs': {
     parameters: {
       query?: never;
@@ -5898,6 +5918,16 @@ export interface components {
     PatchUiSettingsRequest: {
       settings: null | Record<string, never>;
     };
+    PetBudgetStatus: {
+      /** Format: double */
+      limitUsd: null | number | string;
+      /** Format: double */
+      spentUsd: number | string;
+      /** Format: double */
+      remainingUsd: null | number | string;
+      month: string;
+      timeZone: string;
+    };
     PetConnectionResponse: {
       provider: string;
       status: string;
@@ -6358,6 +6388,8 @@ export interface components {
       memories?: null | components['schemas']['PetMemory'][];
       /** @default ask */
       memoryMode: string;
+      /** Format: double */
+      monthlyBudgetUsd?: null | number | string;
     };
     PetSettingsResponse: {
       /** Format: int64 */
@@ -6423,6 +6455,29 @@ export interface components {
       reviewDigest: string;
       /** Format: uuid */
       stepId: string;
+    };
+    PetUsageGroup: {
+      key: string;
+      /** Format: int32 */
+      turns: number | string;
+      /** Format: int64 */
+      inputTokens: number | string;
+      /** Format: int64 */
+      cacheReadTokens: number | string;
+      /** Format: int64 */
+      cacheWriteTokens: number | string;
+      /** Format: int64 */
+      outputTokens: number | string;
+      /** Format: double */
+      costUsd: number | string;
+    };
+    PetUsageResponse: {
+      budget: components['schemas']['PetBudgetStatus'];
+      total: components['schemas']['PetUsageGroup'];
+      days: components['schemas']['PetUsageGroup'][];
+      byPet: components['schemas']['PetUsageGroup'][];
+      byModel: components['schemas']['PetUsageGroup'][];
+      bySource: components['schemas']['PetUsageGroup'][];
     };
     PetWorkspaceMapEntry: {
       /** Format: uuid */
@@ -8067,6 +8122,37 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['CanvasLibraryResponse'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetPetUsage: {
+    parameters: {
+      query?: {
+        month?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PetUsageResponse'];
         };
       };
       /** @description Unprocessable Entity */
@@ -13035,6 +13121,15 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PetConnectionResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
       /** @description Conflict */

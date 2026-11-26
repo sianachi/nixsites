@@ -396,6 +396,37 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         Assert.Equal(thinkHarder, body.RootElement.TryGetProperty("thinkHarder", out var flag) && flag.GetBoolean());
     }
 
+    [Fact]
+    public async Task A_send_carries_Cores_source_label_and_one_budget_line_when_a_limit_is_set()
+    {
+        using var handler = new RecordingWorker();
+        using var http = new HttpClient(handler);
+        var gateway = new PetWorkerClient(http, Configuration(), Session(), Dispatcher(), new StubPermissions(), new KeyedCredentials(), Protector,
+            disclosure: new GrantedDisclosure(), usage: PetUsageTests.Service(20m, 12.4m));
+
+        var result = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Hello"), Cancellation);
+
+        Assert.True(result.IsSuccess);
+        using var body = JsonDocument.Parse(handler.Body);
+        Assert.Equal("app", body.RootElement.GetProperty("usageSource").GetString());
+        Assert.Equal("Budget: $12.40 of $20.00 used this month, $7.60 left.", body.RootElement.GetProperty("budgetLine").GetString());
+    }
+
+    [Fact]
+    public async Task A_send_is_refused_before_the_worker_once_the_months_budget_is_used_up()
+    {
+        using var handler = new RecordingWorker();
+        using var http = new HttpClient(handler);
+        var gateway = new PetWorkerClient(http, Configuration(), Session(), Dispatcher(), new StubPermissions(), new KeyedCredentials(), Protector,
+            disclosure: new GrantedDisclosure(), usage: PetUsageTests.Service(20m, 20m));
+
+        var result = await gateway.ExecuteAsync(new("send", WorkspaceGuid, PetGuid, Guid.NewGuid(), "Hello"), Cancellation);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("pets.budget_exhausted", result.Error.Code);
+        Assert.Equal(string.Empty, handler.Body);
+    }
+
     [Theory]
     [InlineData("anthropic", true)]
     [InlineData("openrouter", true)]

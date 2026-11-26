@@ -24,7 +24,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
     INixSessionContextAccessor session, NixDispatcher dispatcher, IPermissionResolver permissions,
     IPetProviderCredentialStore credentials, PetProviderKeyProtector protector,
     ILogger<PetWorkerClient>? logger = null, SelfIssuedTokenService? tokens = null,
-    IPetDisclosureConsentGuard? disclosure = null)
+    IPetDisclosureConsentGuard? disclosure = null, PetUsageService? usage = null)
 {
     private readonly ILogger _log = logger ?? NullLogger<PetWorkerClient>.Instance;
 
@@ -335,6 +335,21 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         }
 
         var (provider, apiKey) = resolved.Value;
+        // Source is Core's label for this turn, never read from the request body. A new turn is refused once
+        // the month's limit is used up; a running turn finishes, so its tool rounds are not checked.
+        var usageSource = request.ConsentMode == "plan" ? PetUsageSources.Plan : PetUsageSources.App;
+        string? budgetLine = null;
+        if (request.Operation == "send" && usage is not null)
+        {
+            var budget = await usage.RequireAsync(cancellationToken).ConfigureAwait(false);
+            if (budget.IsFailure)
+            {
+                return Result.Failure<PetConnectionResponse>(budget.Error);
+            }
+
+            budgetLine = PetUsageService.Line(budget.Value);
+        }
+
         var address = configuration["Nix:Pets:WorkerUrl"];
         var secret = configuration["Nix:InternalSecret"];
         if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(secret))
@@ -379,7 +394,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
             request.ToolImage.Length > 0 ? request.ToolImage : null, turnToken,
             request.Operation == "send" && (request.ConsentMode == "plan" ? request.ReadWithoutAsking : turnToken is not null),
             NullIfEmpty(request.Fingerprint), NullIfEmpty(request.EditedArguments), NullIfEmpty(request.EditNote), request.Automatic,
-            NullIfEmpty(request.ApprovedOperation), sharingAttestation, NullIfEmpty(request.ConsentMode), request.ThinkHarder), PetJsonContext.Default.PetWorkerRequest);
+            NullIfEmpty(request.ApprovedOperation), sharingAttestation, NullIfEmpty(request.ConsentMode), request.ThinkHarder, usageSource, budgetLine), PetJsonContext.Default.PetWorkerRequest);
         try
         {
             if (slot is not null)
@@ -611,12 +626,12 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         }
         return await PrepareToolFreeTurnAsync(request.WorkspaceId, request.RequestId, request.Instruction ?? "",
             request.Selection ?? "", request.Context ?? "", operation, pet, cancellationToken, grant.Value,
-            request.Kind, request.Kind == "translate" ? request.Language ?? "" : "", request.Model ?? "").ConfigureAwait(false);
+            request.Kind, request.Kind == "translate" ? request.Language ?? "" : "", request.Model ?? "", usageSource: PetUsageSources.Inline).ConfigureAwait(false);
     }
 
     private async Task<Result<PetInlineWorkerRequest>> PrepareToolFreeTurnAsync(Guid workspaceId, Guid requestId,
         string text, string sharedText, string contextText, string operation, PetProfile pet,
-        CancellationToken cancellationToken, string? sharingAttestation = null, string inlineKind = "", string language = "", string model = "", bool thinkHarder = false)
+        CancellationToken cancellationToken, string? sharingAttestation = null, string inlineKind = "", string language = "", string model = "", bool thinkHarder = false, string usageSource = PetUsageSources.App)
     {
         if (disclosure is null || string.IsNullOrEmpty(sharingAttestation)
             || !await disclosure.ValidateAsync(sharingAttestation, cancellationToken).ConfigureAwait(false))
@@ -631,10 +646,22 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         }
 
         var (provider, apiKey) = resolved.Value;
+        string? budgetLine = null;
+        if (usage is not null)
+        {
+            var budget = await usage.RequireAsync(cancellationToken).ConfigureAwait(false);
+            if (budget.IsFailure)
+            {
+                return Result.Failure<PetInlineWorkerRequest>(budget.Error);
+            }
+
+            budgetLine = PetUsageService.Line(budget.Value);
+        }
+
         return Result.Success(new PetInlineWorkerRequest(context.TenantId.Value.ToString(), context.PrincipalId.Value.ToString(),
             workspaceId.ToString(), pet.Id.ToString(), operation, requestId.ToString(), text,
             sharedText, contextText, inlineKind, language, model.Length > 0 ? model : pet.Model,
-            provider, apiKey, sharingAttestation, thinkHarder));
+            provider, apiKey, sharingAttestation, thinkHarder, usageSource, budgetLine));
     }
 
     private async Task<Result<HttpResponseMessage>> OpenToolFreeTurnAsync(PetInlineWorkerRequest request, CancellationToken cancellationToken)

@@ -337,7 +337,7 @@ internal sealed partial class PetRunService
             ? _capabilities.Keys.Except(effective.Abilities, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray()
             : null;
         var input = new PetTaskStepInput(step.Run.Id, work.Job.Job.Id, step.Run.WorkspaceId.Value, step.Run.ItemId?.Value,
-            step.Run.Brief, BoundContext(observations), offered, scopeAbilities, step.State.PlanRequest is not null, pin.Value);
+            step.Run.Brief, BoundContext(observations), offered, scopeAbilities, step.State.PlanRequest is not null, pin.Value, step.State.Routine is not null);
         var prepared = await services.GetRequiredService<PetWorkerClient>().PrepareTaskStepAsync(pet, input, cancellationToken)
             .ConfigureAwait(false);
         return new IsolatedOutcome<PreparedTurn?>(prepared.IsSuccess ? new PreparedTurn(prepared.Value, observed, previousDraft, pin.Value) : null, false);

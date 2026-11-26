@@ -83,6 +83,8 @@ export const petSettingsSchema = z
     /** off: nothing reaches the model or is saved; ask: each new memory waits for a click;
      * always: saved without asking, with Undo. Settings saved before it read as ask. */
     memoryMode: z.enum(['off', 'ask', 'always']).nullish(),
+    /** The most the pets may cost in a calendar month, in USD, whole cents; null is no limit. */
+    monthlyBudgetUsd: z.number().positive().max(100_000).nullish(),
   })
   .refine((settings) => {
     return (
@@ -90,6 +92,32 @@ export const petSettingsSchema = z
       (settings.activePetId === null || settings.profiles[0]?.id === settings.activePetId)
     );
   }, 'The active pet must be the saved companion.');
+
+/** Totals for one key: a day (yyyy-MM-dd), pet id, model or source. Costs are estimates. */
+export const petUsageGroupSchema = z.object({
+  key: z.string(),
+  turns: z.number().int().min(0),
+  inputTokens: z.number().int().min(0),
+  cacheReadTokens: z.number().int().min(0),
+  cacheWriteTokens: z.number().int().min(0),
+  outputTokens: z.number().int().min(0),
+  costUsd: z.number().min(0),
+});
+
+export const petUsageResponseSchema = z.object({
+  budget: z.object({
+    limitUsd: z.number().nullable(),
+    spentUsd: z.number().min(0),
+    remainingUsd: z.number().min(0).nullable(),
+    month: z.string(),
+    timeZone: z.string(),
+  }),
+  total: petUsageGroupSchema,
+  days: z.array(petUsageGroupSchema),
+  byPet: z.array(petUsageGroupSchema),
+  byModel: z.array(petUsageGroupSchema),
+  bySource: z.array(petUsageGroupSchema),
+});
 
 export const petSettingsResponseSchema = z.object({
   revision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
@@ -188,6 +216,8 @@ export const petConnectionSchema = z.object({
 
 export type PetProfile = z.infer<typeof petProfileSchema>;
 export type PetSettings = z.infer<typeof petSettingsSchema>;
+export type PetUsageGroup = z.infer<typeof petUsageGroupSchema>;
+export type PetUsageResponse = z.infer<typeof petUsageResponseSchema>;
 export type PetSettingsResponse = z.infer<typeof petSettingsResponseSchema>;
 export type PetConnection = z.infer<typeof petConnectionSchema>;
 export type PetMessage = z.infer<typeof petMessageSchema>;

@@ -1824,6 +1824,18 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     },
   },
   {
+    id: 'GetPetUsage',
+    method: 'GET',
+    path: '/api/v1/me/pets/usage',
+    area: 'Pets',
+    summary: "The caller's own pet usage and spending limit",
+    detail:
+      'Daily totals for the month with a breakdown by pet, model and source, and the monthly budget (limit, spent, remaining) the pets are held to.',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [{ name: 'month', required: false, type: 'string' }],
+  },
+  {
     id: 'GetPreferences',
     method: 'GET',
     path: '/api/v1/me/preferences',
@@ -3845,6 +3857,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
             inlineWriting: { type: 'boolean' },
             memories: { type: ['null', 'array'], items: { type: 'object' } },
             memoryMode: { type: 'string' },
+            monthlyBudgetUsd: { type: ['null', 'number', 'string'] },
           },
         },
       },

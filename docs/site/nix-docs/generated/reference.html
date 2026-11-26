@@ -2257,7 +2257,7 @@
 
 
 <p>Request body: <code>PetRuntimeRequest</code>.</p>
-<p>Responses: <code>200</code>, <code>409</code>.</p>
+<p>Responses: <code>200</code>, <code>403</code>, <code>409</code>.</p>
 </article>
 <article id="petnoteruntime" data-search="post /api/v1/me/pets/runtime/note petnoteruntime   pets">
 <h3><span class="verb">POST</span> <code>/api/v1/me/pets/runtime/note</code></h3>
@@ -2342,6 +2342,18 @@
 
 <p>Request body: <code>SavePetSettingsRequest</code>.</p>
 <p>Responses: <code>200</code>.</p>
+</article>
+<article id="getpetusage" data-search="get /api/v1/me/pets/usage getpetusage the caller's own pet usage and spending limit daily totals for the month with a breakdown by pet, model and source, and the monthly budget (limit, spent, remaining) the pets are held to. costs are estimates. 'month' (yyyy-mm) reads an earlier month within the 13 months kept; the budget is always the current month's. pets">
+<h3><span class="verb">GET</span> <code>/api/v1/me/pets/usage</code></h3>
+<p>The caller's own pet usage and spending limit</p>
+<p class="id">Operation id: <code>GetPetUsage</code></p>
+<p><strong>Can.</strong> Read the resource named in the summary.</p>
+<p><strong>Cannot.</strong> Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.</p>
+<p><strong>Token.</strong> Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.</p>
+<p>Daily totals for the month with a breakdown by pet, model and source, and the monthly budget (limit, spent, remaining) the pets are held to. Costs are estimates. 'month' (yyyy-MM) reads an earlier month within the 13 months kept; the budget is always the current month's.</p>
+<ul><li><code>month</code> in query (optional, string)</li></ul>
+
+<p>Responses: <code>200</code>, <code>422</code>.</p>
 </article></section>
 <section id="publiclinks"><h2>PublicLinks</h2><article id="getpubliclink" data-search="get /api/v1/items/{itemid}/public-link getpubliclink   publiclinks">
 <h3><span class="verb">GET</span> <code>/api/v1/items/{itemId}/public-link</code></h3>
