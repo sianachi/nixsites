@@ -37,6 +37,12 @@ export const ANTHROPIC_PRICES: Readonly<Record<string, Price>> = {
 /** A model with no price is charged as the dearest one listed: an unknown model must never be under-counted. */
 const FALLBACK = 'claude-fable-5-1';
 
+/** An OpenRouter Claude id ("anthropic/claude-sonnet-4.6:thinking") as the id the price table uses; other ids pass through. */
+export function claudeModelId(openRouterId: string): string {
+  const id = openRouterId.replace(/^anthropic\//, '').replace(/:.*$/, '');
+  return id.startsWith('claude-') ? id.replaceAll('.', '-') : openRouterId;
+}
+
 /** The estimated cost of one turn in USD; OpenRouter's own figure when it sent one, else unknown. */
 export function estimateCostUsd(
   provider: string,

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { eventually, tempDir } from '../testing/testing.ts';
@@ -248,5 +251,238 @@ describe('plan recipient credential pinning', () => {
     } finally {
       transport.close();
     }
+  });
+
+  describe('parallel reads', () => {
+    const readCall = (index: number, id: string): object[] => [
+      {
+        type: 'content_block_start',
+        index,
+        content_block: { type: 'tool_use', id, name: 'nix_read_item' },
+      },
+      {
+        type: 'content_block_delta',
+        index,
+        delta: { type: 'input_json_delta', partial_json: '{"itemId":"x"}' },
+      },
+      { type: 'content_block_stop', index },
+    ];
+    const round = [
+      ...readCall(0, 'r1'),
+      ...readCall(1, 'r2'),
+      ...readCall(2, 'r3'),
+      { type: 'message_delta', delta: { stop_reason: 'tool_use' } },
+      { type: 'message_stop' },
+    ];
+    interface Result {
+      tool_use_id: string;
+      is_error: boolean;
+      content: string;
+    }
+    const lastResults = (body: string): Result[] =>
+      (JSON.parse(body) as { messages: { role: string; content: unknown }[] }).messages
+        .filter((m) => JSON.stringify(m.content).includes('tool_result'))
+        .at(-1)?.content as Result[];
+
+    it('answers every outstanding read with a stopped result, in order, when the turn is interrupted', async () => {
+      const bodies: string[] = [];
+      let completed: unknown;
+      const transport = new HttpTransport({
+        kind: 'anthropic',
+        apiKey: 'synthetic-key',
+        home: tempDir(),
+        notify: (method, payload) => {
+          if (method === 'turn/completed') completed = payload;
+        },
+        fetch: (_url, init) => {
+          bodies.push(typeof init?.body === 'string' ? init.body : '');
+          return Promise.resolve(events(bodies.length === 1 ? round : answer));
+        },
+      });
+      const asked: string[] = [];
+      transport.setRequestHandler((_id, _method, params) => {
+        asked.push((params as { callId: string }).callId);
+        return true;
+      });
+      try {
+        const started = (await transport.call('thread/start', { model: 'synthetic-model' })) as {
+          thread: { id: string };
+        };
+        const turn = (await transport.call('turn/start', {
+          threadId: started.thread.id,
+          input: [{ type: 'text', text: 'Read three' }],
+        })) as { turn: { id: string } };
+        await eventually(() => asked.length === 3);
+        await transport.call('turn/interrupt', { turnId: turn.turn.id });
+        await eventually(() => completed !== undefined);
+        expect(completed).toMatchObject({ turn: { status: 'interrupted' } });
+        completed = undefined;
+        await transport.call('turn/start', {
+          threadId: started.thread.id,
+          input: [{ type: 'text', text: 'Again' }],
+        });
+        await eventually(() => completed !== undefined);
+        const results = lastResults(bodies[1] ?? '{}');
+        expect(results.map((r) => r.tool_use_id)).toEqual(['r1', 'r2', 'r3']);
+        for (const r of results) {
+          expect(r.is_error).toBe(true);
+          expect(r.content).toContain('stopped');
+        }
+      } finally {
+        transport.close();
+      }
+    });
+
+    it('turns one refused and one failing read into error results without disturbing the others', async () => {
+      const bodies: string[] = [];
+      let completed = false;
+      const transport = new HttpTransport({
+        kind: 'anthropic',
+        apiKey: 'synthetic-key',
+        home: tempDir(),
+        notify: (method) => {
+          if (method === 'turn/completed') completed = true;
+        },
+        fetch: (_url, init) => {
+          bodies.push(typeof init?.body === 'string' ? init.body : '');
+          return Promise.resolve(events(bodies.length === 1 ? round : answer));
+        },
+      });
+      // r1 succeeds, r2 is refused by the handler, r3 fails.
+      transport.setRequestHandler((id, _method, params) => {
+        const callId = (params as { callId: string }).callId;
+        if (callId === 'r2') return false;
+        transport.reply(id, {
+          success: callId === 'r1',
+          contentItems: [{ type: 'inputText', text: `result ${callId}` }],
+        });
+        return true;
+      });
+      try {
+        const started = (await transport.call('thread/start', { model: 'synthetic-model' })) as {
+          thread: { id: string };
+        };
+        await transport.call('turn/start', {
+          threadId: started.thread.id,
+          input: [{ type: 'text', text: 'Read three' }],
+        });
+        await eventually(() => completed);
+        const results = lastResults(bodies[1] ?? '{}');
+        expect(results.map((r) => [r.tool_use_id, r.is_error])).toEqual([
+          ['r1', false],
+          ['r2', true],
+          ['r3', true],
+        ]);
+        expect(results[1]?.content).toContain('not available');
+        expect(results[2]?.content).toContain('result r3');
+      } finally {
+        transport.close();
+      }
+    });
+  });
+
+  describe('Anthropic thinking', () => {
+    const thoughtRound = [
+      { type: 'content_block_start', index: 0, content_block: { type: 'thinking' } },
+      {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'thinking_delta', thinking: 'Plan A' },
+      },
+      {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'signature_delta', signature: 'sig-1' },
+      },
+      { type: 'content_block_stop', index: 0 },
+      {
+        type: 'content_block_start',
+        index: 1,
+        content_block: { type: 'redacted_thinking', data: 'blob' },
+      },
+      { type: 'content_block_stop', index: 1 },
+      ...tool.map((e) => ('index' in e ? { ...e, index: 2 } : e)),
+    ];
+
+    const run = async (model: string) => {
+      const home = tempDir();
+      const bodies: Record<string, unknown>[] = [];
+      let completed = false;
+      const transport = new HttpTransport({
+        kind: 'anthropic',
+        apiKey: 'synthetic-key',
+        home,
+        notify: (method) => {
+          if (method === 'turn/completed') completed = true;
+        },
+        fetch: (_url, init) => {
+          bodies.push(
+            JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as Record<
+              string,
+              unknown
+            >,
+          );
+          // The first turn: a thinking tool round then the answer; later turns answer at once.
+          return Promise.resolve(events(bodies.length === 1 ? thoughtRound : answer));
+        },
+      });
+      transport.setRequestHandler((id) => {
+        transport.reply(id, { success: true, contentItems: [{ type: 'inputText', text: 'ok' }] });
+        return true;
+      });
+      const started = (await transport.call('thread/start', { model })) as {
+        thread: { id: string };
+      };
+      const send = async (text: string): Promise<void> => {
+        completed = false;
+        await transport.call('turn/start', {
+          threadId: started.thread.id,
+          input: [{ type: 'text', text }],
+        });
+        await eventually(() => completed);
+      };
+      return {
+        bodies,
+        home,
+        send,
+        id: started.thread.id,
+        close: () => {
+          transport.close();
+        },
+      };
+    };
+
+    it('thinks on Sonnet, replays the blocks inside the turn only, and never saves them', async () => {
+      const t = await run('claude-sonnet-5-5');
+      try {
+        await t.send('First');
+        expect(t.bodies[0]?.thinking).toEqual({ type: 'adaptive', display: 'summarized' });
+        const replayed = (
+          t.bodies[1]?.messages as { role: string; content: { type: string }[] }[]
+        ).find((m) => m.role === 'assistant')?.content;
+        expect(replayed?.slice(0, 3)).toEqual([
+          { type: 'thinking', thinking: 'Plan A', signature: 'sig-1' },
+          { type: 'redacted_thinking', data: 'blob' },
+          expect.objectContaining({ type: 'tool_use' }),
+        ]);
+        await t.send('Second');
+        expect(JSON.stringify(t.bodies[2])).not.toContain('sig-1');
+        expect(readFileSync(join(t.home, 'threads', `${t.id}.json`), 'utf8')).not.toContain(
+          'sig-1',
+        );
+      } finally {
+        t.close();
+      }
+    });
+
+    it('keeps thinking off for Haiku chat', async () => {
+      const t = await run('claude-haiku-5-5');
+      try {
+        await t.send('First');
+        expect(t.bodies[0]?.thinking).toEqual({ type: 'disabled' });
+      } finally {
+        t.close();
+      }
+    });
   });
 });

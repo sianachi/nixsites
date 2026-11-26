@@ -1,6 +1,6 @@
 import { providerResponseError, readBounded } from '../providers/provider-errors.ts';
-import { ANTHROPIC_CHAT_MODEL, THINKING_OFF } from '../shared/models.ts';
-import { estimateCostUsd } from '../shared/pricing.ts';
+import { ANTHROPIC_CHAT_MODEL, THINKING } from '../shared/models.ts';
+import { claudeModelId, estimateCostUsd } from '../shared/pricing.ts';
 import type { ModelInfo, ProviderUsage } from '../shared/types.ts';
 import { isRecord, str } from '../shared/util.ts';
 
@@ -22,6 +22,11 @@ export interface ProviderMessage {
   role: string;
   text?: string | undefined;
   toolCalls?: ProviderToolCall[] | undefined;
+  /**
+   * The raw thinking blocks of a tool round, replayed to Anthropic until the turn ends. Never
+   * saved and never carried into a later turn: the transport strips them.
+   */
+  thinking?: Record<string, unknown>[] | undefined;
   /** Answers the previous assistant message's toolCalls, in order. */
   toolResults?: ProviderToolResult[] | undefined;
 }
@@ -65,6 +70,8 @@ export interface ProviderWire {
 export interface ProviderStreamResult {
   text: string;
   calls: ProviderToolCall[];
+  /** Anthropic only: this round's thinking blocks, for replay within the turn. */
+  thinking?: Record<string, unknown>[];
 }
 
 /** Bounds one provider request; the 15-minute thinking expiry is the outer guard. */
@@ -273,7 +280,7 @@ export const anthropicWire: ProviderWire = {
         });
         messages.push({ role: 'user', content });
       } else if (message.role === 'assistant') {
-        const content: Block[] = [];
+        const content: Block[] = [...(message.thinking ?? [])];
         if ((message.text ?? '') !== '') content.push({ type: 'text', text: message.text });
         for (const call of message.toolCalls ?? []) {
           content.push({
@@ -302,8 +309,8 @@ export const anthropicWire: ProviderWire = {
       messages,
       stream: true,
     };
-    const thinking = THINKING_OFF[thread.model];
-    if (thinking !== undefined) body.thinking = thinking;
+    const thinkingSetting = THINKING[thread.model];
+    if (thinkingSetting !== undefined) body.thinking = thinkingSetting;
     if (thread.system !== '')
       body.system = [{ type: 'text', text: thread.system, cache_control: EPHEMERAL }];
     if (tools.length > 0) body.tools = tools;
@@ -320,7 +327,11 @@ export const anthropicWire: ProviderWire = {
     if (response.status !== 200) throw await providerResponseError('anthropic', response, false);
     let text = '';
     const calls: ProviderToolCall[] = [];
-    const blocks = new Map<number, { kind: string; id: string; name: string; json: string }>();
+    const thinking: Record<string, unknown>[] = [];
+    const blocks = new Map<
+      number,
+      { kind: string; id: string; name: string; json: string; thought: Record<string, unknown> }
+    >();
     const end = { stopReason: '', stopped: false };
     await readSse(ctx, response, (data) => {
       let event: unknown;
@@ -368,6 +379,11 @@ export const anthropicWire: ProviderWire = {
               id: str(block.id),
               name: str(block.name),
               json: '',
+              // A thinking block is replayed whole: its text and signature, or a redacted one's data.
+              thought:
+                block.type === 'thinking'
+                  ? { type: 'thinking', thinking: '', signature: '' }
+                  : { ...block },
             });
           }
           break;
@@ -378,8 +394,17 @@ export const anthropicWire: ProviderWire = {
             onDelta(str(delta.text));
           }
           // Shown while the model works, then dropped: never kept in the thread or sent back.
-          if (delta.type === 'thinking_delta' && str(delta.thinking) !== '')
+          if (delta.type === 'thinking_delta' && str(delta.thinking) !== '') {
             onReasoning?.(str(delta.thinking));
+            const thought = blocks.get(index)?.thought;
+            if (thought !== undefined)
+              thought.thinking = str(thought.thinking) + str(delta.thinking);
+          }
+          if (delta.type === 'signature_delta') {
+            const thought = blocks.get(index)?.thought;
+            if (thought !== undefined)
+              thought.signature = str(thought.signature) + str(delta.signature);
+          }
           if (delta.type === 'input_json_delta') {
             const block = blocks.get(index);
             if (block !== undefined) block.json += str(delta.partial_json);
@@ -390,6 +415,8 @@ export const anthropicWire: ProviderWire = {
           const block = blocks.get(index);
           if (block?.kind === 'tool_use')
             calls.push({ id: block.id, name: block.name, arguments: argumentsOf(block.json) });
+          if (block?.kind === 'thinking' || block?.kind === 'redacted_thinking')
+            thinking.push(block.thought);
           break;
         }
         default:
@@ -402,7 +429,7 @@ export const anthropicWire: ProviderWire = {
       throw new Error('Claude declined this request. Rephrase it or pick another model');
     if (!end.stopped)
       throw new Error('Anthropic ended the response early, so nothing was changed. Try again');
-    return { text, calls };
+    return { text, calls, thinking };
   },
 };
 
@@ -589,13 +616,13 @@ export const openrouterWire: ProviderWire = {
     }).finally(() => {
       if (counted) return;
       // shortcut: a stream that ends before its usage chunk is estimated at 4 characters a token, priced as the
-      // model's own Claude price or else the dearest one, so it never counts as free; upgrade if OpenRouter
+      // model's own Claude price (an OpenRouter Claude id is mapped) or else the dearest one, so it never counts as free; upgrade if OpenRouter
       // offers a generation lookup by id.
       const input = Math.ceil(JSON.stringify(body).length / 4);
       const output = Math.ceil(text.length / 4);
       thread.usage.input_tokens += input;
       thread.usage.output_tokens += output;
-      const cost = estimateCostUsd('anthropic', thread.model, {
+      const cost = estimateCostUsd('anthropic', claudeModelId(thread.model), {
         input_tokens: input,
         cache_read_input_tokens: 0,
         cache_creation_input_tokens: 0,

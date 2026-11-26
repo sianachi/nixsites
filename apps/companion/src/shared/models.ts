@@ -8,11 +8,12 @@ export const DEEP_MODELS: Readonly<Record<string, string>> = { anthropic: 'claud
 export const PROVIDERS: readonly string[] = ['anthropic', 'openrouter'];
 
 /**
- * The `thinking` setting that turns reasoning off on a model whose default is on, so a tool
- * round can be replayed without its thinking blocks. Haiku 5.5 takes `disabled`; Sonnet 5.5
- * rejects it and takes `between_tools`. Other models are sent without one.
+ * The `thinking` setting a model is sent. Haiku 5.5 (chat) takes `disabled`. Sonnet 5.5, the
+ * deeper model for think-harder, plans and task runs, thinks adaptively and returns summaries
+ * (`display` defaults to omitted there), which the reasoning line shows; its blocks are replayed
+ * inside the turn's tool rounds only. Other models are sent without one.
  */
-export const THINKING_OFF: Readonly<Record<string, { type: string }>> = {
+export const THINKING: Readonly<Record<string, { type: string; display?: string }>> = {
   'claude-haiku-5-5': { type: 'disabled' },
-  'claude-sonnet-5-5': { type: 'between_tools' },
+  'claude-sonnet-5-5': { type: 'adaptive', display: 'summarized' },
 };

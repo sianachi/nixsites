@@ -324,7 +324,7 @@ export class HttpTransport implements Transport {
         model: thread.model,
         system: thread.system,
         tools: thread.tools,
-        messages: thread.messages,
+        messages: thread.messages.map((m) => ({ ...m, thinking: undefined })),
         ...(thread.opening === undefined ? {} : { opening: thread.opening }),
       };
       writeFileSync(this.threadPath(thread.id), JSON.stringify(persisted), { mode: 0o600 });
@@ -418,7 +418,7 @@ export class HttpTransport implements Transport {
           finish(signal.aborted ? 'interrupted' : 'failed', signal.aborted ? undefined : error);
           return;
         }
-        const { text, calls } = result;
+        const { text, calls, thinking } = result;
         // A reply with neither words nor tool calls would show as a blank bubble and read as success.
         if (calls.length === 0 && text.trim() === '') {
           finish('failed', new Error('The model finished without an answer. Try again'));
@@ -428,6 +428,8 @@ export class HttpTransport implements Transport {
           role: 'assistant',
           text,
           toolCalls: calls,
+          // Only a tool round needs them back; a final answer's are dropped.
+          ...(calls.length > 0 && thinking?.length ? { thinking } : {}),
         });
         if (calls.length === 0) {
           this.save(thread);
@@ -517,6 +519,7 @@ export class HttpTransport implements Transport {
         new Error('The model kept calling tools without answering; the turn was stopped.'),
       );
     } finally {
+      for (const message of thread.messages) delete message.thinking;
       if (thread.ephemeral) this.threads.delete(thread.id);
       this.turns.get(turnId)?.abort();
       this.turns.delete(turnId);

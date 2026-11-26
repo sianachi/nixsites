@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { ANTHROPIC_MODELS } from '../server/wire.ts';
-import { ANTHROPIC_CHAT_MODEL, DEEP_MODELS, THINKING_OFF } from './models.ts';
-import { ANTHROPIC_PRICES, estimateCostUsd } from './pricing.ts';
+import { ANTHROPIC_CHAT_MODEL, DEEP_MODELS, THINKING } from './models.ts';
+import { ANTHROPIC_PRICES, claudeModelId, estimateCostUsd } from './pricing.ts';
 
 const usage = {
   input_tokens: 1_000_000,
@@ -16,7 +16,7 @@ describe('pricing', () => {
     const chosen = [
       ANTHROPIC_CHAT_MODEL,
       ...Object.values(DEEP_MODELS),
-      ...Object.keys(THINKING_OFF),
+      ...Object.keys(THINKING),
       ...ANTHROPIC_MODELS.map((m) => m.id),
     ];
     for (const model of chosen) expect(ANTHROPIC_PRICES[model], model).toBeDefined();
@@ -39,6 +39,15 @@ describe('pricing', () => {
 
   it('charges Opus 5.5 at its own rate, not Sonnet 5.5', () => {
     expect(estimateCostUsd('anthropic', 'claude-opus-5-5', usage)).toBeCloseTo(4 + 0.2 + 5 + 20);
+  });
+
+  it('maps an OpenRouter Claude id to its own price and leaves other ids to the dearest fallback', () => {
+    expect(claudeModelId('anthropic/claude-sonnet-4.6')).toBe('claude-sonnet-4-6');
+    expect(claudeModelId('anthropic/claude-haiku-5.5:thinking')).toBe('claude-haiku-5-5');
+    expect(claudeModelId('openai/gpt-x')).toBe('openai/gpt-x');
+    expect(
+      estimateCostUsd('anthropic', claudeModelId('anthropic/claude-sonnet-4.6'), usage),
+    ).toBeCloseTo(3 + 0.3 + 3.75 + 15);
   });
 
   it('takes the cost OpenRouter reports, or none', () => {
