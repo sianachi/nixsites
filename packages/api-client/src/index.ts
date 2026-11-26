@@ -161,6 +161,8 @@ export type {
   PetProfile,
   PetSettings,
   PetSettingsResponse,
+  PetUsageGroup,
+  PetUsageResponse,
   PetConnection,
   PetMessage,
 } from './schemas/pets.js';

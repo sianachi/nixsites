@@ -48,6 +48,35 @@ const savedClaudeKey = {
   savedAt: '2026-10-13T12:00:00Z',
 } satisfies PetProviderKey;
 let providerKeys: readonly PetProviderKey[] = [];
+const group = {
+  key: 'claude-haiku-5-5',
+  turns: 3,
+  inputTokens: 1000,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
+  outputTokens: 500,
+  costUsd: 12.4,
+};
+const usage = {
+  budget: {
+    limitUsd: 20,
+    spentUsd: 12.4,
+    remainingUsd: 7.6,
+    month: '2026-11',
+    timeZone: 'Etc/UTC',
+  },
+  total: group,
+  days: [{ ...group, key: '2026-11-20' }],
+  byPet: [{ ...group, key: '44444444-4444-4444-8444-444444444444' }],
+  byModel: [group],
+  bySource: [{ ...group, key: 'app' }],
+};
+
+/** The provider-key reads, apart from the usage read every editor also makes. */
+const providerQueries = () =>
+  client.query.mock.calls.filter(
+    ([endpoint]) => (endpoint as { operation: string }).operation === 'pets.providers',
+  );
 
 async function addPet(user: ReturnType<typeof userEvent.setup>, name = 'Owl') {
   await user.click(screen.getByRole('button', { name: 'Add pet' }));
@@ -75,6 +104,7 @@ describe('pet configuration', () => {
     });
     client.query.mockReset().mockImplementation((endpoint: { operation: string }) => {
       if (endpoint.operation === 'pets.providers') return Promise.resolve({ keys: providerKeys });
+      if (endpoint.operation === 'pets.usage') return Promise.resolve(usage);
       return Promise.reject(new Error(`Unexpected settings query: ${endpoint.operation}`));
     });
     client.execute.mockReset().mockResolvedValue(savedClaudeKey);
@@ -262,7 +292,7 @@ describe('pet configuration', () => {
     expect(screen.getByLabelText('Claude API key')).toHaveValue('');
     expect(screen.getByRole('region', { name: 'Claude connection' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Replace Claude key' })).toBeDisabled();
-    expect(client.query).toHaveBeenCalledOnce();
+    expect(providerQueries()).toHaveLength(1);
     expect(client.query).toHaveBeenCalledWith(
       expect.objectContaining({ operation: 'pets.providers' }),
       expect.anything(),
@@ -290,7 +320,7 @@ describe('pet configuration', () => {
     expect(await screen.findByLabelText('Claude API key')).toHaveValue('');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save Claude setup' })).toBeDisabled();
-    expect(client.query).toHaveBeenCalledTimes(2);
+    expect(providerQueries()).toHaveLength(2);
     expect(client.execute).not.toHaveBeenCalled();
   });
 
@@ -595,5 +625,37 @@ describe('pet configuration', () => {
       'Likes tea.',
     ]);
     expect(saved.memoryMode).toBe('off');
+  });
+
+  it('shows this months usage against the limit, with the pet by name', async () => {
+    render(<PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={vi.fn()} />);
+    const panel = within(await screen.findByRole('region', { name: 'Usage' }));
+    expect(
+      await panel.findByText(/\$12\.40 of \$20\.00 used in 2026-11, \$7\.60 left/),
+    ).toBeVisible();
+    expect(panel.getByRole('progressbar', { name: 'Monthly pet budget used' })).toHaveAttribute(
+      'aria-valuenow',
+      '62',
+    );
+    expect(panel.getByText('Pip')).toBeVisible();
+    expect(panel.getByText('app')).toBeVisible();
+  });
+
+  it('saves a monthly budget, clears it, and refuses an amount that is not whole cents', async () => {
+    const save = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(<PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={save} />);
+    const box = screen.getByRole('textbox', { name: 'Monthly budget (USD)' });
+    await user.type(box, '12.505');
+    expect(screen.getByText('Enter an amount like 20 or 12.50.')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).not.toHaveBeenCalled();
+    await user.clear(box);
+    await user.type(box, '12.50');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledOnce();
+    });
+    expect(save.mock.calls[0]?.[0]).toMatchObject({ monthlyBudgetUsd: 12.5 });
   });
 });

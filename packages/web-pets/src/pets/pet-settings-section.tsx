@@ -27,8 +27,18 @@ import { PetAvatar } from './pet-avatar';
 import { PetProviderKeys } from './pet-provider-keys';
 import { PetDeviceSettings } from './pet-device-settings';
 import { PetMemorySection } from './pet-memory-section';
+import { PetUsagePanel } from './pet-usage-panel';
 import { memoryModeOf } from './memory-mode';
 import { SettingsSection } from '@nix/web-settings/settings/shared/settings-section';
+
+/** An amount in whole cents between 0.01 and 100000, null for empty, undefined when it is not one. */
+function parseBudget(text: string): number | null | undefined {
+  const trimmed = text.trim();
+  if (trimmed === '') return null;
+  if (!/^\d{1,6}(\.\d{1,2})?$/.test(trimmed)) return undefined;
+  const amount = Number(trimmed);
+  return amount > 0 && amount <= 100_000 ? amount : undefined;
+}
 
 export function PetSettingsSection(): ReactElement {
   const state = usePetSettings();
@@ -68,6 +78,8 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
   const [message, setMessage] = useState<string | null>(null);
   const [picker, setPicker] = useState<'add' | 'edit' | null>(null);
   const [nameBeforeEdit, setNameBeforeEdit] = useState<string | null>(null);
+  // What the budget box shows while it is being typed; null follows the saved value.
+  const [budgetText, setBudgetText] = useState<string | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
   const nameButton = useRef<HTMLButtonElement>(null);
   const returnToName = useRef(false);
@@ -101,6 +113,10 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
       nameButton.current?.focus();
     }
   }, [nameBeforeEdit]);
+
+  const budgetShown =
+    budgetText ?? (draft.monthlyBudgetUsd == null ? '' : String(draft.monthlyBudgetUsd));
+  const budgetInvalid = budgetText !== null && parseBudget(budgetText) === undefined;
 
   function change(next: PetSettings): void {
     setDraft(next);
@@ -162,6 +178,10 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
   }
 
   async function saveSettings(): Promise<boolean> {
+    if (budgetInvalid) {
+      setMessage('Enter the monthly budget as an amount like 20 or 12.50, or leave it empty.');
+      return false;
+    }
     // A memory emptied in place is one the owner forgot, not a reason to refuse the whole form.
     const parsed = petSettingsSchema.safeParse({
       ...draft,
@@ -174,6 +194,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
     if (!dirty) return true;
     const ok = await onSave(parsed.data);
     if (ok) {
+      setBudgetText(null);
       setDraft(parsed.data);
       setMessage('Pet settings saved.');
     }
@@ -367,6 +388,29 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
               The text you select is sent to your connected model. Locked notes are never sent.
             </Text>
           </div>
+          <Field
+            label="Monthly budget (USD)"
+            hint="Your pets stop starting new turns once this month's estimated cost reaches it. Leave empty for no limit."
+            error={budgetInvalid ? 'Enter an amount like 20 or 12.50.' : null}
+          >
+            {(control) => (
+              <Input
+                {...control}
+                inputMode="decimal"
+                placeholder="No limit"
+                value={budgetShown}
+                onChange={(event) => {
+                  const text = event.currentTarget.value;
+                  setBudgetText(text);
+                  const amount = parseBudget(text);
+                  if (amount !== undefined) change({ ...draft, monthlyBudgetUsd: amount });
+                }}
+                onBlur={() => {
+                  if (!budgetInvalid) setBudgetText(null);
+                }}
+              />
+            )}
+          </Field>
           {draft.enabled ? <PetDeviceSettings inlineWriting={draft.inlineWriting} /> : null}
         </section>
         <PetMemorySection
@@ -377,6 +421,10 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
           }}
         />
       </fieldset>
+      <PetUsagePanel
+        petNames={Object.fromEntries(initial.settings.profiles.map((p) => [p.id, p.name]))}
+        refresh={initial.revision}
+      />
       {picker === null ? null : (
         <PetAppearancePicker
           initial={picker === 'edit' ? (pet?.appearance ?? 'owl') : 'owl'}

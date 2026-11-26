@@ -7,6 +7,19 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Added
 
+- **Pet usage and a monthly spending limit.** Every finished pet turn (chat, note chat, inline
+  writing, plans, task runs and routines) is recorded with its tokens, model, source and an
+  estimated cost: a price table for Claude models, and OpenRouter's own price when it reports one.
+  Rows are private to the person who spent them and kept 13 months. Settings > Pets shows this
+  month's total against the limit with a breakdown by model, source and pet, and a day-by-day list.
+  `GET /api/v1/me/pets/usage` (Read scope; `month=yyyy-MM` for an earlier month) returns the same
+  totals and the budget, so outside agents can see it.
+- One optional monthly limit in USD per person, over all pets and sources, resetting on the 1st in
+  the person's time zone (Settings > Pets). At 80% one notification arrives per month. At the limit
+  new pet turns are refused with `pets.budget_exhausted` ("This month's pet budget is used up.
+  Raise it in Settings > Pets."); a turn already running finishes. Each turn carries one line with
+  the amount used and left, after the cached prompt, and the pet is told to keep work lean when
+  little is left; it never changes model by itself.
 - `nixctl health --check-session` checks anonymous browser-session availability in addition to
   process liveness. It fails when the session endpoint fails, reports no session data, and leaves
   the default health output unchanged.
