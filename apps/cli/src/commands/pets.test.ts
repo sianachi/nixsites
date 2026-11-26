@@ -36,7 +36,7 @@ describe('pet commands', () => {
         expect(request.headers.get('authorization')).toBe('Bearer ephemeral-session');
         payload = await request.json();
         return HttpResponse.json({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: 'Connected',
           canConnect: false,
@@ -78,7 +78,7 @@ describe('pet commands', () => {
         const body = (await request.json()) as Record<string, unknown>;
         calls.push(body);
         return HttpResponse.json({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: 'Connected',
           canConnect: false,
@@ -159,7 +159,7 @@ describe('pet commands', () => {
       http.post(`${CORE}/api/v1/me/pets/runtime`, async ({ request }) => {
         payloads.push(await request.json());
         return HttpResponse.json({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: 'Connected',
           canConnect: false,
@@ -202,7 +202,7 @@ describe('pet commands', () => {
       http.get(`${CORE}/api/v1/me/pets/runtime/watch`, ({ request }) => {
         query = new URL(request.url).searchParams;
         return HttpResponse.json({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: 'Connected',
           canConnect: false,
@@ -330,7 +330,7 @@ function pendingTool(overrides: Record<string, unknown> = {}): Record<string, un
 
 function runtimeResponse(tools: unknown[]): Record<string, unknown> {
   return {
-    provider: 'chatgpt',
+    provider: 'anthropic',
     status: 'connected',
     reason: 'Connected',
     canConnect: false,

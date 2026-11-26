@@ -24,7 +24,6 @@ import { newPet, petCatalog } from './catalog';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
 import { useInRouteDialog } from '@nix/web-foundation/layout/route-dialog-context';
 import { PetAvatar } from './pet-avatar';
-import { PetConnectionPanel } from './pet-connection-panel';
 import { PetProviderKeys } from './pet-provider-keys';
 import { PetDeviceSettings } from './pet-device-settings';
 import { PetMemorySection } from './pet-memory-section';
@@ -277,7 +276,7 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
         {pet ? (
           <>
             <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
-              <Field label="Model">
+              <Field label="Provider">
                 {(control) => (
                   <Select
                     {...control}
@@ -286,27 +285,40 @@ export function PetSettingsEditor({ initial, saving, onSave }: EditorProps): Rea
                       updatePet({ provider: petProviderSchema.parse(event.currentTarget.value) });
                     }}
                   >
-                    <option value="chatgpt">ChatGPT (sign in)</option>
                     <option value="anthropic">Claude</option>
                     <option value="openrouter">OpenRouter</option>
-                    <option value="openai">OpenAI (API key)</option>
                   </Select>
                 )}
               </Field>
-              {pet.provider === 'chatgpt' ? (
-                <PetConnectionPanel collapsible />
-              ) : (
-                <PetProviderKeys
-                  key={pet.provider}
-                  collapsible
-                  provider={pet.provider}
-                  onSaveSettings={saveSettings}
-                  needsProviderSave={
-                    initial.settings.profiles.find((saved) => saved.id === pet.id)?.provider !==
-                    pet.provider
-                  }
-                />
-              )}
+              <Field
+                label="Chat model"
+                hint={
+                  pet.provider === 'anthropic'
+                    ? 'Leave empty for the fast default. Plans, tasks and "Think harder" use a larger model.'
+                    : 'The OpenRouter model id. Leave empty for the first model your key lists.'
+                }
+              >
+                {(control) => (
+                  <Input
+                    {...control}
+                    value={pet.model}
+                    maxLength={160}
+                    onChange={(event) => {
+                      updatePet({ model: event.currentTarget.value.trim() });
+                    }}
+                  />
+                )}
+              </Field>
+              <PetProviderKeys
+                key={pet.provider}
+                collapsible
+                provider={pet.provider}
+                onSaveSettings={saveSettings}
+                needsProviderSave={
+                  initial.settings.profiles.find((saved) => saved.id === pet.id)?.provider !==
+                  pet.provider
+                }
+              />
             </div>
             <PetInstructions
               key={pet.id}

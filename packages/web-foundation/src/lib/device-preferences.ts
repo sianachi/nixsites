@@ -61,14 +61,12 @@ export function writePetPosition(position: PetPosition): void {
   window.dispatchEvent(new Event('nix-pet-device-changed'));
 }
 
-// The ".chat" suffix is kept from when each conversation mode stored its own choice, so a
-// model chosen before Design mode was retired still applies.
 function conversationModelKey(
   workspaceId: string,
   petId: string,
   provider: PetProfile['provider'],
 ): string {
-  return `nix.pet.model.${workspaceId}.${petId}.${provider === 'chatgpt' ? 'chat' : provider}`;
+  return `nix.pet.model.${workspaceId}.${petId}.${provider}`;
 }
 
 export function readConversationModel(
@@ -77,12 +75,7 @@ export function readConversationModel(
   provider: PetProfile['provider'],
 ): string {
   try {
-    const model =
-      readLocal(conversationModelKey(workspaceId, petId, provider)) ??
-      (provider === 'chatgpt'
-        ? sessionStorage.getItem(`nix.pet.model.${workspaceId}.${petId}`)
-        : null) ??
-      '';
+    const model = readLocal(conversationModelKey(workspaceId, petId, provider)) ?? '';
     return model.length <= 160 ? model : '';
   } catch {
     return '';

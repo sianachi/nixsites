@@ -68,15 +68,6 @@ const settingsClient: NixClient = {
     },
   }),
   query: (endpoint) => {
-    if (endpoint.operation === 'pets.connection')
-      return Promise.resolve(
-        endpoint.schema.parse({
-          provider: 'chatgpt',
-          status: 'disconnected',
-          reason: 'Connect ChatGPT to start a conversation.',
-          canConnect: true,
-        }),
-      );
     if (endpoint.operation === 'pets.providers')
       return Promise.resolve(endpoint.schema.parse({ keys: [] }));
     return Promise.reject(new Error(`Unexpected settings story read: ${endpoint.operation}`));
@@ -101,6 +92,7 @@ function settingsStory(provider: PetProfile['provider']): ReactElement {
                 instructions: '',
                 applyWithoutAsking: false,
                 provider,
+                model: '',
               },
             ],
             inlineWriting: false,
@@ -113,20 +105,8 @@ function settingsStory(provider: PetProfile['provider']): ReactElement {
   );
 }
 
-export const Settings = {
-  render: (): ReactElement => settingsStory('chatgpt'),
-  play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
-    const canvas = within(canvasElement);
-    canvas.getByRole('combobox', { name: 'Model' });
-    await canvas.findByRole('button', { name: 'Connect ChatGPT' });
-    canvas.getByRole('region', { name: 'ChatGPT connection' });
-    if (canvas.queryByLabelText(/API key/) !== null)
-      throw new Error('ChatGPT settings must not show API key controls.');
-  },
-};
-
 export const AppearanceGallery = {
-  render: (): ReactElement => settingsStory('chatgpt'),
+  render: (): ReactElement => settingsStory('anthropic'),
   play: async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
     canvas.getByRole('button', { name: 'Change appearance' }).click();
@@ -139,14 +119,11 @@ export const AppearanceGallery = {
 function keySettingsPlay(label: string, otherLabel: string) {
   return async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
-    canvas.getByRole('combobox', { name: 'Model' });
+    canvas.getByRole('combobox', { name: 'Provider' });
     const key = await canvas.findByLabelText(label);
     if (key.getAttribute('type') !== 'password')
       throw new Error('Provider API key fields must conceal their values.');
-    if (
-      canvas.queryByRole('region', { name: 'ChatGPT connection' }) !== null ||
-      canvas.queryByLabelText(otherLabel) !== null
-    )
+    if (canvas.queryByLabelText(otherLabel) !== null)
       throw new Error('Only the selected provider may show its connection controls.');
   };
 }
@@ -159,7 +136,6 @@ export const OpenRouterSettings = {
   render: (): ReactElement => settingsStory('openrouter'),
   play: keySettingsPlay('OpenRouter API key', 'Claude API key'),
 };
-export const DarkSettings = { ...Settings, globals: { ground: 'dark' } };
 export const DarkClaudeSettings = { ...ClaudeSettings, globals: { ground: 'dark' } };
 export const DarkOpenRouterSettings = { ...OpenRouterSettings, globals: { ground: 'dark' } };
 export const DarkAnimationStates = { ...AnimationStates, globals: { ground: 'dark' } };
@@ -197,7 +173,7 @@ export const WorkApproval = {
         petId="22222222-2222-4222-8222-222222222222"
         onChange={() => undefined}
         runtime={petConnectionSchema.parse({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: '',
           canConnect: false,
@@ -258,7 +234,7 @@ export const TwoWritesWaiting = {
           petId="22222222-2222-4222-8222-222222222222"
           onChange={() => undefined}
           runtime={petConnectionSchema.parse({
-            provider: 'chatgpt',
+            provider: 'anthropic',
             status: 'connected',
             reason: '',
             canConnect: false,
@@ -327,7 +303,7 @@ export const AppliedWithoutAsking = {
           onChange={() => undefined}
           applyWithoutAsking
           runtime={petConnectionSchema.parse({
-            provider: 'chatgpt',
+            provider: 'anthropic',
             status: 'connected',
             reason: '',
             canConnect: false,
@@ -460,7 +436,7 @@ export const ViewUpdateApproval = {
         onChange={() => undefined}
         applyWithoutAsking
         runtime={petConnectionSchema.parse({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: '',
           canConnect: false,
@@ -509,7 +485,7 @@ export const ViewReadActivity = {
         petId="22222222-2222-4222-8222-222222222222"
         onChange={() => undefined}
         runtime={petConnectionSchema.parse({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: '',
           canConnect: false,
@@ -636,7 +612,7 @@ export const StructureWorkApproval = {
         petId="22222222-2222-4222-8222-222222222222"
         onChange={() => undefined}
         runtime={petConnectionSchema.parse({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: '',
           canConnect: false,
@@ -731,7 +707,7 @@ function blueprintToolStory(
         petId="22222222-2222-4222-8222-222222222222"
         onChange={() => undefined}
         runtime={petConnectionSchema.parse({
-          provider: 'chatgpt',
+          provider: 'anthropic',
           status: 'connected',
           reason: '',
           canConnect: false,
@@ -787,7 +763,7 @@ const historyClient = {
   execute: () =>
     Promise.resolve(
       petConnectionSchema.parse({
-        provider: 'chatgpt',
+        provider: 'anthropic',
         status: 'connected',
         reason: '',
         canConnect: false,
@@ -986,7 +962,7 @@ function AutoOpenPanel({
 }
 
 const emptyChatConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
@@ -1041,7 +1017,7 @@ export const ConversationControlsDesktop = {
 };
 
 const markdownConversationConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
@@ -1076,7 +1052,7 @@ export const DarkMarkdownConversation = { ...MarkdownConversation, globals: { gr
 
 const STREAM_TOOL_ID = '66666666-6666-4666-8666-666666666666';
 const streamedTurnConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
@@ -1144,7 +1120,7 @@ export const DarkStreamedTurn = { ...StreamedTurn, globals: { ground: 'dark' } }
 
 const STREAMING_DRAFT_ID = 'streaming-user-1:draft:aaaaaaaaaaaaaaaa';
 const streamingReplyConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
@@ -1170,7 +1146,7 @@ export const StreamingReply = {
 export const DarkStreamingReply = { ...StreamingReply, globals: { ground: 'dark' } };
 
 const turnErrorConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'The response did not finish. Try again.',
   canConnect: false,
@@ -1193,7 +1169,7 @@ export const ConversationTurnError = {
 export const DarkConversationTurnError = { ...ConversationTurnError, globals: { ground: 'dark' } };
 
 const launcherBadgeConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
@@ -1229,7 +1205,7 @@ export const LauncherBadge = {
 export const DarkLauncherBadge = { ...LauncherBadge, globals: { ground: 'dark' } };
 
 const autoDeclinedConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
@@ -1271,7 +1247,7 @@ export const AutoDeclinedWrite = {
 export const DarkAutoDeclinedWrite = { ...AutoDeclinedWrite, globals: { ground: 'dark' } };
 
 const completedReceiptConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
@@ -1321,22 +1297,6 @@ export const CompletedReceipt = {
 };
 export const DarkCompletedReceipt = { ...CompletedReceipt, globals: { ground: 'dark' } };
 
-const disconnectedConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
-  status: 'disconnected',
-  reason: 'Connect ChatGPT to start a conversation.',
-  canConnect: true,
-});
-
-export const Disconnected = {
-  render: (): ReactElement => (
-    <DesktopFrame connection={disconnectedConnection}>
-      <AutoOpenCompanion />
-    </DesktopFrame>
-  ),
-};
-export const DarkDisconnected = { ...Disconnected, globals: { ground: 'dark' } };
-
 function keyDisconnectedPlay(reason: string) {
   return async ({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> => {
     const canvas = within(canvasElement);
@@ -1346,11 +1306,6 @@ function keyDisconnectedPlay(reason: string) {
     const settings = canvas.getByRole('link', { name: 'Open Companion settings' });
     if (settings.getAttribute('href') !== `/w/${PHONE_WORKSPACE}/settings?tab=pets`)
       throw new Error('Provider setup must open settings in the current workspace.');
-    if (
-      canvas.queryByRole('button', { name: 'Connect ChatGPT' }) !== null ||
-      canvas.queryByRole('link', { name: 'Open ChatGPT sign-in' }) !== null
-    )
-      throw new Error('API key providers must not ask for ChatGPT sign-in.');
   };
 }
 
@@ -1488,7 +1443,7 @@ function bodyEditRuntime(
   markdown: string,
 ): BodyEditRuntime {
   return petConnectionSchema.parse({
-    provider: 'chatgpt',
+    provider: 'anthropic',
     status: 'connected',
     reason: '',
     canConnect: false,

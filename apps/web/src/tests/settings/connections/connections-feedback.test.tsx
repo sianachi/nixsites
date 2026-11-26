@@ -44,6 +44,7 @@ const pet = (id: string, name: string) => ({
   instructions: '',
   applyWithoutAsking: false,
   provider: 'anthropic' as const,
+  model: '',
 });
 const saved: PetSettingsResponse = {
   revision: 1,

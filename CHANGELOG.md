@@ -101,9 +101,11 @@ follows semantic versioning (`0.x` pre-1.0).
 - The phone and desktop apps show how many offline changes are still waiting to sync, say in plain
   words why a change was not applied, and Settings > About shows when the offline copy last synced
   with a Sync now button.
-- A pet can use an OpenAI API key (Settings > Pets > OpenAI (API key)), separate from the ChatGPT
-  sign-in. The model list comes from the key, and messages are billed to it. Migration
-  `PetProviderOpenAi` allows the new provider in the stored-keys check.
+- A pet has a chat model of its own (Settings > Pets > Chat model; empty uses the provider's
+  default), and "Think harder" in the message box's menu sends one message on the larger model.
+  For Claude the default chat model is the fast Haiku 5.5, and plans, task runs and "Think harder"
+  use Sonnet 5.5; with OpenRouter you pick the model. `PetProfile` gains `model`, and a send gains
+  `thinkHarder`.
 
 ### Changed
 
@@ -205,6 +207,14 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Removed
 
+- **Breaking:** pets no longer run on a linked ChatGPT account or an OpenAI API key; `anthropic`
+  and `openrouter` remain, and a new pet uses `anthropic`. The Codex app-server and its binary are
+  gone from the images, installers and release files, `GET /api/v1/me/pets/connection` and the
+  `connect` and `disconnect` pet operations are removed, and the connection response no longer
+  carries `verificationUrl` and `userCode`. Migration `RetireChatGptAndOpenAi` moves each pet on ChatGPT, OpenAI or no
+  provider to the person's Claude key, else their OpenRouter key, else Claude (the pet then asks
+  for a key and does nothing else), deletes stored OpenAI keys, and the companion deletes saved
+  ChatGPT sign-ins at start. Add a Claude or OpenRouter key in Settings > Pets after upgrading.
 - Eye of Ra and Demiurge are no longer companion appearances. Existing profiles use Owl instead,
   preserving their identity, custom name, instructions and conversation history.
 

@@ -6,7 +6,7 @@ import { ApiClientOverrideProvider } from '@nix/web-platform/api/api-client-prov
 import { PetProviderKeys } from '../../pets/pet-provider-keys';
 
 const storedKey = {
-  provider: 'openai',
+  provider: 'openrouter',
   keyHint: '1234',
   savedAt: '2026-11-24T12:00:00Z',
 } satisfies PetProviderKey;
@@ -47,7 +47,7 @@ function setup({
   const view = (needsSave: boolean) => (
     <ApiClientOverrideProvider client={client}>
       <PetProviderKeys
-        provider="openai"
+        provider="openrouter"
         onSaveSettings={onSaveSettings}
         needsProviderSave={needsSave}
         collapsible={collapsible}
@@ -69,13 +69,13 @@ it('names only key removal while its reply is held and keeps the saved key on re
   const removal = deferred<undefined>();
   const { execute, onSaveSettings, user } = setup();
   execute.mockReturnValueOnce(removal.promise);
-  await user.click(await screen.findByRole('button', { name: 'Remove OpenAI key' }));
+  await user.click(await screen.findByRole('button', { name: 'Remove OpenRouter key' }));
 
   const pending = screen.getByRole('button', { name: 'Removing key…' });
   expect(pending).toBeDisabled();
   expect(pending).toHaveAttribute('aria-busy', 'true');
-  expect(screen.getByRole('button', { name: 'Replace OpenAI key' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Use OpenAI' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Replace OpenRouter key' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Use OpenRouter' })).toBeDisabled();
   expect(screen.queryByRole('button', { name: 'Saving…' })).toBeNull();
   expect(screen.getByText('Using your saved key ending 1234.')).toBeVisible();
   expect(onSaveSettings).not.toHaveBeenCalled();
@@ -88,25 +88,25 @@ it('names only key removal while its reply is held and keeps the saved key on re
   });
   expect(screen.getByRole('alert')).toHaveTextContent('The key could not be removed.');
   expect(screen.getByText('Using your saved key ending 1234.')).toBeVisible();
-  const retry = screen.getByRole('button', { name: 'Remove OpenAI key' });
+  const retry = screen.getByRole('button', { name: 'Remove OpenRouter key' });
   expect(retry).toBeEnabled();
   retry.focus();
   await user.keyboard('{Enter}');
-  expect(await screen.findByRole('status')).toHaveTextContent('OpenAI API key removed.');
-  expect(screen.queryByRole('button', { name: 'Remove OpenAI key' })).toBeNull();
+  expect(await screen.findByRole('status')).toHaveTextContent('OpenRouter API key removed.');
+  expect(screen.queryByRole('button', { name: 'Remove OpenRouter key' })).toBeNull();
 });
 
 it('names only provider choice while settings save is held and recovers after refusal', async () => {
   const settings = deferred<boolean>();
   const onSaveSettings = vi.fn<() => Promise<boolean>>().mockReturnValueOnce(settings.promise);
   const { execute, user } = setup({ onSaveSettings });
-  await user.click(await screen.findByRole('button', { name: 'Use OpenAI' }));
+  await user.click(await screen.findByRole('button', { name: 'Use OpenRouter' }));
 
   const pending = screen.getByRole('button', { name: 'Saving setup…' });
   expect(pending).toBeDisabled();
   expect(pending).toHaveAttribute('aria-busy', 'true');
-  expect(screen.getByRole('button', { name: 'Replace OpenAI key' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Remove OpenAI key' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Replace OpenRouter key' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Remove OpenRouter key' })).toBeDisabled();
   expect(screen.queryByRole('button', { name: 'Saving…' })).toBeNull();
   expect(execute).not.toHaveBeenCalled();
 
@@ -116,10 +116,10 @@ it('names only provider choice while settings save is held and recovers after re
   });
   expect(screen.getByRole('alert')).toHaveTextContent('The pet settings could not be saved.');
   expect(screen.queryByRole('status')).toBeNull();
-  expect(screen.getByRole('button', { name: 'Use OpenAI' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Use OpenRouter' })).toBeEnabled();
   onSaveSettings.mockResolvedValueOnce(true);
-  await user.click(screen.getByRole('button', { name: 'Use OpenAI' }));
-  expect(await screen.findByRole('status')).toHaveTextContent('OpenAI setup saved.');
+  await user.click(screen.getByRole('button', { name: 'Use OpenRouter' }));
+  expect(await screen.findByRole('status')).toHaveTextContent('OpenRouter setup saved.');
   expect(execute).not.toHaveBeenCalled();
 });
 
@@ -132,14 +132,14 @@ it('keeps a refused key draft concealed and waits for settings before saving or 
     .mockResolvedValue(true);
   const { execute, user } = setup({ onSaveSettings, needsProviderSave: false });
   execute.mockReturnValueOnce(keySave.promise);
-  const input = await screen.findByLabelText('OpenAI API key');
+  const input = await screen.findByLabelText('OpenRouter API key');
   await user.type(input, 'synthetic-key-5678');
   await user.keyboard('{Enter}');
 
   const pending = screen.getByRole('button', { name: 'Saving…' });
   expect(pending).toBeDisabled();
   expect(pending).toHaveAttribute('aria-busy', 'true');
-  expect(screen.getByRole('button', { name: 'Remove OpenAI key' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Remove OpenRouter key' })).toBeDisabled();
   expect(input).toHaveAttribute('type', 'password');
   expect(input).toHaveValue('synthetic-key-5678');
   expect(execute).not.toHaveBeenCalled();
@@ -162,7 +162,7 @@ it('keeps a refused key draft concealed and waits for settings before saving or 
   expect(screen.getByText('Using your saved key ending 1234.')).toBeVisible();
   input.focus();
   await user.keyboard('{Enter}');
-  expect(await screen.findByRole('status')).toHaveTextContent('OpenAI API key saved.');
+  expect(await screen.findByRole('status')).toHaveTextContent('OpenRouter API key saved.');
   expect(input).toHaveValue('');
 });
 
@@ -170,9 +170,9 @@ it('keeps the draft and makes no key write when saving settings returns false', 
   const settings = deferred<boolean>();
   const onSaveSettings = vi.fn<() => Promise<boolean>>().mockReturnValueOnce(settings.promise);
   const { execute, user } = setup({ onSaveSettings, needsProviderSave: false });
-  const input = await screen.findByLabelText('OpenAI API key');
+  const input = await screen.findByLabelText('OpenRouter API key');
   await user.type(input, 'synthetic-key-5678');
-  await user.click(screen.getByRole('button', { name: 'Replace OpenAI key' }));
+  await user.click(screen.getByRole('button', { name: 'Replace OpenRouter key' }));
   expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
 
   await act(() => {
@@ -183,7 +183,7 @@ it('keeps the draft and makes no key write when saving settings returns false', 
   expect(screen.queryByRole('status')).toBeNull();
   expect(input).toHaveValue('synthetic-key-5678');
   expect(input).toHaveAttribute('type', 'password');
-  expect(screen.getByRole('button', { name: 'Replace OpenAI key' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Replace OpenRouter key' })).toBeEnabled();
   expect(screen.getByText('Using your saved key ending 1234.')).toBeVisible();
 });
 
@@ -193,7 +193,7 @@ it('keeps the held key save visible after the caller confirms provider settings'
   const onSaveSettings = vi.fn<() => Promise<boolean>>().mockReturnValueOnce(settings.promise);
   const { execute, user, rerender } = setup({ onSaveSettings, collapsible: true });
   execute.mockReturnValueOnce(keySave.promise);
-  const input = await screen.findByLabelText('OpenAI API key');
+  const input = await screen.findByLabelText('OpenRouter API key');
   await user.type(input, 'synthetic-key-5678');
   await user.keyboard('{Enter}');
 
@@ -205,22 +205,22 @@ it('keeps the held key save visible after the caller confirms provider settings'
   expect(execute).toHaveBeenCalledWith('pets.saveProviderKey');
   expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
   expect(input).toHaveValue('synthetic-key-5678');
-  expect(screen.queryByRole('button', { name: 'Change OpenAI key' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Change OpenRouter key' })).toBeNull();
 
   await act(() => {
     keySave.resolve(storedKey);
     return keySave.promise;
   });
-  expect(screen.getByRole('button', { name: 'Change OpenAI key' })).toBeEnabled();
-  expect(screen.getByRole('status')).toHaveTextContent('OpenAI API key saved.');
+  expect(screen.getByRole('button', { name: 'Change OpenRouter key' })).toBeEnabled();
+  expect(screen.getByRole('status')).toHaveTextContent('OpenRouter API key saved.');
 });
 
 it('cannot dismiss an explicitly opened key editor while its save is pending', async () => {
   const keySave = deferred<PetProviderKey>();
   const { execute, user } = setup({ collapsible: true, needsProviderSave: false });
   execute.mockReturnValueOnce(keySave.promise);
-  await user.click(await screen.findByRole('button', { name: 'Change OpenAI key' }));
-  const input = screen.getByLabelText('OpenAI API key');
+  await user.click(await screen.findByRole('button', { name: 'Change OpenRouter key' }));
+  const input = screen.getByLabelText('OpenRouter API key');
   await user.type(input, 'synthetic-key-5678');
   await user.keyboard('{Enter}');
   expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
@@ -242,7 +242,7 @@ it('does not claim settings were saved when the settings request rejects before 
     .mockReturnValueOnce(settings.promise)
     .mockResolvedValue(true);
   const { execute, user } = setup({ onSaveSettings });
-  const input = await screen.findByLabelText('OpenAI API key');
+  const input = await screen.findByLabelText('OpenRouter API key');
   await user.type(input, 'synthetic-key-5678');
   await user.keyboard('{Enter}');
 
@@ -254,9 +254,9 @@ it('does not claim settings were saved when the settings request rejects before 
   expect(screen.getByRole('alert')).not.toHaveTextContent('Your pet settings were saved');
   expect(input).toHaveValue('synthetic-key-5678');
   expect(input).toHaveAttribute('type', 'password');
-  expect(screen.getByRole('button', { name: 'Replace OpenAI key' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Replace OpenRouter key' })).toBeEnabled();
   input.focus();
   await user.keyboard('{Enter}');
-  expect(await screen.findByRole('status')).toHaveTextContent('OpenAI API key saved.');
+  expect(await screen.findByRole('status')).toHaveTextContent('OpenRouter API key saved.');
   expect(execute).toHaveBeenCalledOnce();
 });

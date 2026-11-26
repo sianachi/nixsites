@@ -23,7 +23,9 @@ const petId = '22222222-2222-4222-8222-222222222222';
 const settings = petSettingsSchema.parse({
   enabled: true,
   activePetId: petId,
-  profiles: [{ id: petId, name: 'Pip', appearance: 'cat', instructions: '', provider: 'openai' }],
+  profiles: [
+    { id: petId, name: 'Pip', appearance: 'cat', instructions: '', provider: 'anthropic' },
+  ],
 });
 const profile = settings.profiles[0];
 if (profile === undefined) throw new Error('Fixture requires a companion');
@@ -34,12 +36,12 @@ const question = {
   recipientRevision: 'recipient-one',
   sourceScope: { kind: 'workspace' },
   recipient: {
-    provider: 'OpenAI',
-    destination: 'https://api.openai.com',
+    provider: 'Claude',
+    destination: 'https://api.anthropic.com',
     routingPolicy: 'Direct',
     connectionRevision: 'connection-one',
   },
-  message: 'Share the current readable workspace with OpenAI?',
+  message: 'Share the current readable workspace with Claude?',
 };
 
 beforeEach(() => {
@@ -93,7 +95,7 @@ function setup(initialPlanMode = true, currentItemId?: string) {
       status: 'connected',
       reason: '',
       canConnect: false,
-      provider: 'openai',
+      provider: 'anthropic',
       messages: [],
     }),
     models: [],

@@ -38,6 +38,8 @@ export function Composer({
   onToggleWorkspaceAccess,
   applyWithoutAsking,
   onApplyChange,
+  thinkHarder = false,
+  onThinkHarderChange,
   planConsent = false,
   hasPage,
   contextCount,
@@ -72,6 +74,9 @@ export function Composer({
   readonly onToggleWorkspaceAccess: () => void;
   readonly applyWithoutAsking: boolean;
   readonly onApplyChange: (on: boolean) => void;
+  /** One message on the provider's larger model; given only when the provider has one. */
+  readonly thinkHarder?: boolean;
+  readonly onThinkHarderChange?: ((on: boolean) => void) | undefined;
   readonly planConsent?: boolean;
   readonly hasPage: boolean;
   readonly contextCount: number;
@@ -110,6 +115,19 @@ export function Composer({
           },
         ]
       : []),
+    ...(onThinkHarderChange === undefined
+      ? []
+      : [
+          {
+            label: 'Think harder',
+            role: 'menuitemcheckbox' as const,
+            checked: thinkHarder,
+            disabled: running,
+            onSelect: () => {
+              onThinkHarderChange(!thinkHarder);
+            },
+          },
+        ]),
     ...(!planConsent && workspaceAccess && !noteReadOnly
       ? [
           {
@@ -171,6 +189,11 @@ export function Composer({
             : undefined
         }
       />
+      {thinkHarder ? (
+        <Text variant="caption" tone="muted">
+          The next message uses the larger model.
+        </Text>
+      ) : null}
       {needsWorkspaceAccess ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-divider bg-surface px-3 py-2">
           <Text variant="note">

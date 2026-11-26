@@ -11,7 +11,7 @@ const PET_ID = '22222222-2222-4222-8222-222222222222';
 
 function connection(overrides: Record<string, unknown> = {}) {
   return {
-    provider: 'chatgpt',
+    provider: 'anthropic',
     status: 'connected',
     reason: '',
     canConnect: false,

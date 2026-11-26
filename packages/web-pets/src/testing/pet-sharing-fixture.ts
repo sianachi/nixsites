@@ -61,12 +61,12 @@ export function petSharingFixture(): SharingFixture {
           recipientRevision: 'synthetic-recipient',
           sourceScope: body.sourceScope,
           recipient: {
-            provider: 'ChatGPT',
-            destination: 'https://chatgpt.com',
+            provider: 'Claude',
+            destination: 'https://api.anthropic.com',
             routingPolicy: 'Direct',
             connectionRevision: 'synthetic-connection',
           },
-          message: 'Share these selected sources with ChatGPT?',
+          message: 'Share these selected sources with Claude?',
         },
       });
     },

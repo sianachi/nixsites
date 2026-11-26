@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { PetCompanion } from '../../pets/pet-companion';
-import { PetConnectionPanel } from '../../pets/pet-connection-panel';
 import { NixApiError, type PetProfile } from '@nix/api-client';
 import { clearPetDrafts } from '@nix/web-foundation/lib/pet-drafts';
 import { writeWorkspaceAccess } from '@nix/web-foundation/lib/device-preferences';
@@ -35,7 +34,7 @@ vi.mock('@nix/web-workspaces/workspaces/workspace-context', () => ({
 const petSettings = vi.hoisted(
   (): { applyWithoutAsking: boolean; provider: PetProfile['provider'] } => ({
     applyWithoutAsking: false,
-    provider: 'chatgpt',
+    provider: 'anthropic',
   }),
 );
 vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
@@ -65,14 +64,12 @@ vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
 }));
 
 const connected = {
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
   state: 'success',
   messages: [],
-  verificationUrl: '',
-  userCode: '',
 };
 
 function OpenedPetPage() {
@@ -93,7 +90,7 @@ describe('companion workflow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sharing.reset();
-    petSettings.provider = 'chatgpt';
+    petSettings.provider = 'anthropic';
     petSettings.applyWithoutAsking = false;
     const stored = new Map<string, string>();
     vi.stubGlobal('localStorage', {
@@ -212,6 +209,53 @@ describe('companion workflow', () => {
       body: { sharedText: '', mode: '' },
     });
     view.unmount();
+  });
+
+  it('sends think harder for one message only, and only for a provider with a larger model', async () => {
+    const user = userEvent.setup();
+    const sent = () =>
+      client.execute.mock.calls
+        .map(([endpoint]) => (endpoint as { body?: Record<string, unknown> }).body)
+        .filter((body) => body?.operation === 'send');
+    render(
+      <MemoryRouter>
+        <PetCompanion />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Talk with Cat' }));
+    await screen.findByRole('dialog', { name: 'Conversation with Cat' });
+    await chooseFromPlus(user, 'Think harder', 'menuitemcheckbox');
+    expect(screen.getByText('The next message uses the larger model.')).toBeVisible();
+    await user.type(screen.getByRole('textbox', { name: 'Message Cat' }), 'Hard one');
+    await user.click(await screen.findByRole('button', { name: 'Send' }));
+    await waitFor(() => {
+      expect(sent()).toHaveLength(1);
+    });
+    expect(sent()[0]).toMatchObject({ thinkHarder: true });
+    await waitFor(() => {
+      expect(screen.queryByText('The next message uses the larger model.')).not.toBeInTheDocument();
+    });
+    await user.type(screen.getByRole('textbox', { name: 'Message Cat' }), 'Easy one');
+    await user.click(await screen.findByRole('button', { name: 'Send' }));
+    await waitFor(() => {
+      expect(sent()).toHaveLength(2);
+    });
+    expect(sent()[1]).toMatchObject({ thinkHarder: false });
+  });
+
+  it('offers no think harder choice to a provider without a larger model', async () => {
+    petSettings.provider = 'openrouter';
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <PetCompanion />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Talk with Cat' }));
+    await user.click(await screen.findByRole('button', { name: 'Add to message' }));
+    expect(
+      screen.queryByRole('menuitemcheckbox', { name: 'Think harder' }),
+    ).not.toBeInTheDocument();
   });
 
   it('maps the workspace on the first message with workspace access, and never again', async () => {
@@ -378,7 +422,7 @@ describe('companion workflow', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Chat settings' }));
   }
 
-  it('remembers the model choice under the key it was always stored under', async () => {
+  it('remembers the model choice under its provider', async () => {
     client.execute.mockResolvedValue({
       ...connected,
       models: [{ id: 'chat-model', name: 'Chat model', default: false }],
@@ -394,7 +438,7 @@ describe('companion workflow', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'chat-model');
     expect(
       localStorage.getItem(
-        'nix.pet.model.33333333-3333-4333-8333-333333333333.44444444-4444-4444-8444-444444444444.chat',
+        'nix.pet.model.33333333-3333-4333-8333-333333333333.44444444-4444-4444-8444-444444444444.anthropic',
       ),
     ).toBe('chat-model');
   });
@@ -403,7 +447,7 @@ describe('companion workflow', () => {
     { provider: 'anthropic', label: 'Claude' },
     { provider: 'openrouter', label: 'OpenRouter' },
   ] satisfies { provider: PetProfile['provider']; label: string }[])(
-    'shows $label setup instead of ChatGPT sign-in when its key is missing',
+    'shows $label setup when its key is missing',
     async ({ provider, label }) => {
       petSettings.provider = provider;
       client.query.mockResolvedValue({
@@ -426,25 +470,27 @@ describe('companion workflow', () => {
         'href',
         '/w/33333333-3333-4333-8333-333333333333/settings?tab=pets',
       );
-      expect(screen.queryByRole('button', { name: 'Connect ChatGPT' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Open ChatGPT sign-in' })).not.toBeInTheDocument();
-      for (const [request] of client.query.mock.calls)
-        expect(request).not.toHaveProperty('operation', 'pets.connection');
     },
   );
 
-  it('clears ChatGPT status and models when the same pet switches to Claude', async () => {
-    const gptModel = { id: 'gpt-model', name: 'GPT model', supportsTools: true };
+  it('clears OpenRouter status and models when the same pet switches to Claude', async () => {
+    const routerModel = { id: 'router-model', name: 'Router model', supportsTools: true };
     const claudeModel = { id: 'claude-model', name: 'Claude model', supportsTools: true };
     localStorage.setItem(
-      'nix.pet.model.33333333-3333-4333-8333-333333333333.44444444-4444-4444-8444-444444444444.chat',
-      'gpt-model',
+      'nix.pet.model.33333333-3333-4333-8333-333333333333.44444444-4444-4444-8444-444444444444.openrouter',
+      'router-model',
     );
-    client.execute.mockResolvedValue({ ...connected, models: [gptModel] });
+    petSettings.provider = 'openrouter';
+    client.execute.mockResolvedValue({
+      ...connected,
+      provider: 'openrouter',
+      models: [routerModel],
+    });
     client.query.mockResolvedValue({
       ...connected,
+      provider: 'openrouter',
       revision: 25,
-      messages: [{ id: 'gpt-message', role: 'assistant', text: 'ChatGPT conversation' }],
+      messages: [{ id: 'router-message', role: 'assistant', text: 'OpenRouter conversation' }],
     });
     const user = userEvent.setup();
     const { rerender } = render(
@@ -453,9 +499,9 @@ describe('companion workflow', () => {
       </MemoryRouter>,
     );
     await user.click(screen.getByRole('button', { name: 'Talk with Cat' }));
-    expect(await screen.findByText('ChatGPT conversation')).toBeVisible();
+    expect(await screen.findByText('OpenRouter conversation')).toBeVisible();
     await openSettings(user);
-    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('gpt-model');
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('router-model');
     expect(screen.getByRole('link', { name: 'Companion settings' })).toHaveAttribute(
       'href',
       '/w/33333333-3333-4333-8333-333333333333/settings?tab=pets',
@@ -488,7 +534,7 @@ describe('companion workflow', () => {
       </MemoryRouter>,
     );
     await user.click(screen.getByRole('button', { name: 'Talk with Cat' }));
-    expect(screen.queryByText('ChatGPT conversation')).not.toBeInTheDocument();
+    expect(screen.queryByText('OpenRouter conversation')).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Connecting');
     await waitFor(() => {
       expect(finishWatch).toBeDefined();
@@ -498,7 +544,9 @@ describe('companion workflow', () => {
     await openSettings(user);
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('');
     expect(screen.getByRole('option', { name: 'Provider default' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: /GPT model|gpt-model/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: /Router model|router-model/ }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Claude model' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Read without asking/ })).toHaveAccessibleName(
       'Read without asking. When Workspace access is on, Cat can search and read your workspace without asking first. What it reads is sent to Claude. Changes ask first unless you turn on Apply without asking in a conversation. Applies on this device.',
@@ -547,7 +595,6 @@ describe('companion workflow', () => {
       'href',
       '/w/33333333-3333-4333-8333-333333333333/settings?tab=pets',
     );
-    expect(screen.queryByRole('button', { name: 'Connect ChatGPT' })).not.toBeInTheDocument();
   });
 
   it('prioritises replies and keeps secondary controls tucked into the overflow menu', async () => {
@@ -1021,39 +1068,6 @@ describe('companion workflow', () => {
     });
     expect(await screen.findByText('Sprint review')).toBeVisible();
     expect(screen.queryByRole('textbox', { name: 'Conversation title' })).not.toBeInTheDocument();
-  });
-
-  it('offers device sign-in and cancellation without handling credentials in the browser', async () => {
-    client.query.mockResolvedValue({ ...connected, status: 'disconnected', canConnect: true });
-    client.execute.mockResolvedValue({
-      ...connected,
-      status: 'connecting',
-      canConnect: true,
-      verificationUrl: 'https://auth.openai.com/codex/device',
-      userCode: 'TEST-CODE',
-    });
-    const user = userEvent.setup();
-    render(<PetConnectionPanel />);
-    const button = await screen.findByRole('button', { name: 'Connect ChatGPT' });
-    await waitFor(() => {
-      expect(button).toBeEnabled();
-    });
-    await user.click(button);
-    expect(await screen.findByRole('link', { name: 'Open ChatGPT sign-in' })).toHaveAttribute(
-      'href',
-      'https://auth.openai.com/codex/device',
-    );
-    await user.click(screen.getByRole('button', { name: 'Cancel sign-in' }));
-    expect(client.execute).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          operation: 'disconnect',
-          text: '',
-          sharedText: '',
-        }) as unknown,
-      }),
-      expect.anything(),
-    );
   });
 
   it('draws no floating pet once the chat is given its own page everywhere', () => {

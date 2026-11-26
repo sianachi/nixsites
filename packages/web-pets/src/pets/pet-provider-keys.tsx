@@ -210,9 +210,7 @@ export function PetProviderKeys({
               hint={
                 provider === 'anthropic'
                   ? 'Get an API key from console.anthropic.com.'
-                  : provider === 'openai'
-                    ? 'Get an API key from platform.openai.com.'
-                    : 'Get an API key from openrouter.ai.'
+                  : 'Get an API key from openrouter.ai.'
               }
               className="w-full min-w-0"
             >

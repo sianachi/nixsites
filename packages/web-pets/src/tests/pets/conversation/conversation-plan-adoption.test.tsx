@@ -22,7 +22,9 @@ const turnId = '33333333-3333-4333-8333-333333333333';
 const settings = petSettingsSchema.parse({
   enabled: true,
   activePetId: petId,
-  profiles: [{ id: petId, name: 'Pip', appearance: 'cat', instructions: '', provider: 'openai' }],
+  profiles: [
+    { id: petId, name: 'Pip', appearance: 'cat', instructions: '', provider: 'anthropic' },
+  ],
 });
 const pet = settings.profiles[0];
 if (pet === undefined) throw new Error('Fixture requires a companion');
@@ -116,7 +118,7 @@ it.each(cases)(
           status: 'connected',
           reason: '',
           canConnect: false,
-          provider: 'openai',
+          provider: 'anthropic',
           messages: [{ id: 'confirmed-message', role: 'user', text: 'Prepare the two changes.' }],
         }),
         conversationId: 'server-scoped-conversation',

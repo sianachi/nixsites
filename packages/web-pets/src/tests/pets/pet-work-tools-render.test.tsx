@@ -39,7 +39,7 @@ const args = (operation: string, extra: Record<string, string> = {}) =>
 // A fresh object every call, the way each watch tick hands the list a new runtime.
 function freshRuntime(readStatus = 'completed', lockedRead = false): PetConnection {
   return petConnectionSchema.parse({
-    provider: 'chatgpt',
+    provider: 'anthropic',
     status: 'connected',
     reason: '',
     canConnect: false,

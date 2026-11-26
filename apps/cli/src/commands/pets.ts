@@ -21,8 +21,6 @@ import { resolveSession, type SessionDeps } from './shared.ts';
 
 const RUNTIME_OPERATIONS = [
   'status',
-  'connect',
-  'disconnect',
   'models',
   'read',
   'watch',

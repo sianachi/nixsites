@@ -15,7 +15,7 @@ const W = '11111111-1111-4111-8111-111111111111';
 const P = '22222222-2222-4222-8222-222222222222';
 const OLD = '33333333-3333-4333-8333-333333333333';
 const connection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: '',
   canConnect: false,

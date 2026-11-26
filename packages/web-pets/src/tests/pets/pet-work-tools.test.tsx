@@ -42,7 +42,7 @@ vi.mock('@nix/companion', async () => {
   return { ...actual, runWorkspaceTool: runWorkspaceToolSpy };
 });
 const runtime = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: '',
   canConnect: false,

@@ -145,10 +145,6 @@
       "types": "./src/pets/pet-companion.tsx",
       "default": "./src/pets/pet-companion.tsx"
     },
-    "./pets/pet-connection-panel": {
-      "types": "./src/pets/pet-connection-panel.tsx",
-      "default": "./src/pets/pet-connection-panel.tsx"
-    },
     "./pets/pet-device-settings": {
       "types": "./src/pets/pet-device-settings.tsx",
       "default": "./src/pets/pet-device-settings.tsx"

@@ -58,8 +58,8 @@ function setup() {
               recipientRevision: 'recipient-one',
               sourceScope: { kind: 'workspace', readOnlyWorkspaceIds: chat.sourceWorkspaceIds },
               recipient: {
-                provider: 'OpenAI',
-                destination: 'https://api.openai.com',
+                provider: 'Claude',
+                destination: 'https://api.anthropic.com',
                 routingPolicy: 'Direct',
                 connectionRevision: 'connection-one',
               },

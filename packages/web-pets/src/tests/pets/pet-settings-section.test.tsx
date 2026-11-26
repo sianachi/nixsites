@@ -35,6 +35,7 @@ function savedPet(provider: PetProfile['provider']): PetSettingsResponse {
           instructions: '',
           applyWithoutAsking: false,
           provider,
+          model: '',
         },
       ],
     },
@@ -74,13 +75,6 @@ describe('pet configuration', () => {
     });
     client.query.mockReset().mockImplementation((endpoint: { operation: string }) => {
       if (endpoint.operation === 'pets.providers') return Promise.resolve({ keys: providerKeys });
-      if (endpoint.operation === 'pets.connection')
-        return Promise.resolve({
-          provider: 'chatgpt',
-          status: 'disconnected',
-          reason: 'Connect ChatGPT to use this pet.',
-          canConnect: true,
-        });
       return Promise.reject(new Error(`Unexpected settings query: ${endpoint.operation}`));
     });
     client.execute.mockReset().mockResolvedValue(savedClaudeKey);
@@ -156,7 +150,7 @@ describe('pet configuration', () => {
   it('previews an appearance change, allows cancellation and saves only a confirmed choice', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
-    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
+    render(<PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={save} />);
     for (const action of ['Cancel', 'Use this appearance']) {
       await user.click(screen.getByRole('button', { name: 'Change appearance' }));
       const gallery = within(screen.getByRole('dialog', { name: 'Change appearance' }));
@@ -173,7 +167,7 @@ describe('pet configuration', () => {
   it('offers Add pet only when the account has no companion', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
-    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
+    render(<PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={save} />);
     expect(screen.queryByRole('button', { name: 'Add pet' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Remove pet' }));
     expect(screen.getByRole('button', { name: 'Add pet' })).toHaveFocus();
@@ -215,8 +209,8 @@ describe('pet configuration', () => {
   it('lets a pet choose its model provider and keeps the choice in the saved document', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
-    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
+    render(<PetSettingsEditor initial={savedPet('openrouter')} saving={false} onSave={save} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Provider' }), 'anthropic');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(save).toHaveBeenCalled();
@@ -229,27 +223,31 @@ describe('pet configuration', () => {
     const user = userEvent.setup();
     render(
       <PetSettingsEditor
-        initial={savedPet('chatgpt')}
+        initial={savedPet('anthropic')}
         saving={false}
         onSave={() => Promise.resolve(true)}
       />,
     );
-    expect(await screen.findByRole('button', { name: 'Connect ChatGPT' })).toBeVisible();
-    expect(screen.queryByLabelText('Claude API key')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('OpenRouter API key')).not.toBeInTheDocument();
-
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
     expect(await screen.findByLabelText('Claude API key')).toHaveAttribute('type', 'password');
-    expect(screen.queryByRole('region', { name: 'ChatGPT connection' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('OpenRouter API key')).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /ChatGPT|OpenAI/ })).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'openrouter');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Provider' }), 'openrouter');
     expect(await screen.findByLabelText('OpenRouter API key')).toHaveAttribute('type', 'password');
-    expect(screen.queryByRole('region', { name: 'ChatGPT connection' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Claude API key')).not.toBeInTheDocument();
   });
 
-  it('loads a saved Claude key hint without querying ChatGPT or returning the secret to the field', async () => {
+  it('saves the chat model of the pet with its settings', async () => {
+    const save = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(<PetSettingsEditor initial={savedPet('anthropic')} saving={false} onSave={save} />);
+    await user.type(screen.getByRole('textbox', { name: 'Chat model' }), 'claude-sonnet-5-5');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const saved = save.mock.calls.at(-1)?.[0] as PetSettingsResponse['settings'];
+    expect(saved.profiles[0]?.model).toBe('claude-sonnet-5-5');
+  });
+
+  it('loads a saved Claude key hint and never returning the secret to the field', async () => {
     providerKeys = [savedClaudeKey];
     render(
       <PetSettingsEditor
@@ -269,7 +267,6 @@ describe('pet configuration', () => {
       expect.objectContaining({ operation: 'pets.providers' }),
       expect.anything(),
     );
-    expect(screen.queryByRole('button', { name: 'Connect ChatGPT' })).not.toBeInTheDocument();
   });
 
   it('shows a provider key load failure and retries before allowing a key change', async () => {
@@ -312,8 +309,8 @@ describe('pet configuration', () => {
       return Promise.resolve(savedClaudeKey);
     });
     const user = userEvent.setup();
-    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
+    render(<PetSettingsEditor initial={savedPet('openrouter')} saving={false} onSave={save} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Provider' }), 'anthropic');
     await user.type(await screen.findByLabelText('Claude API key'), 'dummy-claude-1234');
     await user.click(screen.getByRole('button', { name: 'Save Claude setup' }));
 
@@ -345,8 +342,8 @@ describe('pet configuration', () => {
   it('does not save a provider key when the selected provider settings cannot be saved', async () => {
     const save = vi.fn().mockResolvedValue(false);
     const user = userEvent.setup();
-    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
+    render(<PetSettingsEditor initial={savedPet('openrouter')} saving={false} onSave={save} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Provider' }), 'anthropic');
     await user.type(await screen.findByLabelText('Claude API key'), 'dummy-claude-1234');
     await user.click(screen.getByRole('button', { name: 'Save Claude setup' }));
 
@@ -364,8 +361,8 @@ describe('pet configuration', () => {
   it('saves the provider setup with Enter in the API key field without submitting settings twice', async () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
-    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
+    render(<PetSettingsEditor initial={savedPet('openrouter')} saving={false} onSave={save} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Provider' }), 'anthropic');
     await user.type(await screen.findByLabelText('Claude API key'), 'dummy-claude-1234');
     await user.keyboard('{Enter}');
 
@@ -421,9 +418,9 @@ describe('pet configuration', () => {
     const save = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     const view = render(
-      <PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={save} />,
+      <PetSettingsEditor initial={savedPet('openrouter')} saving={false} onSave={save} />,
     );
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Provider' }), 'anthropic');
     await user.click(await screen.findByRole('button', { name: 'Use Claude' }));
 
     expect(await screen.findByText('Claude setup saved.')).toBeVisible();
@@ -470,16 +467,12 @@ describe('pet configuration', () => {
       />,
     );
     await user.type(await screen.findByLabelText('Claude API key'), 'unsaved-claude-key');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'openrouter');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Provider' }), 'openrouter');
     expect(await screen.findByLabelText('OpenRouter API key')).toHaveValue('');
     await user.type(screen.getByLabelText('OpenRouter API key'), 'unsaved-openrouter-key');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'anthropic');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Provider' }), 'anthropic');
     expect(await screen.findByLabelText('Claude API key')).toHaveValue('');
     expect(client.execute).not.toHaveBeenCalled();
-    expect(client.query).not.toHaveBeenCalledWith(
-      expect.objectContaining({ operation: 'pets.connection' }),
-      expect.anything(),
-    );
   });
 
   it('shows note context only for enabled inline AI and device options only for an enabled companion', async () => {
@@ -558,24 +551,6 @@ describe('pet configuration', () => {
     localStorage.setItem('nix.pet.surface', 'page');
     render(<PetSettingsEditor {...props} />);
     expect(screen.getByRole('combobox', { name: 'Chat opens' })).toHaveValue('page');
-  });
-
-  it('collapses a connected ChatGPT pet to a status line until Change is pressed', async () => {
-    client.query.mockImplementation((endpoint: { operation: string }) =>
-      Promise.resolve(
-        endpoint.operation === 'pets.connection'
-          ? { provider: 'chatgpt', status: 'connected', reason: 'Connected.', canConnect: true }
-          : { keys: [] },
-      ),
-    );
-    const user = userEvent.setup();
-    render(<PetSettingsEditor initial={savedPet('chatgpt')} saving={false} onSave={vi.fn()} />);
-    expect(await screen.findByText('✓ Connected')).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Disconnect ChatGPT' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Change ChatGPT connection' }));
-    expect(screen.getByRole('button', { name: 'Disconnect ChatGPT' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Done' }));
-    expect(screen.getByRole('button', { name: 'Change ChatGPT connection' })).toHaveFocus();
   });
 
   it('lists what the pet remembered and saves edits, removals, additions and the off switch', async () => {

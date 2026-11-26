@@ -13,23 +13,13 @@ describe('pet model preferences', () => {
     sessionStorage.clear();
   });
 
-  it('retains the historical ChatGPT choice without sharing it with other providers', () => {
-    localStorage.setItem(`nix.pet.model.${WORKSPACE}.${PET}.chat`, 'gpt-model');
-    expect(readConversationModel(WORKSPACE, PET, 'chatgpt')).toBe('gpt-model');
+  it('keeps each provider choice apart', () => {
     expect(readConversationModel(WORKSPACE, PET, 'anthropic')).toBe('');
     expect(readConversationModel(WORKSPACE, PET, 'openrouter')).toBe('');
 
     writeConversationModel(WORKSPACE, PET, 'anthropic', 'claude-model');
     writeConversationModel(WORKSPACE, PET, 'openrouter', 'router-model');
-    expect(readConversationModel(WORKSPACE, PET, 'chatgpt')).toBe('gpt-model');
     expect(readConversationModel(WORKSPACE, PET, 'anthropic')).toBe('claude-model');
     expect(readConversationModel(WORKSPACE, PET, 'openrouter')).toBe('router-model');
-  });
-
-  it('uses the legacy session choice only for ChatGPT', () => {
-    sessionStorage.setItem(`nix.pet.model.${WORKSPACE}.${PET}`, 'old-gpt-model');
-    expect(readConversationModel(WORKSPACE, PET, 'chatgpt')).toBe('old-gpt-model');
-    expect(readConversationModel(WORKSPACE, PET, 'anthropic')).toBe('');
-    expect(readConversationModel(WORKSPACE, PET, 'openrouter')).toBe('');
   });
 });

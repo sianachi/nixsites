@@ -14,6 +14,7 @@ export function useTurns({
   draft,
   setDraft,
   model,
+  thinkHarder = false,
   workspaceAccess,
   hasNoteScope,
   messages,
@@ -30,6 +31,8 @@ export function useTurns({
   readonly draft: string;
   readonly setDraft: (value: string | ((current: string) => string)) => void;
   readonly model: string;
+  /** Send this message on the provider's larger model. */
+  readonly thinkHarder?: boolean;
   readonly workspaceAccess: boolean;
   readonly hasNoteScope: boolean;
   readonly messages: readonly Message[];
@@ -103,6 +106,7 @@ export function useTurns({
     const ok = await send({
       text,
       model,
+      ...(thinkHarder ? { thinkHarder } : {}),
       workspaceAccess: access,
       ...(creationRequestId === undefined ? {} : { requestId: creationRequestId }),
       ...(consentMode === undefined ? {} : { consentMode }),
@@ -137,6 +141,7 @@ export function useTurns({
       const accepted = await send({
         text,
         model,
+        ...(thinkHarder ? { thinkHarder } : {}),
         workspaceAccess: workspaceAccess || creation,
         ...(consentMode === undefined ? {} : { consentMode }),
         replaceFromMessageId,

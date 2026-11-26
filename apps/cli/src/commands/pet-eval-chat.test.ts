@@ -91,7 +91,7 @@ function toolCall(id: string, args: Record<string, unknown>) {
 }
 
 function connection(extra: Record<string, unknown> = {}) {
-  return { provider: 'chatgpt', status: 'connected', reason: '', canConnect: false, ...extra };
+  return { provider: 'anthropic', status: 'connected', reason: '', canConnect: false, ...extra };
 }
 
 function bodyUpdate(text: string): string {

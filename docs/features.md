@@ -68,8 +68,8 @@ The full list of what Nix does today, moved out of the README. Behaviour is defi
 
 ## Companion
 
-- A companion that runs on ChatGPT through the Codex device login, or on Claude or OpenRouter with
-  the person's own API key, chosen per pet. It has account-scoped character, personality,
+- A companion that runs on Claude or OpenRouter with the person's own API key, chosen per pet,
+  with a model of its own and a "Think harder" choice for one message. It has account-scoped character, personality,
   response-length and instruction settings, model selection, and named, resumable conversations
   that can be searched, renamed and saved as chat notes.
 - The companion reads the open note and attached files (text, CSV, JSON, PDFs and images),

@@ -46,7 +46,7 @@ function tool(id: string, operation: string, extra: Record<string, unknown> = {}
 
 function connection(extra: Record<string, unknown> = {}) {
   return {
-    provider: 'chatgpt',
+    provider: 'anthropic',
     status: 'connected',
     reason: '',
     canConnect: false,

@@ -71,7 +71,7 @@ export const phoneSettings = {
 };
 
 const phoneConnection = petConnectionSchema.parse({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,
@@ -132,7 +132,7 @@ function routeQuery(
             endpoint.operation === 'petRuns.listWorkspace' ||
             endpoint.operation === 'petPlans.list'
           ? Promise.resolve(endpoint.schema.parse(phoneRunList))
-          : endpoint.operation === 'pets.watchRuntime' || endpoint.operation === 'pets.connection'
+          : endpoint.operation === 'pets.watchRuntime'
             ? Promise.resolve({ ...connection, revision: 1 })
             : Promise.resolve(settings);
 }

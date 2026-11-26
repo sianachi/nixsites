@@ -36,7 +36,7 @@ vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
             appearance: 'cat',
             instructions: '',
             applyWithoutAsking: false,
-            provider: 'chatgpt',
+            provider: 'anthropic',
           },
         ],
       },
@@ -45,7 +45,7 @@ vi.mock('@nix/web-platform/api/use-pet-settings', () => ({
 }));
 
 const connected = {
-  provider: 'chatgpt',
+  provider: 'anthropic',
   status: 'connected',
   reason: 'Connected',
   canConnect: false,

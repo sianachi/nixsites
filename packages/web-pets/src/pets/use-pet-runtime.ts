@@ -45,6 +45,8 @@ export interface PetSendInput {
   readonly consentMode?: 'plan';
   readonly text: string;
   readonly model: string;
+  /** Run this one message on the provider's larger model. */
+  readonly thinkHarder?: boolean;
   readonly workspaceAccess: boolean;
   readonly readOnly?: boolean;
   readonly itemId?: string;
@@ -249,8 +251,7 @@ export function usePetRuntime(
    * responses; ordinary conversation snapshots still have to advance their revision. */
   const applyRaw = useCallback(
     (value: PetConnection) => {
-      const setup =
-        value.provider !== 'chatgpt' && value.status === 'disconnected' && value.revision === 0;
+      const setup = value.status === 'disconnected' && value.revision === 0;
       if (!setup && value.revision < revision.current) return false;
       const previous = runtimeRef.current;
       if (setup && (previous?.status !== 'disconnected' || previous.revision !== 0)) {
@@ -543,6 +544,7 @@ export function usePetRuntime(
                   requestId: input.requestId ?? requestId.current,
                   text: input.text,
                   model: input.model,
+                  ...(input.thinkHarder ? { thinkHarder: true } : {}),
                   workspaceAccess: input.workspaceAccess,
                   ...(input.consentMode === undefined ? {} : { consentMode: input.consentMode }),
                   readWithoutAsking: readReadWithoutAsking(),

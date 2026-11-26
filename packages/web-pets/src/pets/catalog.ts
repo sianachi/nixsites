@@ -1,10 +1,8 @@
 import type { PetProfile } from '@nix/api-client';
 
 export const petProviderLabels: Record<PetProfile['provider'], string> = {
-  chatgpt: 'ChatGPT',
   anthropic: 'Claude',
   openrouter: 'OpenRouter',
-  openai: 'OpenAI',
 };
 
 export const petCatalog = [
@@ -113,6 +111,7 @@ export function newPet(appearance: PetProfile['appearance'] = 'owl'): PetProfile
     appearance: preset.appearance,
     instructions: '',
     applyWithoutAsking: false,
-    provider: 'chatgpt',
+    provider: 'anthropic',
+    model: '',
   };
 }

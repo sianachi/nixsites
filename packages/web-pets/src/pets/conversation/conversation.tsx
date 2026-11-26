@@ -30,7 +30,6 @@ import {
 import { toolOutcomeSentence } from '../work-tools/receipts';
 import { type PetAnimationState } from '../pet-avatar';
 import { usePetDraft } from '@nix/web-foundation/lib/pet-drafts';
-import { PetConnectionPanel } from '../pet-connection-panel';
 import { type UsePetRuntimeResult } from '../use-pet-runtime';
 import { Composer } from './composer/composer';
 import { useSlashMenu } from './composer/use-slash-menu';
@@ -128,6 +127,8 @@ export function Conversation({
   const [panel, setPanel] = useState<ConversationPanel>('chat');
   const [insight, setInsight] = useState<string | null>(null);
   const [saveChat, setSaveChat] = useState(false);
+  // One message only: it clears when a turn starts.
+  const [thinkHarder, setThinkHarder] = useState(false);
   // The draft lives in a small in-memory store rather than here so it survives the
   // conversation moving between the floating panel and its page.
   const [draft, setDraft] = usePetDraft(workspaceId, pet.id, noteScope?.rootItemId);
@@ -272,11 +273,15 @@ export function Conversation({
       draft,
       setDraft,
       model,
+      thinkHarder,
       workspaceAccess,
       hasNoteScope: noteScope !== undefined,
       messages,
       contextFields: context.contextFields,
-      onSent: closeEditor,
+      onSent: (replacement) => {
+        closeEditor(replacement);
+        setThinkHarder(false);
+      },
       consentMode: jobs?.consentMode,
       onAccepted: ({ workspaceAccess: access, context: fields }) => {
         acceptedScope.current = sourceScope(access, fields);
@@ -644,22 +649,15 @@ export function Conversation({
           </div>
         ) : !connected ? (
           <div className={`min-h-0 overflow-y-auto p-4 ${statusDimension}`}>
-            {pet.provider === 'chatgpt' ? (
-              <PetConnectionPanel />
-            ) : (
-              <div className="flex flex-col gap-3">
-                <Text role="alert">
-                  {runtime.reason ||
-                    `Set up ${petProviderLabels[pet.provider]} in Companion settings to chat.`}
-                </Text>
-                <Link
-                  to={`/w/${workspaceId}/settings?tab=pets`}
-                  className={`underline ${focusRing}`}
-                >
-                  <Text as="span">Open Companion settings</Text>
-                </Link>
-              </div>
-            )}
+            <div className="flex flex-col gap-3">
+              <Text role="alert">
+                {runtime.reason ||
+                  `Set up ${petProviderLabels[pet.provider]} in Companion settings to chat.`}
+              </Text>
+              <Link to={`/w/${workspaceId}/settings?tab=pets`} className={`underline ${focusRing}`}>
+                <Text as="span">Open Companion settings</Text>
+              </Link>
+            </div>
           </div>
         ) : (
           <>
@@ -775,6 +773,8 @@ export function Conversation({
             }}
             applyWithoutAsking={applyWithoutAsking}
             onApplyChange={setApplyWithoutAsking}
+            thinkHarder={thinkHarder}
+            onThinkHarderChange={pet.provider === 'anthropic' ? setThinkHarder : undefined}
             planConsent={planConsent}
             hasPage={Boolean(currentItem)}
             contextCount={context.contexts.length}

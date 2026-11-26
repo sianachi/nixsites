@@ -109,12 +109,10 @@ export function registerPetTools(server: McpServer, { options }: McpToolDeps): v
     'pet_runtime',
     {
       description:
-        'Drive a pet companion runtime: status, connect, send, watch (long-poll for a change past `after`), tool_claim/tool_result, and settings. Uses a short-lived interactive session, never expanded PAT scopes.',
+        'Drive a pet companion runtime: status, send, watch (long-poll for a change past `after`), tool_claim/tool_result, and settings. Uses a short-lived interactive session, never expanded PAT scopes.',
       inputSchema: {
         operation: z.enum([
           'status',
-          'connect',
-          'disconnect',
           'models',
           'read',
           'watch',

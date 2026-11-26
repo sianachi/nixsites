@@ -29,7 +29,8 @@ const pet: PetProfile = {
   name: 'Pip',
   appearance: 'cat',
   instructions: '',
-  provider: 'openai',
+  provider: 'anthropic',
+  model: '',
   applyWithoutAsking: false,
 };
 const settings = petSettingsSchema.parse({
@@ -49,7 +50,7 @@ function setup({ autoJob = false, accepted = true, sendResult = Promise.resolve(
   const submit = vi.fn(() => accepted);
   const runtimeApi: UsePetRuntimeResult = {
     runtime: petConnectionSchema.parse({
-      provider: 'openai',
+      provider: 'anthropic',
       status: 'connected',
       reason: '',
       canConnect: false,

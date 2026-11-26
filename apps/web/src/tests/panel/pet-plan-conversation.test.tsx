@@ -67,12 +67,12 @@ function setup({
                   recipientRevision: 'recipient-one',
                   sourceScope: { kind: 'workspace' },
                   recipient: {
-                    provider: 'OpenAI',
-                    destination: 'https://api.openai.com',
+                    provider: 'Claude',
+                    destination: 'https://api.anthropic.com',
                     routingPolicy: 'Direct',
                     connectionRevision: 'connection-one',
                   },
-                  message: 'May I share the current readable workspace with OpenAI?',
+                  message: 'May I share the current readable workspace with Claude?',
                 }
               : null,
           question: null,

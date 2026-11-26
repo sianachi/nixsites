@@ -26,8 +26,8 @@ function setup(
     recipientRevision: 'recipient-one',
     sourceScope: { kind: 'workspace' },
     recipient: {
-      provider: 'OpenAI',
-      destination: 'https://api.openai.com',
+      provider: 'Claude',
+      destination: 'https://api.anthropic.com',
       routingPolicy: 'Direct',
       connectionRevision: unknown ? 'unknown' : 'connection-one',
     },

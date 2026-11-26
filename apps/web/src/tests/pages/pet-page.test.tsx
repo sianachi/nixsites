@@ -11,7 +11,7 @@ import type { PetProfile } from '@nix/api-client';
 const WORKSPACE = '33333333-3333-4333-8333-333333333333';
 const ROOT = '66666666-6666-4666-8666-666666666666';
 const petSettings = vi.hoisted((): { provider: PetProfile['provider']; enabled: boolean } => ({
-  provider: 'chatgpt',
+  provider: 'anthropic',
   enabled: true,
 }));
 const mock = vi.hoisted(() => ({ query: vi.fn(), execute: vi.fn(), send: vi.fn(), hook: vi.fn() }));
@@ -93,7 +93,7 @@ describe('note chat page', () => {
     // The page is where the conversation lives when tabs are not drawn.
     stubViewport(false);
     useTabStore.setState({ workspaceId: WORKSPACE, byPane: {} });
-    petSettings.provider = 'chatgpt';
+    petSettings.provider = 'anthropic';
     petSettings.enabled = true;
     localStorage.clear();
     sessionStorage.clear();
@@ -159,12 +159,12 @@ describe('note chat page', () => {
                       decisionNonce: '11111111-1111-4111-8111-111111111111',
                       sourceScope: { kind: 'workspace' },
                       recipient: {
-                        provider: 'ChatGPT',
-                        destination: 'https://chatgpt.com',
+                        provider: 'Claude',
+                        destination: 'https://api.anthropic.com',
                         routingPolicy: 'Direct',
                         connectionRevision: 'connection-one',
                       },
-                      message: 'Share the current readable workspace with ChatGPT?',
+                      message: 'Share the current readable workspace with Claude?',
                     }
                   : null,
             });
@@ -297,8 +297,8 @@ describe('note chat page', () => {
 
   it('resets the page model when the same pet changes providers', async () => {
     localStorage.setItem(
-      `nix.pet.model.${WORKSPACE}.44444444-4444-4444-8444-444444444444.chat`,
-      'gpt-model',
+      `nix.pet.model.${WORKSPACE}.44444444-4444-4444-8444-444444444444.anthropic`,
+      'claude-model',
     );
     const user = userEvent.setup();
     const { rerender } = render(
@@ -308,7 +308,7 @@ describe('note chat page', () => {
     );
     await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
     await user.click(screen.getByRole('menuitem', { name: 'Chat settings' }));
-    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('gpt-model');
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('claude-model');
 
     petSettings.provider = 'openrouter';
     rerender(
@@ -319,7 +319,7 @@ describe('note chat page', () => {
     await user.click(screen.getByRole('button', { name: 'More conversation actions' }));
     await user.click(screen.getByRole('menuitem', { name: 'Chat settings' }));
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('');
-    expect(screen.queryByRole('option', { name: /gpt-model/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /claude-model/ })).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Read without asking/ })).toHaveAccessibleName(
       'Read without asking. When Workspace access is on, Pip can search and read your workspace without asking first. What it reads is sent to OpenRouter. Changes ask first unless you turn on Apply without asking in a conversation. Applies on this device.',
     );

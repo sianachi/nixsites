@@ -125,13 +125,13 @@ function Review({
             recipientRevision: 'recipient-one',
             sourceScope: { kind: 'workspace' },
             recipient: {
-              provider: 'OpenAI',
-              destination: 'https://api.openai.com',
+              provider: 'Claude',
+              destination: 'https://api.anthropic.com',
               routingPolicy: 'Direct connection',
               connectionRevision: 'connection-one',
             },
             message:
-              'May I use the readable content in Product team to prepare this plan? Relevant content will be shared with OpenAI.',
+              'May I use the readable content in Product team to prepare this plan? Relevant content will be shared with Claude.',
           },
         }
       : uncertain && preparedPlanFixture.plan != null

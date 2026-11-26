@@ -28,7 +28,7 @@ type Route = [
 export const DEMO_PET_ID = '0199a000-0000-7000-8000-0000000000c1';
 export const DEMO_PET_NAME = 'Pip';
 export const SCRIPTED_REPLY =
-  'This is the demo, so my replies are scripted. On your own Nix, connect ChatGPT, Anthropic or OpenRouter and I can search, plan and change your workspace — always asking before I write.';
+  'This is the demo, so my replies are scripted. On your own Nix, add a Claude or OpenRouter key and I can search, plan and change your workspace — always asking before I write.';
 
 const THINKING_MS = 600;
 const SEEDED_AT = '2026-10-01T09:30:00+00:00';
@@ -46,6 +46,7 @@ export const demoPetSettings = (): Json => ({
       instructions: '',
       applyWithoutAsking: false,
       provider: 'anthropic',
+      model: '',
     },
   ],
   inlineWriting: false,
@@ -260,7 +261,6 @@ export function createDemoAi(env: DemoAiEnv): Route[] {
       /^\/api\/v1\/me\/pets\/providers$/,
       () => env.json({ keys: [{ provider: 'anthropic', keyHint: 'demo', savedAt: SEEDED_AT }] }),
     ],
-    ['GET', /^\/api\/v1\/me\/pets\/connection$/, () => env.json(connection())],
     ['POST', /^\/api\/v1\/me\/pets\/runtime(\/note)?$/, runtime],
     ['GET', /^\/api\/v1\/me\/pets\/runtime(\/note)?\/watch$/, watch],
     [
