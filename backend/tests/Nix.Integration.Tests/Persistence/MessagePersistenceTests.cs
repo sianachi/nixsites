@@ -241,6 +241,19 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_held_fact_is_saved_when_the_stored_settings_still_carry_a_retired_appearance()
+    {
+        await SavePetsAsync("ask", ("Pip", PetId));
+        var message = (await PostAsync(Editor, Note, "I use metric units")).Value;
+        await InsertTurnAsync(message.Id.Value, "working", "now()");
+        await RunWithFactAsync(message.Id.Value, []);
+        await ExecuteAsync("UPDATE pet_preferences SET settings = jsonb_set(settings, '{profiles,0,appearance}', '\"demiurge\"')");
+        var approved = await DecideAsync(message.Id.Value, approve: true, interactive: true);
+        Assert.True(approved.IsSuccess, approved.IsFailure ? approved.Error.Code : "");
+        Assert.Equal("Prefers metric units", Assert.Single(await MemoriesAsync()).Text);
+    }
+
+    [Fact]
     public async Task Always_saves_a_remembered_fact_at_once_with_its_source_and_off_saves_nothing_and_does_not_offer_it()
     {
         await SavePetsAsync("always", ("Pip", PetId));

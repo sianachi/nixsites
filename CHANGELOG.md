@@ -249,6 +249,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- A fact a pet held from a message now saves when your stored pet settings still carry a retired appearance or more than one companion, instead of being dropped with no error; if the settings are invalid the request fails and the fact stays held.
 - Messages to pets: the daily turn cap holds under parallel posts from one token, approving a waiting turn is refused after the workspace switch is turned off, and a turn does not run in a workspace that has since been given a password. `nixctl message post` and the MCP tool refuse to address a pet on a browser-approved login. A memory's "learned in" source is recorded for chat memories and can no longer be set or changed through an access token.
 - A pet addressed in a message thread now replies to the message that addressed it, not to whichever message comes last in the thread, and long threads no longer hide it.
 - Messages under a published site's pages no longer become site pages or appear in the build.

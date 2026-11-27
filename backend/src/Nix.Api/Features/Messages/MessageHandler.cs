@@ -272,7 +272,8 @@ public sealed class MessageHandler(
         for (var attempt = 0; attempt < 3 && fact.Length > 0; attempt++)
         {
             var row = await preferences.FindAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
-            var settings = row is null ? null : JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings);
+            var stored = row is null ? null : JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings);
+            var settings = stored is null ? null : PetSettingsValidation.ForRead(stored);
             if (row is null || settings is null || settings.MemoryMode == PetMemoryModes.Off)
             {
                 return Result.Failure<bool>(new NixError("messages.memory_off", "Memory is off, so nothing was saved."));
@@ -298,7 +299,8 @@ public sealed class MessageHandler(
             var next = settings with { Memories = [.. kept, new PetMemory(Guid.NewGuid(), fact, clock.GetUtcNow(), source)] };
             if (!PetSettingsValidation.IsValid(next))
             {
-                return Result.Success(true);
+                // Failing rolls the request back, so a held fact stays held.
+                return Result.Failure<bool>(new NixError("messages.memory_invalid", "The pet's settings are not valid, so nothing was saved."));
             }
 
             if (await preferences.SaveAsync(new PetPreferences

@@ -48,6 +48,20 @@ public static class PetSettingsValidation
     /// <summary>Gets the initial disabled configuration.</summary>
     public static PetSettings Empty => new(false, null, []);
 
+    /// <summary>Stored settings as every reader sees them: a legacy row cut to one companion, a retired appearance replaced.</summary>
+    public static PetSettings ForRead(PetSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (settings.Profiles.Count > 1)
+        {
+            // Keep the active ID so the existing conversation still opens after upgrading.
+            var pet = settings.Profiles.FirstOrDefault(profile => profile.Id == settings.ActivePetId) ?? settings.Profiles[0];
+            settings = settings with { ActivePetId = pet.Id, Profiles = [pet] };
+        }
+
+        return NormalizeRetiredAppearance(settings)!;
+    }
+
     /// <summary>Replaces a retired appearance while keeping the companion's identity and preferences.</summary>
     public static PetSettings? NormalizeRetiredAppearance(PetSettings? settings)
     {
@@ -130,14 +144,7 @@ public sealed class GetPetSettingsHandler(IPetPreferencesStore store, INixSessio
 
         var settings = JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings)
             ?? throw new InvalidOperationException("Stored pet settings are invalid.");
-        if (settings.Profiles.Count > 1)
-        {
-            // Keep the active ID so the existing conversation still opens after upgrading.
-            var pet = settings.Profiles.FirstOrDefault(profile => profile.Id == settings.ActivePetId) ?? settings.Profiles[0];
-            settings = settings with { ActivePetId = pet.Id, Profiles = [pet] };
-        }
-
-        return new(row.Revision, PetSettingsValidation.NormalizeRetiredAppearance(settings)!);
+        return new(row.Revision, PetSettingsValidation.ForRead(settings));
     }
 }
 
