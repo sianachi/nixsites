@@ -12443,7 +12443,7 @@
         "tags": [
           "Messages"
         ],
-        "summary": "Start a pet's waiting turn (the app only)",
+        "summary": "Start a pet's waiting turn, or save the fact it wants remembered (the app only)",
         "operationId": "ApproveMessagePetTurn",
         "parameters": [
           {
@@ -12495,6 +12495,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -12504,7 +12514,7 @@
         "tags": [
           "Messages"
         ],
-        "summary": "Decline a pet's waiting turn (the app only)",
+        "summary": "Decline a pet's waiting turn, or drop the fact it wants remembered (the app only)",
         "operationId": "DismissMessagePetTurn",
         "parameters": [
           {
@@ -12565,6 +12575,7 @@
         "tags": [
           "Messages"
         ],
+        "description": "The people who can read the item and, for the app or a token with the pets:send scope, the caller's own pets. A token without pets:send sees people only.",
         "operationId": "GetMessageDirectory",
         "parameters": [
           {
@@ -21880,6 +21891,12 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "memory": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

@@ -6,13 +6,16 @@ using static Nix.Persistence.Sql.NixParameter;
 namespace Nix.Persistence.Content;
 
 /// <summary>One pet's turn for one message. <paramref name="Status"/> is pending, working, answered, failed, declined or expired.</summary>
-public sealed record MessagePetTurnRow(Guid PetId, string Status, string? Reason, DateTimeOffset? ExpiresAt, Guid? TokenId, string? TokenName);
+public sealed record MessagePetTurnRow(Guid PetId, string Status, string? Reason, DateTimeOffset? ExpiresAt, Guid? TokenId, string? TokenName, string? Memory = null);
 
 /// <summary>Whether each pet addressed by a message is waiting, running, answered, failed, declined or expired; seen and changed only by the pet's owner.</summary>
 public sealed class MessagePetTurnStore(NixSqlExecutor sql, INixSessionContextAccessor session)
 {
     /// <summary>How long a turn waits for the owner's approval.</summary>
     public static readonly TimeSpan Wait = TimeSpan.FromDays(7);
+
+    /// <summary>How long a turn may run before a read calls it failed; a turn that ended without recording it would otherwise stay working.</summary>
+    public static readonly TimeSpan MaxRunning = TimeSpan.FromMinutes(30);
 
     private NixSessionContext Caller => session.Current ?? throw new InvalidOperationException("A session is required.");
 
@@ -37,10 +40,14 @@ public sealed class MessagePetTurnStore(NixSqlExecutor sql, INixSessionContextAc
     {
         var rows = new List<MessagePetTurnRow>();
         await foreach (var row in sql.QueryAsync<MessagePetTurnRow, Mapper>("""
-            SELECT pet_id, CASE WHEN status = 'pending' AND expires_at <= now() THEN 'expired' ELSE status END,
-                   reason, expires_at, token_id, token_name
+            SELECT pet_id,
+                   CASE WHEN status = 'pending' AND expires_at <= now() THEN 'expired'
+                        WHEN status = 'working' AND started_at <= now() - @running THEN 'failed' ELSE status END,
+                   CASE WHEN status = 'working' AND started_at <= now() - @running THEN 'The turn did not finish.' ELSE reason END,
+                   expires_at, token_id, token_name, memory_text
               FROM message_pet_turn WHERE tenant_id = @tenant AND message_id = @message ORDER BY created_at, pet_id
-            """, default(Mapper), [Uuid("tenant", Caller.TenantId.Value), Uuid("message", messageId)], cancellationToken).ConfigureAwait(false))
+            """, default(Mapper), [Uuid("tenant", Caller.TenantId.Value), Uuid("message", messageId),
+                new NpgsqlParameter("running", NpgsqlTypes.NpgsqlDbType.Interval) { Value = MaxRunning }], cancellationToken).ConfigureAwait(false))
         {
             rows.Add(row);
         }
@@ -53,7 +60,7 @@ public sealed class MessagePetTurnStore(NixSqlExecutor sql, INixSessionContextAc
         await OneAsync("""
             UPDATE message_pet_turn SET status = 'working', started_at = now()
              WHERE tenant_id = @tenant AND message_id = @message AND pet_id = @pet AND status = 'pending' AND expires_at > now()
-            RETURNING pet_id, status, reason, expires_at, token_id, token_name
+            RETURNING pet_id, status, reason, expires_at, token_id, token_name, memory_text
             """, messageId, petId, cancellationToken).ConfigureAwait(false);
 
     /// <summary>Declines a waiting turn. Null when there is none.</summary>
@@ -61,18 +68,35 @@ public sealed class MessagePetTurnStore(NixSqlExecutor sql, INixSessionContextAc
         await OneAsync("""
             UPDATE message_pet_turn SET status = 'declined', reason = 'The owner dismissed it.'
              WHERE tenant_id = @tenant AND message_id = @message AND pet_id = @pet AND status = 'pending' AND expires_at > now()
-            RETURNING pet_id, status, reason, expires_at, token_id, token_name
+            RETURNING pet_id, status, reason, expires_at, token_id, token_name, memory_text
             """, messageId, petId, cancellationToken).ConfigureAwait(false);
 
-    /// <summary>Records how a running turn ended.</summary>
-    public async Task FinishAsync(Guid messageId, Guid petId, string status, string? reason, CancellationToken cancellationToken) =>
+    /// <summary>Records how a running turn ended, and a fact the pet wants remembered that waits for the owner.</summary>
+    public async Task FinishAsync(Guid messageId, Guid petId, string status, string? reason, CancellationToken cancellationToken, string? memory = null) =>
         _ = await sql.ExecuteAsync("""
-            UPDATE message_pet_turn SET status = @status, reason = @reason
+            UPDATE message_pet_turn SET status = @status, reason = @reason, memory_text = @memory
              WHERE tenant_id = @tenant AND message_id = @message AND pet_id = @pet AND status = 'working'
             """,
             [Uuid("tenant", Caller.TenantId.Value), Uuid("message", messageId), Uuid("pet", petId), Text("status", status),
-                Text("reason", reason is { Length: > 500 } ? reason[..500] : reason)],
+                Text("reason", reason is { Length: > 500 } ? reason[..500] : reason), Text("memory", memory)],
             cancellationToken).ConfigureAwait(false);
+
+    /// <summary>Takes the fact waiting on a turn, so it is approved or dismissed once. Null when nothing waits.</summary>
+    public async Task<string?> TakeMemoryAsync(Guid messageId, Guid petId, CancellationToken cancellationToken)
+    {
+        await foreach (var text in sql.QueryAsync<string, TextMapper>("""
+            UPDATE message_pet_turn turn SET memory_text = NULL
+              FROM (SELECT memory_text AS held FROM message_pet_turn
+                     WHERE tenant_id = @tenant AND message_id = @message AND pet_id = @pet AND memory_text IS NOT NULL FOR UPDATE) waiting
+             WHERE turn.tenant_id = @tenant AND turn.message_id = @message AND turn.pet_id = @pet
+            RETURNING waiting.held
+            """, default(TextMapper), [Uuid("tenant", Caller.TenantId.Value), Uuid("message", messageId), Uuid("pet", petId)], cancellationToken).ConfigureAwait(false))
+        {
+            return text;
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// How many turns this token's messages started in the last day. Holds the token's lock until the transaction
@@ -100,11 +124,17 @@ public sealed class MessagePetTurnStore(NixSqlExecutor sql, INixSessionContextAc
         return null;
     }
 
+    private readonly struct TextMapper : INixRowMapper<string>
+    {
+        public string Map(NpgsqlDataReader reader) => reader.GetString(0);
+    }
+
     private readonly struct Mapper : INixRowMapper<MessagePetTurnRow>
     {
         public MessagePetTurnRow Map(NpgsqlDataReader reader) => new(
             reader.GetGuid(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetFieldValue<DateTimeOffset>(3),
-            reader.IsDBNull(4) ? null : reader.GetGuid(4), reader.IsDBNull(5) ? null : reader.GetString(5));
+            reader.IsDBNull(4) ? null : reader.GetGuid(4), reader.IsDBNull(5) ? null : reader.GetString(5),
+            reader.IsDBNull(6) ? null : reader.GetString(6));
     }
 }

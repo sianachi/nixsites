@@ -27,14 +27,15 @@ internal static class MessageEndpoints
             .WithSummary("Where each pet a message addressed stands")
             .Produces<MessagePetStatesResponse>().ProducesProblem(404);
         group.MapPost("/pet-turns/{petId:guid}/approve", Approve).WithName("ApproveMessagePetTurn")
-            .WithSummary("Start a pet's waiting turn (the app only)")
-            .Produces<MessagePetState>().ProducesProblem(403).ProducesProblem(404)
+            .WithSummary("Start a pet's waiting turn, or save the fact it wants remembered (the app only)")
+            .Produces<MessagePetState>().ProducesProblem(403).ProducesProblem(404).ProducesProblem(409)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         group.MapPost("/pet-turns/{petId:guid}/dismiss", Dismiss).WithName("DismissMessagePetTurn")
-            .WithSummary("Decline a pet's waiting turn (the app only)")
+            .WithSummary("Decline a pet's waiting turn, or drop the fact it wants remembered (the app only)")
             .Produces<MessagePetState>().ProducesProblem(403).ProducesProblem(404)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         group.MapGet("/message-directory", Directory).WithName("GetMessageDirectory")
+            .WithDescription("The people who can read the item and, for the app or a token with the pets:send scope, the caller's own pets. A token without pets:send sees people only.")
             .Produces<MessageDirectoryResponse>().ProducesProblem(404);
         return endpoints;
     }
@@ -86,7 +87,7 @@ internal static class MessageEndpoints
             "messages.interactive_only" or "messages.pets_interactive_only" or "messages.pets_scope_required" or "pets.budget_exhausted" => 403,
             "messages.pet_turn_limit" => 429,
             "items.locked" => 423,
-            "items.children_protected" or "items.reserved_type" => 409,
+            "items.children_protected" or "items.reserved_type" or "messages.memory_off" or "messages.memory_full" or "pets.settings_conflict" => 409,
             _ => 404,
         };
         return TypedResults.Problem(ApiProblem.Create(context, status, error.Code, "Message request refused", error.Message));

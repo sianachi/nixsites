@@ -35,6 +35,19 @@ public sealed class MessageAddressingTests
     }
 
     [Fact]
+    public void A_last_Remember_line_is_a_fact_and_is_removed_and_an_unusable_fact_is_dropped_with_it()
+    {
+        Assert.Equal(("Noted.", "Prefers metric units"), MessagePetRunner.TakeRemember("Noted.\nRemember: Prefers metric units"));
+        Assert.Equal(("Hello", ""), MessagePetRunner.TakeRemember("Hello"));
+        Assert.Equal(("a\nRemember: x\nb", ""), MessagePetRunner.TakeRemember("a\nRemember: x\nb"));
+        Assert.Equal(("Ok", ""), MessagePetRunner.TakeRemember("Ok\nRemember: " + new string('x', 281)));
+        Assert.Equal(("Ok", ""), MessagePetRunner.TakeRemember("Ok\nRemember: hid\u200Bden"));
+        var (text, to) = MessagePetRunner.TakeAddressing("Ok\nRemember: Likes tea\nTo: Ada", Names);
+        Assert.Equal(("Ok", "Likes tea"), MessagePetRunner.TakeRemember(text));
+        Assert.Equal([Ada], to.Select(entry => entry.Id));
+    }
+
+    [Fact]
     public void At_most_five_are_kept()
     {
         var many = Enumerable.Range(0, 8).ToDictionary(i => $"P{i}", i => new MessageRecipient(Guid.NewGuid(), "person", $"P{i}"), StringComparer.OrdinalIgnoreCase);

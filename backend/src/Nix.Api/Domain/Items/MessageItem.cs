@@ -33,6 +33,9 @@ public static class MessageItem
     /// <summary>The refusal for moving a message out of its thread or an item into one.</summary>
     public static NixError Fixed => new("items.read_only", "A message stays where it was posted.");
 
+    /// <summary>The refusal for deleting a message while other people's replies hang beneath it.</summary>
+    public static NixError HasOthersReplies => new("items.delete_protected", "Other people have replied in this thread, so it cannot be deleted. Each person can delete their own replies.");
+
     /// <summary>The refusal for removing somebody else's message.</summary>
     public static NixError NotYours => new("items.read_only", "Only the person who posted a message can delete it.");
 }

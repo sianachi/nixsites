@@ -336,7 +336,10 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `locks.too_many_attempts`
 - `me.invalid_ui_settings`
 - `me.ui_settings_too_large`
+- `messages.agents_off`
 - `messages.interactive_only`
+- `messages.memory_full`
+- `messages.memory_off`
 - `messages.no_waiting_turn`
 - `messages.pet_unavailable`
 - `messages.pets_interactive_only`

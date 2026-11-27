@@ -39,6 +39,12 @@ public sealed class PurgeItemHandler : ICommandHandler<PurgeItem, ItemId>
             return Result.Failure<ItemId>(MessageItem.NotYours);
         }
 
+        if (item.Type == MessageItem.Type && _protections is not null && _session.Current is { } actor
+            && await _protections.AnyMessageByOthersBelowAsync(item.Id, actor.PrincipalId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure<ItemId>(MessageItem.HasOthersReplies);
+        }
+
         // The root of a live site, or of one whose files are still being deleted, stays until the
         // site is unpublished and drained, as a workspace purge does.
         if (_sites is not null && await _sites.HasLiveOrStoredSiteAsync(item.WorkspaceId, item.Id, cancellationToken).ConfigureAwait(false))

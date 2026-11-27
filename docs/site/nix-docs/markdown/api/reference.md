@@ -2591,6 +2591,8 @@ Operation id: `GetMessageDirectory`.
 
 **Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
 
+The people who can read the item and, for the app or a token with the pets:send scope, the caller's own pets. A token without pets:send sees people only.
+
 Parameters:
 
 - `itemId` in path (required, string (uuid))
@@ -2646,7 +2648,7 @@ Responses: `200`, `404`.
 
 <a id="approvemessagepetturn"></a>
 
-Start a pet's waiting turn (the app only)
+Start a pet's waiting turn, or save the fact it wants remembered (the app only)
 
 Operation id: `ApproveMessagePetTurn`.
 
@@ -2661,13 +2663,13 @@ Parameters:
 - `itemId` in path (required, string (uuid))
 - `petId` in path (required, string (uuid))
 
-Responses: `200`, `403`, `404`.
+Responses: `200`, `403`, `404`, `409`.
 
 ### POST /api/v1/items/{itemId}/pet-turns/{petId}/dismiss
 
 <a id="dismissmessagepetturn"></a>
 
-Decline a pet's waiting turn (the app only)
+Decline a pet's waiting turn, or drop the fact it wants remembered (the app only)
 
 Operation id: `DismissMessagePetTurn`.
 

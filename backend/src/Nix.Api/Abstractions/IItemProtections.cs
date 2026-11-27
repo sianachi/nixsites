@@ -1,3 +1,4 @@
+using Nix.Domain.Identity;
 using Nix.Domain.Items;
 
 namespace Nix.Abstractions;
@@ -28,6 +29,13 @@ public interface IItemProtections
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <returns><see langword="true"/> when trashing the root would hide a protected item.</returns>
     public ValueTask<bool> AnyDeleteProtectedBelowAsync(ItemId itemId, bool userOnly, CancellationToken cancellationToken);
+
+    /// <summary>Whether any active message strictly beneath <paramref name="itemId"/> was posted by someone other than <paramref name="author"/>.</summary>
+    /// <param name="itemId">The root of the subtree.</param>
+    /// <param name="author">The person deleting the root.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns><see langword="true"/> when trashing the root would take another person's reply with it.</returns>
+    public ValueTask<bool> AnyMessageByOthersBelowAsync(ItemId itemId, PrincipalId author, CancellationToken cancellationToken);
 
     /// <summary>
     /// The first five active items at or below <paramref name="itemId"/> that stop it being trashed:

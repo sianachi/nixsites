@@ -1,8 +1,12 @@
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Nix.Abstractions;
+using Nix.Domain.Content;
 using Nix.Domain.Identity;
 using Nix.Domain.Items;
+using Nix.Domain.Notifications;
 using Nix.Domain.Primitives;
 using Nix.Features.Items;
 using Nix.Features.Pets;
@@ -27,7 +31,10 @@ public sealed class MessageHandler(
     IWorkspaceLocks workspaceLocks,
     WorkspaceAdministrationStore workspaces,
     MessagePetTurnStore turns,
-    PetUsageService usage)
+    PetUsageService usage,
+    INotificationWriter notifications,
+    IPetPreferencesStore preferences,
+    TimeProvider clock)
     : ICommandHandler<PostMessage, PostedMessage>, IQueryHandler<GetMessageDirectory, Result<MessageDirectoryResponse>>
 {
     private const int DirectoryLimit = 100;
@@ -137,6 +144,16 @@ public sealed class MessageHandler(
         foreach (var petId in petIds)
         {
             await turns.AddAsync(posted.Value.Id.Value, petId, status, reason, agentToken, via, cancellationToken).ConfigureAwait(false);
+            if (status == "pending")
+            {
+                // The held turn waits in the app, where its owner may not be looking.
+                var name = (await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), cancellationToken).ConfigureAwait(false))
+                    .Settings.Profiles.FirstOrDefault(pet => pet.Id == petId)?.Name ?? "A pet";
+                _ = await notifications.CreateAsync(context.PrincipalId, NotificationKind.System,
+                    TextCut.Cut($"{via ?? "An agent"} wants to message {name}", 200),
+                    "Approve or dismiss it on the message.", posted.Value.Id, parent.WorkspaceId,
+                    $"message-pet-turn:{posted.Value.Id.Value}:{petId}", cancellationToken).ConfigureAwait(false);
+            }
         }
 
         if (status == "working")
@@ -165,6 +182,23 @@ public sealed class MessageHandler(
         if (!scope.IsInteractive)
         {
             return Result.Failure<MessagePetState>(new NixError("messages.interactive_only", "Only the app can approve or dismiss a pet's turn."));
+        }
+
+        // A fact the pet wants remembered waits on its answered turn; it is approved or dismissed once.
+        if (await turns.TakeMemoryAsync(messageId.Value, petId, cancellationToken).ConfigureAwait(false) is { } held)
+        {
+            if (approve)
+            {
+                var saved = await visible.FindAsync(messageId, ItemAccess.Read, cancellationToken).ConfigureAwait(false) is { IsSuccess: true } message
+                    ? await Remember(message.Value, held, cancellationToken).ConfigureAwait(false)
+                    : Result.Failure<bool>(NotFound);
+                if (saved.IsFailure)
+                {
+                    return Result.Failure<MessagePetState>(saved.Error);
+                }
+            }
+
+            return Result.Success((await StatesAsync(messageId.Value, cancellationToken).ConfigureAwait(false)).First(state => state.PetId == petId));
         }
 
         if (approve && await usage.RequireAsync(cancellationToken).ConfigureAwait(false) is { IsFailure: true } exhausted)
@@ -207,7 +241,7 @@ public sealed class MessageHandler(
         }
 
         var profiles = (await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), cancellationToken).ConfigureAwait(false)).Settings.Profiles;
-        return [.. rows.Select(row => new MessagePetState(row.PetId, profiles.FirstOrDefault(pet => pet.Id == row.PetId)?.Name ?? "A pet that was removed", row.Status, row.Reason, row.ExpiresAt))];
+        return [.. rows.Select(row => new MessagePetState(row.PetId, profiles.FirstOrDefault(pet => pet.Id == row.PetId)?.Name ?? "A pet that was removed", row.Status, row.Reason, row.ExpiresAt, row.Memory))];
     }
 
     // The turn runs later as the poster with no workspace unlock, so refuse here, where the person is looking.
@@ -222,6 +256,77 @@ public sealed class MessageHandler(
             || (await itemLocks.LockedAmongAsync([parent.Id], cancellationToken).ConfigureAwait(false)).Contains(parent.Id)
             ? new NixError("messages.pet_unavailable", "This item is withheld from pets or locked.")
             : null;
+    }
+
+    /// <summary>
+    /// Saves a fact a pet learned from a message turn as one of its owner's memories, under the owner's memory mode
+    /// (off saves nothing). Core records where it came from: the message, its cleaned title and who wrote it, never
+    /// anything the model or a token said. Succeeds without a change when the fact is already kept or is not plain visible text.
+    /// </summary>
+    public async Task<Result<bool>> Remember(Item message, string text, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(text);
+        var fact = Visible(text, PetSettingsValidation.MaxMemoryLength);
+        var context = session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
+        for (var attempt = 0; attempt < 3 && fact.Length > 0; attempt++)
+        {
+            var row = await preferences.FindAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
+            var settings = row is null ? null : JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings);
+            if (row is null || settings is null || settings.MemoryMode == PetMemoryModes.Off)
+            {
+                return Result.Failure<bool>(new NixError("messages.memory_off", "Memory is off, so nothing was saved."));
+            }
+
+            var kept = settings.Memories ?? [];
+            if (kept.Any(memory => string.Equals(memory.Text, fact, StringComparison.OrdinalIgnoreCase)))
+            {
+                return Result.Success(true);
+            }
+
+            if (kept.Count >= PetSettingsValidation.MaxMemories)
+            {
+                return Result.Failure<bool>(new NixError("messages.memory_full", "The pet's memory is full, so nothing was saved."));
+            }
+
+            var parsed = MessagePetRunner.Parse(message);
+            var author = parsed is { } own
+                ? own.Author.Kind == "person" ? (own.Author.Via is { Length: > 0 } via ? $"You via {via}" : "You") : own.Author.Name
+                : "Someone";
+            var source = new PetMemorySource("message", message.Id.Value,
+                Visible(ItemProperties.ReadTitle(message.Properties), 100) is { Length: > 0 } title ? title : "A message", Visible(author, 100) is { Length: > 0 } label ? label : "Someone");
+            var next = settings with { Memories = [.. kept, new PetMemory(Guid.NewGuid(), fact, clock.GetUtcNow(), source)] };
+            if (!PetSettingsValidation.IsValid(next))
+            {
+                return Result.Success(true);
+            }
+
+            if (await preferences.SaveAsync(new PetPreferences
+            {
+                TenantId = context.TenantId,
+                PrincipalId = context.PrincipalId,
+                SettingsJson = JsonSerializer.Serialize(next, PetJsonContext.Default.PetSettings),
+                Revision = row.Revision + 1,
+            }, row.Revision, cancellationToken).ConfigureAwait(false))
+            {
+                return Result.Success(true);
+            }
+        }
+
+        return fact.Length == 0 ? Result.Success(true) : Result.Failure<bool>(new NixError("pets.settings_conflict", "Pet settings changed while saving the memory."));
+    }
+
+    // Text the owner can see in Settings: invisible characters dropped, one line, cut to length.
+    internal static string Visible(string text, int length)
+    {
+        var plain = new StringBuilder(text.Length);
+        foreach (var rune in text.EnumerateRunes())
+        {
+            plain.Append(PetSettingsValidation.IsVisibleText(rune.ToString()) ? rune.ToString() : " ");
+        }
+
+        var line = string.Join(' ', plain.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        return line.Length <= length ? line : line[..length].TrimEnd();
     }
 
     /// <summary>
@@ -258,7 +363,8 @@ public sealed class MessageHandler(
 
         var search = query.Search?.Trim();
         var list = new List<MessageAddressee>();
-        if (scope.IsInteractive)
+        // The app, or a token that may address pets (pets:send), sees the person's own pets; any other token sees people only.
+        if (scope.IsInteractive || scope.IsTokenSession && scope.MayPetSend)
         {
             var settings = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), cancellationToken).ConfigureAwait(false);
             list.AddRange(settings.Settings.Profiles

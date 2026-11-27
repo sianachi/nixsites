@@ -112,7 +112,12 @@ function PetTurns({
             {row.name} {STATUS_TEXT[row.status]}
             {row.reason && row.status !== 'pending' ? `: ${row.reason}` : ''}
           </Text>
-          {row.status === 'pending' ? (
+          {row.memory ? (
+            <Text variant="note" tone="muted">
+              Wants to remember: {row.memory}
+            </Text>
+          ) : null}
+          {row.status === 'pending' || row.memory ? (
             <>
               <Button
                 variant="secondary"
@@ -120,7 +125,7 @@ function PetTurns({
                   void decide(row.petId, true);
                 }}
               >
-                Approve
+                {row.memory ? 'Remember' : 'Approve'}
               </Button>
               <Button
                 variant="ghost"

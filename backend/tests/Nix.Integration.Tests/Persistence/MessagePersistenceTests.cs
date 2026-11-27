@@ -139,6 +139,149 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_directory_lists_the_callers_pets_for_the_app_and_for_a_token_with_pets_send_and_people_only_for_any_other_token()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        Assert.Contains(await DirectoryAsync(token: false, petSend: false), a => a.Id == PetId && a.Kind == "pet");
+        Assert.Contains(await DirectoryAsync(token: true, petSend: true), a => a.Id == PetId && a.Kind == "pet");
+        var plain = await DirectoryAsync(token: true, petSend: false);
+        Assert.DoesNotContain(plain, a => a.Kind == "pet");
+        Assert.Contains(plain, a => a.Id == Friend && a.Kind == "person");
+    }
+
+    [Fact]
+    public async Task A_held_turn_tells_its_owner_once_and_only_the_owner_can_approve_or_dismiss_it()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        await SetPolicyAsync("ask");
+        var held = (await TokenPostAsync("hi", petSend: true, new MessageAddress(PetId, "pet"))).Value;
+        await AssertAsync(Editor, held.Message.Id.Value, count: 1, title: "Claude Desktop wants to message Pip");
+
+        Assert.Equal("messages.no_waiting_turn", (await DecideAsync(held.Message.Id.Value, approve: true, interactive: true, who: Friend)).Error.Code);
+        Assert.Equal("messages.no_waiting_turn", (await DecideAsync(held.Message.Id.Value, approve: false, interactive: true, who: Friend)).Error.Code);
+        Assert.Equal("pending", Assert.Single((await StatesAsync(held.Message.Id.Value)).Pets).Status);
+
+        // A turn that is not held tells nobody.
+        await SetPolicyAsync("off");
+        var declined = (await TokenPostAsync("again", petSend: true, new MessageAddress(PetId, "pet"))).Value;
+        await AssertAsync(Editor, declined.Message.Id.Value, count: 0, title: null);
+    }
+
+    [Fact]
+    public async Task A_turn_that_ends_without_a_reply_is_marked_failed_and_one_that_runs_too_long_reads_as_failed()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        var thrown = (await PostAsync(Editor, Note, "boom")).Value;
+        var trashed = (await PostAsync(Editor, Note, "gone")).Value;
+        var slow = (await PostAsync(Editor, Note, "slow")).Value;
+        foreach (var id in new[] { thrown.Id.Value, trashed.Id.Value })
+        {
+            await InsertTurnAsync(id, "working", "now()");
+        }
+
+        await InsertTurnAsync(slow.Id.Value, "working", "now() - interval '31 minutes'");
+        await using var scope = _fixture.Application.CreateUnscopedScope();
+        var runner = new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
+        {
+            Converse = async (_, _, itemId, _, _, _) =>
+            {
+                if (itemId == thrown.Id.Value)
+                {
+                    throw new InvalidOperationException("The companion fell over.");
+                }
+
+                Assert.True((await SendAsync<DeleteItem, ItemId>(Editor, new DeleteItem(trashed.Id))).IsSuccess);
+                return Result.Success(new PetConnectionResponse("anthropic", "ready", "", true, "success", [new("a", "assistant", "late")]));
+            },
+        };
+        await runner.Run(As(Editor), thrown.Id.Value, [PetId]);
+        await runner.Run(As(Editor), trashed.Id.Value, [PetId]);
+
+        Assert.Equal("failed", Assert.Single((await StatesAsync(thrown.Id.Value)).Pets).Status);
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            Assert.Equal("failed", await RawSql.TextAsync(connection, null, $"SELECT status FROM message_pet_turn WHERE message_id = {RawSql.Literal(trashed.Id.Value)}"));
+        }
+
+        var stuck = Assert.Single((await StatesAsync(slow.Id.Value)).Pets);
+        Assert.Equal(("failed", "The turn did not finish."), (stuck.Status, stuck.Reason));
+    }
+
+    [Fact]
+    public async Task A_remembered_fact_follows_the_owners_memory_mode_and_core_records_where_it_came_from()
+    {
+        // Ask: held on the turn, then approved once by the owner.
+        await SavePetsAsync("ask", ("Pip", PetId));
+        var asked = (await PostAsync(Editor, Note, "I use metric units")).Value;
+        await InsertTurnAsync(asked.Id.Value, "working", "now()");
+        var prompts = new List<string>();
+        await RunWithFactAsync(asked.Id.Value, prompts);
+        Assert.Contains("Remember:", prompts[0], StringComparison.Ordinal);
+        Assert.Empty(await MemoriesAsync());
+        var state = Assert.Single((await StatesAsync(asked.Id.Value)).Pets);
+        Assert.Equal(("answered", "Prefers metric units"), (state.Status, state.Memory));
+        Assert.Equal("Noted.", Assert.Single(await RepliesAsync(asked.Id.Value)).Text);
+        Assert.Equal("messages.no_waiting_turn", (await DecideAsync(asked.Id.Value, approve: true, interactive: true, who: Friend)).Error.Code);
+        var approved = await DecideAsync(asked.Id.Value, approve: true, interactive: true);
+        Assert.True(approved.IsSuccess, approved.IsFailure ? approved.Error.Code + approved.Error.Message : "");
+        var kept = Assert.Single(await MemoriesAsync());
+        Assert.Equal("Prefers metric units", kept.Text);
+        Assert.Equal(new PetMemorySource("message", asked.Id.Value, "I use metric units", "You"), kept.Source);
+        Assert.Equal("messages.no_waiting_turn", (await DecideAsync(asked.Id.Value, approve: true, interactive: true)).Error.Code);
+        Assert.Single(await MemoriesAsync());
+
+        // Dismissed: nothing is kept.
+        var dismissed = (await PostAsync(Editor, Note, "again")).Value;
+        await InsertTurnAsync(dismissed.Id.Value, "working", "now()");
+        await RunWithFactAsync(dismissed.Id.Value, []);
+        Assert.True((await DecideAsync(dismissed.Id.Value, approve: false, interactive: true)).IsSuccess);
+        Assert.Null(Assert.Single((await StatesAsync(dismissed.Id.Value)).Pets).Memory);
+        Assert.Single(await MemoriesAsync());
+    }
+
+    [Fact]
+    public async Task Always_saves_a_remembered_fact_at_once_with_its_source_and_off_saves_nothing_and_does_not_offer_it()
+    {
+        await SavePetsAsync("always", ("Pip", PetId));
+        var message = (await PostAsync(Editor, Note, "call me Ada\u0007")).Value;
+        await InsertTurnAsync(message.Id.Value, "working", "now()");
+        await RunWithFactAsync(message.Id.Value, []);
+        var memory = Assert.Single(await MemoriesAsync());
+        Assert.Equal(("Prefers metric units", "message", message.Id.Value), (memory.Text, memory.Source!.Kind, memory.Source.Id));
+        Assert.Equal("call me Ada", memory.Source.Title);
+        Assert.Null(Assert.Single((await StatesAsync(message.Id.Value)).Pets).Memory);
+
+        await SetMemoryModeAsync(PetMemoryModes.Off);
+        var other = (await PostAsync(Editor, Note, "off")).Value;
+        await InsertTurnAsync(other.Id.Value, "working", "now()");
+        var prompts = new List<string>();
+        await RunWithFactAsync(other.Id.Value, prompts);
+        Assert.DoesNotContain("Remember:", prompts[0], StringComparison.Ordinal);
+        Assert.Single(await MemoriesAsync());
+        Assert.Null(Assert.Single((await StatesAsync(other.Id.Value)).Pets).Memory);
+        Assert.Equal("Noted.", Assert.Single(await RepliesAsync(other.Id.Value)).Text);
+    }
+
+    [Fact]
+    public async Task A_message_with_replies_by_other_people_cannot_be_trashed_or_purged_until_they_are_gone()
+    {
+        var message = (await PostAsync(Editor, Note, "mine")).Value;
+        var mine = (await PostAsync(Editor, message.Id.Value, "my own reply")).Value;
+        var theirs = (await PostAsync(Friend, message.Id.Value, "their reply")).Value;
+        Assert.Equal("items.delete_protected", (await SendAsync<DeleteItem, ItemId>(Editor, new DeleteItem(message.Id))).Error.Code);
+        Assert.True((await SendAsync<DeleteItem, ItemId>(Friend, new DeleteItem(theirs.Id))).IsSuccess);
+        Assert.True((await SendAsync<DeleteItem, ItemId>(Editor, new DeleteItem(message.Id))).IsSuccess);
+        Assert.NotEqual(default, mine.Id);
+
+        // A thread trashed before the rule keeps its others' replies: purging it is refused too.
+        var old = (await PostAsync(Editor, Note, "old")).Value;
+        _ = (await PostAsync(Friend, old.Id.Value, "still here")).Value;
+        await ExecuteAsync($"UPDATE item SET lifecycle_state = 'deleted', purge_after = now() + interval '1 day' WHERE id = {RawSql.Literal(old.Id.Value)}");
+        Assert.Equal("items.delete_protected", (await SendAsync<PurgeItem, ItemId>(Editor, new PurgeItem(old.Id))).Error.Code);
+    }
+
+    [Fact]
     public async Task A_pet_turn_credential_cannot_post_and_a_token_post_names_the_token()
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
@@ -183,6 +326,7 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         Assert.Equal("items.read_only", (await SendAsync<MoveItem, Item>(Editor, new MoveItem(reply.Id, ItemId.From(Note), null))).Error.Code);
         Assert.Equal("items.read_only", (await SendAsync<MoveItem, Item>(Editor, new MoveItem(ItemId.From(Withheld), message.Id, null))).Error.Code);
 
+        Assert.True((await SendAsync<DeleteItem, ItemId>(Friend, new DeleteItem(reply.Id))).IsSuccess);
         Assert.True((await SendAsync<DeleteItem, ItemId>(Editor, new DeleteItem(message.Id))).IsSuccess);
         Assert.Equal("items.read_only", (await SendAsync<PurgeItem, ItemId>(Friend, new PurgeItem(message.Id))).Error.Code);
     }
@@ -409,9 +553,9 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         }
     }
 
-    private async Task<Result<MessagePetState>> DecideAsync(Guid message, bool approve, bool interactive)
+    private async Task<Result<MessagePetState>> DecideAsync(Guid message, bool approve, bool interactive, Guid? who = null)
     {
-        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(who ?? Editor), Cancellation);
         await using (work.ConfigureAwait(false))
         {
             if (interactive)
@@ -422,6 +566,77 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
             var result = await work.Resolve<MessageHandler>().Decide(ItemId.From(message), PetId, approve, Cancellation);
             await work.CommitAsync(Cancellation);
             return result;
+        }
+    }
+
+    private async Task<IReadOnlyList<MessageAddressee>> DirectoryAsync(bool token, bool petSend)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            if (token)
+            {
+                work.Resolve<AccessTokenSessionContext>().SetTokenCeiling(true, false, petSend);
+            }
+            else
+            {
+                work.Resolve<AccessTokenSessionContext>().SetInteractive();
+            }
+
+            return (await work.Resolve<NixDispatcher>().QueryAsync<GetMessageDirectory, Result<MessageDirectoryResponse>>(new(ItemId.From(Note), null), Cancellation)).Value.Addressees;
+        }
+    }
+
+    private async Task AssertAsync(Guid principal, Guid message, int count, string? title)
+    {
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            Assert.Equal(count, await RawSql.CountAsync(connection, null,
+                $"SELECT count(*) FROM notification WHERE item_id = {RawSql.Literal(message)} AND principal_id = {RawSql.Literal(principal)}"
+                + (title is null ? "" : $" AND title = '{title}' AND kind = 'system'")));
+        }
+    }
+
+    private async Task InsertTurnAsync(Guid message, string status, string startedAt) =>
+        await ExecuteAsync($"""
+            INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, started_at)
+            VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(message)}, {RawSql.Literal(PetId)}, {RawSql.Literal(Editor)}, '{status}', {startedAt})
+            """);
+
+    // One turn whose reply carries a fact on a Remember line.
+    private async Task RunWithFactAsync(Guid message, List<string> prompts)
+    {
+        await using var scope = _fixture.Application.CreateUnscopedScope();
+        var runner = new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
+        {
+            Converse = (_, request, _, _, _, _) =>
+            {
+                prompts.Add(request.Text ?? "");
+                return Task.FromResult(Result.Success(new PetConnectionResponse("anthropic", "ready", "", true, "success", [new("a", "assistant", "Noted.\nRemember: Prefers metric units")])));
+            },
+        };
+        await runner.Run(As(Editor), message, [PetId]);
+    }
+
+    private async Task SetMemoryModeAsync(string mode)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var dispatcher = work.Resolve<NixDispatcher>();
+            var current = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
+            Assert.True((await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(current.Revision, current.Settings with { MemoryMode = mode }), Cancellation)).IsSuccess);
+            await work.CommitAsync(Cancellation);
+        }
+    }
+
+    private async Task<IReadOnlyList<PetMemory>> MemoriesAsync()
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            return (await work.Resolve<NixDispatcher>().QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation)).Settings.Memories ?? [];
         }
     }
 
@@ -449,13 +664,15 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     private static JsonNode Stored(Item message) =>
         JsonNode.Parse(JsonNode.Parse(message.Properties!)![MessageItem.Key]!.GetValue<string>())!;
 
-    private async Task SavePetsAsync(params (string Name, Guid Id)[] pets)
+    private Task SavePetsAsync(params (string Name, Guid Id)[] pets) => SavePetsAsync(PetMemoryModes.Ask, pets);
+
+    private async Task SavePetsAsync(string memoryMode, params (string Name, Guid Id)[] pets)
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
         await using (work.ConfigureAwait(false))
         {
             var profiles = pets.Select(pet => new PetProfile(pet.Id, pet.Name, "owl", "")).ToArray();
-            var saved = await work.Resolve<NixDispatcher>().SendAsync<SavePetSettings, PetSettingsResponse>(new(0, new PetSettings(true, profiles[0].Id, profiles)), Cancellation);
+            var saved = await work.Resolve<NixDispatcher>().SendAsync<SavePetSettings, PetSettingsResponse>(new(0, new PetSettings(true, profiles[0].Id, profiles, MemoryMode: memoryMode)), Cancellation);
             Assert.True(saved.IsSuccess);
             await work.CommitAsync(Cancellation);
         }

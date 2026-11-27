@@ -38,6 +38,8 @@ export const messagePetStateSchema = z.object({
   status: z.enum(['pending', 'working', 'answered', 'failed', 'declined', 'expired']),
   reason: z.string().nullable(),
   expiresAt: z.iso.datetime({ offset: true }).nullable(),
+  /** A fact the pet wants remembered from the message, waiting for its owner to approve or dismiss it. */
+  memory: z.string().nullish(),
 });
 
 export const messagePetStatesSchema = z.object({ pets: z.array(messagePetStateSchema) });

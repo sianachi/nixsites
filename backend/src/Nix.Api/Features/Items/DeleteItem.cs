@@ -129,6 +129,13 @@ public sealed class DeleteItemHandler(
                 : "This item belongs to a linked calendar. Unlink the calendar in settings to remove it."));
         }
 
+        // Trashing a message hides its replies; another person's reply is theirs to delete, not the first poster's.
+        if (item.Type == MessageItem.Type && protections is not null
+            && await protections.AnyMessageByOthersBelowAsync(itemId, context.PrincipalId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure<ItemId>(MessageItem.HasOthersReplies);
+        }
+
         // Trashing an item hides everything under it, so a protected item beneath it would be
         // deleted in every way that matters. Refused rather than skipped: the caller asked for
         // one outcome and half of it is not theirs to have.

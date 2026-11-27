@@ -22,8 +22,9 @@ public sealed record MessageDirectoryResponse(IReadOnlyList<MessageAddressee> Ad
 /// <summary>
 /// Where one pet's turn for a message stands: <c>pending</c> (waits for its owner), <c>working</c>, <c>answered</c>,
 /// <c>failed</c>, <c>declined</c> or <c>expired</c>. <paramref name="Reason"/> says why a turn failed or was declined.
+/// <paramref name="Memory"/> is a fact the pet wants to remember from the message, waiting for its owner to approve or dismiss it.
 /// </summary>
-public sealed record MessagePetState(Guid PetId, string Name, string Status, string? Reason, DateTimeOffset? ExpiresAt);
+public sealed record MessagePetState(Guid PetId, string Name, string Status, string? Reason, DateTimeOffset? ExpiresAt, string? Memory = null);
 
 /// <summary>A posted message, where each pet it addressed stands, and (when it addressed a pet) the poster's monthly pet budget.</summary>
 public sealed record PostedMessage(Item Message, IReadOnlyList<MessagePetState> Pets, Nix.Features.Pets.PetBudgetStatus? Budget);

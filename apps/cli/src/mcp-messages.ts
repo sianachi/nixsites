@@ -30,7 +30,7 @@ export function registerMessageTools(server: McpServer, { session }: McpToolDeps
     'message_directory',
     {
       description:
-        'Who a message under this item can address: people who can read it, and (with the pets:send scope) your own pets.',
+        'Who a message under this item can address: people who can read it, and your own pets when you hold the pets:send scope. Without it, people only.',
       inputSchema: { itemId: identifier, query: z.string().max(100).optional() },
     },
     ({ itemId, query }) =>

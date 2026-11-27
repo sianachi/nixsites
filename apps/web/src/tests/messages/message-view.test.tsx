@@ -74,4 +74,34 @@ describe('a message that addressed a pet', () => {
       path: `/api/v1/items/${ITEM}/pet-turns/${PET}/dismiss`,
     });
   });
+
+  it('offers a fact the pet wants to remember with Remember and Dismiss', async () => {
+    query.mockImplementation((endpoint: { path?: string }) => {
+      if (endpoint.path?.endsWith('/pet-turns'))
+        return Promise.resolve({
+          pets: [
+            {
+              petId: PET,
+              name: 'Pip',
+              status: 'answered',
+              reason: null,
+              expiresAt: null,
+              memory: 'Prefers metric units',
+            },
+          ],
+        });
+      if (endpoint.path?.endsWith('/notifications')) return Promise.resolve({ items: [] });
+      return Promise.resolve(message);
+    });
+    const user = userEvent.setup();
+    render(<MessageView itemId={ITEM} />);
+    expect(await screen.findByText(/Wants to remember: Prefers metric units/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Remember' }));
+    await waitFor(() => {
+      expect(execute).toHaveBeenCalledTimes(1);
+    });
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({
+      path: `/api/v1/items/${ITEM}/pet-turns/${PET}/approve`,
+    });
+  });
 });

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Nix.Abstractions;
+using Nix.Domain.Identity;
 using Nix.Domain.Items;
 
 namespace Nix.Persistence.Items;
@@ -38,6 +39,26 @@ public sealed class ItemProtectionStore(NixDbContext database, INixSessionContex
                    AND protected.no_delete
                    AND (NOT {userOnly} OR protected.managed_by IS NULL)
                    AND protected.lifecycle_state = 'active'
+                   AND edge.depth > 0) AS "Value"
+            """).SingleAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> AnyMessageByOthersBelowAsync(ItemId itemId, PrincipalId author, CancellationToken cancellationToken)
+    {
+        var tenantId = TenantId;
+        return await database.Database.SqlQuery<bool>($"""
+            SELECT EXISTS (
+                SELECT 1
+                  FROM item reply
+                  JOIN item_closure edge
+                    ON edge.tenant_id = reply.tenant_id
+                   AND edge.descendant_id = reply.id
+                   AND edge.ancestor_id = {itemId.Value}
+                 WHERE reply.tenant_id = {tenantId}
+                   AND reply.type = 'message'
+                   AND reply.created_by <> {author.Value}
+                   AND reply.lifecycle_state = 'active'
                    AND edge.depth > 0) AS "Value"
             """).SingleAsync(cancellationToken).ConfigureAwait(false);
     }

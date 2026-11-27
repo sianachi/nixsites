@@ -3526,7 +3526,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Start a pet's waiting turn (the app only) */
+    /** Start a pet's waiting turn, or save the fact it wants remembered (the app only) */
     post: operations['ApproveMessagePetTurn'];
     delete?: never;
     options?: never;
@@ -3543,7 +3543,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Decline a pet's waiting turn (the app only) */
+    /** Decline a pet's waiting turn, or drop the fact it wants remembered (the app only) */
     post: operations['DismissMessagePetTurn'];
     delete?: never;
     options?: never;
@@ -3558,6 +3558,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** @description The people who can read the item and, for the app or a token with the pets:send scope, the caller's own pets. A token without pets:send sees people only. */
     get: operations['GetMessageDirectory'];
     put?: never;
     post?: never;
@@ -5855,6 +5856,7 @@ export interface components {
       reason: null | string;
       /** Format: date-time */
       expiresAt: null | string;
+      memory?: null | string;
     };
     MessagePetStatesResponse: {
       pets: components['schemas']['MessagePetState'][];
@@ -16799,6 +16801,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
