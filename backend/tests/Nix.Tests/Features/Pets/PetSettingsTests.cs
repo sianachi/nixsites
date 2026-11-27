@@ -141,6 +141,18 @@ public sealed class PetSettingsTests
     }
 
     [Fact]
+    public void Reading_an_old_row_with_more_than_five_pets_keeps_five_and_the_active_one()
+    {
+        var pets = Enumerable.Range(0, 7).Select(i => Owl with { Id = Guid.NewGuid(), Name = $"Pet {i}" }).ToArray();
+        var plain = PetSettingsValidation.ForRead(new PetSettings(false, pets[1].Id, pets));
+        Assert.Equal(pets.Take(5), plain.Profiles);
+        var late = PetSettingsValidation.ForRead(new PetSettings(false, pets[6].Id, pets));
+        Assert.Equal(5, late.Profiles.Count);
+        Assert.Contains(pets[6], late.Profiles);
+        Assert.True(PetSettingsValidation.IsValid(late));
+    }
+
+    [Fact]
     public void Memories_are_bounded_unique_single_line_facts()
     {
         PetMemory Fact(string text) => new(Guid.NewGuid(), text, DateTimeOffset.UnixEpoch);

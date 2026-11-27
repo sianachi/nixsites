@@ -51,11 +51,23 @@ public static class PetSettingsValidation
     /// <summary>The most companions one person may keep.</summary>
     public const int MaxPets = 5;
 
-    /// <summary>Stored settings as every reader sees them: a retired appearance replaced.</summary>
+    /// <summary>Stored settings as every reader sees them: a retired appearance replaced and no more than <see cref="MaxPets"/> pets (rows saved under an older limit), the active one kept.</summary>
     public static PetSettings ForRead(PetSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        return NormalizeRetiredAppearance(settings)!;
+        var read = NormalizeRetiredAppearance(settings)!;
+        if (read.Profiles is not { Count: > MaxPets } profiles)
+        {
+            return read;
+        }
+
+        var kept = profiles.Take(MaxPets).ToList();
+        if (profiles.FirstOrDefault(pet => pet.Id == read.ActivePetId) is { } active && !kept.Contains(active))
+        {
+            kept[^1] = active;
+        }
+
+        return read with { Profiles = kept };
     }
 
     /// <summary>Replaces a retired appearance while keeping each companion's identity and preferences.</summary>
