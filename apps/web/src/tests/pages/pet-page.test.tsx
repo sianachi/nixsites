@@ -53,6 +53,7 @@ vi.mock('@nix/web-pets/pets/use-pet-runtime', () => ({
       runtime: { status: 'connected', state: 'idle', messages: [], tools: [], lockedRead: false },
       models: [],
       busy: false,
+      sending: '',
       error: '',
       errorKind: null,
       send: mock.send,
