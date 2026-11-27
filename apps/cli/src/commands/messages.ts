@@ -13,6 +13,7 @@ import {
   type MessagePetStates,
   type PostedMessage,
 } from '@nix/api-client';
+import { assertTokenSession } from './agent-records.ts';
 import { parseUuid, resolveSession, type SessionDeps } from './shared.ts';
 import { printResult, type OutputOptions } from '../output.ts';
 import type { Session } from '../session.ts';
@@ -30,12 +31,12 @@ export async function executePostMessage(
   parentId: string,
   input: { readonly text: string; readonly to?: readonly string[] | undefined },
 ): Promise<PostedMessage> {
+  const to = (input.to ?? []).map(parseAddressee);
+  // Core treats a browser-approved login as a person, who may address pets with no scope, cap or approval.
+  if (to.some((address) => address.kind === 'pet')) assertTokenSession(session, 'Addressing a pet');
   const parent = await session.client.query(items.itemById(parentId), { forceRefresh: true });
   return session.client.execute(
-    messages.post(parent.workspaceId, parentId, {
-      text: input.text,
-      to: (input.to ?? []).map(parseAddressee),
-    }),
+    messages.post(parent.workspaceId, parentId, { text: input.text, to }),
   );
 }
 

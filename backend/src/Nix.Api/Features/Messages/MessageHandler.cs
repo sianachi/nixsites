@@ -180,6 +180,16 @@ public sealed class MessageHandler(
             return Result.Failure<MessagePetState>(new NixError("messages.no_waiting_turn", "No pet is waiting on that message, or the wait has run out."));
         }
 
+        if (approve && row.TokenId is not null
+            && await visible.FindAsync(messageId, ItemAccess.Read, cancellationToken).ConfigureAwait(false) is { IsSuccess: true } found
+            && await workspaces.ReadAgentsAddressPetsAsync(found.Value.WorkspaceId, cancellationToken).ConfigureAwait(false) == "off")
+        {
+            // The switch was turned off while the turn waited.
+            const string reason = "Agents may not address pets in this workspace.";
+            await turns.FinishAsync(messageId.Value, petId, "declined", reason, cancellationToken).ConfigureAwait(false);
+            return Result.Failure<MessagePetState>(new NixError("messages.agents_off", reason));
+        }
+
         if (approve)
         {
             pets.Launch(session.Current ?? throw new InvalidOperationException("No session context."), messageId.Value, [petId], new(row.TokenName is null ? PetUsageSources.App : PetUsageSources.Token(row.TokenName), row.TokenId));

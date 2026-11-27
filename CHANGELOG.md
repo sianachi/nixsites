@@ -249,6 +249,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
+- Messages to pets: the daily turn cap holds under parallel posts from one token, approving a waiting turn is refused after the workspace switch is turned off, and a turn does not run in a workspace that has since been given a password. `nixctl message post` and the MCP tool refuse to address a pet on a browser-approved login. A memory's "learned in" source is recorded for chat memories and can no longer be set or changed through an access token.
 - A pet addressed in a message thread now replies to the message that addressed it, not to whichever message comes last in the thread, and long threads no longer hide it.
 - Messages under a published site's pages no longer become site pages or appear in the build.
 - Messages are safer: only the person who posted a message can delete it, and a message cannot be moved out of its thread or an item moved into one. A pet addressed in a thread reads the item's text as well as the thread, never an item withheld from pets or locked, and never sees a message written to pose as another speaker; a pet cannot be addressed in a password-protected workspace, which now says so. Message text in the app shows as plain Markdown and never as generated UI, and messages no longer count as rows in queries, charts and rollups. An older client no longer breaks on a notification kind it does not know.

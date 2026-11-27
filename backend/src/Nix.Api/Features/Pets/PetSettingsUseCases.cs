@@ -142,7 +142,7 @@ public sealed class GetPetSettingsHandler(IPetPreferencesStore store, INixSessio
 }
 
 /// <summary>Persists preferences using a compare-and-swap revision.</summary>
-public sealed class SavePetSettingsHandler(IPetPreferencesStore store, INixSessionContextAccessor session) : ICommandHandler<SavePetSettings, PetSettingsResponse>
+public sealed class SavePetSettingsHandler(IPetPreferencesStore store, INixSessionContextAccessor session, AccessTokenSessionContext scope) : ICommandHandler<SavePetSettings, PetSettingsResponse>
 {
     /// <inheritdoc />
     public async ValueTask<Result<PetSettingsResponse>> HandleAsync(SavePetSettings command, CancellationToken cancellationToken)
@@ -164,6 +164,18 @@ public sealed class SavePetSettingsHandler(IPetPreferencesStore store, INixSessi
             var row = await store.FindAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
             var stored = row is null ? null : JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings);
             settings = settings with { Memories = stored?.Memories };
+        }
+
+        if (!scope.IsInteractive && !scope.IsPetTurn && settings.Memories?.Any(memory => memory.Source is not null) == true)
+        {
+            // Where a memory was learned is the app's or a pet's word; a token keeps only what is already stored, unchanged.
+            var row = await store.FindAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
+            var stored = (row is null ? null : JsonSerializer.Deserialize(row.SettingsJson, PetJsonContext.Default.PetSettings))?.Memories ?? [];
+            settings = settings with
+            {
+                Memories = [.. settings.Memories.Select(memory => memory.Source is null || stored.Any(old => old.Id == memory.Id && old.Text == memory.Text && old.Source == memory.Source)
+                    ? memory : memory with { Source = null })],
+            };
         }
 
         var revision = command.ExpectedRevision + 1;

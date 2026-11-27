@@ -14,6 +14,7 @@ using Nix.Features.Properties;
 using Nix.Features.Views;
 using Nix.Integration.Tests.Harness;
 using Nix.Messaging;
+using Nix.Persistence.Content;
 
 namespace Nix.Integration.Tests.Persistence;
 
@@ -301,6 +302,73 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         }
 
         Assert.Equal("messages.pet_turn_limit", (await TokenPostAsync("one more", petSend: true, new MessageAddress(PetId, "pet"))).Error.Code);
+    }
+
+    [Fact]
+    public async Task Parallel_check_then_add_from_one_token_cannot_pass_the_daily_cap()
+    {
+        var seed = (await PostAsync(Editor, Note, "seed")).Value;
+        for (var index = 0; index < MessageHandler.TokenTurnsPerDay - 1; index++)
+        {
+            await ExecuteAsync($"""
+                INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, token_id, started_at)
+                VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(seed.Id.Value)}, {RawSql.Literal(Guid.NewGuid())},
+                        {RawSql.Literal(Editor)}, 'answered', {RawSql.Literal(Token)}, now())
+                """);
+        }
+
+        // The handler's pattern: count under the token's lock, add only below the cap, commit.
+        var added = await Task.WhenAll(Enumerable.Range(0, 6).Select(async _ =>
+        {
+            var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+            await using (work.ConfigureAwait(false))
+            {
+                var turns = work.Resolve<MessagePetTurnStore>();
+                if (await turns.StartedByTokenAsync(Token, Cancellation) + 1 > MessageHandler.TokenTurnsPerDay)
+                {
+                    return false;
+                }
+
+                await Task.Delay(300, Cancellation); // widens the window between the check and the add
+                await turns.AddAsync(seed.Id.Value, Guid.NewGuid(), "working", null, Token, null, Cancellation);
+                await work.CommitAsync(Cancellation);
+                return true;
+            }
+        }));
+        Assert.Equal(1, added.Count(done => done));
+    }
+
+    [Fact]
+    public async Task Approving_a_waiting_turn_is_refused_once_the_switch_is_off_and_a_turn_does_not_run_in_a_password_protected_workspace()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        var pet = new MessageAddress(PetId, "pet");
+        await SetPolicyAsync("ask");
+        var held = (await TokenPostAsync("hi", petSend: true, pet)).Value;
+        await SetPolicyAsync("off");
+        Assert.Equal("messages.agents_off", (await DecideAsync(held.Message.Id.Value, approve: true, interactive: true)).Error.Code);
+        Assert.Equal("declined", Assert.Single((await StatesAsync(held.Message.Id.Value)).Pets).Status);
+
+        var message = (await PostAsync(Editor, Note, "what now?")).Value;
+        var calls = 0;
+        await using var scope = _fixture.Application.CreateUnscopedScope();
+        var runner = new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
+        {
+            Converse = (_, _, _, _, _, _) =>
+            {
+                calls++;
+                return Task.FromResult(Result.Success(new PetConnectionResponse("anthropic", "ready", "", true, "success", [new("a", "assistant", "ok")])));
+            },
+        };
+        await runner.Run(As(Editor), message.Id.Value, [PetId]);
+        Assert.Equal(1, calls);
+
+        await ExecuteAsync($"""
+            INSERT INTO workspace_lock (workspace_id, tenant_id, password_hash, locked_by, locked_at)
+            VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId)}, {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, repeat('x', 64), {RawSql.Literal(Editor)}, now())
+            """);
+        await runner.Run(As(Editor), message.Id.Value, [PetId]);
+        Assert.Equal(1, calls);
     }
 
     [Fact]

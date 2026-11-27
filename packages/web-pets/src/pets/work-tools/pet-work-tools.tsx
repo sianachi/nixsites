@@ -1,4 +1,4 @@
-import type { PetMemoryMode } from '../memory-mode';
+import { conversationMemorySource, type PetMemoryMode } from '../memory-mode';
 import { pets, type PetConnection, type PetToolCall, type NixClient } from '@nix/api-client';
 import { APP_ONLY_OPERATIONS } from '@nix/companion/auto-apply';
 import {
@@ -344,6 +344,7 @@ function PetWorkToolsView({
             args.operation === 'save_as_template'
               ? (buildLedger ?? serverLedger.current)
               : undefined;
+          const source = memorySource ?? conversationMemorySource(runtime);
           const outcome = await runWorkspaceTool(
             {
               core: client,
@@ -358,7 +359,7 @@ function PetWorkToolsView({
             signal,
             {
               ...(noteScope ? { scope: noteScope } : {}),
-              ...(memorySource ? { memorySource } : {}),
+              ...(source ? { memorySource: source } : {}),
               toolId: tool.id,
               claimId: requestId,
               ...(fence === undefined ? {} : { fence }),

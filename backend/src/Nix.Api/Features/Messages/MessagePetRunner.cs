@@ -98,6 +98,13 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                     }
 
                     workspaceId = message.WorkspaceId.Value;
+                    // The turn may start long after the post (approval) or chain from a reply; this session has no workspace unlock.
+                    if ((await services.GetRequiredService<IWorkspaceLocks>().GetStateAsync(message.WorkspaceId, token).ConfigureAwait(false)).PasswordProtected)
+                    {
+                        failure = "Pets are not available in a password-protected workspace.";
+                        return new IsolatedOutcome<bool>(false, false);
+                    }
+
                     var search = services.GetRequiredService<IItemSearch>();
                     var built = await BuildPrompt(tree, services.GetRequiredService<IItemLocks>(),
                         (under, query, cancel) => search.FindPassagesAsync(under.Id, query, [under.WorkspaceId], 8, true, cancel).AsTask(),

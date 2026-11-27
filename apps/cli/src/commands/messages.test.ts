@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseAddressee } from './messages.ts';
+import { executePostMessage, parseAddressee } from './messages.ts';
+import type { Session } from '../session.ts';
 
 const ID = '33333333-3333-4333-8333-333333333333';
 
@@ -13,5 +14,15 @@ describe('message addressees', () => {
     expect(() => parseAddressee(ID)).toThrow('person:<id> or pet:<id>');
     expect(() => parseAddressee('robot:' + ID)).toThrow();
     expect(() => parseAddressee('pet:nope')).toThrow();
+  });
+});
+
+describe('posting to a pet', () => {
+  const login = { authKind: 'interactive' } as Session;
+
+  it('is refused on a browser-approved login, which Core treats as a person', async () => {
+    await expect(executePostMessage(login, ID, { text: 'hi', to: [`pet:${ID}`] })).rejects.toThrow(
+      'needs an access token',
+    );
   });
 });

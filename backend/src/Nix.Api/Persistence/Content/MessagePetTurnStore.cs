@@ -74,12 +74,20 @@ public sealed class MessagePetTurnStore(NixSqlExecutor sql, INixSessionContextAc
                 Text("reason", reason is { Length: > 500 } ? reason[..500] : reason)],
             cancellationToken).ConfigureAwait(false);
 
-    /// <summary>How many turns this token's messages started in the last day.</summary>
-    public async Task<int> StartedByTokenAsync(Guid tokenId, CancellationToken cancellationToken) =>
-        await sql.ScalarAsync<int>("""
+    /// <summary>
+    /// How many turns this token's messages started in the last day. Holds the token's lock until the transaction
+    /// ends, so a caller that checks the cap and then adds its turns cannot race another request of the same token.
+    /// </summary>
+    public async Task<int> StartedByTokenAsync(Guid tokenId, CancellationToken cancellationToken)
+    {
+        // A separate statement: the count must read after the lock is held.
+        _ = await sql.ExecuteAsync("SELECT pg_advisory_xact_lock(hashtextextended('message-pet-turns:' || @token::text, 0))",
+            [Uuid("token", tokenId)], cancellationToken).ConfigureAwait(false);
+        return await sql.ScalarAsync<int>("""
             SELECT count(*)::int FROM message_pet_turn
              WHERE tenant_id = @tenant AND token_id = @token AND started_at > now() - interval '1 day'
             """, [Uuid("tenant", Caller.TenantId.Value), Uuid("token", tokenId)], cancellationToken).ConfigureAwait(false) ?? 0;
+    }
 
     private async Task<MessagePetTurnRow?> OneAsync(string statement, Guid messageId, Guid petId, CancellationToken cancellationToken)
     {
