@@ -354,6 +354,26 @@ describe('workspace-scoped companion tools', () => {
       ]);
     });
 
+    it('records where the fact was learned when told', async () => {
+      const { ports, query, execute, signal } = setup();
+      query.mockResolvedValue(settings());
+      const source = { kind: 'message' as const, id: itemId, title: 'Plan', author: 'Ada' };
+      await runWorkspaceTool(
+        ports,
+        workspace,
+        input('remember', { markdown: 'Likes tea.' }),
+        signal,
+        {
+          memorySource: source,
+        },
+      );
+      const saved = execute.mock.calls[0]?.[0] as {
+        body: { settings: { memories: { source?: unknown }[] } };
+      };
+      expect(saved.body.settings.memories[1]?.source).toEqual(source);
+      expect(saved.body.settings.memories[0]?.source).toBeUndefined();
+    });
+
     it('saves nothing for a fact it already has, or when memory is off', async () => {
       const { ports, query, execute, signal } = setup();
       query.mockResolvedValue(settings());

@@ -9,6 +9,7 @@ import { registerDocumentAndFileTools } from './mcp-files.ts';
 import { registerTemplateTools } from './mcp-templates.ts';
 import { registerPetTools } from './mcp-pets.ts';
 import { registerStructureAndBlueprintTools } from './mcp-blueprints.ts';
+import { registerMessageTools } from './mcp-messages.ts';
 import { registerNotificationAndReminderTools } from './mcp-notifications.ts';
 import { registerCalendarTools } from './mcp-calendar.ts';
 import { registerAutomationTools } from './mcp-automations.ts';
@@ -48,6 +49,7 @@ export async function createWorkspaceMcpServer(
   hostOnly.push(...registerTemplateTools(server, deps));
   registerPetTools(server, deps);
   registerStructureAndBlueprintTools(server, deps);
+  registerMessageTools(server, deps);
   registerNotificationAndReminderTools(server, deps);
   registerCalendarTools(server, deps);
   registerAutomationTools(server, deps);

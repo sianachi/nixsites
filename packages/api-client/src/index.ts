@@ -295,7 +295,10 @@ export type {
   MessageAddressee,
   MessageAuthor,
   MessageDirectory,
+  MessagePetState,
+  MessagePetStates,
   MessageRecipient,
+  PostedMessage,
 } from './schemas/messages.js';
 export * as habits from './resources/habits.js';
 export { type HabitTracker } from './schemas/habits.js';

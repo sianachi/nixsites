@@ -116,7 +116,11 @@ export const setWorkspaceSharing = (
 /** Whether agents may approve file versions and create public links. Owners, in a browser session, only. */
 export const setWorkspaceAgentPolicy = (
   workspaceId: string,
-  input: { readonly agentsMayApprove?: boolean; readonly agentsMayCreatePublicLinks?: boolean },
+  input: {
+    readonly agentsMayApprove?: boolean;
+    readonly agentsMayCreatePublicLinks?: boolean;
+    readonly agentsAddressPets?: 'off' | 'ask' | 'on';
+  },
 ): CommandEndpoint<Workspace> =>
   defineCommand({
     operation: 'workspaces.setAgentPolicy',
@@ -125,6 +129,7 @@ export const setWorkspaceAgentPolicy = (
     body: {
       agentsMayApprove: input.agentsMayApprove ?? null,
       agentsMayCreatePublicLinks: input.agentsMayCreatePublicLinks ?? null,
+      agentsAddressPets: input.agentsAddressPets ?? null,
     },
     schema: workspaceSchema,
     invalidates: [workspaceListKey, ['workspaces', workspaceId]],

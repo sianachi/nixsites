@@ -21,7 +21,7 @@ describe('the message composer', () => {
         { id: PERSON, name: 'Ada', kind: 'person' },
       ],
     });
-    execute.mockResolvedValue({ id: 'new' });
+    execute.mockResolvedValue({ message: { id: 'new' }, pets: [], budget: null });
     const onPosted = vi.fn();
     const user = userEvent.setup();
     render(<MessageComposer workspaceId="w" parentId="p" onPosted={onPosted} />);

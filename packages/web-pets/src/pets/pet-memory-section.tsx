@@ -70,19 +70,29 @@ export function PetMemorySection({
         <ul className="flex min-w-0 flex-col gap-2" aria-label="Remembered facts">
           {memories.map((memory, index) => (
             <li key={memory.id} className="flex min-w-0 items-center gap-2">
-              <Input
-                aria-label={`Memory ${String(index + 1)}`}
-                className="min-w-0 flex-1"
-                maxLength={MAX_LENGTH}
-                value={memory.text}
-                onChange={(event) => {
-                  const text = event.currentTarget.value;
-                  onChange(
-                    memories.map((entry) => (entry.id === memory.id ? { ...entry, text } : entry)),
-                    mode,
-                  );
-                }}
-              />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <Input
+                  aria-label={`Memory ${String(index + 1)}`}
+                  className="min-w-0"
+                  maxLength={MAX_LENGTH}
+                  value={memory.text}
+                  onChange={(event) => {
+                    const text = event.currentTarget.value;
+                    onChange(
+                      memories.map((entry) =>
+                        entry.id === memory.id ? { ...entry, text } : entry,
+                      ),
+                      mode,
+                    );
+                  }}
+                />
+                {memory.source ? (
+                  <Text variant="note" tone="muted">
+                    Learned in {memory.source.title || `a ${memory.source.kind}`}, from{' '}
+                    {memory.source.author}
+                  </Text>
+                ) : null}
+              </div>
               <Button
                 variant="ghost"
                 aria-label={`Forget "${memory.text}"`}

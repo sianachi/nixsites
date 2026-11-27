@@ -55,9 +55,44 @@ describe('agent policy switches', () => {
       expect(requests).toHaveLength(1);
     });
     expect(requests[0]?.url).toContain(`/workspaces/${STUB_WORKSPACE.id}/agent-policy`);
-    expect(requests[0]?.body).toEqual({ agentsMayApprove: null, agentsMayCreatePublicLinks: true });
+    expect(requests[0]?.body).toEqual({
+      agentsMayApprove: null,
+      agentsMayCreatePublicLinks: true,
+      agentsAddressPets: null,
+    });
     await waitFor(() => {
       expect(updated).toHaveBeenCalled();
+    });
+  });
+
+  it('sets "agents may address pets" alone, off by default', async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        bodies.push(JSON.parse(typeof init?.body === 'string' ? init.body : 'null'));
+        return Promise.resolve(Response.json({ ...STUB_WORKSPACE, agentsAddressPets: 'ask' }));
+      }),
+    );
+    const client = createNixClient({
+      baseUrl: 'http://localhost',
+      tokens: {
+        getAccessToken: () => Promise.resolve('token'),
+        refreshAccessToken: () => Promise.resolve(null),
+      },
+    });
+    render(
+      <ApiClientOverrideProvider client={client}>
+        <SharingSwitches />
+      </ApiClientOverrideProvider>,
+    );
+    const select = screen.getByRole('combobox', { name: 'Agents may address pets' });
+    expect(select).toHaveValue('off');
+    await userEvent.selectOptions(select, 'ask');
+    await waitFor(() => {
+      expect(bodies).toEqual([
+        { agentsMayApprove: null, agentsMayCreatePublicLinks: null, agentsAddressPets: 'ask' },
+      ]);
     });
   });
 });

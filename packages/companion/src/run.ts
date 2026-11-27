@@ -77,6 +77,8 @@ export interface RunOptions {
   fence?: StructureFingerprint;
   onProgress?: (completed: number, total: number) => void;
   scope?: NoteToolScope;
+  /** Where a fact `remember` saves was learned, shown beside it in Settings > Pets > Memory. */
+  memorySource?: { kind: 'conversation' | 'message'; id: string; title: string; author: string };
 }
 
 export interface WorkspaceToolOutcome {
@@ -102,6 +104,7 @@ async function remember(
   client: CompanionPorts['core'],
   fact: string,
   options: { signal: AbortSignal },
+  source?: RunOptions['memorySource'],
 ): Promise<{ remembered: string; alreadyKnown?: true }> {
   const text = fact.trim().replace(/\s+/g, ' ');
   if (text.length > 280)
@@ -124,7 +127,20 @@ async function remember(
       );
     const memories = [
       ...known,
-      { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() },
+      {
+        id: crypto.randomUUID(),
+        text,
+        createdAt: new Date().toISOString(),
+        ...(source
+          ? {
+              source: {
+                ...source,
+                title: source.title.slice(0, 100),
+                author: source.author.slice(0, 100),
+              },
+            }
+          : {}),
+      },
     ];
     try {
       await client.execute(pets.saveSettings(revision, { ...settings, memories }), options);
@@ -447,7 +463,7 @@ export async function runWorkspaceTool(
       break;
     }
     case 'remember': {
-      result = await remember(client, args.markdown, requestOptions);
+      result = await remember(client, args.markdown, requestOptions, options.memorySource);
       break;
     }
     case 'find_action':

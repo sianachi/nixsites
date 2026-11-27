@@ -1,10 +1,22 @@
 import { isCanceledError, isNixApiError, workspaces as coreWorkspaces } from '@nix/api-client';
-import { Checkbox, Text, useUndo } from '@nix/ui';
+import { Checkbox, Field, Select, Text, useUndo } from '@nix/ui';
 import { useState, type ReactElement } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { publishNotice } from '@nix/web-foundation/lib/notices';
 import { useWorkspace } from '../workspace-context';
+
+interface AgentPolicyInput {
+  agentsMayApprove?: boolean;
+  agentsMayCreatePublicLinks?: boolean;
+  agentsAddressPets?: 'off' | 'ask' | 'on';
+}
+
+const PET_POLICY_NOTICES = {
+  off: 'Agents can post messages, but no pet answers them.',
+  ask: 'A pet an agent addresses waits for its owner to approve.',
+  on: 'A pet an agent addresses answers at once.',
+} as const;
 
 /** Who may join this workspace, and whether several people may edit a file at once. Owners only. */
 export function SharingSwitches(): ReactElement {
@@ -27,9 +39,9 @@ export function SharingSwitches(): ReactElement {
   }
 
   function saveAgentPolicy(
-    input: { agentsMayApprove?: boolean; agentsMayCreatePublicLinks?: boolean },
+    input: AgentPolicyInput,
     done: string,
-    back: { agentsMayApprove?: boolean; agentsMayCreatePublicLinks?: boolean },
+    back: AgentPolicyInput,
   ): Promise<void> {
     return run(coreWorkspaces.setWorkspaceAgentPolicy(workspace.id, input), done, () =>
       client.execute(coreWorkspaces.setWorkspaceAgentPolicy(workspace.id, back)),
@@ -138,6 +150,28 @@ export function SharingSwitches(): ReactElement {
           Agents signed in as you count as you. Run them on access tokens for these to apply.
         </Text>
       </div>
+      <Field
+        label="Agents may address pets"
+        hint="Needs a token with the pets:send scope. Ask holds each turn for the pet's owner."
+      >
+        {(control) => (
+          <Select
+            {...control}
+            value={workspace.agentsAddressPets ?? 'off'}
+            disabled={!canManage || saving}
+            onChange={(event) => {
+              const next = event.currentTarget.value as 'off' | 'ask' | 'on';
+              void saveAgentPolicy({ agentsAddressPets: next }, PET_POLICY_NOTICES[next], {
+                agentsAddressPets: workspace.agentsAddressPets ?? 'off',
+              });
+            }}
+          >
+            <option value="off">Off</option>
+            <option value="ask">Ask the pet's owner</option>
+            <option value="on">On</option>
+          </Select>
+        )}
+      </Field>
     </>
   );
 }

@@ -41,11 +41,15 @@ function PetWorkToolsView({
   applyExemptToolIds = [],
   client,
   noteScope,
+  memorySource,
   memoryMode = 'ask',
 }: {
   /** The owner's memory setting (Settings > Pets > Memory); `ask` when unknown. */
   readonly memoryMode?: PetMemoryMode;
   readonly noteScope?: { readonly rootItemId: string; readonly readOnly: boolean } | undefined;
+  /** The conversation or message item this chat is in, recorded beside a fact the pet saves. */
+  readonly memorySource?:
+    { kind: 'conversation' | 'message'; id: string; title: string; author: string } | undefined;
   readonly runtime: PetConnection;
   readonly workspaceId: string;
   readonly petId: string;
@@ -354,6 +358,7 @@ function PetWorkToolsView({
             signal,
             {
               ...(noteScope ? { scope: noteScope } : {}),
+              ...(memorySource ? { memorySource } : {}),
               toolId: tool.id,
               claimId: requestId,
               ...(fence === undefined ? {} : { fence }),

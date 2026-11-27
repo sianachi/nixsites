@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { itemSchema } from './item.js';
+
 /** One addressee, as stored with a message. The name is as it was when the message was posted. */
 export const messageRecipientSchema = z.object({
   id: z.uuid(),
@@ -29,6 +31,35 @@ export const messageAddresseeSchema = z.object({
 
 export const messageDirectorySchema = z.object({ addressees: z.array(messageAddresseeSchema) });
 
+/** Where one pet's turn for a message stands: pending (waits for its owner), working, answered, failed, declined or expired. */
+export const messagePetStateSchema = z.object({
+  petId: z.uuid(),
+  name: z.string(),
+  status: z.enum(['pending', 'working', 'answered', 'failed', 'declined', 'expired']),
+  reason: z.string().nullable(),
+  expiresAt: z.iso.datetime({ offset: true }).nullable(),
+});
+
+export const messagePetStatesSchema = z.object({ pets: z.array(messagePetStateSchema) });
+
+export const postedMessageSchema = z.object({
+  message: itemSchema,
+  pets: z.array(messagePetStateSchema),
+  /** The poster's monthly pet budget, present when the message addressed a pet. */
+  budget: z
+    .object({
+      limitUsd: z.number().nullable(),
+      spentUsd: z.number().min(0),
+      remainingUsd: z.number().min(0).nullable(),
+      month: z.string(),
+      timeZone: z.string(),
+    })
+    .nullable(),
+});
+
+export type MessagePetState = z.infer<typeof messagePetStateSchema>;
+export type MessagePetStates = z.infer<typeof messagePetStatesSchema>;
+export type PostedMessage = z.infer<typeof postedMessageSchema>;
 export type MessageRecipient = z.infer<typeof messageRecipientSchema>;
 export type MessageAuthor = z.infer<typeof messageAuthorSchema>;
 export type Message = z.infer<typeof messageSchema>;

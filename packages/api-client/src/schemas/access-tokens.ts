@@ -10,8 +10,8 @@
 import { z } from 'zod';
 import type { components } from '../generated/api.js';
 
-/** The three scope spellings the API accepts, in the order the interface offers them. */
-export const ACCESS_TOKEN_SCOPES = ['read', 'write', 'admin'] as const;
+/** The scope spellings the API accepts, in the order the interface offers them. */
+export const ACCESS_TOKEN_SCOPES = ['read', 'write', 'admin', 'pets:send'] as const;
 
 export const accessTokenSchema = z.object({
   id: z.string(),

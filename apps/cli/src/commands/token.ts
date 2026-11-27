@@ -1,6 +1,6 @@
 /**
  * `nixctl token rotate <id>`: replaces a personal access token's secret and updates the local
- * profiles that were using the old one.
+ * profiles that were using the old one. `nixctl token create` mints one.
  *
  * Human-only: Core refuses rotation from a token-authenticated session, so this needs a
  * browser-approved login (`nixctl auth login`), and it is deliberately not an MCP tool.
@@ -77,4 +77,33 @@ export async function rotateToken(
     );
   }
   printResult(await executeRotateToken(session, tokenId, deps), output);
+}
+
+const SCOPES = ['read', 'write', 'admin', 'pets:send'] as const;
+
+/** Mints a token. Core refuses this from a token session, so it needs a browser sign-in. */
+export async function createToken(
+  profileName: string | undefined,
+  name: string,
+  options: { readonly scopes: string; readonly days: string },
+  output: OutputOptions,
+  deps: SessionDeps = {},
+): Promise<void> {
+  const scopes = options.scopes.split(',').map((scope) => scope.trim());
+  const days = Number(options.days);
+  if (scopes.some((scope) => !(SCOPES as readonly string[]).includes(scope)))
+    throw new Error(`Scopes are from: ${SCOPES.join(', ')}. pets:send also needs write.`);
+  if (!Number.isInteger(days) || days < 1 || days > 365) throw new Error('--days is 1 to 365.');
+  const session = await resolveSession(profileName, deps);
+  if (session.authKind === 'token') {
+    throw new Error(
+      'Minting a token needs a browser sign-in, not a token. Run `nixctl auth login` and try again.',
+    );
+  }
+  printResult(
+    await session.client.execute(
+      accessTokens.createAccessToken({ name, scopes, expiresInDays: days }),
+    ),
+    output,
+  );
 }

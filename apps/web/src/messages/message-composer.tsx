@@ -9,6 +9,7 @@ const REFUSALS: Record<string, string> = {
   'messages.invalid':
     'Someone you addressed cannot read this, or the message is empty or too long.',
   'messages.pets_interactive_only': 'Only the app can address a pet.',
+  'pets.budget_exhausted': "This month's pet budget is used up. Raise it in Settings > Pets.",
 };
 
 /**
@@ -73,7 +74,7 @@ export function MessageComposer({
       setText('');
       setTo([]);
       onPosted(
-        posted,
+        posted.message,
         named.some((entry) => entry.kind === 'pet'),
       );
       input.current?.focus();

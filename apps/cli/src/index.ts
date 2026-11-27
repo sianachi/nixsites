@@ -25,6 +25,7 @@ import { registerStructureCommands } from './commands/register-structure.ts';
 import { registerApiCommands } from './commands/register-api.ts';
 import { registerRecurrenceCommands } from './commands/register-recurrence.ts';
 import { registerHabitCommands } from './commands/register-habit.ts';
+import { registerMessageCommands } from './commands/register-message.ts';
 import { registerNotificationCommands } from './commands/register-notification.ts';
 import { registerCalendarSyncCommands } from './commands/register-calendar-sync.ts';
 import { registerReminderCommands } from './commands/register-reminder.ts';
@@ -169,6 +170,7 @@ export function buildProgram(): Command {
   registerApiCommands(program, act);
   registerRecurrenceCommands(program, act);
   registerHabitCommands(program, act);
+  registerMessageCommands(program, act);
   registerNotificationCommands(program, act);
   registerCalendarSyncCommands(program, act);
   registerReminderCommands(program, act);

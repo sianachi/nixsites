@@ -76,6 +76,16 @@ export const petSettingsSchema = z
           id: z.uuid(),
           text: z.string().trim().min(1).max(280),
           createdAt: z.iso.datetime({ offset: true }),
+          /** Where a pet learned it: a conversation or message item, its title and who said it. */
+          source: z
+            .object({
+              kind: z.enum(['conversation', 'message']),
+              id: z.uuid(),
+              title: z.string().max(100),
+              author: z.string().min(1).max(100),
+            })
+            .nullable()
+            .exactOptional(),
         }),
       )
       .max(50)

@@ -1,4 +1,11 @@
-import { items, notifications, readMessage, type Item } from '@nix/api-client';
+import {
+  items,
+  messages,
+  notifications,
+  readMessage,
+  type Item,
+  type MessagePetState,
+} from '@nix/api-client';
 import { Button, Skeleton, Text } from '@nix/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -44,6 +51,93 @@ function useReplies(workspaceId: string, parentId: string, version: number, poll
   return rows;
 }
 
+const STATUS_TEXT: Record<MessagePetState['status'], string> = {
+  pending: 'is waiting for your approval',
+  working: 'is answering',
+  answered: 'answered',
+  failed: 'could not answer',
+  declined: 'was not asked',
+  expired: 'was not approved in time',
+};
+
+/** Where each pet this message addressed stands. Only the pets' owner gets rows, so others see nothing. */
+function PetTurns({
+  item,
+  version,
+  pollUntil,
+}: {
+  readonly item: Item;
+  readonly version: number;
+  readonly pollUntil: number;
+}): ReactNode {
+  const client = useApiClient();
+  const [rows, setRows] = useState<readonly MessagePetState[]>([]);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = (): void => {
+      client
+        .query(messages.petTurns(item.id), { signal: controller.signal, forceRefresh: true })
+        .then((loaded) => {
+          if (!controller.signal.aborted) setRows(loaded.pets);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const timer = setInterval(() => {
+      if (Date.now() < pollUntil) load();
+    }, POLL_MS);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [client, item.id, version, pollUntil, tick]);
+
+  async function decide(petId: string, approve: boolean): Promise<void> {
+    try {
+      await client.execute(
+        approve ? messages.approvePetTurn(item.id, petId) : messages.dismissPetTurn(item.id, petId),
+      );
+    } catch {
+      // The row refresh below shows what is true now (it may have expired).
+    }
+    setTick((current) => current + 1);
+  }
+
+  return (
+    <>
+      {rows.map((row) => (
+        <div key={row.petId} className="flex flex-wrap items-center gap-2">
+          <Text variant="note" tone="muted">
+            {row.name} {STATUS_TEXT[row.status]}
+            {row.reason && row.status !== 'pending' ? `: ${row.reason}` : ''}
+          </Text>
+          {row.status === 'pending' ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void decide(row.petId, true);
+                }}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  void decide(row.petId, false);
+                }}
+              >
+                Dismiss
+              </Button>
+            </>
+          ) : null}
+        </div>
+      ))}
+    </>
+  );
+}
+
 function Bubble({ item, unread }: { readonly item: Item; readonly unread: boolean }): ReactNode {
   const message = readMessage(item);
   if (message === null) return <Text tone="muted">This message cannot be shown.</Text>;
@@ -80,6 +174,9 @@ function Node({
     <div className={depth > 0 ? 'ml-4 border-l-2 border-divider pl-3' : ''}>
       <div className="flex flex-col gap-2 py-2">
         <Bubble item={item} unread={unread.has(item.id)} />
+        {readMessage(item)?.to.some((entry) => entry.kind === 'pet') ? (
+          <PetTurns item={item} version={version} pollUntil={pollUntil} />
+        ) : null}
         <div>
           <Button
             variant="ghost"

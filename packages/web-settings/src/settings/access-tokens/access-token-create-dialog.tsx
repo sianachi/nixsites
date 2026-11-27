@@ -5,14 +5,14 @@ import { useRef, useState, type ReactElement, type ReactNode } from 'react';
 import type { CreatedAccessToken, CreateTokenOutcome } from './use-access-tokens';
 
 /**
- * The three scope spellings the API accepts, in the order the interface offers them.
+ * The scope spellings the API accepts, in the order the interface offers them.
  *
  * Restated here because `@nix/api-client`'s root barrel does not yet re-export its access-token
  * schema module, where `ACCESS_TOKEN_SCOPES` lives; when it grows that line, this constant folds
  * into an import. The server validates scopes regardless, so a drift here is a rejected mint
  * rendered honestly, never a token with a scope the API does not grant.
  */
-const ACCESS_TOKEN_SCOPES = ['read', 'write', 'admin'] as const;
+const ACCESS_TOKEN_SCOPES = ['read', 'write', 'admin', 'pets:send'] as const;
 
 /**
  * Minting a token: the form, and then - once - the secret.
@@ -39,6 +39,7 @@ const SCOPE_DESCRIPTIONS: Readonly<Record<(typeof ACCESS_TOKEN_SCOPES)[number], 
   read: 'Read items and search',
   write: 'Create and change items',
   admin: 'Administrative endpoints',
+  'pets:send': 'Message your pets (needs write, and the workspace setting)',
 };
 
 /** The expiries offered as one press, in days. Anything else is the custom field. */
