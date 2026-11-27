@@ -163,6 +163,8 @@ public sealed class WorkspacePrincipalDirectoryTests : IAsyncLifetime
                 command.Parameters.Add(new NpgsqlParameter("after_principal_id", NpgsqlDbType.Uuid) { Value = DBNull.Value });
                 command.Parameters.Add(new NpgsqlParameter("query", NpgsqlDbType.Text) { Value = DBNull.Value });
                 command.Parameters.Add(new NpgsqlParameter("limit", NpgsqlDbType.Integer) { Value = limit });
+                command.Parameters.Add(new NpgsqlParameter("everyone", NpgsqlDbType.Boolean) { Value = true });
+                command.Parameters.Add(new NpgsqlParameter("ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid) { Value = Array.Empty<Guid>() });
                 var plan = new StringBuilder();
                 await using var reader = await command.ExecuteReaderAsync(Cancellation);
                 while (await reader.ReadAsync(Cancellation))
