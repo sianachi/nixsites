@@ -117,7 +117,7 @@ export function PetUsagePanel({
               >
                 <div
                   className={`h-full transition-[width] duration-300 ease-out motion-reduce:transition-none ${share >= 100 ? 'bg-danger' : 'bg-accent'}`}
-                  style={{ width: `${String(share)}%` }}
+                  style={{ width: `${String(share)}%` }} // design-token-exempt: the bar width is the runtime budget share, no static class can carry it
                 />
               </div>
             )}

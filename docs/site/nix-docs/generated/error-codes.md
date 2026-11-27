@@ -339,6 +339,7 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `messages.agents_off`
 - `messages.interactive_only`
 - `messages.memory_full`
+- `messages.memory_invalid`
 - `messages.memory_off`
 - `messages.no_waiting_turn`
 - `messages.pet_unavailable`
