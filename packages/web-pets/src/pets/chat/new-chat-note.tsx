@@ -7,7 +7,7 @@ import {
   type CreateConversationInput,
   type Conversation,
 } from '@nix/api-client';
-import { Button, Checkbox, Dialog, Field, Input, Text } from '@nix/ui';
+import { Button, Checkbox, Dialog, Field, Input, Select, Text } from '@nix/ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useWorkspaceArrangement } from '@nix/web-workspaces/workspaces/use-workspace-arrangement';
 import { PetMessageText } from '../pet-message-text';
@@ -50,8 +50,8 @@ export function NewChatNote({
   const { arrangement } = useWorkspaceArrangement();
   const remembered = arrangement.groups.find((entry) => entry.id === groupId);
   const active = workspaces.filter((entry) => entry.lifecycleState === 'active');
-  const [pet, setPet] = useState<PetProfile | null | undefined>(undefined);
-  const petId = pet?.id ?? '';
+  const [profiles, setProfiles] = useState<readonly PetProfile[] | undefined>(undefined);
+  const [petId, setPetId] = useState('');
   const [sources, setSources] = useState<readonly string[]>(sourceWorkspaceIds);
   const formId = useId();
   const titleRef = useRef<HTMLInputElement>(null);
@@ -99,7 +99,8 @@ export function NewChatNote({
       .query(pets.settings(), { signal: controller.signal })
       .then((value) => {
         if (!controller.signal.aborted) {
-          setPet(value.settings.profiles[0] ?? null);
+          setProfiles(value.settings.profiles);
+          setPetId(value.settings.activePetId ?? value.settings.profiles[0]?.id ?? '');
         }
       })
       .catch(() => {
@@ -250,10 +251,28 @@ export function NewChatNote({
               )}
             </Field>
           ) : null}
-          {pet === null ? (
+          {profiles === undefined ? null : profiles.length === 0 ? (
             <Text variant="note">Add a companion in Pet settings to start a chat.</Text>
-          ) : pet === undefined ? null : (
-            <Text variant="note">Companion: {pet.name}</Text>
+          ) : profiles.length === 1 ? (
+            <Text variant="note">Companion: {profiles[0]?.name}</Text>
+          ) : (
+            <Field label="Pet">
+              {(control) => (
+                <Select
+                  {...control}
+                  value={petId}
+                  onChange={(event) => {
+                    setPetId(event.currentTarget.value);
+                  }}
+                >
+                  {profiles.map((pet) => (
+                    <option key={pet.id} value={pet.id}>
+                      {pet.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
           )}
           <ChatSources
             active={active}

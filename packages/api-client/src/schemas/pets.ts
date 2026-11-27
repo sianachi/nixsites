@@ -67,7 +67,7 @@ export const petSettingsSchema = z
   .object({
     enabled: z.boolean(),
     activePetId: z.uuid().nullable(),
-    profiles: z.array(petProfileSchema).max(1),
+    profiles: z.array(petProfileSchema).max(5),
     inlineWriting: z.boolean().default(false),
     /** What the pet has learned about the owner, newest last; the owner edits them in Settings. */
     memories: z
@@ -97,11 +97,13 @@ export const petSettingsSchema = z
     monthlyBudgetUsd: z.number().positive().max(100_000).nullish(),
   })
   .refine((settings) => {
+    const ids = new Set(settings.profiles.map((profile) => profile.id));
     return (
+      ids.size === settings.profiles.length &&
       (!settings.enabled || settings.activePetId !== null) &&
-      (settings.activePetId === null || settings.profiles[0]?.id === settings.activePetId)
+      (settings.activePetId === null || ids.has(settings.activePetId))
     );
-  }, 'The active pet must be the saved companion.');
+  }, 'Choose an existing active pet and use unique pet identities.');
 
 /** Totals for one key: a day (yyyy-MM-dd), pet id, model or source. Costs are estimates. */
 export const petUsageGroupSchema = z.object({

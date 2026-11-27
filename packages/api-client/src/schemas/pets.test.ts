@@ -93,12 +93,13 @@ describe('pet boundary schemas', () => {
   });
   it('rejects duplicate identities, unknown designs, and dangling active pets', () => {
     expect(petSettingsSchema.safeParse({ ...settings, profiles: [pet, pet] }).success).toBe(false);
+    const many = (count: number) =>
+      Array.from({ length: count }, () => ({ ...pet, id: crypto.randomUUID() }));
+    expect(petSettingsSchema.safeParse({ ...settings, profiles: many(6) }).success).toBe(false);
     expect(
-      petSettingsSchema.safeParse({
-        ...settings,
-        profiles: [pet, { ...pet, id: crypto.randomUUID() }],
-      }).success,
-    ).toBe(false);
+      petSettingsSchema.safeParse({ ...settings, activePetId: pet.id, profiles: [pet, ...many(4)] })
+        .success,
+    ).toBe(true);
     expect(
       petSettingsSchema.safeParse({ ...settings, profiles: [{ ...pet, appearance: 'unknown' }] })
         .success,

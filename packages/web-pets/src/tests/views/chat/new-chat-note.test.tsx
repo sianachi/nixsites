@@ -19,6 +19,7 @@ const groupId = '22222222-2222-4222-8222-222222222222';
 const parentId = '33333333-3333-4333-8333-333333333333';
 const other = { ...STUB_WORKSPACE, id: '44444444-4444-4444-8444-444444444444', name: 'Projects' };
 const noop = () => undefined;
+const pet2 = '55555555-5555-4555-8555-555555555555';
 
 function setup({
   currentId = STUB_WORKSPACE.id,
@@ -28,6 +29,7 @@ function setup({
   existingItemId,
   rememberedParent = false,
   unavailableParent = false,
+  secondPet = false,
 }: {
   currentId?: string | null;
   sources?: string[];
@@ -36,6 +38,7 @@ function setup({
   existingItemId?: string;
   rememberedParent?: boolean;
   unavailableParent?: boolean;
+  secondPet?: boolean;
 } = {}) {
   const user = userEvent.setup();
   const calls: { operation: string; path: string; body: unknown }[] = [];
@@ -75,6 +78,9 @@ function setup({
                       appearance: 'owl',
                       instructions: '',
                     },
+                    ...(secondPet
+                      ? [{ id: pet2, name: 'Fox', appearance: 'fox', instructions: '' }]
+                      : []),
                   ],
                 },
               }
@@ -334,6 +340,19 @@ describe('new chat notes', () => {
     });
     expect(calls.filter((call) => call.operation === 'conversations.create')).toHaveLength(1);
     expect(requests[0]).toBe(requests[1]);
+  });
+
+  it('starts the chat with the pet picked when the account has several', async () => {
+    const { user, calls } = setup({ secondPet: true });
+    await user.click(screen.getByRole('button', { name: 'Add chat' }));
+    const pet = await screen.findByRole('combobox', { name: 'Pet' });
+    expect(pet).toHaveValue(id);
+    await user.selectOptions(pet, 'Fox');
+    await confirm(user);
+    await user.click(screen.getByRole('button', { name: 'Create chat note' }));
+    expect(calls.find((call) => call.operation === 'conversations.create')?.body).toMatchObject({
+      petId: pet2,
+    });
   });
 
   it('configures an existing note without offering a replacement destination', async () => {
