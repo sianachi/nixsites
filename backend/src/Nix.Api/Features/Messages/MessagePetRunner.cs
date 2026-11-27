@@ -92,6 +92,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         // The names a reply may address, and whether this reply reaches the hop limit (then only people).
         var addressable = new Dictionary<string, MessageRecipient>(StringComparer.OrdinalIgnoreCase);
         var atLimit = false;
+        var rememberOffered = false;
         while (!cancellationToken.IsCancellationRequested && failure is null)
         {
             var again = await units.RunAsync(context, async (services, token) =>
@@ -142,6 +143,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                             + Encode(new JsonObject { ["names"] = new JsonArray([.. addressable.Values.Select(entry => (JsonNode?)JsonValue.Create(entry.Name))]) }) + "\n";
                     if ((await services.GetRequiredService<Nix.Messaging.NixDispatcher>().QueryAsync<GetPetSettings, PetSettingsResponse>(new(), token).ConfigureAwait(false)).Settings.MemoryMode != PetMemoryModes.Off)
                     {
+                        rememberOffered = true;
                         prompt += RememberInstruction;
                     }
                 }
@@ -189,7 +191,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         {
             var (kept, named) = TakeAddressing(text, addressable);
             kept = kept.Length == 0 ? text : kept;
-            var (plain, remembered) = TakeRemember(kept);
+            var (plain, remembered) = TakeRemember(kept, rememberOffered);
             (text, recipients, fact) = (plain.Length == 0 ? kept : plain, named, remembered);
         }
 
@@ -300,16 +302,14 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
     {
         ArgumentNullException.ThrowIfNull(reply);
         ArgumentNullException.ThrowIfNull(addressable);
-        var trimmed = reply.TrimEnd();
-        var cut = trimmed.LastIndexOf('\n');
-        var line = trimmed[(cut + 1)..].Trim();
-        if (!line.StartsWith("To:", StringComparison.OrdinalIgnoreCase))
+        var (line, rest) = TakeLine(reply, "To:");
+        if (line is null)
         {
             return (reply, []);
         }
 
         var to = new List<MessageRecipient>();
-        foreach (var name in line[3..].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        foreach (var name in line.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
             if (addressable.TryGetValue(name, out var recipient) && to.All(entry => entry.Id != recipient.Id) && to.Count < 5)
             {
@@ -317,7 +317,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
             }
         }
 
-        return (cut < 0 ? "" : trimmed[..cut].TrimEnd(), to);
+        return (rest, to);
     }
 
     private const string RememberInstruction =
@@ -326,22 +326,44 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
 
     /// <summary>
     /// Splits a reply into its text and the fact on a last line <c>Remember: fact</c>. The line is removed whenever it is
-    /// there; the fact is empty when it is not plain visible text of at most 280 characters.
+    /// there and <paramref name="offered"/> (the prompt taught the convention); the fact is empty when it is not plain
+    /// visible text of at most 280 characters.
     /// </summary>
-    public static (string Text, string Fact) TakeRemember(string reply)
+    public static (string Text, string Fact) TakeRemember(string reply, bool offered = true)
     {
         ArgumentNullException.ThrowIfNull(reply);
-        var trimmed = reply.TrimEnd();
-        var cut = trimmed.LastIndexOf('\n');
-        var line = trimmed[(cut + 1)..].Trim();
-        if (!line.StartsWith("Remember:", StringComparison.OrdinalIgnoreCase))
+        var (fact, rest) = offered ? TakeLine(reply, "Remember:") : (null, reply);
+        if (fact is null)
         {
             return (reply, "");
         }
 
-        var fact = line[9..].Trim();
-        return (cut < 0 ? "" : trimmed[..cut].TrimEnd(),
-            fact.Length is > 0 and <= PetSettingsValidation.MaxMemoryLength && PetSettingsValidation.IsVisibleText(fact) ? fact : "");
+        return (rest, fact.Length is > 0 and <= PetSettingsValidation.MaxMemoryLength && PetSettingsValidation.IsVisibleText(fact) ? fact : "");
+    }
+
+    /// <summary>
+    /// Takes the line that starts with <paramref name="prefix"/> from the end of a reply, where it may sit last or
+    /// just before the other control line (<c>To:</c> and <c>Remember:</c> in either order). Returns its text after the
+    /// prefix and the reply without it, or a null line when it is not there.
+    /// </summary>
+    private static (string? Line, string Remaining) TakeLine(string reply, string prefix)
+    {
+        var lines = reply.TrimEnd().Split('\n');
+        for (var at = lines.Length - 1; at >= Math.Max(0, lines.Length - 2); at--)
+        {
+            var line = lines[at].Trim();
+            if (line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return (line[prefix.Length..].Trim(), string.Join('\n', lines.Where((_, index) => index != at)).TrimEnd());
+            }
+
+            if (!line.StartsWith("To:", StringComparison.OrdinalIgnoreCase) && !line.StartsWith("Remember:", StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+        }
+
+        return (null, reply);
     }
 
     /// <summary>

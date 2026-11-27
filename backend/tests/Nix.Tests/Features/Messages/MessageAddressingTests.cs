@@ -48,6 +48,23 @@ public sealed class MessageAddressingTests
     }
 
     [Fact]
+    public void A_Remember_line_is_left_in_the_reply_when_the_prompt_did_not_offer_it()
+    {
+        Assert.Equal(("Noted.\nRemember: Likes tea", ""), MessagePetRunner.TakeRemember("Noted.\nRemember: Likes tea", offered: false));
+    }
+
+    [Theory]
+    [InlineData("Ok\nTo: Ada\nRemember: Likes tea")]
+    [InlineData("Ok\nRemember: Likes tea\nTo: Ada")]
+    public void The_To_and_Remember_lines_are_taken_in_either_order_and_never_reach_the_reply(string reply)
+    {
+        var (kept, to) = MessagePetRunner.TakeAddressing(reply, Names);
+        var (text, fact) = MessagePetRunner.TakeRemember(kept);
+        Assert.Equal(("Ok", "Likes tea"), (text, fact));
+        Assert.Equal([Ada], to.Select(entry => entry.Id));
+    }
+
+    [Fact]
     public void At_most_five_are_kept()
     {
         var many = Enumerable.Range(0, 8).ToDictionary(i => $"P{i}", i => new MessageRecipient(Guid.NewGuid(), "person", $"P{i}"), StringComparer.OrdinalIgnoreCase);

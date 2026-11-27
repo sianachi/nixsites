@@ -241,6 +241,72 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_held_fact_stays_held_when_remembering_it_fails()
+    {
+        await SavePetsAsync("ask", ("Pip", PetId));
+
+        // Memory turned off after the turn was held.
+        var off = (await PostAsync(Editor, Note, "I use metric units")).Value;
+        await InsertTurnAsync(off.Id.Value, "working", "now()");
+        await RunWithFactAsync(off.Id.Value, []);
+        await SetMemoryModeAsync(PetMemoryModes.Off);
+        await AssertHeldAsync(off.Id.Value, "messages.memory_off");
+
+        // Memory full.
+        await SetMemoryModeAsync(PetMemoryModes.Ask);
+        var full = (await PostAsync(Editor, Note, "again")).Value;
+        await InsertTurnAsync(full.Id.Value, "working", "now()");
+        await RunWithFactAsync(full.Id.Value, []);
+        await FillMemoryAsync();
+        await AssertHeldAsync(full.Id.Value, "messages.memory_full");
+
+        // Settings that keep changing while the fact is saved: a trigger that skips every update.
+        await ExecuteAsync("DELETE FROM pet_preferences");
+        await SavePetsAsync("ask", ("Pip", PetId));
+        var conflict = (await PostAsync(Editor, Note, "third")).Value;
+        await InsertTurnAsync(conflict.Id.Value, "working", "now()");
+        await RunWithFactAsync(conflict.Id.Value, []);
+        await ExecuteAsync("""
+            CREATE FUNCTION skip_pet_update() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NULL; END';
+            CREATE TRIGGER skip_pet_update BEFORE UPDATE ON pet_preferences FOR EACH ROW EXECUTE FUNCTION skip_pet_update()
+            """);
+        try
+        {
+            await AssertHeldAsync(conflict.Id.Value, "pets.settings_conflict");
+        }
+        finally
+        {
+            await ExecuteAsync("DROP TRIGGER skip_pet_update ON pet_preferences; DROP FUNCTION skip_pet_update()");
+        }
+    }
+
+    // Approving fails with the code and, as a failed request rolls back, the fact is still held.
+    private async Task AssertHeldAsync(Guid message, string code)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            work.Resolve<AccessTokenSessionContext>().SetInteractive();
+            Assert.Equal(code, (await work.Resolve<MessageHandler>().Decide(ItemId.From(message), PetId, true, Cancellation)).Error.Code);
+        }
+
+        Assert.Equal("Prefers metric units", Assert.Single((await StatesAsync(message)).Pets).Memory);
+    }
+
+    private async Task FillMemoryAsync()
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var dispatcher = work.Resolve<NixDispatcher>();
+            var current = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), Cancellation);
+            var memories = Enumerable.Range(0, PetSettingsValidation.MaxMemories).Select(i => new PetMemory(Guid.NewGuid(), $"Fact {i}", DateTimeOffset.UtcNow)).ToArray();
+            Assert.True((await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(current.Revision, current.Settings with { Memories = memories }), Cancellation)).IsSuccess);
+            await work.CommitAsync(Cancellation);
+        }
+    }
+
+    [Fact]
     public async Task A_held_fact_is_saved_when_the_stored_settings_still_carry_a_retired_appearance()
     {
         await SavePetsAsync("ask", ("Pip", PetId));
@@ -273,7 +339,8 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         Assert.DoesNotContain("Remember:", prompts[0], StringComparison.Ordinal);
         Assert.Single(await MemoriesAsync());
         Assert.Null(Assert.Single((await StatesAsync(other.Id.Value)).Pets).Memory);
-        Assert.Equal("Noted.", Assert.Single(await RepliesAsync(other.Id.Value)).Text);
+        // Not offered, so the line is not taken from the reply.
+        Assert.Equal("Noted.\nRemember: Prefers metric units", Assert.Single(await RepliesAsync(other.Id.Value)).Text);
     }
 
     [Fact]
