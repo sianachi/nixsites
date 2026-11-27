@@ -244,10 +244,11 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                 new MessageAuthor(petId, "pet", pet.Name, null), addressed, token).ConfigureAwait(false);
             var answered = posted.IsSuccess && failure is null;
             // The owner's memory mode decides: off keeps nothing, always saves at once, ask holds the fact on the turn for approval.
-            // A turn an agent's token started (or chained from) always waits: the owner did not write that message.
+            // A turn on a message no person wrote from the app (a token's, or another pet's in a chain) always waits.
             var mode = settings.Settings.MemoryMode;
-            var held = answered && fact.Length > 0 && (mode == PetMemoryModes.Ask || mode == PetMemoryModes.Always && origin.TokenId is not null) ? fact : null;
-            if (answered && fact.Length > 0 && mode == PetMemoryModes.Always && origin.TokenId is null)
+            var personWrote = origin.TokenId is null && Parse(message) is { Author: { Kind: "person", Via: null } };
+            var held = answered && fact.Length > 0 && (mode == PetMemoryModes.Ask || mode == PetMemoryModes.Always && !personWrote) ? fact : null;
+            if (answered && fact.Length > 0 && mode == PetMemoryModes.Always && personWrote)
             {
                 _ = await services.GetRequiredService<MessageHandler>().Remember(message, fact, token).ConfigureAwait(false);
             }

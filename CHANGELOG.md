@@ -139,7 +139,7 @@ follows semantic versioning (`0.x` pre-1.0).
 ### Changed
 
 - You can keep up to five pets again, each with its own name, appearance, instructions, provider and model. Settings > Pets lists them, picks which one the floating pet uses, and removing one can be undone; a new chat note picks which pet to talk to. Memory stays shared across your pets. Saving pet settings accepts up to five profiles with unique ids again. Settings saved under the older limit of twelve are read as five (the active pet kept) until the next save.
-- A fact a pet wants to remember from a turn an agent's token started, directly or by a chain it began, always waits for your approval, even when memory is set to always; your own turns keep your memory mode.
+- A fact a pet wants to remember from a turn an agent's token started, directly or by a chain it began, always waits for your approval, even when memory is set to always, and so does one from a turn answering another pet's message; your own turns keep your memory mode.
 - A Compose release whose release check is not signed in prints a link to approve in a browser,
   in place of asking for an access token. A stored token still works.
 - The installers print a setup link for the first account. Opening it does not ask for the setup

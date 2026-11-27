@@ -639,6 +639,23 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_fact_from_a_chained_turn_on_another_pets_message_waits_even_in_always_mode()
+    {
+        var (a, b) = (PetId, Guid.NewGuid());
+        await SavePetsAsync("always", ("Ann", a), ("Bob", b));
+        var message = (await PostAsync(Editor, Note, "go")).Value;
+        await InsertTurnAsync(message.Id.Value, "working", "now()");
+        var runner = Chatty([], id => id == a ? "Ask Bob\nTo: Bob" : "Sure\nRemember: Prefers tea");
+        await runner.Run(As(Editor), message.Id.Value, [a]);
+        Assert.Empty(await MemoriesAsync());
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            Assert.Equal(1, await RawSql.CountAsync(connection, null, "SELECT count(*) FROM message_pet_turn WHERE memory_text = 'Prefers tea'"));
+        }
+    }
+
+    [Fact]
     public async Task One_launch_causes_at_most_its_budget_of_turns_however_the_pets_address_each_other()
     {
         var (a, b, c) = (PetId, Guid.NewGuid(), Guid.NewGuid());
