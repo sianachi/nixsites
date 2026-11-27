@@ -29,13 +29,19 @@ internal sealed record RecordPetUsageRequest(string Ticket, string? WorkspaceId,
 /// <summary>The labels Core gives a turn's usage. A label is chosen from the session that started the turn, never from a request body.</summary>
 public static class PetUsageSources
 {
-    // shortcut: only an interactive session can start a pet turn today (tokens are refused by
-    // AccessTokenScopePolicy), so the label is always "app"; add "token:<name>" with pets:send.
     public const string App = "app";
     public const string Plan = "plan";
     public const string Run = "run";
     public const string Routine = "routine";
     public const string Inline = "inline";
+
+    /// <summary>The label for a turn a token started: <c>token:&lt;token name&gt;</c>, without control characters and at most 100 characters.</summary>
+    public static string Token(string? name)
+    {
+        var clean = new string([.. (name ?? "").Where(character => !char.IsControl(character))]).Trim();
+        var label = "token:" + (clean.Length == 0 ? "token" : clean);
+        return label.Length <= 100 ? label : label[..100];
+    }
 
     public static bool IsValid(string source)
     {

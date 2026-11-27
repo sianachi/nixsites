@@ -12,7 +12,8 @@ namespace Nix.Features.Workspaces;
 /// </summary>
 /// <param name="AgentsMayApprove">Whether they may approve or revoke file versions.</param>
 /// <param name="AgentsMayCreatePublicLinks">Whether they may create public links.</param>
-internal sealed record SetAgentPolicyRequest(bool? AgentsMayApprove, bool? AgentsMayCreatePublicLinks);
+/// <param name="AgentsAddressPets">Whether a token with the pets:send scope may address the owner's pets: <c>off</c>, <c>ask</c> or <c>on</c>.</param>
+internal sealed record SetAgentPolicyRequest(bool? AgentsMayApprove, bool? AgentsMayCreatePublicLinks, string? AgentsAddressPets = null);
 
 /// <summary>
 /// [SEC] The workspace agent policy. Only an owner on an interactive session may change it, so no
@@ -31,6 +32,7 @@ internal static class AgentPolicyEndpoints
             .Produces<WorkspaceResponse>()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         return endpoints;
     }
@@ -49,8 +51,14 @@ internal static class AgentPolicyEndpoints
                 "The agent policy can only be changed from a signed-in session."));
         }
 
+        if (request.AgentsAddressPets is not (null or "off" or "ask" or "on"))
+        {
+            return TypedResults.Problem(ApiProblem.Create(
+                context, 422, "workspaces.invalid_agent_policy", "Invalid agent policy", "Agents may address pets: off, ask or on."));
+        }
+
         var id = WorkspaceId.From(workspaceId);
-        if (!await store.SetAgentPolicyAsync(id, request.AgentsMayApprove, request.AgentsMayCreatePublicLinks, context.RequestAborted)
+        if (!await store.SetAgentPolicyAsync(id, request.AgentsMayApprove, request.AgentsMayCreatePublicLinks, request.AgentsAddressPets, context.RequestAborted)
             .ConfigureAwait(false)
             || await store.FindForResponseAsync(id, context.RequestAborted).ConfigureAwait(false) is not { } updated)
         {

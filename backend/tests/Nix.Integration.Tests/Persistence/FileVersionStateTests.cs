@@ -211,7 +211,7 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
         await using (var work = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.AlphaContext, Cancellation))
         {
             var store = work.Resolve<WorkspaceAdministrationStore>();
-            Assert.True(await store.SetAgentPolicyAsync(WorkspaceId.From(TestTenants.AlphaWorkspace), true, null, Cancellation));
+            Assert.True(await store.SetAgentPolicyAsync(WorkspaceId.From(TestTenants.AlphaWorkspace), true, null, null, Cancellation));
             var found = await store.FindAsync(WorkspaceId.From(TestTenants.AlphaWorkspace), Cancellation);
             Assert.True(found!.AgentsMayApprove);
             Assert.False(found.AgentsMayCreatePublicLinks);
@@ -224,7 +224,7 @@ public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLi
         // The other tenant's owner cannot reach it: RLS hides the row, so nothing changes.
         await using var beta = await fixture.Application.BeginUnitOfWorkAsync(TestTenants.BetaContext, Cancellation);
         Assert.False(await beta.Resolve<WorkspaceAdministrationStore>()
-            .SetAgentPolicyAsync(WorkspaceId.From(TestTenants.AlphaWorkspace), false, false, Cancellation));
+            .SetAgentPolicyAsync(WorkspaceId.From(TestTenants.AlphaWorkspace), false, false, null, Cancellation));
     }
 
     [Fact]

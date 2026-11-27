@@ -187,7 +187,6 @@ builder.Services.AddSingleton<Nix.Features.Comments.CommentWatchGate>();  // tak
 builder.Services.AddSingleton<Nix.Features.Pets.PetInlineLimiter>();
 builder.Services.AddHttpClient<ConversationBodyReader>();
 builder.Services.AddHttpClient<Nix.Abstractions.IPublicNoteReader, PublicNoteReader>();
-builder.Services.AddScoped<PetUsageService>();
 builder.Services.AddHttpClient<PetWorkerClient>(client => client.Timeout = Timeout.InfiniteTimeSpan)
     .ConfigurePrimaryHttpMessageHandler(static () => new HttpClientHandler { AllowAutoRedirect = false });
 

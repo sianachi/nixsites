@@ -8,6 +8,8 @@ using Nix.Features.Items;
 using Nix.Features.Pets;
 using Nix.Features.Workspaces;
 using Nix.Messaging;
+using Nix.Persistence.Content;
+using Nix.Persistence.Workspaces;
 
 namespace Nix.Features.Messages;
 
@@ -22,17 +24,23 @@ public sealed class MessageHandler(
     NixDispatcher dispatcher,
     MessagePetRunner pets,
     IItemLocks itemLocks,
-    IWorkspaceLocks workspaceLocks)
-    : ICommandHandler<PostMessage, Item>, IQueryHandler<GetMessageDirectory, Result<MessageDirectoryResponse>>
+    IWorkspaceLocks workspaceLocks,
+    WorkspaceAdministrationStore workspaces,
+    MessagePetTurnStore turns,
+    PetUsageService usage)
+    : ICommandHandler<PostMessage, PostedMessage>, IQueryHandler<GetMessageDirectory, Result<MessageDirectoryResponse>>
 {
     private const int DirectoryLimit = 100;
+
+    /// <summary>The most pet turns one token may start in a day.</summary>
+    public const int TokenTurnsPerDay = 50;
 
     private static NixError NotFound => new("items.not_found", "No such item is visible.");
 
     private static NixError Invalid(string detail) => new("messages.invalid", detail);
 
     /// <inheritdoc />
-    public async ValueTask<Result<Item>> HandleAsync(PostMessage command, CancellationToken cancellationToken)
+    public async ValueTask<Result<PostedMessage>> HandleAsync(PostMessage command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         var request = command.Request;
@@ -40,38 +48,41 @@ public sealed class MessageHandler(
         var to = request.To?.DistinctBy(address => (address.Id, address.Kind)).ToArray() ?? [];
         if (string.IsNullOrEmpty(text) || text.Length > MessageItem.MaxTextLength)
         {
-            return Result.Failure<Item>(Invalid($"A message is 1 to {MessageItem.MaxTextLength:N0} characters."));
+            return Result.Failure<PostedMessage>(Invalid($"A message is 1 to {MessageItem.MaxTextLength:N0} characters."));
         }
 
         if (to.Length > MessageItem.MaxRecipients || to.Any(address => address.Kind is not ("person" or "pet") || address.Id == Guid.Empty))
         {
-            return Result.Failure<Item>(Invalid($"Address at most {MessageItem.MaxRecipients} people or pets, each as person or pet."));
+            return Result.Failure<PostedMessage>(Invalid($"Address at most {MessageItem.MaxRecipients} people or pets, each as person or pet."));
         }
 
         // A pet-turn credential is an agent working for the person, not the person writing.
         if (scope.IsPetTurn)
         {
-            return Result.Failure<Item>(new NixError("messages.interactive_only", "Pets cannot post messages."));
+            return Result.Failure<PostedMessage>(new NixError("messages.interactive_only", "Pets cannot post messages."));
         }
 
-        // Part B opens this for tokens that hold pets:send under the workspace's agent policy.
+        // A token may address a pet only with the pets:send scope; the workspace switch decides what happens next.
         var petIds = to.Where(address => address.Kind == "pet").Select(address => address.Id).ToArray();
-        if (petIds.Length > 0 && !scope.IsInteractive)
+        var agent = !scope.IsInteractive;
+        if (petIds.Length > 0 && agent && !(scope.IsTokenSession && scope.MayPetSend))
         {
-            return Result.Failure<Item>(new NixError("messages.pets_interactive_only", "Only the app can address a pet for now."));
+            return Result.Failure<PostedMessage>(scope.IsTokenSession
+                ? new NixError("messages.pets_scope_required", "Addressing a pet needs a token with the pets:send scope.")
+                : new NixError("messages.pets_interactive_only", "Only the app or a token with the pets:send scope can address a pet."));
         }
 
         var context = session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
         var found = await visible.FindAsync(command.ParentId, ItemAccess.Write, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure)
         {
-            return Result.Failure<Item>(found.Error);
+            return Result.Failure<PostedMessage>(found.Error);
         }
 
         var parent = found.Value;
         if (petIds.Length > 0 && await PetRefusal(parent, cancellationToken).ConfigureAwait(false) is { } refusal)
         {
-            return Result.Failure<Item>(refusal);
+            return Result.Failure<PostedMessage>(refusal);
         }
 
         var author = await identities.FindPrincipalByIdAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
@@ -84,16 +95,109 @@ public sealed class MessageHandler(
         var recipients = await ResolveAsync(parent.WorkspaceId, to, cancellationToken).ConfigureAwait(false);
         if (recipients.IsFailure)
         {
-            return Result.Failure<Item>(recipients.Error);
+            return Result.Failure<PostedMessage>(recipients.Error);
         }
 
-        var result = await Post(parent, text, new MessageAuthor(context.PrincipalId.Value, "person", author?.DisplayName ?? "Someone", via), recipients.Value, cancellationToken).ConfigureAwait(false);
-        if (result.IsSuccess && petIds.Length > 0)
+        // Who starts at once: the app's pets, or an agent's under policy "on"; "ask" holds them for their owner.
+        var policy = petIds.Length > 0 && agent
+            ? await workspaces.ReadAgentsAddressPetsAsync(parent.WorkspaceId, cancellationToken).ConfigureAwait(false)
+            : "on";
+        var agentToken = agent ? credential.CredentialId : null;
+        if (petIds.Length > 0 && policy == "on")
         {
-            pets.Launch(context, result.Value.Id.Value, petIds);
+            if (agentToken is { } limited && await turns.StartedByTokenAsync(limited, cancellationToken).ConfigureAwait(false) + petIds.Length > TokenTurnsPerDay)
+            {
+                return Result.Failure<PostedMessage>(new NixError("messages.pet_turn_limit", $"A token may start {TokenTurnsPerDay} pet turns a day. Try again later."));
+            }
+
+            var budget = await usage.RequireAsync(cancellationToken).ConfigureAwait(false);
+            if (budget.IsFailure)
+            {
+                return Result.Failure<PostedMessage>(budget.Error);
+            }
         }
 
-        return result;
+        var posted = await Post(parent, text, new MessageAuthor(context.PrincipalId.Value, "person", author?.DisplayName ?? "Someone", via), recipients.Value, cancellationToken).ConfigureAwait(false);
+        if (posted.IsFailure)
+        {
+            return Result.Failure<PostedMessage>(posted.Error);
+        }
+
+        if (petIds.Length == 0)
+        {
+            return Result.Success(new PostedMessage(posted.Value, [], null));
+        }
+
+        var (status, reason) = policy switch
+        {
+            "on" => ("working", null),
+            "ask" => ("pending", null),
+            _ => ("declined", "Agents may not address pets in this workspace."),
+        };
+        foreach (var petId in petIds)
+        {
+            await turns.AddAsync(posted.Value.Id.Value, petId, status, reason, agentToken, via, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (status == "working")
+        {
+            pets.Launch(context, posted.Value.Id.Value, petIds, agent ? new(PetUsageSources.Token(via), agentToken) : null);
+        }
+
+        return Result.Success(new PostedMessage(posted.Value, await StatesAsync(posted.Value.Id.Value, cancellationToken).ConfigureAwait(false),
+            await usage.BudgetAsync(cancellationToken).ConfigureAwait(false)));
+    }
+
+    /// <summary>Where each pet a message addressed stands. Only the pets' owner sees any.</summary>
+    public async Task<Result<MessagePetStatesResponse>> PetStates(ItemId messageId, CancellationToken cancellationToken)
+    {
+        if ((await visible.FindAsync(messageId, ItemAccess.Read, cancellationToken).ConfigureAwait(false)).IsFailure)
+        {
+            return Result.Failure<MessagePetStatesResponse>(NotFound);
+        }
+
+        return Result.Success(new MessagePetStatesResponse(await StatesAsync(messageId.Value, cancellationToken).ConfigureAwait(false)));
+    }
+
+    /// <summary>The owner approves (starts the turn) or dismisses a pet's waiting turn. Only the app can.</summary>
+    public async Task<Result<MessagePetState>> Decide(ItemId messageId, Guid petId, bool approve, CancellationToken cancellationToken)
+    {
+        if (!scope.IsInteractive)
+        {
+            return Result.Failure<MessagePetState>(new NixError("messages.interactive_only", "Only the app can approve or dismiss a pet's turn."));
+        }
+
+        if (approve && await usage.RequireAsync(cancellationToken).ConfigureAwait(false) is { IsFailure: true } exhausted)
+        {
+            return Result.Failure<MessagePetState>(exhausted.Error);
+        }
+
+        var row = approve
+            ? await turns.ClaimAsync(messageId.Value, petId, cancellationToken).ConfigureAwait(false)
+            : await turns.DeclineAsync(messageId.Value, petId, cancellationToken).ConfigureAwait(false);
+        if (row is null)
+        {
+            return Result.Failure<MessagePetState>(new NixError("messages.no_waiting_turn", "No pet is waiting on that message, or the wait has run out."));
+        }
+
+        if (approve)
+        {
+            pets.Launch(session.Current ?? throw new InvalidOperationException("No session context."), messageId.Value, [petId], new(row.TokenName is null ? PetUsageSources.App : PetUsageSources.Token(row.TokenName), row.TokenId));
+        }
+
+        return Result.Success((await StatesAsync(messageId.Value, cancellationToken).ConfigureAwait(false)).First(state => state.PetId == petId));
+    }
+
+    private async Task<IReadOnlyList<MessagePetState>> StatesAsync(Guid messageId, CancellationToken cancellationToken)
+    {
+        var rows = await turns.ListAsync(messageId, cancellationToken).ConfigureAwait(false);
+        if (rows.Count == 0)
+        {
+            return [];
+        }
+
+        var profiles = (await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), cancellationToken).ConfigureAwait(false)).Settings.Profiles;
+        return [.. rows.Select(row => new MessagePetState(row.PetId, profiles.FirstOrDefault(pet => pet.Id == row.PetId)?.Name ?? "A pet that was removed", row.Status, row.Reason, row.ExpiresAt))];
     }
 
     // The turn runs later as the poster with no workspace unlock, so refuse here, where the person is looking.

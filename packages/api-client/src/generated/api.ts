@@ -3489,7 +3489,62 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /**
+     * Post a message under an item, or a reply under a message
+     * @description 'to' lists people and pets by id; the text is never parsed. A token that addresses a pet needs the pets:send scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'.
+     */
     post: operations['PostMessage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-turns': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Where each pet a message addressed stands */
+    get: operations['GetMessagePetTurns'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-turns/{petId}/approve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start a pet's waiting turn (the app only) */
+    post: operations['ApproveMessagePetTurn'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/items/{itemId}/pet-turns/{petId}/dismiss': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Decline a pet's waiting turn (the app only) */
+    post: operations['DismissMessagePetTurn'];
     delete?: never;
     options?: never;
     head?: never;
@@ -3760,7 +3815,7 @@ export interface paths {
     put?: never;
     /**
      * Mint a personal access token
-     * @description Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write' and 'admin', and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.
+     * @description Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.
      */
     post: operations['CreateAccessToken'];
     delete?: never;
@@ -5792,6 +5847,18 @@ export interface components {
     MessageDirectoryResponse: {
       addressees: components['schemas']['MessageAddressee'][];
     };
+    MessagePetState: {
+      /** Format: uuid */
+      petId: string;
+      name: string;
+      status: string;
+      reason: null | string;
+      /** Format: date-time */
+      expiresAt: null | string;
+    };
+    MessagePetStatesResponse: {
+      pets: components['schemas']['MessagePetState'][];
+    };
     MoveItemRequest: {
       /** Format: uuid */
       parentId: null | string;
@@ -6027,6 +6094,14 @@ export interface components {
       text: string;
       /** Format: date-time */
       createdAt: string;
+      source?: null | components['schemas']['PetMemorySource'];
+    };
+    PetMemorySource: {
+      kind: string;
+      /** Format: uuid */
+      id: string;
+      title: string;
+      author: string;
     };
     PetMessage: {
       id: string;
@@ -6532,6 +6607,11 @@ export interface components {
       type: string;
       viewKinds?: null | string[];
     };
+    PostedMessageResponse: {
+      message: components['schemas']['ItemResponse'];
+      pets: components['schemas']['MessagePetState'][];
+      budget: null | components['schemas']['PetBudgetStatus'];
+    };
     PostMessageRequest: {
       text: string;
       to: null | components['schemas']['MessageAddress'][];
@@ -6937,6 +7017,7 @@ export interface components {
     SetAgentPolicyRequest: {
       agentsMayApprove: null | boolean;
       agentsMayCreatePublicLinks: null | boolean;
+      agentsAddressPets?: null | string;
     };
     SetFileVersionStateRequest: {
       state: string;
@@ -7871,6 +7952,7 @@ export interface components {
       collaboration: boolean;
       agentsMayApprove?: null | boolean;
       agentsMayCreatePublicLinks?: null | boolean;
+      agentsAddressPets?: null | string;
       passwordProtected?: null | boolean;
       /** Format: date-time */
       unlockedUntil?: null | string;
@@ -8707,6 +8789,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
         headers: {
           [name: string]: unknown;
         };
@@ -16595,7 +16686,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ItemResponse'];
+          'application/json': components['schemas']['PostedMessageResponse'];
         };
       };
       /** @description Forbidden */
@@ -16627,6 +16718,128 @@ export interface operations {
       };
       /** @description Unprocessable Entity */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetMessagePetTurns: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessagePetStatesResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ApproveMessagePetTurn: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        petId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessagePetState'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  DismissMessagePetTurn: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        petId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessagePetState'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

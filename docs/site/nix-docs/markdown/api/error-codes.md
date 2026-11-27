@@ -122,6 +122,14 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 
 - PUT /api/v1/items/{itemId}/lock
 
+### `messages.pet_turn_limit`
+
+- POST /api/v1/items/{itemId}/messages
+
+### `pets.budget_exhausted`
+
+- POST /api/v1/items/{itemId}/messages
+
 ### `pets.inline_busy`
 
 - POST /api/v1/me/pets/inline
@@ -320,7 +328,6 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `items.body_too_large`
 - `items.invalid_idempotency_key`
 - `items.read_only`
-- `items.reserved_type`
 - `items.schema_base_changed`
 - `items.sibling_not_in_destination`
 - `locks.busy`
@@ -330,7 +337,11 @@ Every remaining stable code constant and `NixError` literal in the API project. 
 - `me.invalid_ui_settings`
 - `me.ui_settings_too_large`
 - `messages.interactive_only`
+- `messages.no_waiting_turn`
+- `messages.pet_unavailable`
 - `messages.pets_interactive_only`
+- `messages.pets_scope_required`
+- `messages.workspace_protected`
 - `notifications.invalid_preferences`
 - `notifications.invalid_subscription`
 - `notifications.not_found`

@@ -29,6 +29,9 @@ public enum AccessTokenScope
 
     /// <summary>May administer: sharing, permission entries, public exposure of views.</summary>
     Admin,
+
+    /// <summary>May post a message that addresses one of the principal's pets, and nothing else new.</summary>
+    PetsSend,
 }
 
 /// <summary>
@@ -45,8 +48,11 @@ public static class AccessTokenScopes
     /// <summary>The storage spelling of <see cref="AccessTokenScope.Admin"/>.</summary>
     public const string Admin = "admin";
 
+    /// <summary>The storage spelling of <see cref="AccessTokenScope.PetsSend"/>.</summary>
+    public const string PetsSend = "pets:send";
+
     /// <summary>Every scope, in the order the API lists them.</summary>
-    public static IReadOnlyList<string> All { get; } = [Read, Write, Admin];
+    public static IReadOnlyList<string> All { get; } = [Read, Write, Admin, PetsSend];
 
     /// <summary>
     /// Parses a stored or requested spelling.
@@ -71,6 +77,9 @@ public static class AccessTokenScopes
             case Admin:
                 scope = AccessTokenScope.Admin;
                 return true;
+            case PetsSend:
+                scope = AccessTokenScope.PetsSend;
+                return true;
             default:
                 scope = default;
                 return false;
@@ -87,6 +96,7 @@ public static class AccessTokenScopes
         AccessTokenScope.Read => Read,
         AccessTokenScope.Write => Write,
         AccessTokenScope.Admin => Admin,
+        AccessTokenScope.PetsSend => PetsSend,
         _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unknown scope."),
     };
 }

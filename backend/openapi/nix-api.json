@@ -1078,6 +1078,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -12298,6 +12308,8 @@
         "tags": [
           "Messages"
         ],
+        "summary": "Post a message under an item, or a reply under a message",
+        "description": "'to' lists people and pets by id; the text is never parsed. A token that addresses a pet needs the pets:send scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'.",
         "operationId": "PostMessage",
         "parameters": [
           {
@@ -12326,7 +12338,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ItemResponse"
+                  "$ref": "#/components/schemas/PostedMessageResponse"
                 }
               }
             }
@@ -12363,6 +12375,180 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-turns": {
+      "get": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Where each pet a message addressed stands",
+        "operationId": "GetMessagePetTurns",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagePetStatesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-turns/{petId}/approve": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Start a pet's waiting turn (the app only)",
+        "operationId": "ApproveMessagePetTurn",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagePetState"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/pet-turns/{petId}/dismiss": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Decline a pet's waiting turn (the app only)",
+        "operationId": "DismissMessagePetTurn",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagePetState"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13481,7 +13667,7 @@
           "AccessTokens"
         ],
         "summary": "Mint a personal access token",
-        "description": "Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write' and 'admin', and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.",
+        "description": "Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.",
         "operationId": "CreateAccessToken",
         "requestBody": {
           "content": {
@@ -21662,6 +21848,55 @@
           }
         }
       },
+      "MessagePetState": {
+        "required": [
+          "petId",
+          "name",
+          "status",
+          "reason",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "petId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "MessagePetStatesResponse": {
+        "required": [
+          "pets"
+        ],
+        "type": "object",
+        "properties": {
+          "pets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagePetState"
+            }
+          }
+        }
+      },
       "MoveItemRequest": {
         "required": [
           "parentId",
@@ -22661,6 +22896,40 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetMemorySource"
+              }
+            ]
+          }
+        }
+      },
+      "PetMemorySource": {
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "author"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
           }
         }
       },
@@ -24556,6 +24825,35 @@
           }
         }
       },
+      "PostedMessageResponse": {
+        "required": [
+          "message",
+          "pets",
+          "budget"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/ItemResponse"
+          },
+          "pets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagePetState"
+            }
+          },
+          "budget": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PetBudgetStatus"
+              }
+            ]
+          }
+        }
+      },
       "PostMessageRequest": {
         "required": [
           "text",
@@ -26273,6 +26571,12 @@
             "type": [
               "null",
               "boolean"
+            ]
+          },
+          "agentsAddressPets": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -30580,6 +30884,12 @@
             "type": [
               "null",
               "boolean"
+            ]
+          },
+          "agentsAddressPets": {
+            "type": [
+              "null",
+              "string"
             ]
           },
           "passwordProtected": {

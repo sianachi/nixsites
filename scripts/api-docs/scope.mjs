@@ -72,6 +72,7 @@ export function classify(method, path) {
   if (/^\/api\/v1\/(items|workspaces)\/[^/]+\/pet-runs(\/|$)/.test(value)) return 'interactive';
 
   if (/^\/api\/v1\/items\/[^/]+\/pet-peers(\/|$)/.test(value)) return 'interactive';
+  if (/^\/api\/v1\/items\/[^/]+\/pet-turns\//.test(value)) return 'interactive';
   if (/^\/api\/v1\/items\/[^/]+\/pet-protection$/.test(value)) return 'interactive';
 
   if (

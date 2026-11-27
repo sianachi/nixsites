@@ -93,7 +93,7 @@ Operation id: `CreateAccessToken`.
 
 **Token.** A personal access token cannot call this. Only an interactive browser session can.
 
-Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write' and 'admin', and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.
+Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.
 
 Request body: `CreateAccessTokenRequest`.
 
@@ -2602,6 +2602,8 @@ Responses: `200`, `404`.
 
 <a id="postmessage"></a>
 
+Post a message under an item, or a reply under a message
+
 Operation id: `PostMessage`.
 
 **Can.** Write what the summary names.
@@ -2610,13 +2612,77 @@ Operation id: `PostMessage`.
 
 **Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
 
+'to' lists people and pets by id; the text is never parsed. A token that addresses a pet needs the pets:send scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'.
+
 Parameters:
 
 - `itemId` in path (required, string (uuid))
 
 Request body: `PostMessageRequest`.
 
-Responses: `201`, `403`, `404`, `409`, `422`.
+Responses: `201`, `403`, `404`, `409`, `422`, `429`.
+
+### GET /api/v1/items/{itemId}/pet-turns
+
+<a id="getmessagepetturns"></a>
+
+Where each pet a message addressed stands
+
+Operation id: `GetMessagePetTurns`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+
+Responses: `200`, `404`.
+
+### POST /api/v1/items/{itemId}/pet-turns/{petId}/approve
+
+<a id="approvemessagepetturn"></a>
+
+Start a pet's waiting turn (the app only)
+
+Operation id: `ApproveMessagePetTurn`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `petId` in path (required, string (uuid))
+
+Responses: `200`, `403`, `404`.
+
+### POST /api/v1/items/{itemId}/pet-turns/{petId}/dismiss
+
+<a id="dismissmessagepetturn"></a>
+
+Decline a pet's waiting turn (the app only)
+
+Operation id: `DismissMessagePetTurn`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** A personal access token cannot call this. Only an interactive browser session can.
+
+Parameters:
+
+- `itemId` in path (required, string (uuid))
+- `petId` in path (required, string (uuid))
+
+Responses: `200`, `403`, `404`.
 
 ## NativeSync
 
@@ -6047,7 +6113,7 @@ Parameters:
 
 Request body: `SetAgentPolicyRequest`.
 
-Responses: `200`, `403`, `404`.
+Responses: `200`, `403`, `404`, `422`.
 
 ### POST /api/v1/workspaces/{workspaceId}/archive
 

@@ -23,6 +23,7 @@ public static class PetTurnPolicy
         (Rule(@"^/api/v1/workspaces/[^/]+/pet-connections(/|$)"), true),
         (Rule(@"^/api/v1/(items|workspaces)/[^/]+/pet-runs(/|$)"), true),
         (Rule(@"^/api/v1/items/[^/]+/pet-peers(/|$)"), true),
+        (Rule(@"^/api/v1/items/[^/]+/pet-turns/[^/]+/(approve|dismiss)$"), true),
         (Rule(@"^/api/v1/me/(preferences|ui-settings|workspace-arrangement)(/|$)"), false),
         (Rule(@"^/api/v1/conversations/[^/]+/(turns|configure|sources|cancel)$"), false),
         (Rule(@"^/api/v1/workspaces/[^/]+/conversations(/|$)"), false),

@@ -15,20 +15,59 @@ internal static class MessageEndpoints
     {
         var group = endpoints.MapGroup("/api/v1/items/{itemId:guid}").WithTags("Messages");
         group.MapPost("/messages", Post).WithName("PostMessage")
-            .Produces<ItemResponse>(StatusCodes.Status201Created).ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(422)
+            .WithSummary("Post a message under an item, or a reply under a message")
+            .WithDescription("'to' lists people and pets by id; the text is never parsed. A token that addresses a pet needs the pets:send scope "
+                + "and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn "
+                + "until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). "
+                + "The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; "
+                + "a used-up budget is 403 'pets.budget_exhausted'.")
+            .Produces<PostedMessageResponse>(StatusCodes.Status201Created).ProducesProblem(403).ProducesProblem(404).ProducesProblem(409).ProducesProblem(422).ProducesProblem(429)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
+        group.MapGet("/pet-turns", PetTurns).WithName("GetMessagePetTurns")
+            .WithSummary("Where each pet a message addressed stands")
+            .Produces<MessagePetStatesResponse>().ProducesProblem(404);
+        group.MapPost("/pet-turns/{petId:guid}/approve", Approve).WithName("ApproveMessagePetTurn")
+            .WithSummary("Start a pet's waiting turn (the app only)")
+            .Produces<MessagePetState>().ProducesProblem(403).ProducesProblem(404)
+            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
+        group.MapPost("/pet-turns/{petId:guid}/dismiss", Dismiss).WithName("DismissMessagePetTurn")
+            .WithSummary("Decline a pet's waiting turn (the app only)")
+            .Produces<MessagePetState>().ProducesProblem(403).ProducesProblem(404)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         group.MapGet("/message-directory", Directory).WithName("GetMessageDirectory")
             .Produces<MessageDirectoryResponse>().ProducesProblem(404);
         return endpoints;
     }
 
-    private static async Task<Results<Created<ItemResponse>, ProblemHttpResult>> Post(
+    private static async Task<Results<Created<PostedMessageResponse>, ProblemHttpResult>> Post(
         Guid itemId, PostMessageRequest request, HttpContext context, [FromServices] NixDispatcher dispatcher)
     {
-        var result = await dispatcher.SendAsync<PostMessage, Item>(new(ItemId.From(itemId), request), context.RequestAborted).ConfigureAwait(false);
+        var result = await dispatcher.SendAsync<PostMessage, PostedMessage>(new(ItemId.From(itemId), request), context.RequestAborted).ConfigureAwait(false);
         return result.IsSuccess
-            ? TypedResults.Created($"/api/v1/items/{result.Value.Id}", ItemMapping.ToResponse(result.Value, false))
+            ? TypedResults.Created($"/api/v1/items/{result.Value.Message.Id}",
+                new PostedMessageResponse(ItemMapping.ToResponse(result.Value.Message, false), result.Value.Pets, result.Value.Budget))
             : Problem(context, result.Error);
+    }
+
+    private static async Task<Results<Ok<MessagePetStatesResponse>, ProblemHttpResult>> PetTurns(
+        Guid itemId, HttpContext context, [FromServices] MessageHandler handler)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        var result = await handler.PetStates(ItemId.From(itemId), context.RequestAborted).ConfigureAwait(false);
+        return result.IsSuccess ? TypedResults.Ok(result.Value) : Problem(context, result.Error);
+    }
+
+    private static Task<Results<Ok<MessagePetState>, ProblemHttpResult>> Approve(
+        Guid itemId, Guid petId, HttpContext context, [FromServices] MessageHandler handler) => Decide(itemId, petId, true, context, handler);
+
+    private static Task<Results<Ok<MessagePetState>, ProblemHttpResult>> Dismiss(
+        Guid itemId, Guid petId, HttpContext context, [FromServices] MessageHandler handler) => Decide(itemId, petId, false, context, handler);
+
+    private static async Task<Results<Ok<MessagePetState>, ProblemHttpResult>> Decide(
+        Guid itemId, Guid petId, bool approve, HttpContext context, MessageHandler handler)
+    {
+        var result = await handler.Decide(ItemId.From(itemId), petId, approve, context.RequestAborted).ConfigureAwait(false);
+        return result.IsSuccess ? TypedResults.Ok(result.Value) : Problem(context, result.Error);
     }
 
     private static async Task<Results<Ok<MessageDirectoryResponse>, ProblemHttpResult>> Directory(
@@ -44,7 +83,8 @@ internal static class MessageEndpoints
         var status = error.Code switch
         {
             "messages.invalid" or "items.invalid_properties" => 422,
-            "messages.interactive_only" or "messages.pets_interactive_only" => 403,
+            "messages.interactive_only" or "messages.pets_interactive_only" or "messages.pets_scope_required" or "pets.budget_exhausted" => 403,
+            "messages.pet_turn_limit" => 429,
             "items.locked" => 423,
             "items.children_protected" or "items.reserved_type" => 409,
             _ => 404,

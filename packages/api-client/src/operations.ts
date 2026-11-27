@@ -47,6 +47,8 @@ export const HUMAN_ONLY: readonly [RegExp, 'any' | 'write'][] = [
   [/^\/api\/v1\/(items|workspaces)\/[^/]+\/pet-runs(\/|$)/, 'any'],
   [/^\/api\/v1\/workspaces\/[^/]+\/(pet-plans|pet-sharing)(\/|$)/, 'any'],
   [/^\/api\/v1\/items\/[^/]+\/pet-peers(\/|$)/, 'any'],
+  // Approving or dismissing a pet's waiting turn is its owner's decision.
+  [/^\/api\/v1\/items\/[^/]+\/pet-turns\/[^/]+\/(approve|dismiss)$/, 'any'],
   [/^\/api\/v1\/me\/(preferences|ui-settings|workspace-arrangement)(\/|$)/, 'write'],
   [/^\/api\/v1\/conversations\/[^/]+\/(turns|configure|sources|cancel)$/, 'write'],
   [/^\/api\/v1\/workspaces\/[^/]+\/conversations(\/|$)/, 'write'],

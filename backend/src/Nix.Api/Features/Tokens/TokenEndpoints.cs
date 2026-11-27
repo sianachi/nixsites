@@ -52,8 +52,8 @@ internal static class TokenEndpoints
             .WithSummary("Mint a personal access token")
             .WithDescription(
                 "Mints a token that authenticates a non-browser client as the calling principal, "
-                + "within the ceiling the request chooses: scopes from 'read', 'write' and "
-                + "'admin', and an expiry of 1 to 365 days - both required, neither defaulted. "
+                + "within the ceiling the request chooses: scopes from 'read', 'write', "
+                + "'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. "
                 + "The response is the only place the secret ever appears; store it or lose it. "
                 + "A token only narrows: every request it authenticates still resolves the "
                 + "principal's own permissions, so it can never do what its issuer cannot. Fails "

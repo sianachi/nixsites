@@ -93,7 +93,10 @@ public static class PetSettingsValidation
         {
             if (memory is null || memory.Id == Guid.Empty || !memoryIds.Add(memory.Id)
                 || string.IsNullOrWhiteSpace(memory.Text) || memory.Text.Length > MaxMemoryLength
-                || !IsVisibleText(memory.Text))
+                || !IsVisibleText(memory.Text)
+                || memory.Source is { } source && (source.Kind is not ("conversation" or "message") || source.Id == Guid.Empty
+                    || source.Title is not { Length: <= 100 } || source.Author is not { Length: > 0 and <= 100 }
+                    || !IsVisibleText(source.Title) || !IsVisibleText(source.Author)))
             {
                 return false;
             }

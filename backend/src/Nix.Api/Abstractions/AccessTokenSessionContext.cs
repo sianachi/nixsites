@@ -50,6 +50,12 @@ public sealed class AccessTokenSessionContext
     public bool MayAdminister { get; private set; } = true;
 
     /// <summary>
+    /// Whether the acting credential may post a message that addresses a pet. Always <see langword="true"/>
+    /// for an interactive session; for a token session, whether it holds the <c>pets:send</c> scope.
+    /// </summary>
+    public bool MayPetSend { get; private set; } = true;
+
+    /// <summary>
     /// Whether the acting credential is a person's browser session. Fail-closed: <see langword="false"/>
     /// unless the middleware validated a browser-session token, so an access token, an external
     /// bearer, a worker delegation and in-process work are all <see langword="false"/>.
@@ -85,7 +91,8 @@ public sealed class AccessTokenSessionContext
     /// <param name="mayWrite">Whether the token holds the write scope.</param>
     /// <param name="mayAdminister">Whether the token holds the admin scope.</param>
     /// <exception cref="InvalidOperationException">The ceiling was already recorded.</exception>
-    public void SetTokenCeiling(bool mayWrite, bool mayAdminister)
+    /// <param name="mayPetSend">Whether the token holds the pets:send scope.</param>
+    public void SetTokenCeiling(bool mayWrite, bool mayAdminister, bool mayPetSend = false)
     {
         if (_set)
         {
@@ -99,5 +106,6 @@ public sealed class AccessTokenSessionContext
         IsTokenSession = true;
         MayWrite = mayWrite;
         MayAdminister = mayAdminister;
+        MayPetSend = mayPetSend;
     }
 }

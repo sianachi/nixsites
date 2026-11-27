@@ -258,6 +258,8 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<ConversationService>();
         services.AddScoped<ConversationRunner>();
         services.AddScoped<Nix.Features.Messages.MessagePetRunner>();
+        services.AddScoped<Nix.Persistence.Content.MessagePetTurnStore>();
+        services.AddScoped<Nix.Features.Pets.PetUsageService>();
         services.AddScoped<ICommandHandler<CreateConversation, ConversationResponse>, ConversationHandlers>();
         services.AddScoped<ICommandHandler<ConfigureConversation, ConversationResponse>, ConversationHandlers>();
         services.AddScoped<IQueryHandler<GetConversation, Result<ConversationResponse>>, ConversationHandlers>();
@@ -402,7 +404,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Features.Comments.CommentNoticeSource>();
         services.AddScoped<Nix.Abstractions.Scheduling.ITriggerSource, Nix.Features.Messages.MessageNoticeSource>();
         services.AddScoped<Nix.Features.Messages.MessageHandler>();
-        services.AddScoped<ICommandHandler<Nix.Features.Messages.PostMessage, Item>>(sp => sp.GetRequiredService<Nix.Features.Messages.MessageHandler>());
+        services.AddScoped<ICommandHandler<Nix.Features.Messages.PostMessage, Nix.Features.Messages.PostedMessage>>(sp => sp.GetRequiredService<Nix.Features.Messages.MessageHandler>());
         services.AddScoped<IQueryHandler<Nix.Features.Messages.GetMessageDirectory, Result<Nix.Features.Messages.MessageDirectoryResponse>>>(sp => sp.GetRequiredService<Nix.Features.Messages.MessageHandler>());
         services.AddScoped<ICommandHandler<AddComment, CommentThreadDto>, CommentHandler>();
         services.AddScoped<ICommandHandler<ReplyComment, CommentThreadDto>, CommentHandler>();

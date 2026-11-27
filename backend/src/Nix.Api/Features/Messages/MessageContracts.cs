@@ -19,8 +19,23 @@ public sealed record MessageAddressee(Guid Id, string Name, string Kind);
 /// <summary>Who a message under an item can address: the caller's pets, and the people who can read the item.</summary>
 public sealed record MessageDirectoryResponse(IReadOnlyList<MessageAddressee> Addressees);
 
+/// <summary>
+/// Where one pet's turn for a message stands: <c>pending</c> (waits for its owner), <c>working</c>, <c>answered</c>,
+/// <c>failed</c>, <c>declined</c> or <c>expired</c>. <paramref name="Reason"/> says why a turn failed or was declined.
+/// </summary>
+public sealed record MessagePetState(Guid PetId, string Name, string Status, string? Reason, DateTimeOffset? ExpiresAt);
+
+/// <summary>A posted message, where each pet it addressed stands, and (when it addressed a pet) the poster's monthly pet budget.</summary>
+public sealed record PostedMessage(Item Message, IReadOnlyList<MessagePetState> Pets, Nix.Features.Pets.PetBudgetStatus? Budget);
+
+/// <summary>The pets a message addressed and where each one's turn stands.</summary>
+public sealed record MessagePetStatesResponse(IReadOnlyList<MessagePetState> Pets);
+
 /// <summary>Posts a message under <paramref name="ParentId"/>.</summary>
-public sealed record PostMessage(ItemId ParentId, PostMessageRequest Request) : ICommand<Item>;
+public sealed record PostMessage(ItemId ParentId, PostMessageRequest Request) : ICommand<PostedMessage>;
 
 /// <summary>Lists who a message under <paramref name="ItemId"/> can address.</summary>
 public sealed record GetMessageDirectory(ItemId ItemId, string? Search) : IQuery<Result<MessageDirectoryResponse>>;
+
+/// <summary>The response to posting a message: the message as an item, where each addressed pet's turn stands, and the poster's pet budget when a pet was addressed.</summary>
+internal sealed record PostedMessageResponse(Nix.Features.Items.ItemResponse Message, IReadOnlyList<MessagePetState> Pets, Nix.Features.Pets.PetBudgetStatus? Budget);

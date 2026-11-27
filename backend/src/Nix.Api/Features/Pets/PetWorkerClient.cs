@@ -128,12 +128,12 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
     }
 
     internal Task<Result<PetConnectionResponse>> ExecuteConversationAsync(PetRuntimeRequest request, Guid conversationItemId,
-        IReadOnlyList<Guid> sourceWorkspaceIds, IReadOnlyList<PetMessage>? earlierMessages, CancellationToken cancellationToken) =>
+        IReadOnlyList<Guid> sourceWorkspaceIds, IReadOnlyList<PetMessage>? earlierMessages, CancellationToken cancellationToken, string? usageLabel = null) =>
         ExecuteCoreAsync(request with { ReadOnly = true, WorkspaceAccess = true, RootItemId = null }, 0, cancellationToken,
-            conversationItemId, sourceWorkspaceIds, earlierMessages);
+            conversationItemId, sourceWorkspaceIds, earlierMessages, usageLabel: usageLabel);
 
     private async Task<Result<PetConnectionResponse>> ExecuteCoreAsync(PetRuntimeRequest request, long after, CancellationToken cancellationToken,
-        Guid? conversationItemId = null, IReadOnlyList<Guid>? sourceWorkspaceIds = null, IReadOnlyList<PetMessage>? earlierMessages = null, StreamSlot? slot = null)
+        Guid? conversationItemId = null, IReadOnlyList<Guid>? sourceWorkspaceIds = null, IReadOnlyList<PetMessage>? earlierMessages = null, StreamSlot? slot = null, string? usageLabel = null)
     {
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");
         if (request.Operation is not ("status" or "models" or "read" or "watch" or "watch_stream" or "send" or "interrupt" or "reset" or "tool_claim" or "tool_result" or "tool_approve" or "history" or "read_history" or "delete_history" or "rename" or "resume_history")
@@ -337,7 +337,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         var (provider, apiKey) = resolved.Value;
         // Source is Core's label for this turn, never read from the request body. A new turn is refused once
         // the month's limit is used up; a running turn finishes, so its tool rounds are not checked.
-        var usageSource = request.ConsentMode == "plan" ? PetUsageSources.Plan : PetUsageSources.App;
+        var usageSource = usageLabel is not null && PetUsageSources.IsValid(usageLabel) ? usageLabel : request.ConsentMode == "plan" ? PetUsageSources.Plan : PetUsageSources.App;
         string? budgetLine = null;
         if (request.Operation == "send" && usage is not null)
         {

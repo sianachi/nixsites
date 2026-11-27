@@ -13,4 +13,7 @@ public sealed record MessageRecipient(Guid Id, string Kind, string Name);
 [JsonSerializable(typeof(IReadOnlyList<MessageRecipient>))]
 [JsonSerializable(typeof(PostMessageRequest))]
 [JsonSerializable(typeof(MessageDirectoryResponse))]
+[JsonSerializable(typeof(PostedMessageResponse))]
+[JsonSerializable(typeof(MessagePetStatesResponse))]
+[JsonSerializable(typeof(MessagePetState))]
 internal sealed partial class MessageJson : JsonSerializerContext;

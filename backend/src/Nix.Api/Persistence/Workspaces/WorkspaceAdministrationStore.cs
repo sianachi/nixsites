@@ -30,6 +30,7 @@ public sealed record WorkspaceSnapshot(
     bool AgentsMayApprove,
     bool AgentsMayCreatePublicLinks,
     long StorageUsedBytes,
+    string AgentsAddressPets = "off",
     bool PasswordProtected = false,
     DateTimeOffset? UnlockedUntil = null)
 {
@@ -377,6 +378,7 @@ public sealed partial class WorkspaceAdministrationStore(
         WorkspaceId workspaceId,
         bool? agentsMayApprove,
         bool? agentsMayCreatePublicLinks,
+        string? agentsAddressPets,
         CancellationToken cancellationToken)
     {
         var context = Session;
@@ -388,9 +390,20 @@ public sealed partial class WorkspaceAdministrationStore(
                 Uuid("workspace_id", workspaceId.Value),
                 NixParameter.Boolean("agents_may_approve", agentsMayApprove),
                 NixParameter.Boolean("agents_may_create_public_links", agentsMayCreatePublicLinks),
+                Text("agents_address_pets", agentsAddressPets),
             ],
             cancellationToken).ConfigureAwait(false);
         return result is not null;
+    }
+
+    /// <summary>The workspace's switch for agents addressing pets: <c>off</c>, <c>ask</c> or <c>on</c>. <c>off</c> when the workspace is not visible.</summary>
+    public async ValueTask<string> ReadAgentsAddressPetsAsync(WorkspaceId workspaceId, CancellationToken cancellationToken)
+    {
+        var context = Session;
+        return await _sql.ScalarRefAsync<string>(
+            WorkspaceAdministrationSql.ReadAgentsAddressPets,
+            [Uuid("tenant_id", context.TenantId.Value), Uuid("workspace_id", workspaceId.Value)],
+            cancellationToken).ConfigureAwait(false) ?? "off";
     }
 
     public async ValueTask<bool> RenameAsync(
@@ -1005,7 +1018,7 @@ public sealed partial class WorkspaceAdministrationStore(
             reader.GetBoolean(9), reader.IsDBNull(10) ? null : reader.GetGuid(10),
             reader.GetString(11), reader.IsDBNull(12) ? null : reader.GetFieldValue<DateTimeOffset>(12),
             reader.GetBoolean(13), reader.GetBoolean(14), reader.GetBoolean(15), reader.GetBoolean(16),
-            reader.GetInt64(17));
+            reader.GetInt64(17), reader.GetString(18));
     }
 
     private readonly record struct DailyNoteContextRow(

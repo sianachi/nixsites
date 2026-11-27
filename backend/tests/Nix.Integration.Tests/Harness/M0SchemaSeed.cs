@@ -322,6 +322,9 @@ internal static class M0SchemaSeed
                 VALUES ({Literal(rows.ItemId)}, {Literal(rows.TenantId)}, {Literal(rows.PrincipalId)},
                     {Literal(rows.ItemId)}, 'anthropic', 'claude-haiku-5-5', 'app', 1, 0, 0, 1, 0.01, now(), 1);
 
+                INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status)
+                VALUES ({Literal(rows.TenantId)}, {Literal(rows.ItemId)}, {Literal(rows.ItemId)}, {Literal(rows.PrincipalId)}, 'working');
+
                 INSERT INTO pet_plan_decision_context
                     (id, tenant_id, owner_id, workspace_id, run_id, plan_id, plan_version, review_digest,
                      grantee_credential_id, client_name, approve, secret_hash, expires_at)

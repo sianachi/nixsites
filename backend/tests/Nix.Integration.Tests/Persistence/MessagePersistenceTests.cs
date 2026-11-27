@@ -144,7 +144,7 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         await using (work.ConfigureAwait(false))
         {
             work.Resolve<AccessTokenSessionContext>().SetPetTurn(true, false);
-            var refused = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, Item>(new(ItemId.From(Note), new("hi", [])), Cancellation);
+            var refused = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, PostedMessage>(new(ItemId.From(Note), new("hi", [])), Cancellation);
             Assert.Equal("messages.interactive_only", refused.Error.Code);
         }
 
@@ -153,9 +153,9 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         {
             work.Resolve<AccessTokenSessionContext>().SetTokenCeiling(true, false);
             work.Resolve<CredentialSessionContext>().Set(Token);
-            var posted = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, Item>(new(ItemId.From(Note), new("from an agent", [])), Cancellation);
+            var posted = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, PostedMessage>(new(ItemId.From(Note), new("from an agent", [])), Cancellation);
             Assert.True(posted.IsSuccess);
-            var stored = JsonNode.Parse(JsonNode.Parse(posted.Value.Properties!)![MessageItem.Key]!.GetValue<string>())!;
+            var stored = JsonNode.Parse(JsonNode.Parse(posted.Value.Message.Properties!)![MessageItem.Key]!.GetValue<string>())!;
             Assert.Equal("Claude Desktop", stored["author"]!["via"]!.GetValue<string>());
         }
     }
@@ -234,7 +234,7 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         ]);
         var runner = new MessagePetRunner(units)
         {
-            Converse = (_, request, _, _, _) =>
+            Converse = (_, request, _, _, _, _) =>
             {
                 Assert.Equal(PetId, request.PetId);
                 seen.Add(request.Text ?? "");
@@ -253,6 +253,129 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         Assert.Collection(await RepliesAsync(message.Id.Value),
             first => Assert.Equal(("Pip", "pet", "Do the thing."), first),
             second => Assert.Equal(("Pip", "pet", "I could not answer: The pet is down."), second));
+    }
+
+    [Fact]
+    public async Task A_token_needs_pets_send_and_the_workspace_switch_to_address_a_pet_and_the_wait_is_ask_or_declined()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        var pet = new MessageAddress(PetId, "pet");
+        Assert.Equal("messages.pets_scope_required", (await TokenPostAsync("hi", petSend: false, pet)).Error.Code);
+
+        // Off (the default): the message posts, no turn starts, and the poster can read why.
+        var off = (await TokenPostAsync("hi", petSend: true, pet)).Value;
+        var declined = Assert.Single(off.Pets);
+        Assert.Equal(("declined", PetId), (declined.Status, declined.PetId));
+        Assert.NotNull(off.Budget);
+
+        // Ask: held for the owner, who can dismiss it; an expired one can no longer be approved.
+        await SetPolicyAsync("ask");
+        var held = (await TokenPostAsync("hi", petSend: true, pet)).Value;
+        Assert.Equal("pending", Assert.Single(held.Pets).Status);
+        Assert.NotNull(held.Pets[0].ExpiresAt);
+        Assert.Equal("declined", (await DecideAsync(held.Message.Id.Value, approve: false, interactive: true)).Value.Status);
+        Assert.Equal("messages.no_waiting_turn", (await DecideAsync(held.Message.Id.Value, approve: true, interactive: true)).Error.Code);
+        var late = (await TokenPostAsync("later", petSend: true, pet)).Value;
+        await ExecuteAsync($"UPDATE message_pet_turn SET expires_at = now() - interval '1 minute' WHERE message_id = {RawSql.Literal(late.Message.Id.Value)}");
+        Assert.Equal("messages.no_waiting_turn", (await DecideAsync(late.Message.Id.Value, approve: true, interactive: true)).Error.Code);
+        Assert.Equal("expired", Assert.Single((await StatesAsync(late.Message.Id.Value)).Pets).Status);
+
+        // Only the app decides.
+        var third = (await TokenPostAsync("again", petSend: true, pet)).Value;
+        Assert.Equal("messages.interactive_only", (await DecideAsync(third.Message.Id.Value, approve: true, interactive: false)).Error.Code);
+    }
+
+    [Fact]
+    public async Task A_token_starts_at_most_fifty_pet_turns_a_day_under_on()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        await SetPolicyAsync("on");
+        var seed = (await PostAsync(Editor, Note, "seed")).Value;
+        for (var index = 0; index < 50; index++)
+        {
+            await ExecuteAsync($"""
+                INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, token_id, started_at)
+                VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(seed.Id.Value)}, {RawSql.Literal(Guid.NewGuid())},
+                        {RawSql.Literal(Editor)}, 'answered', {RawSql.Literal(Token)}, now())
+                """);
+        }
+
+        Assert.Equal("messages.pet_turn_limit", (await TokenPostAsync("one more", petSend: true, new MessageAddress(PetId, "pet"))).Error.Code);
+    }
+
+    [Fact]
+    public async Task Hops_count_pet_turns_since_a_person_wrote_from_the_app_and_an_agent_never_resets_them()
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var tree = work.Resolve<IItemTree>();
+            var handler = work.Resolve<MessageHandler>();
+            var person = await handler.Post((await tree.FindAsync(ItemId.From(Note), Cancellation))!, "q", new MessageAuthor(Editor, "person", "Editor", null), [], Cancellation);
+            var first = await handler.Post(person.Value, "a", new MessageAuthor(PetId, "pet", "Pip", null), [], Cancellation);
+            var agent = await handler.Post(first.Value, "b", new MessageAuthor(Editor, "person", "Editor", "Claude"), [], Cancellation);
+            var second = await handler.Post(agent.Value, "c", new MessageAuthor(PetId, "pet", "Pip", null), [], Cancellation);
+            Assert.Equal(0, await MessagePetRunner.Hops(tree, person.Value, Cancellation));
+            Assert.Equal(1, await MessagePetRunner.Hops(tree, first.Value, Cancellation));
+            Assert.Equal(1, await MessagePetRunner.Hops(tree, agent.Value, Cancellation));
+            Assert.Equal(2, await MessagePetRunner.Hops(tree, second.Value, Cancellation));
+            var again = await handler.Post(second.Value, "d", new MessageAuthor(Editor, "person", "Editor", null), [], Cancellation);
+            Assert.Equal(0, await MessagePetRunner.Hops(tree, again.Value, Cancellation));
+        }
+    }
+
+    private async Task<Result<PostedMessage>> TokenPostAsync(string text, bool petSend, params MessageAddress[] to)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            work.Resolve<AccessTokenSessionContext>().SetTokenCeiling(true, false, petSend);
+            work.Resolve<CredentialSessionContext>().Set(Token);
+            var result = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, PostedMessage>(new(ItemId.From(Note), new(text, to)), Cancellation);
+            if (result.IsSuccess)
+            {
+                await work.CommitAsync(Cancellation);
+            }
+
+            return result;
+        }
+    }
+
+    private async Task<Result<MessagePetState>> DecideAsync(Guid message, bool approve, bool interactive)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            if (interactive)
+            {
+                work.Resolve<AccessTokenSessionContext>().SetInteractive();
+            }
+
+            var result = await work.Resolve<MessageHandler>().Decide(ItemId.From(message), PetId, approve, Cancellation);
+            await work.CommitAsync(Cancellation);
+            return result;
+        }
+    }
+
+    private async Task<MessagePetStatesResponse> StatesAsync(Guid message)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            return (await work.Resolve<MessageHandler>().PetStates(ItemId.From(message), Cancellation)).Value;
+        }
+    }
+
+    private async Task SetPolicyAsync(string policy) =>
+        await ExecuteAsync($"UPDATE workspace SET agents_address_pets = '{policy}' WHERE workspace_id = {RawSql.Literal(M0SchemaSeed.Alpha.WorkspaceId)}");
+
+    private async Task ExecuteAsync(string sql)
+    {
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            await RawSql.ExecuteAsync(connection, transaction: null, sql);
+        }
     }
 
     private static JsonNode Stored(Item message) =>
@@ -296,13 +419,13 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
                 work.Resolve<AccessTokenSessionContext>().SetInteractive();
             }
 
-            var result = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, Item>(new(ItemId.From(parent), new(text, to)), Cancellation);
+            var result = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, PostedMessage>(new(ItemId.From(parent), new(text, to)), Cancellation);
             if (result.IsSuccess)
             {
                 await work.CommitAsync(Cancellation);
             }
 
-            return result;
+            return result.IsSuccess ? Result.Success(result.Value.Message) : Result.Failure<Item>(result.Error);
         }
     }
 
@@ -379,7 +502,7 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
             INSERT INTO personal_access_token
                 (token_id, tenant_id, principal_id, name, lookup, secret_hash, scopes, created_at, expires_at, revoked_at, last_used_at)
             VALUES ({{RawSql.Literal(Token)}}, {{tenant}}, {{RawSql.Literal(Editor)}}, 'Claude Desktop', 'mtok00000000',
-                    '\x0304'::bytea, ARRAY['read','write']::text[], now(), now() + interval '30 days', NULL, NULL);
+                    '\x0304'::bytea, ARRAY['read','write','pets:send']::text[], now(), now() + interval '30 days', NULL, NULL);
             """;
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))

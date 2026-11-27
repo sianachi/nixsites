@@ -16,7 +16,7 @@ public static class WorkspaceAdministrationSql
             SELECT w.workspace_id, w.name, w.version_retention_days,
                    w.storage_quota_bytes, w.created_at, w.personal_owner_principal_id,
                    w.lifecycle_state, w.archived_at, w.daily_notes, w.membership_locked, w.collaboration,
-                   w.agents_may_approve, w.agents_may_create_public_links
+                   w.agents_may_approve, w.agents_may_create_public_links, w.agents_address_pets
             FROM workspace w
             CROSS JOIN caller c
             WHERE w.tenant_id = @tenant_id
@@ -89,7 +89,8 @@ public static class WorkspaceAdministrationSql
                CASE WHEN r.role_rank >= 0 THEN
                    (SELECT COALESCE(sum(fv.byte_length), 0)::bigint FROM file_version fv
                     WHERE fv.tenant_id = @tenant_id AND fv.workspace_id = r.workspace_id)
-                   ELSE 0 END AS storage_used_bytes
+                   ELSE 0 END AS storage_used_bytes,
+               r.agents_address_pets
         FROM reachable r CROSS JOIN caller c
         LEFT JOIN LATERAL (
             SELECT invitation.invitation_id
@@ -158,7 +159,8 @@ public static class WorkspaceAdministrationSql
                CASE WHEN c.tenant_admin OR h.role_rank >= 0 THEN
                    (SELECT COALESCE(sum(fv.byte_length), 0)::bigint FROM file_version fv
                     WHERE fv.tenant_id = @tenant_id AND fv.workspace_id = w.workspace_id)
-                   ELSE 0 END
+                   ELSE 0 END,
+               w.agents_address_pets
         FROM workspace w CROSS JOIN caller c CROSS JOIN held h
         LEFT JOIN LATERAL (
             SELECT invitation.invitation_id
@@ -233,7 +235,8 @@ public static class WorkspaceAdministrationSql
         WITH updated AS (
             UPDATE workspace w
             SET agents_may_approve = COALESCE(@agents_may_approve, w.agents_may_approve),
-                agents_may_create_public_links = COALESCE(@agents_may_create_public_links, w.agents_may_create_public_links)
+                agents_may_create_public_links = COALESCE(@agents_may_create_public_links, w.agents_may_create_public_links),
+                agents_address_pets = COALESCE(@agents_address_pets, w.agents_address_pets)
             WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
               AND (EXISTS (SELECT 1 FROM workspace_member wm
                            WHERE wm.tenant_id = w.tenant_id AND wm.workspace_id = w.workspace_id
@@ -243,18 +246,24 @@ public static class WorkspaceAdministrationSql
                                    SELECT 1 FROM group_membership gm
                                    WHERE gm.tenant_id = wm.tenant_id AND gm.group_id = wm.subject_id
                                      AND gm.principal_id = @principal_id)))))
-            RETURNING w.workspace_id, w.agents_may_approve, w.agents_may_create_public_links
+            RETURNING w.workspace_id, w.agents_may_approve, w.agents_may_create_public_links, w.agents_address_pets
         ), audited AS (
             INSERT INTO audit_event
                 (event_id, tenant_id, workspace_id, actor_id, action, subject_id, subject_type, after, occurred_at)
             SELECT gen_random_uuid(), @tenant_id, workspace_id, @principal_id, 'workspace.agent_policy_changed',
                    workspace_id, 'workspace',
                    jsonb_build_object('agentsMayApprove', agents_may_approve,
-                                      'agentsMayCreatePublicLinks', agents_may_create_public_links),
+                                      'agentsMayCreatePublicLinks', agents_may_create_public_links,
+                                      'agentsAddressPets', agents_address_pets),
                    now()
             FROM updated
         )
         SELECT workspace_id FROM updated
+        """;
+
+    /// <summary>The workspace's switch for agents addressing pets (<c>off</c>, <c>ask</c> or <c>on</c>); null when the workspace is not visible.</summary>
+    public const string ReadAgentsAddressPets = """
+        SELECT w.agents_address_pets FROM workspace w WHERE w.tenant_id = @tenant_id AND w.workspace_id = @workspace_id
         """;
 
     /// <summary>A workspace's item defaults for any member. Null when the workspace is not visible; <c>{}</c> when none were set.</summary>

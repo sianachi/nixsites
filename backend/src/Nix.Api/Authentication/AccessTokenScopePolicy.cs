@@ -100,6 +100,13 @@ public static class AccessTokenScopePolicy
             return Requirement.InteractiveOnly;
         }
 
+        // Approving or dismissing a pet's waiting turn is the owner's decision, in the app.
+        if (value.StartsWith("/api/v1/items/", StringComparison.OrdinalIgnoreCase)
+            && value.Contains("/pet-turns/", StringComparison.OrdinalIgnoreCase))
+        {
+            return Requirement.InteractiveOnly;
+        }
+
         // Peer registrations hold their own credential boundary.
         if (value.StartsWith("/api/v1/items/", StringComparison.OrdinalIgnoreCase)
             && (value.EndsWith("/pet-peers", StringComparison.OrdinalIgnoreCase)

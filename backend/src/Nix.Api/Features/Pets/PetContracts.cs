@@ -37,8 +37,11 @@ public static class PetMemoryModes
     public const string Always = "always";
 }
 
-/// <summary>One fact the pet saved, or the owner wrote, about the owner.</summary>
-public sealed record PetMemory(Guid Id, string Text, DateTimeOffset CreatedAt);
+/// <summary>Where a pet learned a fact: a <c>conversation</c> or <c>message</c> item, its title and who said it, as they were then.</summary>
+public sealed record PetMemorySource(string Kind, Guid Id, string Title, string Author);
+
+/// <summary>One fact the pet saved, or the owner wrote, about the owner; <c>Source</c> says where a pet learned it.</summary>
+public sealed record PetMemory(Guid Id, string Text, DateTimeOffset CreatedAt, PetMemorySource? Source = null);
 
 /// <summary>The saved document and its concurrency version.</summary>
 public sealed record PetSettingsResponse(long Revision, PetSettings Settings);

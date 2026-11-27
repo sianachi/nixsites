@@ -57,6 +57,11 @@
     "method": "POST",
     "path": "/api/v1/items/{itemId}/view-setups"
   },
+  "ApproveMessagePetTurn": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-turns/{petId}/approve"
+  },
   "ApproveSitePublish": {
     "mode": "human",
     "method": "POST",
@@ -444,6 +449,11 @@
     "method": "DELETE",
     "path": "/api/v1/workspaces/{workspaceId}/pet-connections/{connectionId}"
   },
+  "DismissMessagePetTurn": {
+    "mode": "human",
+    "method": "POST",
+    "path": "/api/v1/items/{itemId}/pet-turns/{petId}/dismiss"
+  },
   "EditComment": {
     "mode": "review",
     "method": "PATCH",
@@ -578,6 +588,11 @@
     "mode": "read",
     "method": "GET",
     "path": "/api/v1/items/{itemId}/message-directory"
+  },
+  "GetMessagePetTurns": {
+    "mode": "read",
+    "method": "GET",
+    "path": "/api/v1/items/{itemId}/pet-turns"
   },
   "GetOperation": {
     "mode": "read",

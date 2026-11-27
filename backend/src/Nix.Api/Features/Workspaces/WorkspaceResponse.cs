@@ -38,6 +38,7 @@ internal sealed record WorkspaceResponse(
     bool Collaboration,
     bool? AgentsMayApprove = null,
     bool? AgentsMayCreatePublicLinks = null,
+    string? AgentsAddressPets = null,
     bool? PasswordProtected = null,
     DateTimeOffset? UnlockedUntil = null,
     long StorageUsedBytes = 0);
