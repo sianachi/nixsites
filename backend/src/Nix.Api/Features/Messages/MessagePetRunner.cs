@@ -22,16 +22,30 @@ public sealed record MessageTurnOrigin(string Source, Guid? TokenId);
 /// </summary>
 /// <remarks>
 /// A reply may address the owner's other pets and people (a last line <c>To: Name, Name</c>); the pets it
-/// names answer in turn only while the thread's hop count is below <see cref="HopLimit"/>.
+/// names answer in turn only while the thread has started fewer than <see cref="HopLimit"/> pet turns since a
+/// person last wrote from the app, and the launch has <see cref="LaunchBudget"/> turns left, however the pets
+/// address each other. Chained turns of a token's message count against that token's daily cap.
 /// </remarks>
 public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplicationLifetime? lifetime = null)
 {
-    /// <summary>Pet turns in a thread since a person last wrote from the app; a reply that reaches it addresses no pets.</summary>
+    /// <summary>Pet turns started in a thread since a person last wrote from the app; once reached, no chained turn starts.</summary>
     public const int HopLimit = 4;
+
+    /// <summary>The most pet turns one post (or approval) may cause in total, direct and chained.</summary>
+    public const int LaunchBudget = 8;
+
+    /// <summary>The turns a launch may still start; shared by every turn it chains.</summary>
+    internal sealed class Budget(int remaining)
+    {
+        public int Remaining { get; set; } = remaining;
+    }
 
     private const int ThreadBudget = 3500;
     private const int PerMessage = 1500;
     private const int ParentBudget = 2000;
+
+    /// <summary>The turns one launch may cause; tests lower it.</summary>
+    public int TurnBudget { get; init; } = LaunchBudget;
 
     /// <summary>The companion call; tests replace it.</summary>
     public Func<IServiceProvider, PetRuntimeRequest, Guid, IReadOnlyList<Guid>, string, CancellationToken, Task<Result<PetConnectionResponse>>> Converse { get; init; } =
@@ -43,10 +57,14 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         _ = Run(context, messageId, petIds, origin);
 
     /// <summary>Runs one turn per pet, in order. <paramref name="origin"/> labels the usage and counts it against a token; the app by default.</summary>
-    public async Task Run(NixSessionContext context, Guid messageId, IReadOnlyList<Guid> petIds, MessageTurnOrigin? origin = null)
+    public Task Run(NixSessionContext context, Guid messageId, IReadOnlyList<Guid> petIds, MessageTurnOrigin? origin = null) =>
+        Run(context, messageId, petIds, origin, new Budget(TurnBudget));
+
+    private async Task Run(NixSessionContext context, Guid messageId, IReadOnlyList<Guid> petIds, MessageTurnOrigin? origin, Budget budget)
     {
         ArgumentNullException.ThrowIfNull(petIds);
         origin ??= new(PetUsageSources.App, null);
+        budget.Remaining = Math.Max(0, budget.Remaining - petIds.Count);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(lifetime?.ApplicationStopping ?? CancellationToken.None);
         deadline.CancelAfter(TimeSpan.FromMinutes(3 * petIds.Count));
         foreach (var petId in petIds)
@@ -54,7 +72,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
             try
             {
                 deadline.Token.ThrowIfCancellationRequested();
-                await Turn(context, messageId, petId, origin, deadline.Token).ConfigureAwait(false);
+                await Turn(context, messageId, petId, origin, budget, deadline.Token).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
@@ -81,7 +99,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         }
     }
 
-    private async Task Turn(NixSessionContext context, Guid messageId, Guid petId, MessageTurnOrigin origin, CancellationToken cancellationToken)
+    private async Task Turn(NixSessionContext context, Guid messageId, Guid petId, MessageTurnOrigin origin, Budget budget, CancellationToken cancellationToken)
     {
         var requestId = Guid.NewGuid();
         string? prompt = null;
@@ -136,7 +154,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                         return new IsolatedOutcome<bool>(false, false);
                     }
 
-                    atLimit = await Hops(tree, message, token).ConfigureAwait(false) + 1 >= HopLimit;
+                    atLimit = budget.Remaining <= 0 || await ThreadStarted(tree, services.GetRequiredService<MessagePetTurnStore>(), message, token).ConfigureAwait(false) >= HopLimit;
                     addressable = await Addressable(services, message.WorkspaceId, petId, atLimit, token).ConfigureAwait(false);
                     prompt = addressable.Count == 0 ? built
                         : built + "\nIf someone else should see your reply, end it with one last line \"To: Name, Name\" using only these names, and nothing else on that line: "
@@ -210,15 +228,26 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
             }
 
             var turns = services.GetRequiredService<MessagePetTurnStore>();
-            // Pets are addressed only below the limit; people always are.
-            var addressed = recipients.Where(recipient => recipient.Kind == "person" || !atLimit).ToArray();
+            // The thread's lock is held to the end of this unit, so another chain in it counts after this one has added its turns.
+            await turns.LockThreadAsync((await ThreadRootAsync(tree, message, token).ConfigureAwait(false)).Value, token).ConfigureAwait(false);
+            var room = Math.Min(budget.Remaining, HopLimit - await ThreadStarted(tree, turns, message, token).ConfigureAwait(false));
+            if (origin.TokenId is { } tokenId)
+            {
+                room = Math.Min(room, MessageHandler.TokenTurnsPerDay - await turns.StartedByTokenAsync(tokenId, token).ConfigureAwait(false));
+            }
+
+            // People are always addressed; pets only while the thread, the launch and the token have room, in the order named.
+            var petsLeft = Math.Max(0, room);
+            var addressed = recipients.Where(recipient => recipient.Kind == "person" || petsLeft-- > 0).ToArray();
             var posted = await services.GetRequiredService<MessageHandler>().Post(
                 message, text.Length > MessageItem.MaxTextLength ? text[..MessageItem.MaxTextLength] : text,
                 new MessageAuthor(petId, "pet", pet.Name, null), addressed, token).ConfigureAwait(false);
             var answered = posted.IsSuccess && failure is null;
             // The owner's memory mode decides: off keeps nothing, always saves at once, ask holds the fact on the turn for approval.
-            var held = answered && fact.Length > 0 && settings.Settings.MemoryMode == PetMemoryModes.Ask ? fact : null;
-            if (answered && fact.Length > 0 && settings.Settings.MemoryMode == PetMemoryModes.Always)
+            // A turn an agent's token started (or chained from) always waits: the owner did not write that message.
+            var mode = settings.Settings.MemoryMode;
+            var held = answered && fact.Length > 0 && (mode == PetMemoryModes.Ask || mode == PetMemoryModes.Always && origin.TokenId is not null) ? fact : null;
+            if (answered && fact.Length > 0 && mode == PetMemoryModes.Always && origin.TokenId is null)
             {
                 _ = await services.GetRequiredService<MessageHandler>().Remember(message, fact, token).ConfigureAwait(false);
             }
@@ -234,33 +263,43 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         }, CancellationToken.None).ConfigureAwait(false);
         if (next.Pets.Length > 0)
         {
-            await Run(context, next.Reply, next.Pets, origin).ConfigureAwait(false);
+            await Run(context, next.Reply, next.Pets, origin, budget).ConfigureAwait(false);
         }
     }
 
-    /// <summary>
-    /// Pet turns in the thread since a person last wrote from the app, counting <paramref name="message"/> and what it
-    /// replies to: a pet's message is one, a person's message through a token is skipped (an agent never resets the
-    /// count), and a person's message from the app ends it.
-    /// </summary>
-    public static async Task<int> Hops(IItemTree tree, Item message, CancellationToken cancellationToken)
+    /// <summary>The first message of the thread <paramref name="message"/> belongs to.</summary>
+    public static async Task<ItemId> ThreadRootAsync(IItemTree tree, Item message, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(tree);
         ArgumentNullException.ThrowIfNull(message);
-        var count = 0;
+        var root = message;
+        for (var step = 0; step < 100 && root.ParentId is { } parentId
+            && await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false) is { Type: MessageItem.Type } up; step++)
+        {
+            root = up;
+        }
+
+        return root.Id;
+    }
+
+    /// <summary>
+    /// Pet turns started anywhere in the thread since a person last wrote from the app: those on the nearest message above
+    /// <paramref name="message"/> (or itself) that a person wrote from the app, or on the whole thread when none, and on
+    /// every reply under it, siblings and fan-out included. A person's message through a token never resets the count.
+    /// </summary>
+    public static async Task<int> ThreadStarted(IItemTree tree, MessagePetTurnStore turns, Item message, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(tree);
+        ArgumentNullException.ThrowIfNull(turns);
+        ArgumentNullException.ThrowIfNull(message);
+        var start = message;
         var item = message;
         for (var step = 0; step < 100 && item.Type == MessageItem.Type; step++)
         {
-            if (Parse(item) is { } parsed)
+            start = item;
+            if (Parse(item) is { Author: { Kind: "person", Via: null } })
             {
-                if (parsed.Author.Kind == "pet")
-                {
-                    count++;
-                }
-                else if (parsed.Author.Via is null)
-                {
-                    break;
-                }
+                break;
             }
 
             if (item.ParentId is not { } parentId || await tree.FindAsync(parentId, cancellationToken).ConfigureAwait(false) is not { } parent)
@@ -271,7 +310,23 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
             item = parent;
         }
 
-        return count;
+        // shortcut: the walk keeps 500 messages, so a thread larger than that undercounts; upgrade to a recursive query if threads grow.
+        var ids = new List<Guid>();
+        var pending = new Stack<Item>([start]);
+        while (pending.Count > 0 && ids.Count < 500)
+        {
+            var current = pending.Pop();
+            ids.Add(current.Id.Value);
+            foreach (var child in await tree.ListChildrenAsync(current.WorkspaceId, current.Id, false, null, 100, cancellationToken).ConfigureAwait(false))
+            {
+                if (child.Type == MessageItem.Type)
+                {
+                    pending.Push(child);
+                }
+            }
+        }
+
+        return await turns.StartedOnAsync([.. ids], cancellationToken).ConfigureAwait(false);
     }
 
     // The owner's other pets (below the hop limit) and the people who can read the item, by name; a name two share is left out.

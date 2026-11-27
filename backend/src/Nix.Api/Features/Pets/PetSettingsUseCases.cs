@@ -48,47 +48,45 @@ public static class PetSettingsValidation
     /// <summary>Gets the initial disabled configuration.</summary>
     public static PetSettings Empty => new(false, null, []);
 
-    /// <summary>Stored settings as every reader sees them: a legacy row cut to one companion, a retired appearance replaced.</summary>
+    /// <summary>The most companions one person may keep.</summary>
+    public const int MaxPets = 5;
+
+    /// <summary>Stored settings as every reader sees them: a retired appearance replaced.</summary>
     public static PetSettings ForRead(PetSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        if (settings.Profiles.Count > 1)
-        {
-            // Keep the active ID so the existing conversation still opens after upgrading.
-            var pet = settings.Profiles.FirstOrDefault(profile => profile.Id == settings.ActivePetId) ?? settings.Profiles[0];
-            settings = settings with { ActivePetId = pet.Id, Profiles = [pet] };
-        }
-
         return NormalizeRetiredAppearance(settings)!;
     }
 
-    /// <summary>Replaces a retired appearance while keeping the companion's identity and preferences.</summary>
+    /// <summary>Replaces a retired appearance while keeping each companion's identity and preferences.</summary>
     public static PetSettings? NormalizeRetiredAppearance(PetSettings? settings)
     {
-        if (settings?.Profiles is not { Count: 1 } profiles || profiles[0] is not { Appearance: "eye-of-ra" or "demiurge" } profile)
+        if (settings?.Profiles is not { } profiles || !profiles.Any(profile => profile is { Appearance: "eye-of-ra" or "demiurge" }))
         {
             return settings;
         }
 
         // A companion still carrying the retired design's own name takes Owl's.
-        var retiredName = profile.Appearance == "eye-of-ra" ? "Eye of Ra" : "Demiurge";
         return settings with
         {
-            Profiles = [profile with { Appearance = "owl", Name = profile.Name == retiredName ? "Owl" : profile.Name }],
+            Profiles = [.. profiles.Select(profile => profile is { Appearance: "eye-of-ra" or "demiurge" }
+                ? profile with { Appearance = "owl", Name = profile.Name == (profile.Appearance == "eye-of-ra" ? "Eye of Ra" : "Demiurge") ? "Owl" : profile.Name }
+                : profile)],
         };
     }
 
     /// <summary>Refuses unknown presets, invalid active references, duplicate identities, and unbounded text.</summary>
     public static bool IsValid(PetSettings? settings)
     {
-        if (settings is null || settings.Profiles is null || settings.Profiles.Count > 1)
+        if (settings is null || settings.Profiles is null || settings.Profiles.Count > MaxPets)
         {
             return false;
         }
 
+        var ids = new HashSet<Guid>();
         foreach (var profile in settings.Profiles)
         {
-            if (profile is null || profile.Id == Guid.Empty
+            if (profile is null || profile.Id == Guid.Empty || !ids.Add(profile.Id)
                 || string.IsNullOrWhiteSpace(profile.Name) || profile.Name.Length > 80
                 || profile.Appearance is not ("owl" or "cat" or "fox"
                     or "octopus" or "axolotl" or "moth" or "pangolin" or "phoenix-chick" or "mushroom-sprite"
@@ -124,7 +122,7 @@ public static class PetSettingsValidation
         return memoryIds.Count <= MaxMemories
             && settings.MemoryMode is PetMemoryModes.Off or PetMemoryModes.Ask or PetMemoryModes.Always
             && (!settings.Enabled || settings.ActivePetId is not null)
-            && (settings.ActivePetId is null || settings.Profiles.Count == 1 && settings.ActivePetId == settings.Profiles[0].Id)
+            && (settings.ActivePetId is null || ids.Contains(settings.ActivePetId.Value))
             && Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(settings, PetJsonContext.Default.PetSettings)) <= 60000;
     }
 }
@@ -158,9 +156,7 @@ public sealed class SavePetSettingsHandler(IPetPreferencesStore store, INixSessi
         var settings = PetSettingsValidation.NormalizeRetiredAppearance(command.Settings);
         if (settings is null || command.ExpectedRevision < 0 || command.ExpectedRevision >= 9007199254740991 || !PetSettingsValidation.IsValid(settings))
         {
-            var detail = settings?.Profiles is { Count: > 1 } ? "An account can only have one companion."
-                : "Check the companion's name and settings, then save again.";
-            return Result.Failure<PetSettingsResponse>(new NixError("pets.invalid_settings", detail));
+            return Result.Failure<PetSettingsResponse>(new NixError("pets.invalid_settings", "Check the companions' names and settings (at most 5), then save again."));
         }
 
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");

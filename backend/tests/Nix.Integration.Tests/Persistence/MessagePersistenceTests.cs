@@ -596,23 +596,173 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Hops_count_pet_turns_since_a_person_wrote_from_the_app_and_an_agent_never_resets_them()
+    public async Task The_thread_count_covers_every_branch_since_the_app_last_wrote_and_an_agent_never_resets_it()
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
         await using (work.ConfigureAwait(false))
         {
             var tree = work.Resolve<IItemTree>();
+            var turns = work.Resolve<MessagePetTurnStore>();
             var handler = work.Resolve<MessageHandler>();
             var person = await handler.Post((await tree.FindAsync(ItemId.From(Note), Cancellation))!, "q", new MessageAuthor(Editor, "person", "Editor", null), [], Cancellation);
             var first = await handler.Post(person.Value, "a", new MessageAuthor(PetId, "pet", "Pip", null), [], Cancellation);
             var agent = await handler.Post(first.Value, "b", new MessageAuthor(Editor, "person", "Editor", "Claude"), [], Cancellation);
-            var second = await handler.Post(agent.Value, "c", new MessageAuthor(PetId, "pet", "Pip", null), [], Cancellation);
-            Assert.Equal(0, await MessagePetRunner.Hops(tree, person.Value, Cancellation));
-            Assert.Equal(1, await MessagePetRunner.Hops(tree, first.Value, Cancellation));
-            Assert.Equal(1, await MessagePetRunner.Hops(tree, agent.Value, Cancellation));
-            Assert.Equal(2, await MessagePetRunner.Hops(tree, second.Value, Cancellation));
-            var again = await handler.Post(second.Value, "d", new MessageAuthor(Editor, "person", "Editor", null), [], Cancellation);
-            Assert.Equal(0, await MessagePetRunner.Hops(tree, again.Value, Cancellation));
+            var sibling = await handler.Post(person.Value, "c", new MessageAuthor(PetId, "pet", "Pip", null), [], Cancellation);
+            foreach (var message in new[] { person.Value, first.Value, agent.Value, sibling.Value })
+            {
+                await turns.AddAsync(message.Id.Value, PetId, "working", null, null, null, Cancellation);
+            }
+
+            // Fan-out counts: a sibling branch and an agent's message in between are all one thread.
+            Assert.Equal(4, await MessagePetRunner.ThreadStarted(tree, turns, agent.Value, Cancellation));
+            Assert.Equal(4, await MessagePetRunner.ThreadStarted(tree, turns, sibling.Value, Cancellation));
+            Assert.Equal(person.Value.Id, await MessagePetRunner.ThreadRootAsync(tree, agent.Value, Cancellation));
+            // A person's message from the app starts the count again.
+            var again = await handler.Post(agent.Value, "d", new MessageAuthor(Editor, "person", "Editor", null), [], Cancellation);
+            Assert.Equal(0, await MessagePetRunner.ThreadStarted(tree, turns, again.Value, Cancellation));
+        }
+    }
+
+    [Fact]
+    public async Task A_fan_out_chain_stops_at_four_turns_in_the_thread()
+    {
+        var (a, b, c) = (PetId, Guid.NewGuid(), Guid.NewGuid());
+        await SavePetsAsync(("Ann", a), ("Bob", b), ("Cy", c));
+        var message = (await PostAsync(Editor, Note, "go")).Value;
+        await InsertTurnAsync(message.Id.Value, "working", "now()");
+        var calls = new List<Guid>();
+        // Every pet answers by addressing the other two, so an unbounded chain would never end.
+        var runner = Chatty(calls, id => id == a ? "Ann says hi\nTo: Bob, Cy" : id == b ? "Bob says hi\nTo: Ann, Cy" : "Cy says hi\nTo: Ann, Bob");
+        await runner.Run(As(Editor), message.Id.Value, [a]);
+        Assert.Equal(4, calls.Count);
+        Assert.Equal(4, await StartedOnThreadAsync());
+    }
+
+    [Fact]
+    public async Task One_launch_causes_at_most_its_budget_of_turns_however_the_pets_address_each_other()
+    {
+        var (a, b, c) = (PetId, Guid.NewGuid(), Guid.NewGuid());
+        await SavePetsAsync(("Ann", a), ("Bob", b), ("Cy", c));
+        var message = (await PostAsync(Editor, Note, "go")).Value;
+        await InsertTurnAsync(message.Id.Value, "working", "now()");
+        var calls = new List<Guid>();
+        var runner = Chatty(calls, _ => "hi\nTo: Ann, Bob, Cy", budget: 2);
+        await runner.Run(As(Editor), message.Id.Value, [a]);
+        Assert.Equal(2, calls.Count);
+    }
+
+    [Fact]
+    public async Task Two_chains_in_one_thread_cannot_both_slip_under_the_limit()
+    {
+        var (a, b, c, d) = (PetId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        await SavePetsAsync(("Ann", a), ("Bob", b), ("Cy", c), ("Di", d));
+        var message = (await PostAsync(Editor, Note, "go")).Value;
+        await InsertTurnAsync(message.Id.Value, "working", "now()");
+        await ExecuteAsync($"""
+            INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, started_at)
+            VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(message.Id.Value)}, {RawSql.Literal(b)}, {RawSql.Literal(Editor)}, 'working', now())
+            """);
+        var calls = new List<Guid>();
+        using var both = new CountdownEvent(2);
+        // Ann and Bob answer together, each naming Cy and Di: the thread has room for two more turns, not four.
+        var runner = Chatty(calls, id => id is var x && (x == a || x == b) ? "hi\nTo: Cy, Di" : "ok", hold: both);
+        await Task.WhenAll(runner.Run(As(Editor), message.Id.Value, [a]), runner.Run(As(Editor), message.Id.Value, [b]));
+        Assert.Equal(4, calls.Count);
+        Assert.Equal(4, await StartedOnThreadAsync());
+    }
+
+    [Fact]
+    public async Task Chained_turns_of_a_tokens_message_count_against_its_daily_cap()
+    {
+        var (a, b, c, d) = (PetId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        await SavePetsAsync(("Ann", a), ("Bob", b), ("Cy", c), ("Di", d));
+        var seed = (await PostAsync(Editor, Note, "seed")).Value;
+        for (var index = 0; index < 47; index++)
+        {
+            await ExecuteAsync($"""
+                INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, token_id, started_at)
+                VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(seed.Id.Value)}, {RawSql.Literal(Guid.NewGuid())},
+                        {RawSql.Literal(Editor)}, 'answered', {RawSql.Literal(Token)}, now())
+                """);
+        }
+
+        var message = (await PostAsync(Editor, Note, "go")).Value;
+        await ExecuteAsync($"""
+            INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, token_id, started_at)
+            VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(message.Id.Value)}, {RawSql.Literal(a)}, {RawSql.Literal(Editor)}, 'working', {RawSql.Literal(Token)}, now())
+            """);
+        var calls = new List<Guid>();
+        var runner = Chatty(calls, id => id == a ? "hi\nTo: Bob, Cy, Di" : "ok");
+        await runner.Run(As(Editor), message.Id.Value, [a], new("token:Claude", Token));
+        // 48 used, so two more fit under 50; the third pet is dropped though the thread had room.
+        Assert.Equal(3, calls.Count);
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            Assert.Equal(50, await RawSql.CountAsync(connection, null, $"SELECT count(*) FROM message_pet_turn WHERE token_id = {RawSql.Literal(Token)}"));
+        }
+    }
+
+    [Fact]
+    public async Task A_fact_from_a_turn_a_token_started_always_waits_for_approval_even_in_always_mode_and_off_still_saves_nothing()
+    {
+        await SavePetsAsync("always", ("Pip", PetId));
+        var fromToken = (await PostAsync(Editor, Note, "I use metric units")).Value;
+        await ExecuteAsync($"""
+            INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, token_id, token_name, started_at)
+            VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(fromToken.Id.Value)}, {RawSql.Literal(PetId)}, {RawSql.Literal(Editor)}, 'working', {RawSql.Literal(Token)}, 'Claude', now())
+            """);
+        await RunWithFactAsync(fromToken.Id.Value, [], new("token:Claude", Token));
+        Assert.Empty(await MemoriesAsync());
+        var state = Assert.Single((await StatesAsync(fromToken.Id.Value)).Pets);
+        Assert.Equal(("answered", "Prefers metric units"), (state.Status, state.Memory));
+        Assert.True((await DecideAsync(fromToken.Id.Value, approve: true, interactive: true)).IsSuccess);
+        Assert.Equal("Prefers metric units", Assert.Single(await MemoriesAsync()).Text);
+
+        // The person's own turn keeps the mode (saved at once, as before); off offers and saves nothing.
+        await SetMemoryModeAsync(PetMemoryModes.Off);
+        var off = (await PostAsync(Editor, Note, "again")).Value;
+        await ExecuteAsync($"""
+            INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, token_id, started_at)
+            VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(off.Id.Value)}, {RawSql.Literal(PetId)}, {RawSql.Literal(Editor)}, 'working', {RawSql.Literal(Token)}, now())
+            """);
+        await RunWithFactAsync(off.Id.Value, [], new("token:Claude", Token));
+        Assert.Null(Assert.Single((await StatesAsync(off.Id.Value)).Pets).Memory);
+        Assert.Single(await MemoriesAsync());
+    }
+
+    // Each pet's reply is chosen by its id; a pet turn answers in plain text. hold makes two turns reach their reply together.
+    private MessagePetRunner Chatty(List<Guid> calls, Func<Guid, string> answer, int budget = MessagePetRunner.LaunchBudget, CountdownEvent? hold = null)
+    {
+        var scope = _fixture.Application.CreateUnscopedScope();
+        return new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
+        {
+            TurnBudget = budget,
+            Converse = (_, request, _, _, _, token) =>
+            {
+                lock (calls)
+                {
+                    calls.Add(request.PetId ?? Guid.Empty);
+                }
+
+                var reply = answer(request.PetId ?? Guid.Empty).Replace("\\n", "\n", StringComparison.Ordinal);
+                if (reply.Contains("To:", StringComparison.Ordinal) && hold is not null)
+                {
+                    hold.Signal();
+                    hold.Wait(TimeSpan.FromSeconds(10), token);
+                }
+
+                return Task.FromResult(Result.Success(new PetConnectionResponse("anthropic", "ready", "", true, "success", [new("a", "assistant", reply)])));
+            },
+        };
+    }
+
+    private async Task<int> StartedOnThreadAsync()
+    {
+        var connection = await _fixture.OpenMigratorConnectionAsync();
+        await using (connection.ConfigureAwait(false))
+        {
+            return (int)await RawSql.CountAsync(connection, null, "SELECT count(*) FROM message_pet_turn WHERE started_at IS NOT NULL");
         }
     }
 
@@ -685,7 +835,7 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
             """);
 
     // One turn whose reply carries a fact on a Remember line.
-    private async Task RunWithFactAsync(Guid message, List<string> prompts)
+    private async Task RunWithFactAsync(Guid message, List<string> prompts, MessageTurnOrigin? origin = null)
     {
         await using var scope = _fixture.Application.CreateUnscopedScope();
         var runner = new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
@@ -696,7 +846,7 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
                 return Task.FromResult(Result.Success(new PetConnectionResponse("anthropic", "ready", "", true, "success", [new("a", "assistant", "Noted.\nRemember: Prefers metric units")])));
             },
         };
-        await runner.Run(As(Editor), message, [PetId]);
+        await runner.Run(As(Editor), message, [PetId], origin);
     }
 
     private async Task SetMemoryModeAsync(string mode)

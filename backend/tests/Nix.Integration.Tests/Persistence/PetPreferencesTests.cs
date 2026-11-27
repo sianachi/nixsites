@@ -53,8 +53,8 @@ public sealed class PetPreferencesTests(NixPostgresFixture fixture) : IAsyncLife
             Assert.Equal(1, saved.Revision);
             var pet = Assert.Single(saved.Settings.Profiles);
             Assert.Equal("Owl", pet.Name);
-            var twoPets = saved.Settings with { Profiles = [pet, pet with { Id = Guid.NewGuid() }] };
-            var refused = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(1, twoPets), Cancellation);
+            var sameId = saved.Settings with { Profiles = [pet, pet with { Name = "Twin" }] };
+            var refused = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(1, sameId), Cancellation);
             Assert.True(refused.IsFailure);
             Assert.Equal("pets.invalid_settings", refused.Error.Code);
             var conflict = await dispatcher.SendAsync<SavePetSettings, PetSettingsResponse>(new(0, saved.Settings), Cancellation);

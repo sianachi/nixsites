@@ -113,6 +113,18 @@ public sealed class MessagePetTurnStore(NixSqlExecutor sql, INixSessionContextAc
             """, [Uuid("tenant", Caller.TenantId.Value), Uuid("token", tokenId)], cancellationToken).ConfigureAwait(false) ?? 0;
     }
 
+    /// <summary>Takes a lock for one thread until the transaction ends, so two chains in it count and add their turns one after the other.</summary>
+    public async Task LockThreadAsync(Guid threadRootId, CancellationToken cancellationToken) =>
+        _ = await sql.ExecuteAsync("SELECT pg_advisory_xact_lock(hashtextextended('message-pet-thread:' || @thread::text, 0))",
+            [Uuid("thread", threadRootId)], cancellationToken).ConfigureAwait(false);
+
+    /// <summary>How many turns have started (running or finished) on these messages.</summary>
+    public async Task<int> StartedOnAsync(Guid[] messageIds, CancellationToken cancellationToken) =>
+        await sql.ScalarAsync<int>("""
+            SELECT count(*)::int FROM message_pet_turn
+             WHERE tenant_id = @tenant AND message_id = ANY(@messages) AND started_at IS NOT NULL
+            """, [Uuid("tenant", Caller.TenantId.Value), UuidArray("messages", messageIds)], cancellationToken).ConfigureAwait(false) ?? 0;
+
     private async Task<MessagePetTurnRow?> OneAsync(string statement, Guid messageId, Guid petId, CancellationToken cancellationToken)
     {
         await foreach (var row in sql.QueryAsync<MessagePetTurnRow, Mapper>(statement, default(Mapper),
