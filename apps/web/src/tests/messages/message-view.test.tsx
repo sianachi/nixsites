@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MessageView } from '../../messages/message-view';
@@ -9,6 +10,10 @@ const ITEM = '11111111-1111-4111-8111-111111111111';
 const execute = vi.fn();
 const query = vi.fn();
 const paginate = vi.fn();
+
+vi.mock('@nix/web-pets/pets/pet-avatar', () => ({
+  PetAvatar: ({ label }: { label: string }) => <span data-testid="pet-avatar">{label}</span>,
+}));
 
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => ({ execute, query, paginate }),
@@ -31,6 +36,7 @@ const message = {
 describe('a message that addressed a pet', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Element.prototype.scrollIntoView = vi.fn();
     paginate.mockImplementation(() => ({
       // eslint-disable-next-line @typescript-eslint/require-await
       async *[Symbol.asyncIterator]() {
@@ -103,5 +109,123 @@ describe('a message that addressed a pet', () => {
     expect(execute.mock.calls[0]?.[0]).toMatchObject({
       path: `/api/v1/items/${ITEM}/pet-turns/${PET}/approve`,
     });
+  });
+});
+
+const ME = '44444444-4444-4444-8444-444444444444';
+
+function reply(id: string, author: object, text: string, at: string) {
+  return {
+    id,
+    workspaceId: message.workspaceId,
+    type: 'message',
+    createdAt: at,
+    properties: { $message: JSON.stringify({ text, author, to: [] }) },
+  };
+}
+
+describe('the chat', () => {
+  function open(turns: object[], thread: object[], onQuery?: (path: string) => unknown) {
+    paginate.mockImplementation(() => ({
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async *[Symbol.asyncIterator]() {
+        yield* thread;
+      },
+    }));
+    query.mockImplementation((endpoint: { path?: string }) => {
+      const path = endpoint.path ?? '';
+      const custom = onQuery?.(path);
+      if (custom !== undefined) return Promise.resolve(custom);
+      if (path.endsWith('/pet-turns')) return Promise.resolve({ pets: turns });
+      if (path.endsWith('/notifications')) return Promise.resolve({ items: [] });
+      if (path.endsWith('/me')) return Promise.resolve({ id: ME });
+      return Promise.resolve(message);
+    });
+    return render(
+      <MemoryRouter>
+        <MessageView itemId={ITEM} />
+      </MemoryRouter>,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Element.prototype.scrollIntoView = vi.fn();
+    execute.mockResolvedValue({ question: null });
+  });
+
+  it('puts the viewer on the right, groups an author and gives pets their avatar', async () => {
+    const mine = { id: ME, kind: 'person', name: 'Ada Admin' };
+    open(
+      [],
+      [
+        reply('a1', mine, 'one', '2026-11-27T00:01:00.000Z'),
+        reply('a2', mine, 'two', '2026-11-27T00:02:00.000Z'),
+        reply('a3', { id: PET, kind: 'pet', name: 'Pip' }, 'hi there', '2026-11-27T00:03:00.000Z'),
+      ],
+    );
+    await waitFor(() => {
+      expect(screen.getAllByRole('article')).toHaveLength(4);
+      expect(screen.getAllByText('You')).toHaveLength(1);
+    });
+    const articles = screen.getAllByRole('article');
+    // The opening message is Ada's too, from another id, so it reads as someone else's.
+    expect(articles[1]?.className).toContain('flex-row-reverse');
+    expect(articles[2]?.className).toContain('flex-row-reverse');
+    expect(articles[0]?.className).not.toContain('flex-row-reverse');
+    expect(screen.getByTestId('pet-avatar')).toHaveTextContent('Pip');
+    expect(screen.getByRole('log', { name: 'Conversation' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBeTruthy();
+  });
+
+  it('shows a typing indicator while a pet works', async () => {
+    open([{ petId: PET, name: 'Pip', status: 'working', reason: null, expiresAt: null }], []);
+    expect(await screen.findByRole('status', { name: 'Pip is answering' })).toBeTruthy();
+  });
+
+  it('reviews sharing inline for a refused turn and starts it again once approved', async () => {
+    const user = userEvent.setup();
+    open(
+      [
+        {
+          petId: PET,
+          name: 'Pip',
+          status: 'failed',
+          reason: 'Review the selected sources and provider before sharing content.',
+          expiresAt: null,
+          code: 'pets.sharing_required',
+        },
+      ],
+      [],
+    );
+    await user.click(await screen.findByRole('button', { name: 'Review sharing' }));
+    await waitFor(() => {
+      expect(execute).toHaveBeenCalledTimes(2);
+    });
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({
+      body: { petId: PET, sourceScope: { kind: 'workspace' } },
+    });
+    expect(execute.mock.calls[1]?.[0]).toMatchObject({
+      path: `/api/v1/items/${ITEM}/pet-turns/${PET}/approve`,
+    });
+  });
+
+  it('points to Settings when the pet has no provider key', async () => {
+    open(
+      [
+        {
+          petId: PET,
+          name: 'Pip',
+          status: 'failed',
+          reason: 'Add a key.',
+          expiresAt: null,
+          code: 'pets.no_provider_key',
+        },
+      ],
+      [],
+    );
+    const link = await screen.findByRole('link', { name: /provider key/ });
+    expect(link.getAttribute('href')).toBe(`/w/${message.workspaceId}/settings?tab=pets`);
+    expect(screen.queryByRole('button', { name: 'Review sharing' })).toBeNull();
   });
 });

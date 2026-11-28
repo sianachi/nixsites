@@ -346,10 +346,12 @@ export function OpenItem({
         : showChildren
           ? ''
           : activeId;
+  // A message's body is its thread, shown as a chat.
+  const documentName = bodyKind === 'message' ? 'Chat' : 'Document';
   const canManageViews = lock.open && workspace !== null && container.status === 'ready';
   const hiddenViews = [
     ...(documentTabHidden && (hidden.has(DOCUMENT_VIEW) || canManageViews)
-      ? [{ id: DOCUMENT_VIEW, name: 'Document' }]
+      ? [{ id: DOCUMENT_VIEW, name: documentName }]
       : []),
     ...views.filter((view) => hidden.has(view.id)),
   ];
@@ -643,7 +645,7 @@ export function OpenItem({
                 selectView(DOCUMENT_VIEW);
               }}
             >
-              Document
+              {documentName}
             </Button>
           )}
           {mobileItemControls}
@@ -690,7 +692,7 @@ export function OpenItem({
               />
             )
           }
-          documentLabel="Document"
+          documentLabel={documentName}
           documentHidden={documentTabHidden}
           defaultViewId={loadingPreviewView ? undefined : (previewDefault ?? storedDefault)}
           onSelect={(chosen) => {

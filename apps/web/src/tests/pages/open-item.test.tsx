@@ -57,6 +57,22 @@ const BOARD = {
   layout: null,
 };
 
+describe('a message', () => {
+  it('names its body Chat, not Document', async () => {
+    const message = item({
+      id: '2c2c2c2c-2222-4222-8222-2c2c2c2c2c2c',
+      title: 'Hello',
+      type: 'message',
+    });
+    stubCoreApi({ items: [message] });
+    renderAt(<App />, `/?item=${message.id}`);
+
+    const views = within(await screen.findByRole('navigation', { name: 'Views' }));
+    expect(views.getByRole('button', { name: 'Chat' })).toHaveAttribute('aria-current', 'page');
+    expect(views.queryByRole('button', { name: 'Document' })).not.toBeInTheDocument();
+  });
+});
+
 describe('an item nobody has configured', () => {
   it('opens into its document and offers Comments beside it', async () => {
     stubCoreApi({ items: [NOTES, CHILD] });
