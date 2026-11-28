@@ -42,6 +42,9 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         public int Remaining { get; set; } = remaining;
     }
 
+    /// <summary>How long a turn waits for the owner to decide a write; under <see cref="MessagePetTurnStore.MaxRunning"/>, which calls a longer turn failed.</summary>
+    private static readonly TimeSpan ApprovalWait = TimeSpan.FromMinutes(25);
+
     private const int ThreadBudget = 3500;
     private const int PerMessage = 1500;
     private const int ParentBudget = 2000;
@@ -52,7 +55,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
     /// <summary>The companion call; tests replace it.</summary>
     public Func<IServiceProvider, PetRuntimeRequest, Guid, IReadOnlyList<Guid>, string, CancellationToken, Task<Result<PetConnectionResponse>>> Converse { get; init; } =
         (services, request, itemId, workspaces, source, token) =>
-            services.GetRequiredService<PetWorkerClient>().ExecuteConversationAsync(request, itemId, workspaces, null, token, source);
+            services.GetRequiredService<PetWorkerClient>().ExecuteMessageTurnAsync(request, itemId, token, source);
 
     /// <summary>Starts the turns without waiting for them.</summary>
     internal void Launch(NixSessionContext context, Guid messageId, IReadOnlyList<Guid> petIds, MessageTurnOrigin? origin = null) =>
@@ -74,7 +77,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
             try
             {
                 deadline.Token.ThrowIfCancellationRequested();
-                await Turn(context, messageId, petId, origin, budget, deadline.Token).ConfigureAwait(false);
+                await Turn(context, messageId, petId, origin, budget, deadline).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
@@ -101,8 +104,14 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         }
     }
 
-    private async Task Turn(NixSessionContext context, Guid messageId, Guid petId, MessageTurnOrigin origin, Budget budget, CancellationToken cancellationToken)
+    private async Task Turn(NixSessionContext context, Guid messageId, Guid petId, MessageTurnOrigin origin, Budget budget, CancellationTokenSource deadline)
     {
+        var cancellationToken = deadline.Token;
+        // Writes the pet proposed wait for the owner's card in the Chat view; an owner's own message with the pet's
+        // "apply without asking" on lets the companion apply what its own rules allow. A token's message never does.
+        var autoApply = false;
+        var waiting = false;
+        var tried = new HashSet<string>(StringComparer.Ordinal);
         var requestId = Guid.NewGuid();
         string? prompt = null;
         string? failure = null;
@@ -161,7 +170,9 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                     prompt = addressable.Count == 0 ? built
                         : built + "\nIf someone else should see your reply, end it with one last line \"To: Name, Name\" using only these names, and nothing else on that line: "
                             + Encode(new JsonObject { ["names"] = new JsonArray([.. addressable.Values.Select(entry => (JsonNode?)JsonValue.Create(entry.Name))]) }) + "\n";
-                    if ((await services.GetRequiredService<Nix.Messaging.NixDispatcher>().QueryAsync<GetPetSettings, PetSettingsResponse>(new(), token).ConfigureAwait(false)).Settings.MemoryMode != PetMemoryModes.Off)
+                    var petSettings = (await services.GetRequiredService<Nix.Messaging.NixDispatcher>().QueryAsync<GetPetSettings, PetSettingsResponse>(new(), token).ConfigureAwait(false)).Settings;
+                    autoApply = origin.TokenId is null && petSettings.Profiles.FirstOrDefault(profile => profile.Id == petId)?.ApplyWithoutAsking == true;
+                    if (petSettings.MemoryMode != PetMemoryModes.Off)
                     {
                         rememberOffered = true;
                         prompt += RememberInstruction;
@@ -187,6 +198,26 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                 }
 
                 var running = response.Value.State is "working" or "running" or "thinking" or "sending" or "busy";
+                foreach (var tool in running ? response.Value.Tools ?? [] : [])
+                {
+                    if (tool.Status != "pending")
+                    {
+                        continue;
+                    }
+
+                    if (autoApply && response.Value.ServerWrites && tried.Add(tool.Id) && ToolOperation(tool.Arguments) is { Length: > 0 } operation)
+                    {
+                        // Refused or held by the companion's own rules: the tool stays pending and the owner's card decides.
+                        _ = await Converse(services, new("tool_approve", workspaceId, petId, Guid.NewGuid(), ToolId: tool.Id, ApprovedOperation: operation, Automatic: true, Mode: "chat"),
+                            messageId, [workspaceId], origin.Source, token).ConfigureAwait(false);
+                    }
+                    else if (!waiting)
+                    {
+                        waiting = true;
+                        deadline.CancelAfter(ApprovalWait);
+                    }
+                }
+
                 if (!running)
                 {
                     reply = ConversationRunner.ReplyText(response.Value.Messages);
@@ -203,7 +234,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                 break;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(waiting ? 3 : 1), cancellationToken).ConfigureAwait(false);
         }
 
         if (failure is { Length: 0 })
@@ -277,6 +308,19 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         if (next.Pets.Length > 0)
         {
             await Run(context, next.Reply, next.Pets, origin, budget).ConfigureAwait(false);
+        }
+    }
+
+    private static string ToolOperation(string arguments)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(arguments);
+            return document.RootElement.TryGetProperty("operation", out var operation) && operation.ValueKind == JsonValueKind.String ? operation.GetString() ?? "" : "";
+        }
+        catch (JsonException)
+        {
+            return "";
         }
     }
 

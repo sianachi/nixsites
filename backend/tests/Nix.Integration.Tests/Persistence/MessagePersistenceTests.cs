@@ -526,6 +526,50 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
             second => Assert.Equal(("Pip", "pet", "I could not answer: The pet is down."), second));
     }
 
+    [Theory]
+    [InlineData(true, false, true, 1)]
+    [InlineData(false, false, true, 0)]
+    [InlineData(true, true, true, 0)]
+    [InlineData(true, false, false, 0)]
+    public async Task A_message_turns_write_is_applied_without_asking_only_for_the_owners_own_message_with_the_pets_switch_on_and_otherwise_waits_for_the_card(
+        bool applyWithoutAsking, bool startedByToken, bool serverWrites, int automatic)
+    {
+        await SavePetsAsync(applyWithoutAsking, ("Pip", PetId));
+        var message = (await PostAsync(Editor, Note, "add a line to Dogs and Cats")).Value;
+        await using var scope = _fixture.Application.CreateUnscopedScope();
+        var approvals = new List<PetRuntimeRequest>();
+        var sends = new List<(string Operation, Guid Message)>();
+        var reads = 0;
+        var runner = new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
+        {
+            Converse = (_, request, messageId, _, _, _) =>
+            {
+                sends.Add((request.Operation, messageId));
+                if (request.Operation == "tool_approve")
+                {
+                    approvals.Add(request);
+                    return Task.FromResult(Result.Success(new PetConnectionResponse("anthropic", "connected", "", false)));
+                }
+
+                // The write waits on the owner (the card in the Chat view) for two reads, then the turn is done.
+                return Task.FromResult(Result.Success(++reads < 3
+                    ? new PetConnectionResponse("anthropic", "connected", "", false, "thinking", [], Tools: [new("t1", "{\"operation\":\"append_note\"}", "pending", "", "")], ServerWrites: serverWrites)
+                    : new PetConnectionResponse("anthropic", "connected", "", false, "success", [new("a", "assistant", "Added it.")], ServerWrites: serverWrites)));
+            },
+        };
+
+        await runner.Run(As(Editor), message.Id.Value, [PetId], startedByToken ? new MessageTurnOrigin(PetUsageSources.App, Guid.NewGuid()) : null);
+
+        Assert.All(sends, call => Assert.Equal(message.Id.Value, call.Message));
+        Assert.Equal(automatic, approvals.Count);
+        Assert.All(approvals, approval =>
+        {
+            Assert.True(approval.Automatic);
+            Assert.Equal(("t1", "append_note", PetId), (approval.ToolId, approval.ApprovedOperation, approval.PetId));
+        });
+        Assert.Equal(("Pip", "pet", "Added it."), Assert.Single(await RepliesAsync(message.Id.Value)));
+    }
+
     [Fact]
     public async Task A_token_needs_pets_send_and_the_workspace_switch_to_address_a_pet_and_the_wait_is_ask_or_declined()
     {
@@ -1157,12 +1201,16 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
 
     private Task SavePetsAsync(params (string Name, Guid Id)[] pets) => SavePetsAsync(PetMemoryModes.Ask, pets);
 
-    private async Task SavePetsAsync(string memoryMode, params (string Name, Guid Id)[] pets)
+    private Task SavePetsAsync(bool applyWithoutAsking, params (string Name, Guid Id)[] pets) => SavePetsAsync(PetMemoryModes.Ask, applyWithoutAsking, pets);
+
+    private Task SavePetsAsync(string memoryMode, params (string Name, Guid Id)[] pets) => SavePetsAsync(memoryMode, false, pets);
+
+    private async Task SavePetsAsync(string memoryMode, bool applyWithoutAsking, params (string Name, Guid Id)[] pets)
     {
         var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
         await using (work.ConfigureAwait(false))
         {
-            var profiles = pets.Select(pet => new PetProfile(pet.Id, pet.Name, "owl", "")).ToArray();
+            var profiles = pets.Select(pet => new PetProfile(pet.Id, pet.Name, "owl", "", applyWithoutAsking)).ToArray();
             var saved = await work.Resolve<NixDispatcher>().SendAsync<SavePetSettings, PetSettingsResponse>(new(0, new PetSettings(true, profiles[0].Id, profiles, MemoryMode: memoryMode)), Cancellation);
             Assert.True(saved.IsSuccess);
             await work.CommitAsync(Cancellation);

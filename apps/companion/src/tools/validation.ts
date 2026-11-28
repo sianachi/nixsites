@@ -31,6 +31,7 @@ const FIELDS: Readonly<Record<keyof Request, Kind>> = {
   workspaceAccess: 'boolean',
   rootItemId: 'string',
   conversationItemId: 'string',
+  messageId: 'string',
   sourceWorkspaceIds: 'strings',
   earlierMessages: 'messages',
   readOnly: 'boolean',
@@ -229,6 +230,11 @@ export function validTurnContext(r: Request): boolean {
 }
 
 export function validConversationContext(r: Request): boolean {
+  if (
+    r.messageId !== '' &&
+    (!UUID.test(r.messageId) || r.conversationItemId !== '' || r.rootItemId !== '')
+  )
+    return false;
   if (r.conversationItemId === '') {
     return r.sourceWorkspaceIds.length === 0 && r.earlierMessages.length === 0;
   }

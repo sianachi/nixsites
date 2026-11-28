@@ -6495,6 +6495,8 @@ export interface components {
       consentMode: string;
       /** @default false */
       thinkHarder: boolean;
+      /** Format: uuid */
+      messageId?: null | string;
     };
     PetSettings: {
       enabled: boolean;

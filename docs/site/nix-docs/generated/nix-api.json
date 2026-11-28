@@ -24420,6 +24420,13 @@
           "thinkHarder": {
             "type": "boolean",
             "default": false
+          },
+          "messageId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

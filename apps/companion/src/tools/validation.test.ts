@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { conversationKey } from '../shared/diagnostics.ts';
 import { IDS, request } from '../testing/testing.ts';
 import { parseRequest, validRequest } from './validation.ts';
 
@@ -164,6 +165,24 @@ describe('request boundary', () => {
     ).toBe(false);
     // Without a conversation id the scope fields must be empty.
     expect(validRequest(request({ sourceWorkspaceIds: [IDS.workspace] }))).toBe(false);
+  });
+});
+
+describe('message turns', () => {
+  it("name a chat message, which keeps the turn's conversation apart from the pet's own chat", () => {
+    const body = JSON.stringify({ ...request(), messageId: IDS.item });
+    const parsed = parseRequest(body);
+    expect(parsed).toMatchObject({ messageId: IDS.item });
+    expect(parsed !== null && validRequest(parsed)).toBe(true);
+    const plain = request();
+    expect(conversationKey({ ...plain, messageId: IDS.item })).toBe(
+      `${plain.workspaceId}-${plain.petId}-msg-${IDS.item}`,
+    );
+    expect(conversationKey(plain)).toBe(`${plain.workspaceId}-${plain.petId}`);
+  });
+  it('refuse a message id that is not a UUID or that mixes with another conversation scope', () => {
+    expect(validRequest(request({ messageId: 'nope' }))).toBe(false);
+    expect(validRequest(request({ messageId: IDS.item, rootItemId: IDS.item }))).toBe(false);
   });
 });
 

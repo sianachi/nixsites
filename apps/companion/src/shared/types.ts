@@ -42,6 +42,8 @@ export interface Request {
   workspaceAccess: boolean;
   rootItemId: string;
   conversationItemId: string;
+  /** The chat message whose thread this turn answers: its own conversation, with the ordinary tools. */
+  messageId: string;
   sourceWorkspaceIds: string[];
   earlierMessages: Message[];
   readOnly: boolean;
@@ -101,6 +103,7 @@ export function emptyRequest(): Request {
     workspaceAccess: false,
     rootItemId: '',
     conversationItemId: '',
+    messageId: '',
     sourceWorkspaceIds: [],
     earlierMessages: [],
     readOnly: false,

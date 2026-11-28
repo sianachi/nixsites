@@ -9,10 +9,20 @@ import {
   type Message,
   type MessageAddressee,
   type MessagePetState,
+  type PetConnection,
   type PetProfile,
 } from '@nix/api-client';
 import { Button, Skeleton, Text, focusRing, initialsOf } from '@nix/ui';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router';
 
 import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
@@ -21,6 +31,10 @@ import { PetAvatar } from '@nix/web-pets/pets/pet-avatar';
 import { PetMessageText } from '@nix/web-pets/pets/pet-message-text';
 
 import { MessageComposer } from './message-composer';
+
+const PetWorkTools = lazy(async () => ({
+  default: (await import('@nix/web-pets/pets/work-tools/pet-work-tools')).PetWorkTools,
+}));
 
 /** Pets answer after the request returns, so a thread that addressed one is re-read for a while. */
 const POLL_MS = 3000;
@@ -230,6 +244,62 @@ function PetTurns({
 }
 
 /**
+ * What a working pet has asked to do in the workspace: the pet chat's own cards, with the same Approve and Reject,
+ * for the changes (and reads) that wait on the owner. Reads the pet's turn conversation while it runs.
+ */
+function PetTurnTools({
+  item,
+  row,
+}: {
+  readonly item: Item;
+  readonly row: MessagePetState;
+}): ReactNode {
+  const client = useApiClient();
+  const [runtime, setRuntime] = useState<PetConnection | undefined>(undefined);
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = (): void => {
+      client
+        .execute(
+          petsResource.runtime({
+            operation: 'read',
+            workspaceId: item.workspaceId,
+            petId: row.petId,
+            messageId: item.id,
+          }),
+          { signal: controller.signal },
+        )
+        .then((loaded) => {
+          if (!controller.signal.aborted) setRuntime(loaded);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const timer = setInterval(load, POLL_MS);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [client, item.id, item.workspaceId, row.petId]);
+  if (!runtime?.tools?.length) return null;
+  return (
+    <div className="pl-12">
+      <Suspense fallback={null}>
+        <PetWorkTools
+          client={client}
+          runtime={runtime}
+          workspaceId={item.workspaceId}
+          petId={row.petId}
+          petName={row.name}
+          messageId={item.id}
+          onChange={setRuntime}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+/**
  * One pet's turn. Working is the pet's typing bubble; one with no provider key points to Settings.
  */
 function PetTurn({
@@ -245,24 +315,27 @@ function PetTurn({
 }): ReactNode {
   if (row.status === 'working') {
     return (
-      <div className="flex items-end gap-2" role="status" aria-label={`${row.name} is answering`}>
-        <ChatAvatar
-          author={{ id: row.petId, kind: 'pet', name: row.name }}
-          pets={pet ? [pet] : []}
-        />
-        <span
-          className="flex gap-1 rounded-2xl rounded-bl-sm bg-surface px-3 py-3"
-          aria-hidden="true"
-        >
-          {[0, 150, 300].map((delay) => (
-            <span
-              key={delay}
-              className="size-1.5 rounded-full bg-muted motion-safe:animate-pulse"
-              style={{ animationDelay: `${String(delay)}ms` }}
-            />
-          ))}
-        </span>
-      </div>
+      <>
+        <div className="flex items-end gap-2" role="status" aria-label={`${row.name} is answering`}>
+          <ChatAvatar
+            author={{ id: row.petId, kind: 'pet', name: row.name }}
+            pets={pet ? [pet] : []}
+          />
+          <span
+            className="flex gap-1 rounded-2xl rounded-bl-sm bg-surface px-3 py-3"
+            aria-hidden="true"
+          >
+            {[0, 150, 300].map((delay) => (
+              <span
+                key={delay}
+                className="size-1.5 rounded-full bg-muted motion-safe:animate-pulse"
+                style={{ animationDelay: `${String(delay)}ms` }}
+              />
+            ))}
+          </span>
+        </div>
+        <PetTurnTools item={item} row={row} />
+      </>
     );
   }
   const needsKey = row.status === 'failed' && row.code === 'pets.no_provider_key';

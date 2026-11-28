@@ -130,6 +130,8 @@ export interface RuntimeInput {
   readonly workspaceAccess?: boolean;
   /** Limits this conversation to one item and its descendants. */
   readonly rootItemId?: string;
+  /** A chat message: reads and decides the tools of a pet's turn in that message's thread. */
+  readonly messageId?: string;
   /** Offers reading tools only; Core still checks every request. */
   readonly readOnly?: boolean;
   readonly toolId?: string;
@@ -186,6 +188,7 @@ export const runtime = (input: RuntimeInput): CommandEndpoint<PetConnection> =>
       thinkHarder: input.thinkHarder ?? false,
       workspaceAccess: input.workspaceAccess ?? false,
       rootItemId: input.rootItemId ?? null,
+      messageId: input.messageId ?? null,
       itemIds: input.itemIds === undefined ? null : [...input.itemIds],
       replaceFromMessageId: input.replaceFromMessageId ?? null,
       readOnly: input.readOnly ?? false,

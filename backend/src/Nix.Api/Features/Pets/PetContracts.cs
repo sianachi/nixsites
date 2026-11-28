@@ -127,6 +127,7 @@ public sealed record PetWorkspaceMapEntry(Guid Id, string Title, string Type, IR
 /// the owner saw, <c>EditedArguments</c> and <c>EditNote</c> when the owner changed the request, and
 /// <c>Automatic</c> when "Apply without asking" sent it. Core mints the write token only for this operation.
 /// <c>ThinkHarder</c> (send only) runs this one message on the provider's larger model, over the pet's own pick.
+/// <c>MessageId</c> names a chat message: a pet's turn in that message's thread is its own conversation, with the same tools and approvals as a pet chat. From the app only <c>read</c>, <c>tool_claim</c>, <c>tool_result</c> and <c>tool_approve</c> take it; Core starts the turns itself.
 /// </remarks>
 public sealed record PetRuntimeRequest(string Operation, Guid? WorkspaceId = null, Guid? PetId = null,
     Guid? RequestId = null, string Text = "", Guid? ItemId = null, string SharedText = "",
@@ -135,7 +136,7 @@ public sealed record PetRuntimeRequest(string Operation, Guid? WorkspaceId = nul
     bool ToolLockedContent = false, Guid? RootItemId = null, bool ReadOnly = false,
     IReadOnlyList<Guid>? ItemIds = null, Guid? ReplaceFromMessageId = null, string ToolImage = "",
     bool ReadWithoutAsking = false, string Fingerprint = "", string EditedArguments = "", string EditNote = "",
-    bool Automatic = false, string ApprovedOperation = "", string ConsentMode = "", bool ThinkHarder = false);
+    bool Automatic = false, string ApprovedOperation = "", string ConsentMode = "", bool ThinkHarder = false, Guid? MessageId = null);
 
 /// <summary>Opens a chat event stream: the conversation is the workspace, the pet and, for a note chat, the note.</summary>
 public sealed record PetStreamRequest(Guid WorkspaceId, Guid PetId, string Mode = "", Guid? RootItemId = null);
@@ -174,7 +175,8 @@ internal sealed record PetWorkerRequest(string TenantId, string PrincipalId, str
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ThinkHarder = false,
     // Core's signed ticket for the turn's usage report and the one budget line the turn carries; see PetUsageService.
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? UsageTicket = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? BudgetLine = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? BudgetLine = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? MessageId = null);
 
 /// <summary>One inline writing request from the editor: the person's selection and what to do with it.</summary>
 /// <param name="WorkspaceId">The workspace the item is in.</param>

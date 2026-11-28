@@ -16,6 +16,16 @@ vi.mock('@nix/web-pets/pets/pet-avatar', () => ({
   PetAvatar: ({ label }: { label: string }) => <span data-testid="pet-avatar">{label}</span>,
 }));
 
+vi.mock('@nix/web-pets/pets/work-tools/pet-work-tools', () => ({
+  PetWorkTools: (props: {
+    messageId?: string;
+    petId: string;
+    runtime: { tools?: { id: string }[] };
+  }) => (
+    <div data-testid="pet-work-tools">{`${props.petId} ${props.messageId ?? ''} ${props.runtime.tools?.map((tool) => tool.id).join() ?? ''}`}</div>
+  ),
+}));
+
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({
   useApiClient: () => client,
 }));
@@ -285,6 +295,42 @@ describe('the chat', () => {
       await new Promise((resolve) => setTimeout(resolve, 3500));
       expect(turnReads()).toBe(reads);
       expect(paginate.mock.calls.length).toBe(lists);
+    });
+  });
+});
+
+describe('a working pet that asked to change something', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Element.prototype.scrollIntoView = vi.fn();
+    paginate.mockImplementation(() => ({
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async *[Symbol.asyncIterator]() {
+        yield* [];
+      },
+    }));
+    query.mockImplementation((endpoint: { path?: string }) => {
+      if (endpoint.path?.endsWith('/pet-turns'))
+        return Promise.resolve({
+          pets: [{ petId: PET, name: 'Pip', status: 'working', reason: null, expiresAt: null }],
+        });
+      if (endpoint.path?.endsWith('/notifications')) return Promise.resolve({ items: [] });
+      return Promise.resolve(message);
+    });
+    execute.mockResolvedValue({
+      provider: 'anthropic',
+      status: 'connected',
+      state: 'thinking',
+      tools: [{ id: 'tool-1', arguments: '{}', status: 'pending', result: '', claimId: '' }],
+    });
+  });
+
+  it("reads the turn's own conversation and shows the pet chat's approval cards under its bubble", async () => {
+    render(<MessageView itemId={ITEM} />);
+    expect(await screen.findByTestId('pet-work-tools')).toHaveTextContent(`${PET} ${ITEM} tool-1`);
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({
+      path: '/api/v1/me/pets/runtime',
+      body: { operation: 'read', petId: PET, messageId: ITEM },
     });
   });
 });

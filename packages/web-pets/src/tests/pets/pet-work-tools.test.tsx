@@ -2741,6 +2741,39 @@ describe('approved writes run by the server', () => {
     expect(runWorkspaceToolSpy).not.toHaveBeenCalled();
   });
 
+  it("scopes every call to a chat message's turn when it shows that turn's tools", async () => {
+    const MESSAGE = '33333333-3333-4333-8333-333333333333';
+    client.execute.mockImplementation((endpoint: { body: { requestId?: string } }) =>
+      Promise.resolve({
+        ...serverRuntime,
+        tools: (serverRuntime.tools ?? []).map((tool) => ({
+          ...tool,
+          status: 'claimed',
+          claimId: endpoint.body.requestId ?? '',
+        })),
+      }),
+    );
+    render(
+      <PetWorkTools
+        client={client as unknown as NixClient}
+        runtime={serverRuntime}
+        workspaceId="11111111-1111-4111-8111-111111111111"
+        petId="22222222-2222-4222-8222-222222222222"
+        messageId={MESSAGE}
+        onChange={vi.fn()}
+      />,
+      { wrapper: MemoryRouter },
+    );
+    await approveRequest();
+    await waitFor(() => {
+      expect(requestOperations()).toEqual(['tool_approve']);
+    });
+    expect(client.execute.mock.calls[0]?.[0]).toMatchObject({
+      path: '/api/v1/me/pets/runtime',
+      body: { operation: 'tool_approve', messageId: MESSAGE },
+    });
+  });
+
   it('keeps the claim path for a decline', async () => {
     client.execute.mockRejectedValue(new Error('offline'));
     showServer();

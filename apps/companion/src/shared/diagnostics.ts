@@ -150,10 +150,12 @@ export function conversationKey(r: {
   petId: string;
   conversationItemId: string;
   rootItemId: string;
+  messageId?: string;
 }): string {
   if (r.workspaceId === '' || r.petId === '') return '';
   let key = `${r.workspaceId}-${r.petId}`;
   if (r.conversationItemId !== '') return `${key}-chat-${r.conversationItemId}`;
+  if (r.messageId) return `${key}-msg-${r.messageId}`;
   if (r.rootItemId !== '') key += `-note-${r.rootItemId}`;
   return key;
 }

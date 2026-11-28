@@ -838,7 +838,89 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         Assert.Equal(0, handler.Calls);
     }
 
-    private static (PetWorkerClient Gateway, SelfIssuedTokenService Signer) ApprovalGateway(HttpMessageHandler handler, string? serverTools)
+    private static readonly Guid MessageGuid = new("66666666-6666-4666-8666-666666666666");
+
+    [Theory]
+    [InlineData("reads")]
+    [InlineData("all")]
+    public async Task A_message_turn_is_its_own_conversation_with_workspace_tools_and_a_read_token(string serverTools)
+    {
+        using var handler = new RecordingWorker();
+        var (gateway, signer) = ApprovalGateway(handler, serverTools, itemType: "message");
+        using var signerLifetime = signer;
+        var requestId = Guid.NewGuid();
+
+        var result = await gateway.ExecuteMessageTurnAsync(new("send", WorkspaceGuid, PetGuid, requestId, "Summarise Dogs and Cats", Mode: "chat"), MessageGuid, Cancellation);
+
+        Assert.True(result.IsSuccess);
+        using var body = JsonDocument.Parse(handler.Body);
+        Assert.Equal(MessageGuid.ToString(), body.RootElement.GetProperty("messageId").GetString());
+        Assert.True(body.RootElement.GetProperty("workspaceAccess").GetBoolean());
+        Assert.False(body.RootElement.TryGetProperty("readOnly", out _));
+        Assert.False(body.RootElement.TryGetProperty("conversationItemId", out _));
+        Assert.True(body.RootElement.GetProperty("readWithoutAsking").GetBoolean());
+        var validated = await new JwtSecurityTokenHandler { MapInboundClaims = false }
+            .ValidateTokenAsync(body.RootElement.GetProperty("turnToken").GetString()!, signer.CreateValidationParameters());
+        Assert.True(validated.IsValid);
+        Assert.True(SelfIssuedTokenService.TryReadPetTurnClaims(validated.ClaimsIdentity, out _, out _, out var turn, out var mode));
+        Assert.Equal((requestId, PetTurnMode.Read), (turn, mode));
+        // The owner's personal facts stay out of a thread others may read.
+        Assert.DoesNotContain("User preferences: Explain clearly.\n\nWhat the owner", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task The_owner_approves_a_message_turns_write_with_the_same_write_token_as_pet_chat()
+    {
+        using var handler = new RecordingWorker();
+        var (gateway, signer) = ApprovalGateway(handler, "all", itemType: "message");
+        using var signerLifetime = signer;
+        var requestId = Guid.NewGuid();
+
+        var result = await gateway.ExecuteAsync(new("tool_approve", WorkspaceGuid, PetGuid, requestId, ToolId: "tool-one",
+            ApprovedOperation: "append_note", Fingerprint: "fp", MessageId: MessageGuid), Cancellation);
+
+        Assert.True(result.IsSuccess);
+        using var body = JsonDocument.Parse(handler.Body);
+        Assert.Equal(MessageGuid.ToString(), body.RootElement.GetProperty("messageId").GetString());
+        var validated = await new JwtSecurityTokenHandler { MapInboundClaims = false }
+            .ValidateTokenAsync(body.RootElement.GetProperty("turnToken").GetString()!, signer.CreateValidationParameters());
+        Assert.True(SelfIssuedTokenService.TryReadPetTurnClaims(validated.ClaimsIdentity, out _, out _, out _, out var mode));
+        Assert.Equal(PetTurnMode.Write, mode);
+    }
+
+    [Theory]
+    [InlineData("send", "message", false, "pets.invalid_request")]
+    [InlineData("tool_approve", "note", false, "pets.not_found")]
+    [InlineData("tool_approve", "message", true, "pets.not_found")]
+    public async Task A_message_turn_only_opens_for_a_readable_unlocked_message_and_never_starts_from_the_app(string operation, string itemType, bool locked, string code)
+    {
+        using var handler = new RecordingWorker();
+        var (gateway, signer) = ApprovalGateway(handler, "all", itemType, locked ? MessageGuid : null);
+        using var signerLifetime = signer;
+
+        var result = await gateway.ExecuteAsync(new(operation, WorkspaceGuid, PetGuid, Guid.NewGuid(), operation == "send" ? "Hi" : "", ToolId: operation == "send" ? "" : "tool-one",
+            ApprovedOperation: operation == "send" ? "" : "append_note", MessageId: MessageGuid), Cancellation);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(code, result.Error.Code);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    [Fact]
+    public async Task Someone_who_does_not_own_the_pet_cannot_approve_in_its_message_turn()
+    {
+        using var handler = new RecordingWorker();
+        var (gateway, signer) = ApprovalGateway(handler, "all", itemType: "message");
+        using var signerLifetime = signer;
+
+        var result = await gateway.ExecuteAsync(new("tool_approve", WorkspaceGuid, Guid.NewGuid(), Guid.NewGuid(), ToolId: "tool-one",
+            ApprovedOperation: "append_note", MessageId: MessageGuid), Cancellation);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(0, handler.Calls);
+    }
+
+    private static (PetWorkerClient Gateway, SelfIssuedTokenService Signer) ApprovalGateway(HttpMessageHandler handler, string? serverTools, string itemType = "note", Guid? locked = null)
     {
 #pragma warning disable CA2000 // the test disposes the signer; the client lives for the test
         var http = new HttpClient(handler);
@@ -860,7 +942,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
 
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
         var signer = new SelfIssuedTokenService(configuration, TimeProvider.System);
-        return (new PetWorkerClient(http, configuration, Session(), Dispatcher(), new StubPermissions(), new KeyedCredentials(),
+        return (new PetWorkerClient(http, configuration, Session(), Dispatcher(itemType: itemType, lockedItem: locked), new StubPermissions(), new KeyedCredentials(),
             Protector, tokens: signer, disclosure: new GrantedDisclosure()), signer);
     }
 
@@ -1387,12 +1469,12 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         return session;
     }
 
-    private static NixDispatcher Dispatcher(string provider = PetProviders.Anthropic, bool inlineWriting = false, Guid? unreadableItem = null, Guid? lockedItem = null, string? itemTitle = null, string model = "")
+    private static NixDispatcher Dispatcher(string provider = PetProviders.Anthropic, bool inlineWriting = false, Guid? unreadableItem = null, Guid? lockedItem = null, string? itemTitle = null, string model = "", string itemType = "note")
     {
         var services = new ServiceCollection();
         services.AddSingleton<IQueryHandler<GetWorkspace, WorkspaceSnapshot?>>(new FakeGetWorkspaceHandler());
         services.AddSingleton<IQueryHandler<GetPetSettings, PetSettingsResponse>>(new FakeGetPetSettingsHandler(provider, inlineWriting, model));
-        services.AddSingleton<IQueryHandler<GetItem, Result<Item>>>(new FakeGetItemHandler(unreadableItem, itemTitle));
+        services.AddSingleton<IQueryHandler<GetItem, Result<Item>>>(new FakeGetItemHandler(unreadableItem, itemTitle, itemType));
         services.AddSingleton<IQueryHandler<GetItemLock, Result<ItemLockState>>>(new FakeGetItemLockHandler(lockedItem));
         return new NixDispatcher(services.BuildServiceProvider());
     }
@@ -1418,7 +1500,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
             ValueTask.FromResult(Result.Success(new ItemLockState(query.ItemId.Value == locked, null, null, query.ItemId.Value == locked)));
     }
 
-    private sealed class FakeGetItemHandler(Guid? unreadable = null, string? title = null) : IQueryHandler<GetItem, Result<Item>>
+    private sealed class FakeGetItemHandler(Guid? unreadable = null, string? title = null, string type = "note") : IQueryHandler<GetItem, Result<Item>>
     {
         public ValueTask<Result<Item>> HandleAsync(GetItem query, CancellationToken cancellationToken) => query.ItemId.Value == unreadable
             ? ValueTask.FromResult(Result.Failure<Item>(new("items.not_found", "Not found")))
@@ -1427,7 +1509,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
                 Id = query.ItemId,
                 TenantId = TenantId.Create(),
                 WorkspaceId = new(WorkspaceGuid),
-                Type = "note",
+                Type = type,
                 Seq = 1,
                 LifecycleState = ItemLifecycleState.Active,
                 CreatedBy = PrincipalId.Create(),

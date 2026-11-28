@@ -41,12 +41,15 @@ function PetWorkToolsView({
   applyExemptToolIds = [],
   client,
   noteScope,
+  messageId,
   memorySource,
   memoryMode = 'ask',
 }: {
   /** The owner's memory setting (Settings > Pets > Memory); `ask` when unknown. */
   readonly memoryMode?: PetMemoryMode;
   readonly noteScope?: { readonly rootItemId: string; readonly readOnly: boolean } | undefined;
+  /** A chat message whose thread this pet's turn is in: its tools and approvals belong to that turn's own conversation. */
+  readonly messageId?: string | undefined;
   /** The conversation or message item this chat is in, recorded beside a fact the pet saves. */
   readonly memorySource?:
     { kind: 'conversation' | 'message'; id: string; title: string; author: string } | undefined;
@@ -230,6 +233,7 @@ function PetWorkToolsView({
           workspaceId,
           petId,
           ...(noteScope ? { rootItemId: noteScope.rootItemId } : {}),
+          ...(messageId ? { messageId } : {}),
         };
         try {
           const reply = await client.execute(
@@ -294,6 +298,7 @@ function PetWorkToolsView({
             workspaceId,
             petId,
             ...(noteScope ? { rootItemId: noteScope.rootItemId } : {}),
+            ...(messageId ? { messageId } : {}),
             toolId: tool.id,
             requestId,
           }),
@@ -311,6 +316,7 @@ function PetWorkToolsView({
             workspaceId,
             petId,
             ...(noteScope ? { rootItemId: noteScope.rootItemId } : {}),
+            ...(messageId ? { messageId } : {}),
           }),
           { signal },
         );
@@ -397,6 +403,7 @@ function PetWorkToolsView({
           workspaceId,
           petId,
           ...(noteScope ? { rootItemId: noteScope.rootItemId } : {}),
+          ...(messageId ? { messageId } : {}),
           toolId: tool.id,
           requestId,
           toolResult,
