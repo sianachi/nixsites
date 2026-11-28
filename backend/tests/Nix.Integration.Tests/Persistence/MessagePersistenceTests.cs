@@ -1001,6 +1001,27 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_pet_hop_count_sees_turns_on_replies_past_the_first_hundred()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        var root = (await PostAsync(Editor, Note, "start")).Value;
+        for (var index = 0; index < 100; index++)
+        {
+            Assert.True((await PostAsTokenAsync(Token, Editor, root.Id.Value, $"m{index}", true)).IsSuccess);
+        }
+
+        var late = (await PostAsTokenAsync(Token, Editor, root.Id.Value, "late", true)).Value.Message;
+        await InsertTurnAsync(late.Id.Value, "answered", "now()");
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var tree = work.Resolve<IItemTree>();
+            var item = await tree.FindAsync(late.Id, Cancellation);
+            Assert.Equal(1, await MessagePetRunner.ThreadStarted(tree, work.Resolve<MessagePetTurnStore>(), item!, Cancellation));
+        }
+    }
+
+    [Fact]
     public async Task A_token_posts_at_most_five_hundred_messages_a_day_even_in_parallel_and_the_count_ages_out()
     {
         await ExecuteAsync($"""

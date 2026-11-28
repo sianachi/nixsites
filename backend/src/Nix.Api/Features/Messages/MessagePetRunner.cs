@@ -325,6 +325,26 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         }
     }
 
+    /// <summary>Every message reply directly under <paramref name="item"/>, paged: a flat thread puts all of them under one message.</summary>
+    public static async Task<IReadOnlyList<Item>> RepliesAsync(IItemTree tree, Item item, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(tree);
+        ArgumentNullException.ThrowIfNull(item);
+        var replies = new List<Item>();
+        long? after = null;
+        while (true)
+        {
+            var page = await tree.ListChildrenAsync(item.WorkspaceId, item.Id, false, after, 100, cancellationToken).ConfigureAwait(false);
+            replies.AddRange(page.Where(child => child.Type == MessageItem.Type));
+            if (page.Count < 100)
+            {
+                return replies;
+            }
+
+            after = page[^1].Seq;
+        }
+    }
+
     /// <summary>The first message of the thread <paramref name="message"/> belongs to.</summary>
     public static async Task<ItemId> ThreadRootAsync(IItemTree tree, Item message, CancellationToken cancellationToken)
     {
@@ -375,12 +395,9 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         {
             var current = pending.Pop();
             ids.Add(current.Id.Value);
-            foreach (var child in await tree.ListChildrenAsync(current.WorkspaceId, current.Id, false, null, 100, cancellationToken).ConfigureAwait(false))
+            foreach (var child in await RepliesAsync(tree, current, cancellationToken).ConfigureAwait(false))
             {
-                if (child.Type == MessageItem.Type)
-                {
-                    pending.Push(child);
-                }
+                pending.Push(child);
             }
         }
 
@@ -517,8 +534,8 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
         {
             var current = pending.Pop();
             walked.Add(current);
-            var children = await tree.ListChildrenAsync(current.WorkspaceId, current.Id, false, null, 100, cancellationToken).ConfigureAwait(false);
-            foreach (var child in children.Where(child => child.Type == MessageItem.Type).Reverse())
+            var children = await RepliesAsync(tree, current, cancellationToken).ConfigureAwait(false);
+            foreach (var child in Enumerable.Reverse(children))
             {
                 pending.Push(child);
             }

@@ -463,22 +463,9 @@ public sealed class MessageHandler(
         {
             var current = pending.Pop();
             walked.Add(current);
-            // Page through every reply: a flat thread puts all of them under one message.
-            long? after = null;
-            while (true)
+            foreach (var child in await MessagePetRunner.RepliesAsync(tree, current, cancellationToken).ConfigureAwait(false))
             {
-                var page = await tree.ListChildrenAsync(current.WorkspaceId, current.Id, false, after, 100, cancellationToken).ConfigureAwait(false);
-                foreach (var child in page.Where(child => child.Type == MessageItem.Type))
-                {
-                    pending.Push(child);
-                }
-
-                if (page.Count < 100)
-                {
-                    break;
-                }
-
-                after = page[^1].Seq;
+                pending.Push(child);
             }
         }
 
