@@ -73,6 +73,22 @@ describe('a message', () => {
   });
 });
 
+describe('an artifact', () => {
+  it('names its body Artifact, not Document', async () => {
+    const artifact = item({
+      id: '3d3d3d3d-3333-4333-8333-3d3d3d3d3d3d',
+      title: 'List',
+      type: 'artifact',
+    });
+    stubCoreApi({ items: [artifact] });
+    renderAt(<App />, `/?item=${artifact.id}`);
+
+    const views = within(await screen.findByRole('navigation', { name: 'Views' }));
+    expect(views.getByRole('button', { name: 'Artifact' })).toHaveAttribute('aria-current', 'page');
+    expect(views.queryByRole('button', { name: 'Document' })).not.toBeInTheDocument();
+  });
+});
+
 describe('an item nobody has configured', () => {
   it('opens into its document and offers Comments beside it', async () => {
     stubCoreApi({ items: [NOTES, CHILD] });

@@ -145,7 +145,10 @@ export function ItemBody({
               </span>
             }
           >
-            <ArtifactView itemId={itemId} />
+            {/* The pane has a fixed height, so the artifact scrolls inside it. */}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <ArtifactView itemId={itemId} />
+            </div>
           </Suspense>
         ) : (
           // Every kind this build has not heard of is prose - the same open-set rule

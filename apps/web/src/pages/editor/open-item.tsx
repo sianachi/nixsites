@@ -346,8 +346,9 @@ export function OpenItem({
         : showChildren
           ? ''
           : activeId;
-  // A message's body is its thread, shown as a chat.
-  const documentName = bodyKind === 'message' ? 'Chat' : 'Document';
+  // A message's body is its thread, shown as a chat; an artifact's body is the program it draws.
+  const documentName =
+    bodyKind === 'message' ? 'Chat' : bodyKind === 'artifact' ? 'Artifact' : 'Document';
   const canManageViews = lock.open && workspace !== null && container.status === 'ready';
   const hiddenViews = [
     ...(documentTabHidden && (hidden.has(DOCUMENT_VIEW) || canManageViews)
