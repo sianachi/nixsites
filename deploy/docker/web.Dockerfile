@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 
 RUN pnpm --filter @nix/web build
 
-FROM caddy:2-alpine@sha256:78bd35025c7ba85961dd149ae670315129954e77abe2383ac47c89106b35ade9 AS web
+FROM caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 AS web
 COPY --from=build /repo/apps/web/dist /srv/nix/web
 # Served at /THIRD-PARTY-NOTICES.txt: the bundle goes to every browser that loads it.
 COPY THIRD-PARTY-NOTICES.txt /srv/nix/web/
