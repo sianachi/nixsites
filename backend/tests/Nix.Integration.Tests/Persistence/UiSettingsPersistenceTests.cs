@@ -5,7 +5,7 @@ using Nix.Messaging;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class UiSettingsPersistenceTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

@@ -2,7 +2,7 @@ using Nix.Integration.Tests.Harness;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class TemplatePresetSeedIntegrationTests : IAsyncLifetime
 {
     private const string WorkspaceSeed = """

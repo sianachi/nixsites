@@ -9,7 +9,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// build's manifest rows cannot be rewritten or erased by the application, and the collaboration
 /// service has no grant on any of them.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class SiteRlsTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly string[] Tables =

@@ -7,7 +7,7 @@ using Nix.Integration.Tests.Harness;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Recurring calendar candidates honor derived item visibility inside their bulk read.</summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class RecurrenceCandidateAuthorizationTests : IAsyncLifetime
 {
     private static readonly Guid DeletedAncestor = new("1ecaff00-1111-4111-8111-1ecaff000001");

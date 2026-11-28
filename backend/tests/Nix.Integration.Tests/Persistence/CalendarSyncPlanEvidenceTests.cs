@@ -22,7 +22,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// has something to exclude.
 /// </remarks>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class CalendarSyncPlanEvidenceTests(NixPostgresFixture fixture, ITestOutputHelper output) : IAsyncLifetime
 {
     private static readonly Guid Connection = new("ca1e0000-1111-4111-8111-000000000001");

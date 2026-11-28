@@ -13,7 +13,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// a note may hand out, which version, and what stays hidden. The seeded Alpha file has one draft
 /// version.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class PublicFileAccessTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly M0TenantRows Alpha = M0SchemaSeed.Alpha;

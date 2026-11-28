@@ -11,7 +11,7 @@ using Nix.Persistence.Workspaces;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class WorkspaceAdministrationTests : IAsyncLifetime
 {
     private static readonly Guid Alice = new("71717171-1111-4111-8111-717171717171");

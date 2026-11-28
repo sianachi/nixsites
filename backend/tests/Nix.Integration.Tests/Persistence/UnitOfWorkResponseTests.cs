@@ -22,7 +22,7 @@ using Nix.Persistence.ObjectStorage;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class UnitOfWorkResponseTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

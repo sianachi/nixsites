@@ -24,7 +24,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// then moving the stored date into the past as the migrator. A later day is simulated by moving
 /// the trash triggers' day-stamped dedupe keys back.
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class ExpiryIntegrationTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly Guid Colleague = new("14141414-1111-4111-8111-141414141414");

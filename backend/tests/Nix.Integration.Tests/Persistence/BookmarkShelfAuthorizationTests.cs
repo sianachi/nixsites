@@ -26,7 +26,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// the statement's principal predicate keeps one shelf out of the other's answer.
 /// </para>
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class BookmarkShelfAuthorizationTests : IAsyncLifetime
 {
     /// <summary>A second workspace in Alpha's tenant that only <see cref="Keeper"/> belongs to.</summary>

@@ -37,6 +37,7 @@ on:
       - 'scripts/backup-r2.test.py'
       - 'scripts/backup-r2.py'
       - 'scripts/stress/mvp1-evidence*.mjs'
+      - 'scripts/ci/package-*'
       - '.github/workflows/ci-frontend.yml'
   pull_request:
     paths:
@@ -63,6 +64,7 @@ on:
       - 'scripts/backup-r2.test.py'
       - 'scripts/backup-r2.py'
       - 'scripts/stress/mvp1-evidence*.mjs'
+      - 'scripts/ci/package-*'
       - '.github/workflows/ci-frontend.yml'
 
 concurrency:
@@ -164,11 +166,9 @@ jobs:
             exit 1
           fi
 
-      - name: Lint (ESLint + Prettier check)
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
+      # ESLint runs per package in frontend-packages below; Prettier covers the whole repository.
+      - name: Format check (Prettier)
+        run: pnpm lint:format
 
       # Tests that live outside every workspace package, so `pnpm test` never visits them.
       - name: Script tests outside packages
@@ -210,11 +210,18 @@ jobs:
       - name: Frontend layering guard (the leaves are leaves; the shell is not imported for a value)
         run: ./scripts/check-frontend-layering.sh
 
-  frontend-unit:
-    name: frontend unit
+  # Lint, typecheck and unit tests per workspace package, split across three jobs. The packages
+  # are divided by scripts/ci/package-shard.mjs from the live workspace list, so every package is
+  # in exactly one shard and a new package is picked up without editing anything. (apps/web keeps
+  # its tests in frontend-web-unit below; its lint and typecheck are in a shard here.)
+  frontend-packages:
+    name: frontend packages
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    needs: frontend-static
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -228,7 +235,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: This shard's packages
+        id: shard
+        run: |
+          node scripts/ci/package-shard.mjs --check 3
+          node scripts/ci/package-shard.mjs ${{ matrix.shard }} 3 | tee "$RUNNER_TEMP/filters"
+          echo "browser_worker=$(grep -c browser-worker "$RUNNER_TEMP/filters" || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Lint (ESLint)
+        run: |
+          mapfile -t filters < "$RUNNER_TEMP/filters"
+          pnpm -r --if-present "${filters[@]}" lint
+
+      - name: Typecheck
+        run: |
+          mapfile -t filters < "$RUNNER_TEMP/filters"
+          pnpm -r --if-present "${filters[@]}" typecheck
+
       - name: Install sandboxed Chromium for browser-worker tests
+        if: steps.shard.outputs.browser_worker != '0'
         run: |
           pnpm --filter @nix/browser-worker exec playwright install --with-deps --no-shell chromium
           if [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || true)" = 1 ]; then
@@ -250,7 +275,9 @@ jobs:
         # unrun.
         env:
           NIX_COLLAB_SKIP_DB_TESTS: '1'
-        run: pnpm -r --if-present --filter '!@nix/web' test
+        run: |
+          mapfile -t filters < "$RUNNER_TEMP/filters"
+          pnpm -r --if-present "${filters[@]}" --filter '!@nix/web' test
 
   # The Electron desktop app: its unit tests already run in frontend-unit (`pnpm -r test`); this adds
   # what needs a display and a real window: the app against a fake server (boundary run) and the
@@ -260,7 +287,6 @@ jobs:
     name: desktop
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    needs: frontend-static
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -288,7 +314,6 @@ jobs:
     name: frontend web unit
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    needs: frontend-static
     strategy:
       fail-fast: false
       matrix:
@@ -312,7 +337,6 @@ jobs:
   frontend-storybook:
     name: frontend storybook
     runs-on: ubuntu-24.04
-    needs: frontend-static
     # The suite is known to hang rather than fail in some headless environments
     # (before collecting a single test), and the vitest config's own timeouts
     # cannot bound a browser that never launches. This is the backstop that
@@ -349,7 +373,6 @@ jobs:
     name: collab integration
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    needs: frontend-static
 
     services:
       postgres:
@@ -380,8 +403,19 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props', 'Nix.slnx') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # The migrator compiles while pnpm installs; the two used to run one after the other.
+      - name: Install dependencies, and build the migrator
+        run: |
+          dotnet build backend/src/Nix.Migrator &
+          build=$!
+          pnpm install --frozen-lockfile
+          wait "$build"
 
       # The schema comes from the migrator, not from a copy of the DDL kept here. A
       # second definition of the content tables would drift from the first, and the
@@ -407,7 +441,7 @@ jobs:
         env:
           NIX_MIGRATOR_CONNECTION_STRING: >-
             Host=localhost;Port=5433;Database=nix;Username=nix_migrator;Password=nix-dev-migrator
-        run: dotnet run --project src/Nix.Migrator
+        run: dotnet run --no-build --project src/Nix.Migrator
 
       - name: Collaboration service tests
         env:

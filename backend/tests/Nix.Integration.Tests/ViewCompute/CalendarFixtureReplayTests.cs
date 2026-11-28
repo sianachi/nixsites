@@ -22,7 +22,7 @@ namespace Nix.Integration.Tests.ViewCompute;
 /// value (broken by item id, which Core mints) and ties between series in different containers
 /// (broken by sibling order, which is per parent).
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class CalendarFixtureReplayTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

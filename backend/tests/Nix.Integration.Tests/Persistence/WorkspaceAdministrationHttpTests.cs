@@ -15,7 +15,7 @@ using Nix.Messaging;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class WorkspaceAdministrationHttpTests : IAsyncLifetime
 {
     private static readonly Guid Owner = new("81818181-1111-4111-8111-818181818181");

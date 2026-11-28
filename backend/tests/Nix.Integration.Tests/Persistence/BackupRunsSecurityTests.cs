@@ -8,7 +8,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// capability-only shape. Only the superuser acting as <c>nix_backup</c> can write, only
 /// <c>nix_app</c> can read, and neither can touch the table itself.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class BackupRunsSecurityTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private const string Writer = "nix_record_backup_run(timestamptz, timestamptz, text, text, text, bigint, text)";

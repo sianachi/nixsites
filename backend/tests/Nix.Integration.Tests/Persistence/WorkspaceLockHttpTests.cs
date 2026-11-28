@@ -24,7 +24,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// a same-tenant person as a viewer. Each personal access token is its own credential, so two
 /// tokens held by one person are two separate unlocks.
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class WorkspaceLockHttpTests : IAsyncLifetime
 {
     private const string InternalSecret = "workspace-lock-http-internal-secret";

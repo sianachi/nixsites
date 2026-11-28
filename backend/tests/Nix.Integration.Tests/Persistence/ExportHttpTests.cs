@@ -23,7 +23,7 @@ using Nix.Workers;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class ExportHttpTests : IAsyncLifetime
 {
     private const string InternalSecret = "export-http-internal-secret";

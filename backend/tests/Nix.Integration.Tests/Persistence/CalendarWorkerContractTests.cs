@@ -17,7 +17,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// <c>fixtures/calendar-contract/</c> (shared with the in-process worker) posted exactly and answered with
 /// exactly their key sets, and the pull, push, cursor and log semantics behind them.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class CalendarWorkerContractTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private CalendarSyncHost _host = null!;

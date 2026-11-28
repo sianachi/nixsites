@@ -23,7 +23,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// changes. That last one is the promise ADR-0007 §4 makes, and it is the one most likely to be
 /// broken by somebody making validation stricter for good reasons.
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class PropertyWriteTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

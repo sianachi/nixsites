@@ -15,7 +15,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// same tenant or another - reads, changes, runs or even detects them, and the cross-owner SQL is
 /// reachable only through the narrow functions, executable by <c>nix_app</c> alone.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class AutomationSecurityTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly string[] Finders =

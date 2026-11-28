@@ -12,7 +12,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// Row-level security isolates tenants, proved against a real Postgres with two tenants and the
 /// runtime role that cannot bypass policies.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class RlsIsolationTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

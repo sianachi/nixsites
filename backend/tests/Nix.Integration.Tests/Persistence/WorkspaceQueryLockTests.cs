@@ -20,7 +20,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// it reappears once that credential unlocks; a scope on the lock or anything beneath it answers
 /// 423; and the locked item's own row, which a lock does not withhold, is returned.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class WorkspaceQueryLockTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private const string Password = "hunter22";

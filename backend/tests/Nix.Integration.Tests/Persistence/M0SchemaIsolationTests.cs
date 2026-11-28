@@ -30,7 +30,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// this pair exists to prevent.
 /// </para>
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class M0SchemaIsolationTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

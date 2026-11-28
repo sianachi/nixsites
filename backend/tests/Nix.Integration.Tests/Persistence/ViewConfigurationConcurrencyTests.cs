@@ -18,7 +18,7 @@ using NpgsqlTypes;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Actual Postgres compare-and-swap, including contention after the handler's last read.</summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class ViewConfigurationConcurrencyTests(NixPostgresFixture fixture, ITestOutputHelper output) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

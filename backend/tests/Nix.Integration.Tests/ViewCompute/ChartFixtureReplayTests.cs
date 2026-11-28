@@ -16,7 +16,7 @@ namespace Nix.Integration.Tests.ViewCompute;
 /// built the way <c>ChartMapping</c> builds the HTTP body and compared with the fixture's expected
 /// JSON after the minted ids are written back as <c>{key}</c>.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class ChartFixtureReplayTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

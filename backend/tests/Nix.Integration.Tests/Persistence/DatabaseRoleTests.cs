@@ -12,7 +12,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// change the schema. These assertions are the foundation the others stand on, so they interrogate
 /// the live cluster rather than the SQL that was supposed to have configured it.
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class DatabaseRoleTests
 {
     private readonly NixPostgresFixture _fixture;

@@ -9,7 +9,7 @@ using Npgsql;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Two real transactions: the second must wait for the first to finish, on exactly the same key.</summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class AdvisoryLocksTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly Guid Tenant = new("5e7c0a00-4444-4444-8444-5e7c0a000001");

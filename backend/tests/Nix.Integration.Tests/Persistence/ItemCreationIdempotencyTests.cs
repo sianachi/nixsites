@@ -21,7 +21,7 @@ using NpgsqlTypes;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class ItemCreationIdempotencyTests(NixPostgresFixture fixture, ITestOutputHelper output) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

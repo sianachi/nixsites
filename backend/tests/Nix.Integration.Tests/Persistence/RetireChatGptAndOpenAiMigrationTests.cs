@@ -6,7 +6,7 @@ using Nix.Persistence;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class RetireChatGptAndOpenAiMigrationTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

@@ -18,7 +18,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// that need an approved version, delete protection under the topology lock, workspace moves,
 /// purge and tenant isolation.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class ItemReferenceTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly Guid Locker = new("5b7e0c00-3333-4333-8333-5b7e0c000001");

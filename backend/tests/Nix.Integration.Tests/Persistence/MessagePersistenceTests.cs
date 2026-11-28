@@ -19,7 +19,7 @@ using Nix.Persistence.Content;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Messages as items: who may post, who may be addressed, who is told, and that a posted message never changes.</summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class MessagePersistenceTests : IAsyncLifetime
 {
     private static readonly Guid Note = new("c0c0c000-5555-4555-8555-c0c0c0000001");

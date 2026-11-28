@@ -15,7 +15,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// the item trigger inserts, firing re-verified as the owner, coalescing onto a running round,
 /// access loss, and retention.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class CalendarSchedulingTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly Guid Colleague = new("1d1d1d1d-1111-4111-8111-1d1d1d1d1d1d");

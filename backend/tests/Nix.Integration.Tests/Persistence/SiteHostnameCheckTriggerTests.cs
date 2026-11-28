@@ -7,7 +7,7 @@ using Nix.Integration.Tests.Harness;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>The background hostname checker: a claim never verified within a week is withdrawn, as the system.</summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SiteHostnameCheckTriggerTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private SiteScenario _scenario = null!;

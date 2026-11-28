@@ -12,7 +12,7 @@ using Npgsql;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Cross-tenant dispatch reveals only leased work and enforces lease ownership.</summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class WorkerDispatchTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

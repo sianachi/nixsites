@@ -16,7 +16,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// exact staged bodies named by an unfinished operation, and the template catalog may read active
 /// revisions. Neither permission may turn those envelopes into ordinary workspace content.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class TemplateBoundarySecurityIntegrationTests : IAsyncLifetime
 {
     private static readonly Guid HiddenActiveRoot = new("a1000000-1111-4111-8111-a10000000001");

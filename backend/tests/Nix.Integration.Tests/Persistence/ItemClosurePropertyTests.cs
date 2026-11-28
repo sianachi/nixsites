@@ -40,7 +40,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// short enough to read.
 /// </para>
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 [SuppressMessage(
     "Security",
     "CA5394:Do not use insecure randomness",

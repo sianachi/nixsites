@@ -16,7 +16,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// Note comments: who may write, who may change what, what a lock and the trash do, who is told,
 /// and how a watcher learns of a change.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class NoteCommentTests : IAsyncLifetime
 {
     private static readonly Guid Note = new("c0c0c000-4444-4444-8444-c0c0c0000001");
