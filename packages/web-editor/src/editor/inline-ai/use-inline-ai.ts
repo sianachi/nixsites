@@ -51,7 +51,8 @@ export type InlineFailure =
   | 'interrupted'
   | 'not_found'
   | 'invalid'
-  | 'not_added';
+  | 'not_added'
+  | 'no_provider_key';
 
 export interface InlinePanelState {
   readonly phase: InlinePhase;
@@ -88,6 +89,7 @@ const FAILURE_BY_CODE: Readonly<Record<string, InlineFailure>> = {
   'pets.inline_disabled': 'disabled',
   'pets.inline_item_locked': 'locked',
   'pets.unavailable': 'unavailable',
+  'pets.no_provider_key': 'no_provider_key',
   'pets.inline_busy': 'busy',
   'pets.not_found': 'not_found',
   'pets.invalid_request': 'invalid',

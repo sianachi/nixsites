@@ -55,12 +55,12 @@ public sealed class MessagePetTurnStore(NixSqlExecutor sql, INixSessionContextAc
         return rows;
     }
 
-    /// <summary>Takes a waiting, unexpired turn to start it. Null when there is none.</summary>
+    /// <summary>Takes a waiting, unexpired turn, or one that failed under the retired sharing review (consent is implied now), to start it. Null when there is none.</summary>
     public async Task<MessagePetTurnRow?> ClaimAsync(Guid messageId, Guid petId, CancellationToken cancellationToken) =>
         await OneAsync("""
             UPDATE message_pet_turn SET status = 'working', started_at = now(), reason = NULL, reason_code = NULL
              WHERE tenant_id = @tenant AND message_id = @message AND pet_id = @pet
-               AND status = 'pending' AND expires_at > now()
+               AND (status = 'pending' AND expires_at > now() OR status = 'failed' AND reason_code = 'pets.sharing_required')
             RETURNING pet_id, status, reason, expires_at, token_id, token_name, memory_text, reason_code
             """, messageId, petId, cancellationToken).ConfigureAwait(false);
 

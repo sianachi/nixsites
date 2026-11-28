@@ -117,6 +117,15 @@ describe('inline AI across visible viewports', () => {
   });
 });
 
+describe('inline AI without a provider key', () => {
+  it('points to Settings > Pets and offers no retry', () => {
+    render(panel(controllerFor({ ...INITIAL, phase: 'error', failure: 'no_provider_key' })));
+    expect(screen.getByRole('alert')).toHaveTextContent('Settings > Pets');
+    expect(screen.getByRole('link', { name: 'Open pet settings' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+  });
+});
+
 describe('inline AI prompt and result interaction', () => {
   it('keeps touch Enter for new lines and submits with Ctrl+Enter or Generate', async () => {
     stubViewport(800);

@@ -73,6 +73,8 @@ function failureMessage(failure: InlineFailure, kept: boolean): string {
       return 'This note is locked, so its text is not sent to the assistant.';
     case 'unavailable':
       return 'No model is connected for the assistant to use.';
+    case 'no_provider_key':
+      return 'Add a Claude or OpenRouter key in Settings > Pets to use the assistant.';
     case 'busy':
       return 'Too many writing requests are running at once. Try again in a moment.';
     case 'timeout':
@@ -295,7 +297,7 @@ function OpenPanel({
       : (TITLES[kind] ?? 'Write with AI');
   const failure = state.failure;
   const settingsLink =
-    failure === 'disabled' || failure === 'unavailable' ? (
+    failure === 'disabled' || failure === 'unavailable' || failure === 'no_provider_key' ? (
       <Link to={`/w/${workspaceId ?? ''}/settings?tab=pets`} className={`underline ${focusRing}`}>
         <Text as="span" variant="note">
           Open pet settings

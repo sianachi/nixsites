@@ -202,6 +202,23 @@ describe('the chat', () => {
     expect(link.getAttribute('href')).toBe(`/w/${message.workspaceId}/settings?tab=pets`);
   });
 
+  it('reads an old sharing_required failure and offers to try again', async () => {
+    open(
+      [
+        {
+          petId: PET,
+          name: 'Pip',
+          status: 'failed',
+          reason: 'Review sharing.',
+          expiresAt: null,
+          code: 'pets.sharing_required',
+        },
+      ],
+      [],
+    );
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
+
   it('opens a reply as the whole thread, from its first message', async () => {
     const REPLY = '55555555-5555-4555-8555-555555555555';
     const opened = { ...message, id: REPLY, parentId: ITEM };

@@ -265,6 +265,8 @@ function PetTurn({
     );
   }
   const needsKey = row.status === 'failed' && row.code === 'pets.no_provider_key';
+  // Turns that failed under the retired sharing review start again.
+  const legacyRetry = row.status === 'failed' && row.code === 'pets.sharing_required';
   return (
     <div className="flex flex-col gap-1 pl-12">
       <div className="flex flex-wrap items-center gap-2">
@@ -296,6 +298,16 @@ function PetTurn({
               Dismiss
             </Button>
           </>
+        ) : null}
+        {legacyRetry ? (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void onDecide(true);
+            }}
+          >
+            Try again
+          </Button>
         ) : null}
         {needsKey ? (
           <Link
