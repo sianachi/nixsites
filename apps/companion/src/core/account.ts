@@ -6,7 +6,7 @@ import {
   type ProviderContextProvenance,
 } from './context-provenance.ts';
 import { createHash, randomUUID } from 'node:crypto';
-import { APP_ONLY_OPERATIONS, mayApplyUnasked } from '@nix/companion/auto-apply';
+import { APP_ONLY_OPERATIONS, FENCED_OPERATIONS, mayApplyUnasked } from '@nix/companion/auto-apply';
 import {
   READ_ONLY_OPERATIONS,
   workspaceToolSchema,
@@ -1605,7 +1605,11 @@ export class Account {
     const parsed = workspaceToolSchema.parse(JSON.parse(args));
     if (APP_ONLY_OPERATIONS.has(parsed.operation) || READ_ONLY_OPERATIONS.has(parsed.operation))
       throw new Error('this operation is not approved on the server');
-    if (r.automatic && !mayApplyUnasked(parsed, c.lockedRead)) {
+    if (
+      r.automatic &&
+      (!mayApplyUnasked(parsed, c.lockedRead) ||
+        (r.fingerprint === '' && FENCED_OPERATIONS.has(parsed.operation)))
+    ) {
       // Left pending: the app shows the card. lockedRead here is authoritative.
       this.diag.record(key, 'info', 'tool.approve_held', { tool: operation });
       return;

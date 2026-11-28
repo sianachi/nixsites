@@ -108,7 +108,7 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
     {
         var cancellationToken = deadline.Token;
         // Writes the pet proposed wait for the owner's card in the Chat view; an owner's own message with the pet's
-        // "apply without asking" on lets the companion apply what its own rules allow. A token's message never does.
+        // "apply without asking" on lets the companion apply what its own rules allow. A token's message or a pet's in a chain never does.
         var autoApply = false;
         var waiting = false;
         var tried = new HashSet<string>(StringComparer.Ordinal);
@@ -171,7 +171,8 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                         : built + "\nIf someone else should see your reply, end it with one last line \"To: Name, Name\" using only these names, and nothing else on that line: "
                             + Encode(new JsonObject { ["names"] = new JsonArray([.. addressable.Values.Select(entry => (JsonNode?)JsonValue.Create(entry.Name))]) }) + "\n";
                     var petSettings = (await services.GetRequiredService<Nix.Messaging.NixDispatcher>().QueryAsync<GetPetSettings, PetSettingsResponse>(new(), token).ConfigureAwait(false)).Settings;
-                    autoApply = origin.TokenId is null && petSettings.Profiles.FirstOrDefault(profile => profile.Id == petId)?.ApplyWithoutAsking == true;
+                    // Only a message a person wrote from the app: a token's, or another pet's in a chain, can carry text no owner chose.
+                    autoApply = origin.TokenId is null && Parse(message) is { Author: { Kind: "person", Via: null } } && petSettings.Profiles.FirstOrDefault(profile => profile.Id == petId)?.ApplyWithoutAsking == true;
                     if (petSettings.MemoryMode != PetMemoryModes.Off)
                     {
                         rememberOffered = true;

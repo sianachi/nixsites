@@ -2774,6 +2774,62 @@ describe('approved writes run by the server', () => {
     });
   });
 
+  it('never sends content from under a lock back into a chat thread', async () => {
+    const readRuntime = {
+      ...runtime,
+      tools: (runtime.tools ?? []).map((tool) => ({
+        ...tool,
+        arguments: JSON.stringify({
+          operation: 'read_item',
+          itemId: '33333333-3333-4333-8333-333333333333',
+          title: '',
+          markdown: '',
+          parentId: '',
+          query: '',
+          propertiesJson: '',
+        }),
+      })),
+    };
+    client.execute.mockImplementation((endpoint: { body: { requestId: string } }) =>
+      Promise.resolve({
+        ...readRuntime,
+        tools: readRuntime.tools.map((tool) => ({
+          ...tool,
+          status: 'claimed',
+          claimId: endpoint.body.requestId,
+        })),
+      }),
+    );
+    runWorkspaceToolSpy.mockResolvedValueOnce({
+      text: 'the unlocked secret',
+      readOnly: true,
+      touchedParents: [],
+      lockedContent: true,
+    });
+    render(
+      <PetWorkTools
+        client={client as unknown as NixClient}
+        runtime={readRuntime}
+        workspaceId="11111111-1111-4111-8111-111111111111"
+        petId="22222222-2222-4222-8222-222222222222"
+        messageId="44444444-4444-4444-8444-444444444444"
+        onChange={vi.fn()}
+      />,
+      { wrapper: MemoryRouter },
+    );
+    await waitFor(() => {
+      expect(client.execute).toHaveBeenCalledTimes(2);
+    });
+    const result = client.execute.mock.calls[1]?.[0] as { body: Record<string, unknown> };
+    expect(result.body).toMatchObject({
+      operation: 'tool_result',
+      toolSuccess: false,
+      toolLockedContent: true,
+      toolResult: expect.stringContaining('locked') as unknown,
+    });
+    expect(JSON.stringify(result.body)).not.toContain('the unlocked secret');
+  });
+
   it('keeps the claim path for a decline', async () => {
     client.execute.mockRejectedValue(new Error('offline'));
     showServer();

@@ -30,6 +30,9 @@ import {
 import { afterWrite } from '../approval/prepare-write';
 import { PetWorkToolCard } from './tool-card';
 
+const LOCKED_IN_THREAD =
+  'That content is locked. A pet in a chat thread cannot read locked notes, because everyone in the thread would see the reply.';
+
 function PetWorkToolsView({
   runtime,
   workspaceId,
@@ -341,6 +344,7 @@ function PetWorkToolsView({
       let notRun: string | undefined;
       // A declined result (its problems) can quote a locked note just as a read can.
       let toolLockedContent = refusalQuotesLockedContent;
+      let toolReadOnly = true;
       if (approved) {
         try {
           const { runWorkspaceTool, createCompanionBodies, defaultClock, defaultIds } =
@@ -378,6 +382,7 @@ function PetWorkToolsView({
           toolImage = outcome.image;
           toolSuccess = true;
           toolLockedContent = outcome.lockedContent;
+          toolReadOnly = outcome.readOnly;
           if (args.operation === 'build_blueprint') {
             const build = buildOutcome(outcome.text);
             if (build?.complete) setBuildLedger(build.ledger);
@@ -394,6 +399,13 @@ function PetWorkToolsView({
             notRun = reason.ownerMessage;
           if (reason instanceof WorkspaceToolRefusal) toolLockedContent = reason.lockedContent;
         }
+      }
+      // A thread's reply is read by everyone in it, and this browser holds the owner's unlocks, so a turn in a
+      // thread never gets content from under a lock: it learns only that the item is locked.
+      if (messageId && toolLockedContent && !(toolSuccess && !toolReadOnly)) {
+        toolResult = LOCKED_IN_THREAD;
+        toolSuccess = false;
+        toolImage = undefined;
       }
       // An owner's edit is what ran - or what failed - so the pet hears it with every outcome.
       if (approved && edited) toolResult = `${edited.note}\n${toolResult}`;

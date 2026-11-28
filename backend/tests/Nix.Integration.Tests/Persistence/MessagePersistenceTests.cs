@@ -571,6 +571,42 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_pet_answering_another_pets_message_in_a_chain_never_applies_a_write_unasked()
+    {
+        var (ann, bob) = (Guid.NewGuid(), Guid.NewGuid());
+        await SavePetsAsync(true, ("Ann", ann), ("Bob", bob));
+        var message = (await PostAsync(Editor, Note, "hello")).Value;
+        await using var scope = _fixture.Application.CreateUnscopedScope();
+        var approvals = new List<Guid>();
+        var bobReads = 0;
+        var runner = new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
+        {
+            Converse = (_, request, _, _, _, _) =>
+            {
+                if (request.Operation == "tool_approve")
+                {
+                    approvals.Add(request.PetId!.Value);
+                    return Task.FromResult(Result.Success(new PetConnectionResponse("anthropic", "connected", "", false)));
+                }
+
+                if (request.PetId == ann)
+                {
+                    return Task.FromResult(Result.Success(new PetConnectionResponse("anthropic", "ready", "", true, "success", [new("a", "assistant", "Ask Bob\nTo: Bob")])));
+                }
+
+                return Task.FromResult(Result.Success(++bobReads < 2
+                    ? new PetConnectionResponse("anthropic", "connected", "", false, "thinking", [], Tools: [new("t1", "{\"operation\":\"append_note\"}", "pending", "", "")], ServerWrites: true)
+                    : new PetConnectionResponse("anthropic", "connected", "", false, "success", [new("b", "assistant", "Done.")], ServerWrites: true)));
+            },
+        };
+
+        await runner.Run(As(Editor), message.Id.Value, [ann]);
+
+        Assert.True(bobReads >= 2);
+        Assert.Empty(approvals);
+    }
+
+    [Fact]
     public async Task A_token_needs_pets_send_and_the_workspace_switch_to_address_a_pet_and_the_wait_is_ask_or_declined()
     {
         await SavePetsAsync(("Pip", PetId));

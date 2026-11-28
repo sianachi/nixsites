@@ -222,6 +222,26 @@ export function writeTextItems(args: WorkspaceToolArgs): WriteTextItem[] {
   return out;
 }
 
+/** Writes whose run refuses without the fingerprint the owner's preview produced (`runWorkspaceTool`),
+ * so an automatic approval that carries none can only fail; it waits for the owner's card instead. */
+export const FENCED_OPERATIONS: ReadonlySet<WorkspaceToolArgs['operation']> = new Set<
+  WorkspaceToolArgs['operation']
+>([
+  'create_structured',
+  'add_view',
+  'create_entries',
+  'add_fields',
+  'edit_fields',
+  'edit_form',
+  'update_view',
+  'set_recurrence',
+  'build_blueprint',
+  'save_as_template',
+  'complete_task',
+  'replace_section',
+  'replace_passage',
+]);
+
 /** What the server re-checks for an automatic approval: the parts of `writeMayRunWithoutAsking`
  * that depend on the arguments and the conversation alone. Preview-derived conditions (a body
  * edit's joined text, lost formatting, a repeating-task occurrence) are pinned by the fence the

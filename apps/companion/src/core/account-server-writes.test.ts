@@ -191,6 +191,21 @@ describe('tool_approve', () => {
     expect(run).toHaveBeenCalledOnce();
   });
 
+  it('holds an automatic approval of a write that needs the preview fence, and runs it with one', async () => {
+    const { tools, run } = fake();
+    const { snap, approve } = await start(tools, 'nix_complete_task', {
+      itemId: IDS.item,
+      completed: true,
+    });
+    await approve({ approvedOperation: 'complete_task', automatic: true });
+    await settle();
+    expect(run).not.toHaveBeenCalled();
+    expect(snap().tools[0]?.status).toBe('pending');
+    await approve({ approvedOperation: 'complete_task', automatic: true, fingerprint: 'fp-1' });
+    await eventually(() => snap().tools[0]?.status === 'completed');
+    expect(run).toHaveBeenCalledOnce();
+  });
+
   it('refuses app-only operations', async () => {
     const { tools, run } = fake();
     const { approve } = await start(tools, 'nix_save_as_template', {
