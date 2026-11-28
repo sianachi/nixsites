@@ -522,7 +522,6 @@ export class Account {
       c.title = str(raw.title);
       c.lockedRead = raw.lockedRead === true;
       c.providerContext = readProviderContext(raw.providerContext);
-      c.disclosureBlocked = raw.disclosureBlocked === true;
       c.state = 'idle';
       if (c.conversationItemId !== '') {
         c.state = c.durableState;
@@ -537,10 +536,6 @@ export class Account {
           t.status = 'interrupted';
           t.result = 'Worker restarted. Check Nix before requesting this change again.';
         }
-      }
-      if (c.disclosureBlocked) {
-        c.state = 'error';
-        c.reason = HISTORY_SHARING_RECOVERY;
       }
     }
     c.revision = Date.now();
@@ -568,7 +563,6 @@ export class Account {
       ...(c.title !== '' ? { title: c.title } : {}),
       ...(c.lockedRead ? { lockedRead: true } : {}),
       ...(c.providerContext === undefined ? {} : { providerContext: c.providerContext }),
-      ...(c.disclosureBlocked ? { disclosureBlocked: true } : {}),
     };
     writeFileAtomic(this.path(key), `${JSON.stringify(persisted)}\n`);
   }
@@ -633,16 +627,10 @@ export class Account {
 
   async canDisclose(r: Request): Promise<boolean> {
     if (this.validateSharing === undefined) return false;
+    // A saved key is the consent to share (owner decision, 28 November): Core's answer decides every turn, and
+    // nothing here blocks a conversation for good, whatever key or provider its earlier turns used.
     const conversation = this.conversations.get(conversationKey(r));
-    if (conversation?.disclosureBlocked === true) return false;
     const context = conversation?.providerContext;
-    if (
-      conversation !== undefined &&
-      conversation.requestId !== r.requestId &&
-      (conversation.threadId !== '' || conversation.messages.length > 0) &&
-      context === undefined
-    )
-      return false;
     const decision = await this.validateSharing(
       {
         tenantId: r.tenantId,
@@ -666,8 +654,6 @@ export class Account {
       AbortSignal.timeout(10_000),
     );
     if (typeof decision === 'boolean' || !decision.allowed || decision.recipientRevision === null)
-      return false;
-    if (context !== undefined && context.recipientRevision !== decision.recipientRevision)
       return false;
     const pinned = this.recipientRevisions.get(r.requestId);
     if (pinned !== undefined && pinned !== decision.recipientRevision) return false;
@@ -1057,6 +1043,7 @@ export class Account {
     try {
       if (!(await this.canDisclose(r))) throw new Error(HISTORY_SHARING_RECOVERY);
       disclosureConfirmed = true;
+      c.disclosureBlocked = false;
       this.transport.setDisclosureGuard?.(thread, () => this.canDisclose(c.actor));
       turnParams.consentMode = r.consentMode;
       turnParams.recipientRevision = this.recipientRevisionFor(r);

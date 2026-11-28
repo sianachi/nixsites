@@ -91,13 +91,15 @@ describe('cached provider context disclosure', () => {
       expect(app.account.conversations.get(keyOf(start))?.turnId).toBe('');
       expect(app.transport.methods()).not.toContain('turn/start');
       expect((await app.account.handle(app.signal, start)).state).toBe('error');
+      // Not blocked for good: the next turn asks Core again, which still refuses here.
       await expect(
         app.account.handle(app.signal, { ...start, requestId: IDS.other }),
-      ).rejects.toThrow('new conversation');
+      ).rejects.toThrow();
+      expect(checks).toBeGreaterThan(2);
     },
   );
 
-  it('keeps a refused disclosure terminal and recoverable without forwarding its trusted receipt', async () => {
+  it('ends a refused disclosure without forwarding its trusted receipt, and asks Core again after a restart', async () => {
     let allowed = true;
     const app = harness({
       validateSharing: () =>
@@ -152,11 +154,11 @@ describe('cached provider context disclosure', () => {
       ],
     });
     expect(app.account.snapshot(keyOf(start)).reason).toContain('new conversation');
+    // A saved key is the consent: once Core allows the turn again, the conversation continues.
     const restored = harness({ home: app.home });
     await expect(
       restored.account.handle(restored.signal, { ...start, requestId: IDS.other }),
-    ).rejects.toThrow('new conversation');
-    expect(restored.transport.calls).toEqual([]);
+    ).resolves.toBeDefined();
   });
 
   it('shows explicit recovery when the transport refuses a cached continuation', async () => {
@@ -362,7 +364,7 @@ describe('cached provider context disclosure', () => {
     );
   });
 
-  it('refuses legacy cached history without provenance and preserves its visible transcript', async () => {
+  it('continues legacy cached history without provenance once Core allows the turn, keeping its transcript', async () => {
     const app = harness();
     const start = request();
     writeFileSync(
@@ -373,8 +375,7 @@ describe('cached provider context disclosure', () => {
         messages: [{ id: IDS.other, role: 'assistant', text: 'Legacy source content' }],
       }),
     );
-    await expect(app.account.handle(app.signal, start)).rejects.toThrow('new conversation');
-    expect(app.transport.calls).toEqual([]);
+    await expect(app.account.handle(app.signal, start)).resolves.toBeDefined();
     expect(app.account.snapshot(keyOf(start)).messages[0]?.text).toBe('Legacy source content');
   });
 
