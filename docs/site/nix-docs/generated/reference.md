@@ -2648,7 +2648,7 @@ Responses: `200`, `404`.
 
 <a id="approvemessagepetturn"></a>
 
-Start a pet's waiting turn, or save the fact it wants remembered (the app only)
+Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)
 
 Operation id: `ApproveMessagePetTurn`.
 

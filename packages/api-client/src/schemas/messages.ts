@@ -40,6 +40,8 @@ export const messagePetStateSchema = z.object({
   expiresAt: z.iso.datetime({ offset: true }).nullable(),
   /** A fact the pet wants remembered from the message, waiting for its owner to approve or dismiss it. */
   memory: z.string().nullish(),
+  /** Why a failed turn could not start: sharing not reviewed (retry after approving) or no provider key saved. */
+  code: z.enum(['pets.sharing_required', 'pets.no_provider_key']).nullish(),
 });
 
 export const messagePetStatesSchema = z.object({ pets: z.array(messagePetStateSchema) });

@@ -27,7 +27,7 @@ internal static class MessageEndpoints
             .WithSummary("Where each pet a message addressed stands")
             .Produces<MessagePetStatesResponse>().ProducesProblem(404);
         group.MapPost("/pet-turns/{petId:guid}/approve", Approve).WithName("ApproveMessagePetTurn")
-            .WithSummary("Start a pet's waiting turn, or save the fact it wants remembered (the app only)")
+            .WithSummary("Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)")
             .Produces<MessagePetState>().ProducesProblem(403).ProducesProblem(404).ProducesProblem(409)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         group.MapPost("/pet-turns/{petId:guid}/dismiss", Dismiss).WithName("DismissMessagePetTurn")

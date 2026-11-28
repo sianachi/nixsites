@@ -3526,7 +3526,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Start a pet's waiting turn, or save the fact it wants remembered (the app only) */
+    /** Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only) */
     post: operations['ApproveMessagePetTurn'];
     delete?: never;
     options?: never;
@@ -5857,6 +5857,7 @@ export interface components {
       /** Format: date-time */
       expiresAt: null | string;
       memory?: null | string;
+      code?: null | string;
     };
     MessagePetStatesResponse: {
       pets: components['schemas']['MessagePetState'][];

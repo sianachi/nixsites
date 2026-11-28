@@ -259,7 +259,8 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     method: 'POST',
     path: '/api/v1/items/{itemId}/pet-turns/{petId}/approve',
     area: 'Messages',
-    summary: "Start a pet's waiting turn, or save the fact it wants remembered (the app only)",
+    summary:
+      "Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)",
     detail: '',
     pathParams: ['itemId', 'petId'],
     uuidParams: ['itemId', 'petId'],

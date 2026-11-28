@@ -1527,9 +1527,9 @@
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
-<article id="approvemessagepetturn" data-search="post /api/v1/items/{itemid}/pet-turns/{petid}/approve approvemessagepetturn start a pet's waiting turn, or save the fact it wants remembered (the app only)  messages">
+<article id="approvemessagepetturn" data-search="post /api/v1/items/{itemid}/pet-turns/{petid}/approve approvemessagepetturn start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)  messages">
 <h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-turns/{petId}/approve</code></h3>
-<p>Start a pet's waiting turn, or save the fact it wants remembered (the app only)</p>
+<p>Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)</p>
 <p class="id">Operation id: <code>ApproveMessagePetTurn</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>

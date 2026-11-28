@@ -209,6 +209,43 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_turn_refused_for_sharing_keeps_its_code_posts_no_reply_and_the_owner_can_retry_it_but_not_other_failures()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        var refused = (await PostAsync(Editor, Note, "hello")).Value;
+        var broken = (await PostAsync(Editor, Note, "again")).Value;
+        await InsertTurnAsync(refused.Id.Value, "working", "now()");
+        await InsertTurnAsync(broken.Id.Value, "failed", "now()");
+        await using var scope = _fixture.Application.CreateUnscopedScope();
+        var runner = new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
+        {
+            Converse = (_, _, _, _, _, _) => Task.FromResult(Result.Failure<PetConnectionResponse>(new NixError("pets.sharing_required", "Review sharing."))),
+        };
+        await runner.Run(As(Editor), refused.Id.Value, [PetId]);
+
+        var state = Assert.Single((await StatesAsync(refused.Id.Value)).Pets);
+        Assert.Equal(("failed", "pets.sharing_required"), (state.Status, state.Code));
+        Assert.Empty(await RepliesAsync(refused.Id.Value));
+
+        // Claiming is what a retry does (the approve route launches the turn after it): only the sharing refusal can be taken again.
+        Assert.Null(await ClaimAsync(broken.Id.Value, Editor));
+        Assert.Null(await ClaimAsync(refused.Id.Value, Friend));
+        var retried = Assert.IsType<MessagePetTurnRow>(await ClaimAsync(refused.Id.Value, Editor));
+        Assert.Equal(("working", null, null), (retried.Status, retried.Reason, retried.Code));
+    }
+
+    private async Task<MessagePetTurnRow?> ClaimAsync(Guid message, Guid who)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(who), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            var row = await work.Resolve<MessagePetTurnStore>().ClaimAsync(message, PetId, Cancellation);
+            await work.CommitAsync(Cancellation);
+            return row;
+        }
+    }
+
+    [Fact]
     public async Task A_remembered_fact_follows_the_owners_memory_mode_and_core_records_where_it_came_from()
     {
         // Ask: held on the turn, then approved once by the owner.

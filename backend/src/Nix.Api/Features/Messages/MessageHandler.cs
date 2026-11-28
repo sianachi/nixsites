@@ -176,7 +176,7 @@ public sealed class MessageHandler(
         return Result.Success(new MessagePetStatesResponse(await StatesAsync(messageId.Value, cancellationToken).ConfigureAwait(false)));
     }
 
-    /// <summary>The owner approves (starts the turn) or dismisses a pet's waiting turn. Only the app can.</summary>
+    /// <summary>The owner approves (starts the turn, or retries one that failed for want of sharing consent) or dismisses a pet's waiting turn. Only the app can.</summary>
     public async Task<Result<MessagePetState>> Decide(ItemId messageId, Guid petId, bool approve, CancellationToken cancellationToken)
     {
         if (!scope.IsInteractive)
@@ -241,7 +241,7 @@ public sealed class MessageHandler(
         }
 
         var profiles = (await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), cancellationToken).ConfigureAwait(false)).Settings.Profiles;
-        return [.. rows.Select(row => new MessagePetState(row.PetId, profiles.FirstOrDefault(pet => pet.Id == row.PetId)?.Name ?? "A pet that was removed", row.Status, row.Reason, row.ExpiresAt, row.Memory))];
+        return [.. rows.Select(row => new MessagePetState(row.PetId, profiles.FirstOrDefault(pet => pet.Id == row.PetId)?.Name ?? "A pet that was removed", row.Status, row.Reason, row.ExpiresAt, row.Memory, row.Code))];
     }
 
     // The turn runs later as the poster with no workspace unlock, so refuse here, where the person is looking.
