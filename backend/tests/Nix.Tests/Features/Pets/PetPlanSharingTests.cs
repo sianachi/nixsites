@@ -53,6 +53,15 @@ public sealed class PetPlanSharingTests
         Assert.Equal(false, method.Invoke(null, ["pet_planet_search"]));
     }
 
+    [Fact]
+    public void Owner_text_pinning_needs_only_a_saved_key_not_a_browser_session()
+    {
+        var service = Core.GetType("Nix.Features.PetRuns.PetPlanSharingService", throwOnError: true)!;
+        var parameters = service.GetConstructors().Single().GetParameters().Select(value => value.ParameterType.Name);
+        Assert.DoesNotContain("BrowserAccess", parameters);
+        Assert.DoesNotContain("IHttpContextAccessor", parameters);
+    }
+
     private static string Scope(Guid workspace, Guid pet, string kind, Guid[] sources, Guid[]? readOnlyWorkspaces = null)
     {
         var scopeType = Core.GetType("Nix.Features.PetRuns.PetPlanSourceScope", throwOnError: true)!;

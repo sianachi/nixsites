@@ -156,7 +156,8 @@ follows semantic versioning (`0.x` pre-1.0).
   apply. Removed: the sharing question and decision routes (`/pet-sharing/question`,
   `/pet-sharing/decision`, `/pet-plans/{runId}/sharing/decision`), `pets.sharing_required`, the
   `sharingQuestion` field of a plan, and `nixctl pet-plans share-handoff`. Settings > Pets now says
-  that saving a key sends the pet's selected workspace content to that provider.
+  that saving a key sends the pet's selected workspace content to that provider. A text-only turn
+  no longer needs a browser session either, so a CLI session with a saved key can send one.
 - Enabled companion workspaces review a whole prepared plan in labelled forms. Continue approves
   its exact steps once; changed values or scope require a fresh review. Progress and receipts show
   what applied, what stopped, and what needs checking. App-only steps wait for an open client.

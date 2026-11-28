@@ -9,7 +9,6 @@ using Nix.Abstractions.PetRuns;
 using Nix.Domain.Identity;
 using Nix.Domain.Primitives;
 using Nix.Domain.Tenancy;
-using Nix.Features.BrowserAuth;
 using Nix.Features.Pets;
 using Nix.Messaging;
 
@@ -18,8 +17,7 @@ namespace Nix.Features.PetRuns;
 [SuppressMessage("Performance", "CA1812", Justification = "Created by dependency injection.")]
 internal sealed class PetPlanSharingService(INixSessionContextAccessor session,
     NixDispatcher dispatcher, IPermissionResolver permissions, IPetProviderCredentialStore credentials,
-    IDataProtectionProvider protection, BrowserAccess browser,
-    IHttpContextAccessor httpContext, TimeProvider clock, IIsolatedUnitOfWork isolated, IIdentityDirectory identities)
+    IDataProtectionProvider protection, TimeProvider clock, IIsolatedUnitOfWork isolated, IIdentityDirectory identities)
 {
     private readonly IDataProtector _protector = protection.CreateProtector("Nix.PetDisclosure.v1");
     private NixSessionContext Caller => session.Current ?? throw new InvalidOperationException("An owner transaction is required.");
@@ -104,10 +102,9 @@ internal sealed class PetPlanSharingService(INixSessionContextAccessor session,
     internal async Task<Result<string>> PinOwnerTextAsync(Guid workspaceId, Guid petId, Guid turnId,
         CancellationToken cancellationToken)
     {
-        var http = httpContext.HttpContext;
-        if (http is null || turnId == Guid.Empty || await browser.VerifyAsync(http, requireOrigin: true).ConfigureAwait(false) is null)
+        if (turnId == Guid.Empty)
         {
-            return Result.Failure<string>(NoKey);
+            return Result.Failure<string>(new("pets.invalid_request", "A turn id is required."));
         }
         var described = await DescribeAsync(workspaceId, petId, new("selected", []), cancellationToken).ConfigureAwait(false);
         if (described.IsFailure || described.Value.Recipient.ConnectionRevision == "unknown")
