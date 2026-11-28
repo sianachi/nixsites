@@ -463,12 +463,22 @@ public sealed class MessageHandler(
         {
             var current = pending.Pop();
             walked.Add(current);
-            foreach (var child in await tree.ListChildrenAsync(current.WorkspaceId, current.Id, false, null, 100, cancellationToken).ConfigureAwait(false))
+            // Page through every reply: a flat thread puts all of them under one message.
+            long? after = null;
+            while (true)
             {
-                if (child.Type == MessageItem.Type)
+                var page = await tree.ListChildrenAsync(current.WorkspaceId, current.Id, false, after, 100, cancellationToken).ConfigureAwait(false);
+                foreach (var child in page.Where(child => child.Type == MessageItem.Type))
                 {
                     pending.Push(child);
                 }
+
+                if (page.Count < 100)
+                {
+                    break;
+                }
+
+                after = page[^1].Seq;
             }
         }
 

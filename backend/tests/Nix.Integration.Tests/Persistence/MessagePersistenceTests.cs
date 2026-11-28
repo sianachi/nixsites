@@ -906,6 +906,21 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_thread_guard_sees_replies_past_the_first_hundred_under_one_message()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        var root = (await PostAsync(Editor, Note, "start")).Value;
+        for (var index = 0; index < 100; index++)
+        {
+            Assert.True((await PostAsTokenAsync(Token, Editor, root.Id.Value, $"m{index}", true)).IsSuccess);
+        }
+
+        // The person's message is the 101st reply, so the run must be counted from it, not from the 100th reply.
+        Assert.True((await PostAsync(Editor, root.Id.Value, "back")).IsSuccess);
+        Assert.True((await PostAsTokenAsync(Token, Editor, root.Id.Value, "now", true, new MessageAddress(PetId, "pet"))).IsSuccess);
+    }
+
+    [Fact]
     public async Task A_token_posts_at_most_five_hundred_messages_a_day_even_in_parallel_and_the_count_ages_out()
     {
         await ExecuteAsync($"""
