@@ -27,7 +27,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// answer.
 /// </para>
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class SearchAuthorizationTests : IAsyncLifetime
 {
     /// <summary>A second workspace in Alpha's tenant, which the acting principal is not a member of.</summary>

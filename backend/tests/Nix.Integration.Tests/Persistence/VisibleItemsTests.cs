@@ -12,7 +12,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// The visible-item gate against real Postgres: a deleted, template, locked or foreign-tenant item
 /// is refused the way the tree's visibility rules and the lock rules say it must be.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class VisibleItemsTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly Guid Locker = new("10c10c00-1111-4111-8111-10c10c000011");

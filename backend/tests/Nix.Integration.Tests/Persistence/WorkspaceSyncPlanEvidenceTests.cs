@@ -16,7 +16,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// markers, planned and run as the runtime role under row-level security.
 /// </summary>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class WorkspaceSyncPlanEvidenceTests(NixPostgresFixture fixture, ITestOutputHelper output) : IAsyncLifetime
 {
     private const int Items = 50_000;

@@ -19,7 +19,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// this is the database round trip - the actual row GitHub issue #54 was filed against, where the
 /// file page's bar reads <c>file_version.file_name</c> and had stopped agreeing with the tree.
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class RenameItemFileNameTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

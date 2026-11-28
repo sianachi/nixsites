@@ -1,5 +1,6 @@
 # Backend CI (engineering plan section 9.2).
-#   Stage 1 static -> Stage 2 unit. Integration (Testcontainers) is stage 3.
+#   Everything runs side by side so a run costs the slowest job, not the sum of the stages:
+#   format, static + unit, and the integration suite split into shards (below).
 #
 # Split from the frontend workflow so the two lanes can be developed in
 # parallel without contending for one file. Path filters mean a frontend-only
@@ -25,6 +26,7 @@ on:
       - 'scripts/check-layering.sh'
       - 'scripts/check-root-is-unambiguous.sh'
       - 'scripts/fetch-pdf-fonts.sh'
+      - 'scripts/ci/**'
       - '.github/workflows/ci-backend.yml'
   pull_request:
     paths:
@@ -36,6 +38,7 @@ on:
       - 'scripts/check-layering.sh'
       - 'scripts/check-root-is-unambiguous.sh'
       - 'scripts/fetch-pdf-fonts.sh'
+      - 'scripts/ci/**'
       - '.github/workflows/ci-backend.yml'
 
 concurrency:
@@ -50,8 +53,10 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  backend-static:
-    name: backend static
+  # dotnet format loads and analyses the whole solution, which is the slow part (about four
+  # minutes), so it gets a runner of its own instead of delaying the build.
+  backend-format:
+    name: backend format
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -62,8 +67,33 @@ jobs:
           # mise.toml pins dotnet = "10"; track the same major here.
           dotnet-version: 10.0.x
 
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props', 'Nix.slnx') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Verify formatting (dotnet format)
         run: dotnet format Nix.slnx --verify-no-changes
+
+  # Build once with the analyzers and warnings-as-errors on, then run the unit suite on that
+  # build. It used to build a second time in its own job.
+  backend-static:
+    name: backend static
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props', 'Nix.slnx') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Build (analyzers + warnings-as-errors)
         run: dotnet build Nix.slnx --configuration Release -p:NixGenerateOpenApiContract=true
@@ -97,20 +127,8 @@ jobs:
       - name: Root has exactly one project/solution file
         run: ./scripts/check-root-is-unambiguous.sh
 
-  backend-unit:
-    name: backend unit
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    needs: backend-static
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        with:
-          dotnet-version: 10.0.x
-
       # Named explicitly rather than run across the solution: Nix.Integration.Tests
-      # needs Docker and runs in its own stage-3 job. Nix.Tests must stay free of
+      # needs Docker and runs in its own shard jobs. Nix.Tests must stay free of
       # Testcontainers so this job never needs a daemon - that is the whole reason
       # the two suites are separate projects rather than one.
       # The PDF CJK font tests skip without these fonts.
@@ -119,33 +137,43 @@ jobs:
 
       - name: Unit tests
         working-directory: backend
-        run: dotnet test --project tests/Nix.Tests/Nix.Tests.csproj --configuration Release
+        run: dotnet test --project tests/Nix.Tests/Nix.Tests.csproj --configuration Release --no-build
 
-  # ── Stage 3: integration ───────────────────────────────────────────────────
+  # ── Integration ────────────────────────────────────────────────────────────
   # Everything that needs a real Postgres: the tenant isolation policies, the
   # composite foreign keys that stop cross-tenant references, the grants matrix,
   # the pre-authentication identity provider resolver, and the SET LOCAL pooling
-  # proof.
-  #
-  # These are the tests the engineering plan calls the crown jewels, and until
-  # this job existed they ran only on whichever machine last touched them. A
+  # proof. These are the tests the engineering plan calls the crown jewels, and a
   # permission regression is a breach rather than a defect, so "someone ran it
   # locally" is not a control.
   #
-  # Parallel to backend-unit rather than after it: both need the static stage to
-  # have passed, neither needs the other, and a broken policy should not wait on
-  # a unit suite to be reported.
+  # One suite, run as eight shards that each build the test project and run a slice of the
+  # classes (scripts/ci/integration-shard.mjs; the slice lists are in
+  # scripts/ci/integration-shards.json). A pull request skips the plan-evidence classes, as it
+  # always did: they measure query plans over a large seeded corpus, take minutes, and run on
+  # every push to main. backend-shard-guard proves the slices together are the whole suite.
   backend-integration:
-    name: backend integration
+    name: backend integration (${{ matrix.shard }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    needs: backend-static
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    env:
+      SKIP_PLAN_EVIDENCE: ${{ github.event_name == 'pull_request' && '1' || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: 10.0.x
+
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props', 'Nix.slnx') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       # No docker setup step: ubuntu-24.04 ships a running daemon, and
       # Testcontainers finds it through the default socket. Asserted rather than
@@ -154,15 +182,30 @@ jobs:
       - name: Docker is available for Testcontainers
         run: docker info --format 'docker {{.ServerVersion}}'
 
-      # Pulled explicitly so the image download is its own step. Inside the
-      # fixture it would land in the first test's timeout budget and present as
-      # a flake on a cold runner.
-      - name: Pre-pull the Postgres image
-        run: docker pull pgvector/pgvector:pg16
+      # The Postgres image downloads while the compiler runs. Pulled explicitly rather than inside
+      # the fixture, where it would land in the first test's timeout budget and present as a flake
+      # on a cold runner.
+      - name: Build, and pre-pull the Postgres image
+        run: |
+          docker pull pgvector/pgvector:pg16 &
+          pull=$!
+          dotnet build backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release
+          wait "$pull"
 
-      - name: Integration tests
-        working-directory: backend
-        timeout-minutes: 27
+      # What this shard would run, and what the whole suite is, for backend-shard-guard.
+      - name: List this shard's tests
+        run: |
+          mkdir -p shard-lists
+          LIST=1 bash scripts/ci/integration-tests.sh ${{ matrix.shard }} > shard-lists/shard-${{ matrix.shard }}.txt
+          if [ "${{ matrix.shard }}" = 1 ]; then LIST=1 bash scripts/ci/integration-tests.sh all > shard-lists/all.txt; fi
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: shard-list-${{ matrix.shard }}
+          path: shard-lists/
+
+      - name: Integration tests (shard ${{ matrix.shard }} of 8)
+        timeout-minutes: 20
         run: |
           # Only inspect disposable Testcontainers databases on this runner.
           # Report long-running statements so fixture stalls have server-side evidence.
@@ -176,34 +219,26 @@ jobs:
           diagnostic_pid=$!
           trap 'kill "$diagnostic_pid" 2>/dev/null || true' EXIT
           # The step timeout bounds a stuck test; the hang dump flags need an extension package xunit v4 does not bundle.
-          dotnet test --project tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
-            --filter-not-trait "Category=PlanEvidence" \
-            --output Detailed
+          bash scripts/ci/integration-tests.sh ${{ matrix.shard }}
 
-  # ── Stage 3b: query-plan evidence ──────────────────────────────────────────
-  # EXPLAIN-based proof that hot statements use their indexes over a large seeded corpus. It
-  # measures performance rather than behaviour, takes about nine minutes, and the functional
-  # classes already cover what each statement returns, so it runs after merge instead of
-  # holding every pull request.
-  backend-plan-evidence:
-    name: backend plan evidence
-    if: github.event_name == 'push'
+  # The shards are slices of one suite. Each listed its tests before running them; the unsplit
+  # listing came from shard 1. Fails if a test is in no shard, in two, or is not in the suite.
+  backend-shard-guard:
+    name: backend shard guard
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    needs: backend-static
+    timeout-minutes: 5
+    needs: backend-integration
+    if: always() && needs.backend-integration.result != 'cancelled'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          dotnet-version: 10.0.x
+          pattern: shard-list-*
+          path: lists
+          merge-multiple: true
 
-      - name: Pre-pull the Postgres image
-        run: docker pull pgvector/pgvector:pg16
-
-      - name: Plan evidence tests
-        working-directory: backend
+      - name: Shards are a partition of the suite
         run: |
-          dotnet test --project tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release \
-            --filter-trait "Category=PlanEvidence" \
-            --output Detailed
+          node scripts/ci/integration-shard.mjs --check
+          node scripts/ci/check-shard-partition.mjs lists

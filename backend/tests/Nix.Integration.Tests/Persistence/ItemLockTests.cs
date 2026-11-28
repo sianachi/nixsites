@@ -31,7 +31,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// link table, which is what the derived-path tests below lean on.
 /// </para>
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class ItemLockTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     /// <summary>The browser session that sets the lock.</summary>

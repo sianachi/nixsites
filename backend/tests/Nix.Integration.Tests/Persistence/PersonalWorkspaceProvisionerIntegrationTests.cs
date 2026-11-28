@@ -9,7 +9,7 @@ using Nix.Persistence.Identity;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class PersonalWorkspaceProvisionerIntegrationTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

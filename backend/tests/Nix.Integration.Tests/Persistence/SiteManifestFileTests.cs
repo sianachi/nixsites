@@ -12,7 +12,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// [SEC] Only referenced images are copied into a build, and the set cannot grow once the build
 /// has left the queue.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SiteManifestFileTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private SiteScenario _scenario = null!;

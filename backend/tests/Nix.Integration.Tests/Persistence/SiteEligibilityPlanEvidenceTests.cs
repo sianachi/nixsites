@@ -22,7 +22,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// has something to exclude.
 /// </remarks>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class SiteEligibilityPlanEvidenceTests(NixPostgresFixture fixture, ITestOutputHelper output) : IAsyncLifetime
 {
     private static readonly Guid SiteId = new("51e51e51-aaaa-4aaa-8aaa-51e51e51aaaa");

@@ -10,7 +10,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// real pipeline: authorization is server-side, grants are tenant-scoped, and a database grant
 /// never widens the instance-wide operator flag.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class SiteOperatorHttpTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly Dictionary<string, string?> Configured = new()

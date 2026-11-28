@@ -14,7 +14,7 @@ using Npgsql;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Real PostgreSQL security, queue growth and active-job plan proof for workspace transfers.</summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class WorkspaceTransferGuardTests(NixPostgresFixture fixture, ITestOutputHelper output) : IAsyncLifetime
 {
     private const int ChainSize = 128;

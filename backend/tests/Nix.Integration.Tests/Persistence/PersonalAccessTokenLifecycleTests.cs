@@ -32,7 +32,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// and it is why this test can exist without a Zitadel container.
 /// </para>
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class PersonalAccessTokenLifecycleTests : IAsyncLifetime
 {
     private const string InternalSecret = "lifecycle-internal-secret-value";

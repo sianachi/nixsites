@@ -21,7 +21,7 @@ namespace Nix.Integration.Tests.Workers;
 /// service, reports, and the job completes. A second hand-out of the same notification yields no
 /// devices, so a re-run can never push twice.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class NotifyPushEndToEndTests : IAsyncLifetime
 {
     private const string InternalSecret = "notify-e2e-internal-secret";

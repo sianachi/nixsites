@@ -14,7 +14,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// Passage retrieval over a note and its descendants returns only body text the caller may read:
 /// nothing outside the subtree, at or under a lock, trashed, or in a workspace the caller is not in.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class NotePassageTests : IAsyncLifetime
 {
     private static readonly Guid PrivateWorkspace = new("9a55a6e0-1111-4111-8111-9a55a6e00001");

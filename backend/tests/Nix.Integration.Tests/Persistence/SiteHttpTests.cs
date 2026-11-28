@@ -9,7 +9,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// Sites through the real pipeline: who may read, who may change and publish, what is written to
 /// the audit log, and that a repeated publish is the same build.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SiteHttpTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private SiteHttpHost _host = null!;

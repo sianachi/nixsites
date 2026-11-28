@@ -14,7 +14,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// The sites worker's routes end to end: what the lease proves, what the manifest and uploads
 /// enforce, and that the host manifest the worker writes is the exact bytes Core planned.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SiteWorkerEndpointTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private const string Execution = "sites-worker:019946d1-fbc1-7d99-9ce7-1c721b406ff0";

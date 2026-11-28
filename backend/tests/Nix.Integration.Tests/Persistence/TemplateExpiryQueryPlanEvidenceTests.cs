@@ -8,7 +8,7 @@ namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Records the workspace-scoped expiry plans against the MVP stress corpus size.</summary>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class TemplateExpiryQueryPlanEvidenceTests : IAsyncLifetime
 {
     private const int CorpusSize = 3200;

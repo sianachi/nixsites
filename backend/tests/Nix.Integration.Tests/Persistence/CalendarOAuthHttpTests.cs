@@ -13,7 +13,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// boundary accepts only the session that started it, only within ten minutes, and stores the
 /// grant protected; reconnecting updates the row; disconnecting revokes upstream and stops links.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class CalendarOAuthHttpTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private CalendarSyncHost _host = null!;

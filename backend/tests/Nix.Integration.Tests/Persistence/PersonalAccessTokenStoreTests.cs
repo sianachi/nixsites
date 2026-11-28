@@ -22,7 +22,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// edge: a row read across either boundary here is a credential's metadata, and a revocation
 /// that reaches across it would let a neighbour end somebody else's access.
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class PersonalAccessTokenStoreTests : IAsyncLifetime
 {
     /// <summary>A second principal in Alpha's tenant, sharing the workspace.</summary>

@@ -13,7 +13,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// statement, so each way an item can be withheld has its own case, and the same set is asserted
 /// again on the build manifest that a worker is later handed.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SiteEligibilityTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private SiteScenario _scenario = null!;

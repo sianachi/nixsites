@@ -8,7 +8,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// The organization's MCP and public link switches through the real pipeline: administrators only,
 /// interactive sessions only, audited, shown in <c>/me</c>, and capped by what the deployment offers.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class TenantSettingsHttpTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private const string Route = "/api/v1/tenant/settings";

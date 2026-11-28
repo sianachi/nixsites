@@ -8,7 +8,7 @@ using NpgsqlTypes;
 namespace Nix.Integration.Tests.Persistence;
 
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class WorkspaceAdministrationPlanEvidenceTests : IAsyncLifetime
 {
     private const int CorpusSize = 10000;

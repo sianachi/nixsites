@@ -23,7 +23,7 @@ using Nix.Persistence.Identity;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class JitMiddlewareTransactionIntegrationTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

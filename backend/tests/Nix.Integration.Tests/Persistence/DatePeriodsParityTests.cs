@@ -14,7 +14,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// one item in two weeks. Eight years of days cover every weekday at every month, quarter and year
 /// boundary, a leap day, and the ISO weeks that straddle New Year.
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class DatePeriodsParityTests
 {
     private readonly NixPostgresFixture _fixture;

@@ -16,7 +16,7 @@ namespace Nix.Integration.Tests.ViewCompute;
 /// The habit golden fixtures (<c>packages/view-compute/fixtures/habit</c>) replayed through Core's
 /// own <see cref="HabitTrackerHandler"/>, so the offline TypeScript port cannot drift from it.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class HabitFixtureReplayTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

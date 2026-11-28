@@ -19,7 +19,7 @@ using NpgsqlTypes;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Native metadata synchronization against Postgres commit order and current permissions.</summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class NativeWorkspaceSyncTests(NixPostgresFixture fixture, ITestOutputHelper output) : IAsyncLifetime
 {
     private static readonly Guid Member = new("7c500000-1111-4111-8111-7c5000000001");

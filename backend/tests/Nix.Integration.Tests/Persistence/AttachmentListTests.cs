@@ -18,7 +18,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// The attachments list on real Postgres as the runtime role: which version a file shows, the
 /// filters, keyset paging, pin and link flags, what a lock withholds, and tenant isolation.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class AttachmentListTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private const string Password = "hunter22";

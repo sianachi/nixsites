@@ -9,7 +9,7 @@ using Nix.Messaging;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Habit settings and check-ins over the real PostgreSQL persistence boundary.</summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class HabitTrackerIntegrationTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;
