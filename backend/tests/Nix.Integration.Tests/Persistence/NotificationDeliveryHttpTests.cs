@@ -21,7 +21,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// <c>internal/notifyjob/handler.go</c>): a strict, single JSON object with exactly the fields
 /// those decoders read, and the delivery/results round trip they drive.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class NotificationDeliveryHttpTests : IAsyncLifetime
 {
     private const string InternalSecret = "notify-http-internal-secret";

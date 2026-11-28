@@ -12,7 +12,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// role under row-level security, for the filters that match only a few files.
 /// </summary>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class AttachmentListFilterScaleTests : IAsyncLifetime
 {
     private const int Files = 120000;

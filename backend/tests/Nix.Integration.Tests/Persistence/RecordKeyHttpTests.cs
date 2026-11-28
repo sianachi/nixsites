@@ -17,7 +17,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// <summary>
 /// Record keys, lookup, upsert, batch and strict mode through the real HTTP pipeline on Postgres.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class RecordKeyHttpTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

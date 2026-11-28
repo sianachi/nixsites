@@ -11,7 +11,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// at most <see cref="SiteRules.MaximumDownloadBytes"/> and under the same eligibility rules as an
 /// image. Any other type, or a larger file, is not eligible.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SiteDownloadFileTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private SiteScenario _scenario = null!;

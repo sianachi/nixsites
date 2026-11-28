@@ -16,7 +16,7 @@ namespace Nix.Integration.Tests.ViewCompute;
 /// (the real route handlers, called directly), so the offline TypeScript port is held to what Core
 /// answers. Record the expected answers with <c>NIX_FIXTURE_RECORD=1</c>; never write them by hand.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class QueryFixtureReplayTests : IAsyncLifetime
 {
     private static readonly Assembly Core = typeof(RunItemQuery).Assembly;

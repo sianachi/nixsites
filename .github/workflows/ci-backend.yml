@@ -1,6 +1,6 @@
 # Backend CI (engineering plan section 9.2).
 #   Everything runs side by side so a run costs the slowest job, not the sum of the stages:
-#   format, static + unit, and the integration suite split into shards (below).
+#   format, static, unit, and the integration suite split into shards (below).
 #
 # Split from the frontend workflow so the two lanes can be developed in
 # parallel without contending for one file. Path filters mean a frontend-only
@@ -129,10 +129,33 @@ jobs:
       - name: Root has exactly one project/solution file
         run: ./scripts/check-root-is-unambiguous.sh
 
-      # Named explicitly rather than run across the solution: Nix.Integration.Tests
-      # needs Docker and runs in its own shard jobs. Nix.Tests must stay free of
-      # Testcontainers so this job never needs a daemon - that is the whole reason
-      # the two suites are separate projects rather than one.
+  # The unit suite on its own build. The analyzers and warnings-as-errors already gate the same
+  # sources in backend-static, so this build leaves the analyzers out: the binaries are the same
+  # and it saves about half the compile time.
+  #
+  # Named explicitly rather than run across the solution: Nix.Integration.Tests needs Docker and
+  # runs in its own shard jobs. Nix.Tests must stay free of Testcontainers so this job never needs
+  # a daemon - that is the whole reason the two suites are separate projects rather than one.
+  backend-unit:
+    name: backend unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props', 'Nix.slnx') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Build
+        run: dotnet build backend/tests/Nix.Tests/Nix.Tests.csproj --configuration Release -p:RunAnalyzers=false
+
       # The PDF CJK font tests skip without these fonts.
       - name: Fetch PDF fallback fonts
         run: sh scripts/fetch-pdf-fonts.sh
@@ -163,7 +186,7 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
     env:
-      SKIP_PLAN_EVIDENCE: ${{ github.event_name == 'pull_request' && '1' || '' }}
+      SKIP_PLAN_EVIDENCE: '' # MEASURE: restore the pull_request condition
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -184,14 +207,15 @@ jobs:
       - name: Docker is available for Testcontainers
         run: docker info --format 'docker {{.ServerVersion}}'
 
-      # The Postgres image downloads while the compiler runs. Pulled explicitly rather than inside
+      # The analyzers run in backend-static over the same sources, so this build leaves them out. The
+      # Postgres image downloads while the compiler runs. Pulled explicitly rather than inside
       # the fixture, where it would land in the first test's timeout budget and present as a flake
       # on a cold runner.
       - name: Build, and pre-pull the Postgres image
         run: |
           docker pull pgvector/pgvector:pg16 &
           pull=$!
-          dotnet build backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release
+          dotnet build backend/tests/Nix.Integration.Tests/Nix.Integration.Tests.csproj --configuration Release -p:RunAnalyzers=false
           wait "$pull"
 
       # What this shard would run, and what the whole suite is, for backend-shard-guard.

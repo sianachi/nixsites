@@ -29,7 +29,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// <c>IS DISTINCT FROM</c> matches an item that never had the property at all.
 /// </para>
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class ItemQueryAuthorizationTests : IAsyncLifetime
 {
     private const string TodayText = "2026-08-15";

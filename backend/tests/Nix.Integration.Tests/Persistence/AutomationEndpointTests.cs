@@ -16,7 +16,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// The automation routes at the wire: CRUD, compare-and-set, the refusal codes, the per-workspace
 /// ceiling, and the Admin scope a personal access token needs to change a rule.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class AutomationEndpointTests : IAsyncLifetime
 {
     private const string PropertyTrigger = """{"type":"property_changed","key":"status","to":{"value":"done"}}""";

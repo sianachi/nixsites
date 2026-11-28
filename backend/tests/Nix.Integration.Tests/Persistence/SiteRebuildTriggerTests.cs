@@ -13,7 +13,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// Automatic republish: the planner finds changed sites after their debounce, firing builds as the
 /// principal who turned the mode on, and stops for good when that principal loses the authority.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SiteRebuildTriggerTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private SiteScenario _scenario = null!;

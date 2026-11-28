@@ -13,7 +13,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// the assertions hold that file_version is never read whole and that a page walks file_body in key order.
 /// </summary>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class AttachmentListPlanEvidenceTests(NixPostgresFixture fixture, ITestOutputHelper output) : IAsyncLifetime
 {
     private const string SeedFile = "(SELECT n, md5('i' || n)::uuid AS item_id, md5('a' || n)::uuid AS v1, md5('b' || n)::uuid AS v2 FROM generate_series(1, 5000) AS n) AS seed_file";

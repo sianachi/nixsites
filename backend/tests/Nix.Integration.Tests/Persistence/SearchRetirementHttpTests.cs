@@ -10,7 +10,7 @@ using Nix.Persistence.Search;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>The retired indexer cannot read projections or enqueue rebuild work.</summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SearchRetirementHttpTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private const string InternalSecret = "search-retirement-http-secret";

@@ -15,7 +15,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// DEFINER functions, the planner's idempotent reconcile, the dispatcher's retry backoff, and
 /// retention.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SchedulingPersistenceTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

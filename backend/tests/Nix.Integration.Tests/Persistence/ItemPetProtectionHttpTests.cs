@@ -3,7 +3,7 @@ using Nix.Integration.Tests.Harness;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class ItemPetProtectionHttpTests(NixPostgresFixture fixture)
 {
     [Fact]

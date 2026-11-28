@@ -24,7 +24,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// [SEC] File version lifecycle over the real schema: the allowed transitions, the agent gate for
 /// each credential kind, the shown version, rename limited to drafts, and tenant isolation.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class FileVersionStateTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

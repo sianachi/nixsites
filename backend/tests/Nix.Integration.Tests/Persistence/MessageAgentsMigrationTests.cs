@@ -6,7 +6,7 @@ using Nix.Persistence;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class MessageAgentsMigrationTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private const string Before = "20261128100000_MessagePetTurnCode";

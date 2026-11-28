@@ -11,7 +11,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// of at most <see cref="SiteRules.MaximumDiagramBytes"/>, under the same eligibility rules as an
 /// image. The worker re-sanitises its bytes before publishing; Core only bounds what it hands over.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class SiteDiagramFileTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private SiteScenario _scenario = null!;

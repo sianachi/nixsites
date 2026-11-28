@@ -20,7 +20,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// token) is covered in the unit suite - what a live database adds here is row-level security and
 /// the membership rows the resolver reads.
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class InternalAuthorizationTests : IAsyncLifetime
 {
     /// <summary>A principal of the first tenant holding no grant of any kind.</summary>

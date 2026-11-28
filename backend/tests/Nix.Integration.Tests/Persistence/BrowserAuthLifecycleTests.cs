@@ -23,7 +23,7 @@ using Npgsql;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>The complete same-origin browser session lifecycle over real Postgres and HTTP.</summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class BrowserAuthLifecycleTests : IAsyncLifetime
 {
     private const string Issuer = "https://issuer.alpha.test";

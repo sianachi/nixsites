@@ -24,7 +24,7 @@ using Npgsql;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Document imports stay hidden until their complete staged subtree can publish.</summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class DocumentImportStoreTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

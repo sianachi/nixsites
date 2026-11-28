@@ -8,7 +8,7 @@ using Npgsql;
 namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>The local sign-in functions over real Postgres: the pause, single-use links, codes and challenges.</summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class LocalSignInStoreTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly PrincipalId Alpha = PrincipalId.From(TestTenants.AlphaPrincipal);

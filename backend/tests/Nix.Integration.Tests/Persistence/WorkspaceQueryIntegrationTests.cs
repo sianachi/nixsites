@@ -31,7 +31,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// cannot see answers exactly what reading that item would.
 /// </para>
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class WorkspaceQueryIntegrationTests : IAsyncLifetime
 {
     private const string TodayText = "2026-08-15";

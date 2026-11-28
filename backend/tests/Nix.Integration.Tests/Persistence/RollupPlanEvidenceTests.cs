@@ -37,7 +37,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// </para>
 /// </remarks>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class RollupPlanEvidenceTests : IAsyncLifetime
 {
     private const int Containers = 400;

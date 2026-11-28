@@ -37,7 +37,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// something a parity test should paper over.
 /// </para>
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class StructureRuleParityHttpTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

@@ -37,7 +37,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// argument about the same table.
 /// </para>
 /// </remarks>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 [SuppressMessage(
     "Security",
     "CA5394:Do not use insecure randomness",

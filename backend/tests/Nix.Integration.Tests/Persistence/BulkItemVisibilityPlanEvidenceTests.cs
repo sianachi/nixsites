@@ -10,7 +10,7 @@ namespace Nix.Integration.Tests.Persistence;
 
 /// <summary>Runtime-role plans for the bulk reads that apply derived item visibility.</summary>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class BulkItemVisibilityPlanEvidenceTests : IAsyncLifetime
 {
     private const int CorpusSize = 3_200;

@@ -13,7 +13,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// exactly <c>nix_app</c>'s; every SECURITY DEFINER function pins its search path; and a stored
 /// refresh token is never the plaintext.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class CalendarSecurityTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly Guid Colleague = new("1c1c1c1c-1111-4111-8111-1c1c1c1c1c1c");

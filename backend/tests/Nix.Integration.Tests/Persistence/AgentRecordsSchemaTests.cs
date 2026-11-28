@@ -11,7 +11,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// database built from migrations only. Tenant isolation and grants for these tables are covered
 /// by <see cref="M0SchemaIsolationTests"/>, which iterates every tenant-scoped table.
 /// </summary>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class AgentRecordsSchemaTests : IAsyncLifetime
 {
     private const string UniqueViolation = "23505";

@@ -17,7 +17,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// a store that filtered correctly against a database holding one tenant's rows would prove
 /// nothing at all.
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class RecurrenceStoreTests : IAsyncLifetime
 {
     private static readonly DateOnly Anchor = new(2026, 3, 2);

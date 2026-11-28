@@ -18,7 +18,7 @@ using Npgsql;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class WorkspaceItemMoveTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly WorkspaceId Destination = WorkspaceId.From(new Guid("d1000000-0000-4000-8000-000000000001"));

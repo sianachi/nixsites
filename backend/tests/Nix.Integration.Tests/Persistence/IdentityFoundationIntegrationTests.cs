@@ -12,7 +12,7 @@ using Npgsql;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class IdentityFoundationIntegrationTests : IAsyncLifetime
 {
     private readonly NixPostgresFixture _fixture;

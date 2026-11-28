@@ -11,7 +11,7 @@ using Npgsql;
 
 namespace Nix.Integration.Tests.Persistence;
 
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class NotificationsPersistenceTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static readonly Guid SecondAlphaPrincipal = new("1c1c1c1c-1111-4111-8111-1c1c1c1c1c1c");

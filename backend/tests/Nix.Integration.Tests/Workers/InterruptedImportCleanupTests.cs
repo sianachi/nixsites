@@ -18,7 +18,7 @@ namespace Nix.Integration.Tests.Workers;
 /// An import commit interrupted by a restart leaves nothing behind: the startup sweep's cleanup
 /// fails the import, hard-deletes its staged tree and queues the staged objects for cleanup.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class InterruptedImportCleanupTests(NixPostgresFixture fixture) : IAsyncLifetime
 {
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;

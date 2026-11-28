@@ -31,7 +31,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// away from the evidence.
 /// </remarks>
 [Trait("Category", "PlanEvidence")]
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class ItemVisibilityPlanEvidenceTests : IAsyncLifetime
 {
     private const int CorpusSizePerTenant = 3200;

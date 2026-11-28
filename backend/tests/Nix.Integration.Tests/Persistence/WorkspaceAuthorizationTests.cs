@@ -30,7 +30,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// bothers to consult it.
 /// </para>
 /// </remarks>
-[Collection(PostgresCollectionDefinition.Name)]
+[Collection(PostgresSecondaryCollectionDefinition.Name)]
 public sealed class WorkspaceAuthorizationTests : IAsyncLifetime
 {
     /// <summary>A principal of the first tenant holding no grant of any kind.</summary>

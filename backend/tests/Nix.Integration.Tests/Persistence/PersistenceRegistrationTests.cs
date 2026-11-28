@@ -10,7 +10,7 @@ namespace Nix.Integration.Tests.Persistence;
 /// <summary>
 /// What <c>AddNixPersistence</c> registers, and what it refuses to register.
 /// </summary>
-[Collection(PostgresSecondaryCollectionDefinition.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class PersistenceRegistrationTests
 {
     private readonly NixPostgresFixture _fixture;
