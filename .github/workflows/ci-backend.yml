@@ -26,7 +26,8 @@ on:
       - 'scripts/check-layering.sh'
       - 'scripts/check-root-is-unambiguous.sh'
       - 'scripts/fetch-pdf-fonts.sh'
-      - 'scripts/ci/**'
+      - 'scripts/ci/integration-*'
+      - 'scripts/ci/check-shard-partition.mjs'
       - '.github/workflows/ci-backend.yml'
   pull_request:
     paths:
@@ -38,7 +39,8 @@ on:
       - 'scripts/check-layering.sh'
       - 'scripts/check-root-is-unambiguous.sh'
       - 'scripts/fetch-pdf-fonts.sh'
-      - 'scripts/ci/**'
+      - 'scripts/ci/integration-*'
+      - 'scripts/ci/check-shard-partition.mjs'
       - '.github/workflows/ci-backend.yml'
 
 concurrency:

@@ -25,10 +25,13 @@ for (const f of fs.readdirSync(dir).filter((f) => /^shard-\d+\.txt$/.test(f))) {
 }
 const allTotal = [...all.values()].reduce((a, b) => a + b, 0);
 console.log(`unsplit: ${allTotal} tests, shards together: ${total}`);
-const bad = [...new Set([...all.keys(), ...union.keys()])].filter((n) => all.get(n) !== union.get(n));
+const bad = [...new Set([...all.keys(), ...union.keys()])].filter(
+  (n) => all.get(n) !== union.get(n),
+);
 if (bad.length > 0 || allTotal === 0) {
   console.error(`Shards are not a partition of the suite (${bad.length} tests differ):`);
-  for (const n of bad.slice(0, 40)) console.error(`  ${n}: unsplit ${all.get(n) ?? 0}, shards ${union.get(n) ?? 0}`);
+  for (const n of bad.slice(0, 40))
+    console.error(`  ${n}: unsplit ${all.get(n) ?? 0}, shards ${union.get(n) ?? 0}`);
   process.exit(1);
 }
 console.log('Shards partition the suite exactly.');
