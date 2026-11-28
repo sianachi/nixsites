@@ -34,7 +34,7 @@ RUN dotnet publish backend/src/Nix.Api/Nix.Api.csproj \
 # InvariantGlobalization is false in backend/Directory.Build.props, so the runtime needs ICU.
 # The "-extra" chiseled variant carries it; plain "-chiseled" does not and the process will
 # fail at startup. If in doubt, fall back to mcr.microsoft.com/dotnet/aspnet:10.0.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:a9298ccc39c6258ae71228479e2f3f8d2ceb6639a9927262a4b0ff7d319a0e7e AS api
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:cae5b962bfb786606def03d250c6a645cc98839095c89e806e4bd8978a68115b AS api
 WORKDIR /app
 COPY --from=build /out/api ./
 COPY THIRD-PARTY-NOTICES.txt ./
@@ -46,7 +46,7 @@ ENTRYPOINT ["dotnet", "Nix.Api.dll"]
 
 # The migrator references the API persistence assembly, which carries the ASP.NET shared
 # framework; use the same runtime family as Core so the migration job can start on ARM hosts.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:a9298ccc39c6258ae71228479e2f3f8d2ceb6639a9927262a4b0ff7d319a0e7e AS migrator
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:cae5b962bfb786606def03d250c6a645cc98839095c89e806e4bd8978a68115b AS migrator
 WORKDIR /app
 COPY --from=build /out/migrator ./
 COPY THIRD-PARTY-NOTICES.txt ./
