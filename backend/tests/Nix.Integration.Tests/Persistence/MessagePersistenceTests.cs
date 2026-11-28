@@ -30,6 +30,11 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     private static readonly Guid Editor = new("c0c0c000-5555-4555-8555-c0c0c0000013");
     private static readonly Guid Friend = new("c0c0c000-5555-4555-8555-c0c0c0000014");
     private static readonly Guid Stranger = new("c0c0c000-5555-4555-8555-c0c0c0000015");
+    // Editor's other agent, one that was revoked, one without the agents scope, and Friend's own agent.
+    private static readonly Guid Grok = new("c0c0c000-5555-4555-8555-c0c0c0000022");
+    private static readonly Guid Revoked = new("c0c0c000-5555-4555-8555-c0c0c0000023");
+    private static readonly Guid Plain = new("c0c0c000-5555-4555-8555-c0c0c0000024");
+    private static readonly Guid FriendBot = new("c0c0c000-5555-4555-8555-c0c0c0000025");
 
     private readonly NixPostgresFixture _fixture;
 
@@ -227,9 +232,15 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         Assert.Equal(("failed", "pets.no_provider_key"), (state.Status, state.Code));
         Assert.Empty(await RepliesAsync(refused.Id.Value));
 
-        // Only a waiting turn can be claimed; a failed one is final.
+        // Only a waiting turn can be claimed; a failed one is final, except one that failed under the retired sharing review.
         Assert.Null(await ClaimAsync(broken.Id.Value, Editor));
         Assert.Null(await ClaimAsync(refused.Id.Value, Editor));
+        var legacy = (await PostAsync(Editor, Note, "old")).Value;
+        await ExecuteAsync($"""
+            INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status, reason_code, started_at)
+            VALUES ({RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, {RawSql.Literal(legacy.Id.Value)}, {RawSql.Literal(PetId)}, {RawSql.Literal(Editor)}, 'failed', 'pets.sharing_required', now())
+            """);
+        Assert.Equal("working", (await ClaimAsync(legacy.Id.Value, Editor))?.Status);
     }
 
     private async Task<MessagePetTurnRow?> ClaimAsync(Guid message, Guid who)
@@ -783,6 +794,187 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         Assert.Single(await MemoriesAsync());
     }
 
+    [Fact]
+    public async Task The_directory_lists_agents_only_to_the_owners_app_and_the_owners_other_agent_tokens()
+    {
+        // The app sees every live agent token of the person, not revoked ones, tokens without the scope, or another person's.
+        var app = await DirectoryAsync(token: false, petSend: false);
+        Assert.Equal(["Claude Desktop", "Grok"], app.Where(a => a.Kind == "agent").Select(a => a.Name).Order());
+        Assert.Contains(app, a => a.Id == Token && a.Kind == "agent");
+        Assert.DoesNotContain(app, a => a.Id == Revoked || a.Id == Plain || a.Id == FriendBot);
+
+        // An agent token sees the others, not itself.
+        var asClaude = await DirectoryAsync(token: true, petSend: true);
+        Assert.Equal(Grok, Assert.Single(asClaude, a => a.Kind == "agent").Id);
+
+        // A token without the scope sees none; another person's app and agents see only their own.
+        Assert.DoesNotContain(await DirectoryAsync(token: true, petSend: false), a => a.Kind == "agent");
+        Assert.Equal(FriendBot, Assert.Single(await DirectoryAsync(token: false, petSend: false, who: Friend), a => a.Kind == "agent").Id);
+    }
+
+    [Fact]
+    public async Task An_agent_is_addressed_by_its_token_id_and_only_by_its_owner_and_a_revoked_or_unscoped_token_is_not_addressable()
+    {
+        var grok = new MessageAddress(Grok, "agent");
+        var posted = (await PostAsTokenAsync(Token, Editor, Note, "ping", true, grok)).Value.Message;
+        var stored = Stored(posted);
+        Assert.Equal(("agent", "Grok"), (stored["to"]![0]!["kind"]!.GetValue<string>(), stored["to"]![0]!["name"]!.GetValue<string>()));
+        // The author stays "<person> via <token name>" and records the token id.
+        Assert.Equal(("Editor", "Claude Desktop", Token), (stored["author"]!["name"]!.GetValue<string>(), stored["author"]!["via"]!.GetValue<string>(), stored["author"]!["tokenId"]!.GetValue<Guid>()));
+
+        // The app addresses an agent too; a token without the scope, an agent addressing itself, a revoked token,
+        // a token without the scope, and another person's token are all refused.
+        Assert.True((await PostAsync(Editor, Note, "from the app", [grok], interactive: true)).IsSuccess);
+        Assert.Equal("messages.pets_scope_required", (await PostAsTokenAsync(Plain, Editor, Note, "x", false, grok)).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsTokenAsync(Token, Editor, Note, "x", true, new MessageAddress(Token, "agent"))).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsTokenAsync(Token, Editor, Note, "x", true, new MessageAddress(Revoked, "agent"))).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsTokenAsync(Token, Editor, Note, "x", true, new MessageAddress(Plain, "agent"))).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsTokenAsync(FriendBot, Friend, Note, "x", true, grok)).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsync(Friend, Note, "x", [new MessageAddress(Grok, "agent")], interactive: true)).Error.Code);
+        Assert.Equal("messages.invalid", (await PostAsync(Editor, Note, "x", [new MessageAddress(FriendBot, "agent")], interactive: true)).Error.Code);
+    }
+
+    [Fact]
+    public async Task Only_the_addressed_token_reads_its_inbox_pages_it_and_marks_messages_read()
+    {
+        var grok = new MessageAddress(Grok, "agent");
+        var first = (await PostAsTokenAsync(Token, Editor, Note, "one", true, grok)).Value.Message;
+        var reply = (await PostAsTokenAsync(Token, Editor, first.Id.Value, "two", true, grok)).Value.Message;
+        var third = (await PostAsync(Editor, Note, "three", [grok], interactive: true)).Value;
+
+        var inbox = (await InboxAsync(Grok, Editor, 2, null)).Value;
+        Assert.Equal([third.Id.Value, reply.Id.Value], inbox.Messages.Select(m => m.MessageId));
+        Assert.NotNull(inbox.Next);
+        var entry = inbox.Messages[1];
+        Assert.Equal((first.Id.Value, Note, "two", "Editor", "Claude Desktop"), (entry.ThreadId, entry.ParentId, entry.Text, entry.Author.Name, entry.Author.Via));
+        Assert.Equal([first.Id.Value], (await InboxAsync(Grok, Editor, 2, inbox.Next)).Value.Messages.Select(m => m.MessageId));
+
+        // Nobody else reads it: the sender, a token without the scope, the app, another person's agent.
+        Assert.Empty((await InboxAsync(Token, Editor, null, null)).Value.Messages);
+        Assert.Equal("messages.agents_only", (await InboxAsync(Plain, Editor, null, null, agents: false)).Error.Code);
+        Assert.Equal("messages.agents_only", (await InboxAsync(null, Editor, null, null)).Error.Code);
+        Assert.Empty((await InboxAsync(FriendBot, Friend, null, null)).Value.Messages);
+
+        // Another token cannot mark its messages; its own can, once.
+        Assert.Equal(0, (await MarkReadAsync(Token, Editor, third.Id.Value)).Value.Marked);
+        Assert.Equal(1, (await MarkReadAsync(Grok, Editor, third.Id.Value, third.Id.Value)).Value.Marked);
+        Assert.Equal(0, (await MarkReadAsync(Grok, Editor, third.Id.Value)).Value.Marked);
+        Assert.Equal([reply.Id.Value, first.Id.Value], (await InboxAsync(Grok, Editor, null, null)).Value.Messages.Select(m => m.MessageId));
+        Assert.Equal("messages.invalid", (await MarkReadAsync(Grok, Editor)).Error.Code);
+        Assert.Equal("messages.agents_only", (await MarkReadAsync(null, Editor, first.Id.Value)).Error.Code);
+    }
+
+    [Fact]
+    public async Task A_pet_may_name_an_agent_in_its_to_line_and_it_lands_in_the_inbox_and_starts_nothing()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        var message = (await PostAsync(Editor, Note, "go")).Value;
+        await InsertTurnAsync(message.Id.Value, "working", "now()");
+        var calls = new List<Guid>();
+        await Chatty(calls, _ => "Done.\nTo: Grok, Old bot, Script").Run(As(Editor), message.Id.Value, [PetId]);
+
+        // Only the live agent is addressed; the revoked token and the one without the scope are not names the pet can use.
+        var reply = Assert.Single(await RepliesAsync(message.Id.Value));
+        Assert.Equal(("Pip", "pet", "Done."), reply);
+        var inbox = (await InboxAsync(Grok, Editor, null, null)).Value.Messages;
+        var entry = Assert.Single(inbox);
+        Assert.Equal(("Done.", "pet", message.Id.Value), (entry.Text, entry.Author.Kind, entry.ThreadId));
+        Assert.Single(calls);
+        Assert.Equal(1, await StartedOnThreadAsync());
+    }
+
+    [Fact]
+    public async Task A_token_message_to_agents_or_pets_is_refused_after_thirty_in_a_row_without_a_person_and_a_persons_message_resets_it()
+    {
+        await SavePetsAsync(("Pip", PetId));
+        var grok = new MessageAddress(Grok, "agent");
+        var root = (await PostAsync(Editor, Note, "start")).Value;
+        for (var index = 0; index < MessageHandler.ThreadAgentRunLimit; index++)
+        {
+            Assert.True((await PostAsTokenAsync(Token, Editor, root.Id.Value, $"m{index}", true)).IsSuccess);
+        }
+
+        var refused = await PostAsTokenAsync(Token, Editor, root.Id.Value, "again", true, grok);
+        Assert.Equal("messages.thread_agent_limit", refused.Error.Code);
+        Assert.Equal("messages.thread_agent_limit", (await PostAsTokenAsync(Token, Editor, root.Id.Value, "again", true, new MessageAddress(PetId, "pet"))).Error.Code);
+        // A message that addresses nobody, or only a person, still posts, and so does a person's own.
+        Assert.True((await PostAsTokenAsync(Token, Editor, root.Id.Value, "fyi", true, new MessageAddress(Friend, "person"))).IsSuccess);
+
+        // A person writing in the app starts the count again; a person's message through a token does not.
+        Assert.True((await PostAsync(Editor, root.Id.Value, "back")).IsSuccess);
+        Assert.True((await PostAsTokenAsync(Token, Editor, root.Id.Value, "now", true, grok)).IsSuccess);
+    }
+
+    [Fact]
+    public async Task A_token_posts_at_most_five_hundred_messages_a_day_even_in_parallel_and_the_count_ages_out()
+    {
+        await ExecuteAsync($"""
+            INSERT INTO message_token_post (tenant_id, message_id, token_id, principal_id, created_at)
+            SELECT {RawSql.Literal(M0SchemaSeed.Alpha.TenantId)}, gen_random_uuid(), {RawSql.Literal(Token)}, {RawSql.Literal(Editor)}, now()
+              FROM generate_series(1, {MessageAgentStore.TokenPostsPerDay - 1})
+            """);
+        var results = await Task.WhenAll(Enumerable.Range(0, 6).Select(index => PostAsTokenAsync(Token, Editor, Note, $"p{index}", true)));
+        Assert.Equal(1, results.Count(result => result.IsSuccess));
+        Assert.All(results.Where(result => result.IsFailure), result => Assert.Equal("messages.token_message_limit", result.Error.Code));
+        // Another token is unaffected, and a day later the count is free again.
+        Assert.True((await PostAsTokenAsync(Grok, Editor, Note, "other", true)).IsSuccess);
+        await ExecuteAsync("UPDATE message_token_post SET created_at = now() - interval '2 days'");
+        Assert.True((await PostAsTokenAsync(Token, Editor, Note, "free", true)).IsSuccess);
+    }
+
+    private async Task<Result<PostedMessage>> PostAsTokenAsync(Guid token, Guid principal, Guid parent, string text, bool agents, params MessageAddress[] to)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(principal), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            work.Resolve<AccessTokenSessionContext>().SetTokenCeiling(true, false, agents);
+            work.Resolve<CredentialSessionContext>().Set(token);
+            var result = await work.Resolve<NixDispatcher>().SendAsync<PostMessage, PostedMessage>(new(ItemId.From(parent), new(text, to)), Cancellation);
+            if (result.IsSuccess)
+            {
+                await work.CommitAsync(Cancellation);
+            }
+
+            return result;
+        }
+    }
+
+    // The inbox as a token (null: the app), holding the agents scope unless told otherwise.
+    private async Task<Result<MessageInboxResponse>> InboxAsync(Guid? token, Guid principal, int? limit, Guid? after, bool agents = true)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(principal), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            AsTokenOrApp(work, token, agents);
+            return await work.Resolve<MessageHandler>().InboxAsync(after, limit, Cancellation);
+        }
+    }
+
+    private async Task<Result<MarkMessagesReadResponse>> MarkReadAsync(Guid? token, Guid principal, params Guid[] ids)
+    {
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(principal), Cancellation);
+        await using (work.ConfigureAwait(false))
+        {
+            AsTokenOrApp(work, token, true);
+            var result = await work.Resolve<MessageHandler>().MarkReadAsync(ids, Cancellation);
+            await work.CommitAsync(Cancellation);
+            return result;
+        }
+    }
+
+    private static void AsTokenOrApp(NixUnitOfWork work, Guid? token, bool agents)
+    {
+        if (token is { } id)
+        {
+            work.Resolve<AccessTokenSessionContext>().SetTokenCeiling(true, false, agents);
+            work.Resolve<CredentialSessionContext>().Set(id);
+        }
+        else
+        {
+            work.Resolve<AccessTokenSessionContext>().SetInteractive();
+        }
+    }
+
     // Each pet's reply is chosen by its id; a pet turn answers in plain text. hold makes two turns reach their reply together.
     private MessagePetRunner Chatty(List<Guid> calls, Func<Guid, string> answer, int budget = MessagePetRunner.LaunchBudget, CountdownEvent? hold = null)
     {
@@ -851,14 +1043,16 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         }
     }
 
-    private async Task<IReadOnlyList<MessageAddressee>> DirectoryAsync(bool token, bool petSend)
+    private async Task<IReadOnlyList<MessageAddressee>> DirectoryAsync(bool token, bool petSend, Guid? who = null)
     {
-        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(Editor), Cancellation);
+        var work = await _fixture.Application.BeginUnitOfWorkAsync(As(who ?? Editor), Cancellation);
         await using (work.ConfigureAwait(false))
         {
             if (token)
             {
                 work.Resolve<AccessTokenSessionContext>().SetTokenCeiling(true, false, petSend);
+                // The token sessions of the directory tests are Claude Desktop (agents) or a script (not).
+                work.Resolve<CredentialSessionContext>().Set(petSend ? Token : Plain);
             }
             else
             {
@@ -1069,7 +1263,15 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
             INSERT INTO personal_access_token
                 (token_id, tenant_id, principal_id, name, lookup, secret_hash, scopes, created_at, expires_at, revoked_at, last_used_at)
             VALUES ({{RawSql.Literal(Token)}}, {{tenant}}, {{RawSql.Literal(Editor)}}, 'Claude Desktop', 'mtok00000000',
-                    '\x0304'::bytea, ARRAY['read','write','pets:send']::text[], now(), now() + interval '30 days', NULL, NULL);
+                    '\x0304'::bytea, ARRAY['read','write','agents']::text[], now(), now() + interval '30 days', NULL, NULL),
+                   ({{RawSql.Literal(Grok)}}, {{tenant}}, {{RawSql.Literal(Editor)}}, 'Grok', 'mtok00000001',
+                    '\x0304'::bytea, ARRAY['read','write','agents']::text[], now(), now() + interval '30 days', NULL, NULL),
+                   ({{RawSql.Literal(Revoked)}}, {{tenant}}, {{RawSql.Literal(Editor)}}, 'Old bot', 'mtok00000002',
+                    '\x0304'::bytea, ARRAY['read','write','agents']::text[], now() - interval '2 days', now() + interval '30 days', now(), NULL),
+                   ({{RawSql.Literal(Plain)}}, {{tenant}}, {{RawSql.Literal(Editor)}}, 'Script', 'mtok00000003',
+                    '\x0304'::bytea, ARRAY['read','write']::text[], now(), now() + interval '30 days', NULL, NULL),
+                   ({{RawSql.Literal(FriendBot)}}, {{tenant}}, {{RawSql.Literal(Friend)}}, 'Friend bot', 'mtok00000004',
+                    '\x0304'::bytea, ARRAY['read','write','agents']::text[], now(), now() + interval '30 days', NULL, NULL);
             """;
         var connection = await _fixture.OpenMigratorConnectionAsync();
         await using (connection.ConfigureAwait(false))

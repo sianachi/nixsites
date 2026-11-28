@@ -3443,7 +3443,7 @@ export interface paths {
     put?: never;
     /**
      * Post a message under an item, or a reply under a message
-     * @description 'to' lists people and pets by id; the text is never parsed. A token that addresses a pet needs the pets:send scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'.
+     * @description 'to' lists people, pets and agents by id (kind person, pet or agent); the text is never parsed. A token that addresses a pet or an agent needs the agents scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'. An agent is one of your own live tokens holding the agents scope (not the posting token); the message lands in its inbox and nothing starts. A token may post 500 messages a day (429 'messages.token_message_limit'), and once the last 30 messages of a thread all came from agents or pets, a token's message that addresses agents or pets is refused (409 'messages.thread_agent_limit') until a person writes in the app.
      */
     post: operations['PostMessage'];
     delete?: never;
@@ -3510,10 +3510,47 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** @description The people who can read the item and, for the app or a token with the pets:send scope, the caller's own pets. A token without pets:send sees people only. */
+    /** @description The people who can read the item and, for the app or a token with the agents scope, the caller's own pets and its other live agent tokens (kind agent). A token without the agents scope sees people only. */
     get: operations['GetMessageDirectory'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/me/message-inbox': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The calling agent token's unread messages
+     * @description Unread messages addressed to the token that makes the call, newest first, each with its thread's first message, the item the thread sits under, its author and text. Only a token with the agents scope has an inbox (403 'messages.agents_only'); nobody else reads it. 'after' is the 'next' of the previous page.
+     */
+    get: operations['GetMessageInbox'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/me/message-inbox/read': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark messages read in the calling agent token's inbox */
+    post: operations['MarkMessagesRead'];
     delete?: never;
     options?: never;
     head?: never;
@@ -3768,7 +3805,7 @@ export interface paths {
     put?: never;
     /**
      * Mint a personal access token
-     * @description Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.
+     * @description Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'agents' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.
      */
     post: operations['CreateAccessToken'];
     delete?: never;
@@ -5758,6 +5795,13 @@ export interface components {
       item: components['schemas']['ItemResponse'];
       trashed: boolean;
     };
+    MarkMessagesReadRequest: {
+      messageIds: string[];
+    };
+    MarkMessagesReadResponse: {
+      /** Format: int32 */
+      marked: number | string;
+    };
     MentionResponse: {
       item: components['schemas']['SearchHitResponse'];
       phrase: string;
@@ -5783,8 +5827,36 @@ export interface components {
       name: string;
       kind: string;
     };
+    MessageAuthor: {
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      name: string;
+      via: null | string;
+      /** Format: uuid */
+      tokenId?: null | string;
+    };
     MessageDirectoryResponse: {
       addressees: components['schemas']['MessageAddressee'][];
+    };
+    MessageInboxEntry: {
+      /** Format: uuid */
+      messageId: string;
+      /** Format: uuid */
+      threadId: string;
+      /** Format: uuid */
+      parentId: null | string;
+      /** Format: uuid */
+      workspaceId: string;
+      author: components['schemas']['MessageAuthor'];
+      text: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    MessageInboxResponse: {
+      messages: components['schemas']['MessageInboxEntry'][];
+      /** Format: uuid */
+      next: null | string;
     };
     MessagePetState: {
       /** Format: uuid */
@@ -16703,6 +16775,80 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetMessageInbox: {
+    parameters: {
+      query?: {
+        after?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessageInboxResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  MarkMessagesRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MarkMessagesReadRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MarkMessagesReadResponse'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
         headers: {
           [name: string]: unknown;
         };

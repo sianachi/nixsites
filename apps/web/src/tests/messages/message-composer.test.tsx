@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { MessageComposer } from '../../messages/message-composer';
 
 const PET = '33333333-3333-4333-8333-333333333333';
+const AGENT = '55555555-5555-4555-8555-555555555555';
 const PERSON = '44444444-4444-4444-8444-444444444444';
 const execute = vi.fn();
 const query = vi.fn();
@@ -43,6 +44,50 @@ describe('the message composer', () => {
       path: '/api/v1/items/p/messages',
       body: { text: '@Pip hello', to: [{ id: PET, kind: 'pet' }] },
     });
+  });
+
+  it('opens the picker at an @, filters as you type, picks with the keyboard and keeps the rest of the text', async () => {
+    query.mockImplementation((endpoint: { query?: { query?: string } }) =>
+      Promise.resolve({
+        addressees: [
+          { id: PET, name: 'Pip', kind: 'pet' },
+          { id: PERSON, name: 'Ada', kind: 'person' },
+          { id: AGENT, name: 'Grok', kind: 'agent' },
+        ].filter((entry) => entry.name.toLowerCase().includes(endpoint.query?.query ?? '')),
+      }),
+    );
+    execute.mockResolvedValue({ message: { id: 'new' }, pets: [], budget: null });
+    const user = userEvent.setup();
+    render(<MessageComposer workspaceId="w" parentId="p" onPosted={vi.fn()} />);
+    const box = screen.getByRole('textbox', { name: 'Message' });
+    await user.type(box, 'hi @');
+    expect(await screen.findByRole('option', { name: 'Grok (agent)' })).toBeTruthy();
+    await user.type(box, 'g');
+    await waitFor(() => {
+      expect(screen.getAllByRole('option')).toHaveLength(1);
+    });
+    await user.keyboard('{Enter}');
+    expect(box).toHaveValue('hi @Grok ');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    await user.keyboard('now{Enter}');
+    await waitFor(() => {
+      expect(execute).toHaveBeenCalled();
+    });
+    expect(execute.mock.calls.at(-1)?.[0]).toMatchObject({
+      body: { text: 'hi @Grok now', to: [{ id: AGENT, kind: 'agent' }] },
+    });
+  });
+
+  it('closes the inline picker with Escape without losing the text, and Enter then sends', async () => {
+    query.mockResolvedValue({ addressees: [{ id: PET, name: 'Pip', kind: 'pet' }] });
+    const user = userEvent.setup();
+    render(<MessageComposer workspaceId="w" parentId="p" onPosted={vi.fn()} />);
+    const box = screen.getByRole('textbox', { name: 'Message' });
+    await user.type(box, '@p');
+    expect(await screen.findByRole('listbox')).toBeTruthy();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(box).toHaveValue('@p');
   });
 
   it('says why a refused message was not sent and keeps the text', async () => {

@@ -122,7 +122,19 @@ Clients branch on `code` in the problem body. The codes named inside operation d
 
 - PUT /api/v1/items/{itemId}/lock
 
+### `messages.agents_only`
+
+- GET /api/v1/me/message-inbox
+
 ### `messages.pet_turn_limit`
+
+- POST /api/v1/items/{itemId}/messages
+
+### `messages.thread_agent_limit`
+
+- POST /api/v1/items/{itemId}/messages
+
+### `messages.token_message_limit`
 
 - POST /api/v1/items/{itemId}/messages
 

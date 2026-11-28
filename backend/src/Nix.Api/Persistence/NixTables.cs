@@ -167,6 +167,12 @@ public static class NixTables
     /// <summary>Whether a pet's turn for one message is waiting, running, answered, failed, declined or expired; private to the pet's owner.</summary>
     public const string MessagePetTurn = "message_pet_turn";
 
+    /// <summary>The messages addressed to an agent token and whether it has read them; private to the token's owner.</summary>
+    public const string MessageAgentInbox = "message_agent_inbox";
+
+    /// <summary>One row per message a token posted, counted for its daily cap; private to the token's owner.</summary>
+    public const string MessageTokenPost = "message_token_post";
+
     /// <summary>An owner's expiring, credential-bound plan decision handoff.</summary>
     public const string PetPlanDecisionContext = "pet_plan_decision_context";
 
@@ -360,6 +366,8 @@ public static class NixTables
         PetPlanDecisionContext,
         PetUsage,
         MessagePetTurn,
+        MessageAgentInbox,
+        MessageTokenPost,
         Notification,
         PushSubscription,
         NotificationInbox,
@@ -577,6 +585,8 @@ public static class NixTables
             // Rows are only ever added and read as the person; the retention function deletes them.
             [PetUsage] = ImmutableRegistration,
             [MessagePetTurn] = FullDml,
+            [MessageAgentInbox] = FullDml,
+            [MessageTokenPost] = FullDml,
             [Notification] = FullDml,
             [PushSubscription] = FullDml,
             [NotificationInbox] = FullDml,

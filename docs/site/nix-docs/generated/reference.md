@@ -92,7 +92,7 @@ Operation id: `CreateAccessToken`.
 
 **Token.** A personal access token cannot call this. Only an interactive browser session can.
 
-Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.
+Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'agents' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.
 
 Request body: `CreateAccessTokenRequest`.
 
@@ -2590,7 +2590,7 @@ Operation id: `GetMessageDirectory`.
 
 **Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
 
-The people who can read the item and, for the app or a token with the pets:send scope, the caller's own pets. A token without pets:send sees people only.
+The people who can read the item and, for the app or a token with the agents scope, the caller's own pets and its other live agent tokens (kind agent). A token without the agents scope sees people only.
 
 Parameters:
 
@@ -2613,7 +2613,7 @@ Operation id: `PostMessage`.
 
 **Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
 
-'to' lists people and pets by id; the text is never parsed. A token that addresses a pet needs the pets:send scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'.
+'to' lists people, pets and agents by id (kind person, pet or agent); the text is never parsed. A token that addresses a pet or an agent needs the agents scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'. An agent is one of your own live tokens holding the agents scope (not the posting token); the message lands in its inbox and nothing starts. A token may post 500 messages a day (429 'messages.token_message_limit'), and once the last 30 messages of a thread all came from agents or pets, a token's message that addresses agents or pets is refused (409 'messages.thread_agent_limit') until a person writes in the app.
 
 Parameters:
 
@@ -2684,6 +2684,47 @@ Parameters:
 - `petId` in path (required, string (uuid))
 
 Responses: `200`, `403`, `404`.
+
+### GET /api/v1/me/message-inbox
+
+<a id="getmessageinbox"></a>
+
+The calling agent token's unread messages
+
+Operation id: `GetMessageInbox`.
+
+**Can.** Read the resource named in the summary.
+
+**Cannot.** Create, update, or delete stored data. It does not read or replace a note, canvas, or spreadsheet body.
+
+**Token.** Requires a personal access token with the read scope, or an interactive session. A scope never grants more than the person who minted the token can already do, and read, write, and admin are independent.
+
+Unread messages addressed to the token that makes the call, newest first, each with its thread's first message, the item the thread sits under, its author and text. Only a token with the agents scope has an inbox (403 'messages.agents_only'); nobody else reads it. 'after' is the 'next' of the previous page.
+
+Parameters:
+
+- `after` in query (optional, string (uuid))
+- `limit` in query (optional, integer | string)
+
+Responses: `200`, `403`.
+
+### POST /api/v1/me/message-inbox/read
+
+<a id="markmessagesread"></a>
+
+Mark messages read in the calling agent token's inbox
+
+Operation id: `MarkMessagesRead`.
+
+**Can.** Write what the summary names.
+
+**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
+
+**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
+
+Request body: `MarkMessagesReadRequest`.
+
+Responses: `200`, `403`, `422`.
 
 ## NativeSync
 

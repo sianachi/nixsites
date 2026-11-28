@@ -36,7 +36,7 @@ export const workspaceSchema = z.object({
   agentsMayApprove: z.boolean().nullable().exactOptional(),
   /** Whether they may create public links. */
   agentsMayCreatePublicLinks: z.boolean().nullable().exactOptional(),
-  /** Whether a token with the pets:send scope may address the owner's pets: off, ask (the owner approves) or on. */
+  /** Whether a token with the agents scope may address the owner's pets: off, ask (the owner approves) or on. */
   agentsAddressPets: z.enum(['off', 'ask', 'on']).nullable().exactOptional(),
   /**
    * Whether the workspace has a password. While it does and `unlockedUntil` is absent, the

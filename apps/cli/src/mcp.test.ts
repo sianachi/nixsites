@@ -79,6 +79,8 @@ describe('nixctl mcp workspace tools', () => {
         'blueprint_build',
         'post_message',
         'message_directory',
+        'inbox',
+        'mark_read',
         'message_status',
         'list_notifications',
         'mark_notification_read',

@@ -12,7 +12,7 @@ namespace Nix.Features.Workspaces;
 /// </summary>
 /// <param name="AgentsMayApprove">Whether they may approve or revoke file versions.</param>
 /// <param name="AgentsMayCreatePublicLinks">Whether they may create public links.</param>
-/// <param name="AgentsAddressPets">Whether a token with the pets:send scope may address the owner's pets: <c>off</c>, <c>ask</c> or <c>on</c>.</param>
+/// <param name="AgentsAddressPets">Whether a token with the agents scope may address the owner's pets: <c>off</c>, <c>ask</c> or <c>on</c>.</param>
 internal sealed record SetAgentPolicyRequest(bool? AgentsMayApprove, bool? AgentsMayCreatePublicLinks, string? AgentsAddressPets = null);
 
 /// <summary>

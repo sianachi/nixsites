@@ -144,6 +144,8 @@ public sealed class AccessTokenScopePolicyTests
         ["ListComments"] = Requirement.Read,
         ["PostMessage"] = Requirement.Write,
         ["GetMessageDirectory"] = Requirement.Read,
+        ["GetMessageInbox"] = Requirement.Read,
+        ["MarkMessagesRead"] = Requirement.Write,
         ["GetMessagePetTurns"] = Requirement.Read,
         ["ApproveMessagePetTurn"] = Requirement.InteractiveOnly,
         ["DismissMessagePetTurn"] = Requirement.InteractiveOnly,

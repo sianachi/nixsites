@@ -4,7 +4,7 @@ using Nix.Messaging;
 
 namespace Nix.Features.Messages;
 
-/// <summary>One addressee: a person or one of the poster's own pets. <c>kind</c> is <c>person</c> or <c>pet</c>.</summary>
+/// <summary>One addressee: a person, one of the poster's own pets, or one of the poster's agent tokens. <c>kind</c> is <c>person</c>, <c>pet</c> or <c>agent</c>.</summary>
 public sealed record MessageAddress(Guid Id, string Kind);
 
 /// <summary>
@@ -16,7 +16,7 @@ public sealed record PostMessageRequest(string Text, IReadOnlyList<MessageAddres
 /// <summary>Someone a message under an item can address.</summary>
 public sealed record MessageAddressee(Guid Id, string Name, string Kind);
 
-/// <summary>Who a message under an item can address: the caller's pets, and the people who can read the item.</summary>
+/// <summary>Who a message under an item can address: the caller's pets and agents, and the people who can read the item.</summary>
 public sealed record MessageDirectoryResponse(IReadOnlyList<MessageAddressee> Addressees);
 
 /// <summary>
@@ -26,6 +26,18 @@ public sealed record MessageDirectoryResponse(IReadOnlyList<MessageAddressee> Ad
 /// <paramref name="Memory"/> is a fact the pet wants to remember from the message, waiting for its owner to approve or dismiss it.
 /// </summary>
 public sealed record MessagePetState(Guid PetId, string Name, string Status, string? Reason, DateTimeOffset? ExpiresAt, string? Memory = null, string? Code = null);
+
+/// <summary>One unread message in an agent's inbox: the message, its thread's first message, the item the thread sits under, who wrote it and what it says.</summary>
+public sealed record MessageInboxEntry(Guid MessageId, Guid ThreadId, Guid? ParentId, Guid WorkspaceId, MessageAuthor Author, string Text, DateTimeOffset CreatedAt);
+
+/// <summary>An agent's unread messages, newest first. <paramref name="Next"/> is the cursor (<c>after</c>) for the next page, null at the end.</summary>
+public sealed record MessageInboxResponse(IReadOnlyList<MessageInboxEntry> Messages, Guid? Next);
+
+/// <summary>Messages of the caller's inbox to mark read.</summary>
+public sealed record MarkMessagesReadRequest(IReadOnlyList<Guid> MessageIds);
+
+/// <summary>How many of the named messages were unread and are now read.</summary>
+public sealed record MarkMessagesReadResponse(int Marked);
 
 /// <summary>A posted message, where each pet it addressed stands, and (when it addressed a pet) the poster's monthly pet budget.</summary>
 public sealed record PostedMessage(Item Message, IReadOnlyList<MessagePetState> Pets, Nix.Features.Pets.PetBudgetStatus? Budget);

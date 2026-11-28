@@ -50,10 +50,10 @@ public sealed class AccessTokenSessionContext
     public bool MayAdminister { get; private set; } = true;
 
     /// <summary>
-    /// Whether the acting credential may post a message that addresses a pet. Always <see langword="true"/>
-    /// for an interactive session; for a token session, whether it holds the <c>pets:send</c> scope.
+    /// Whether the acting credential may address pets and agents in a message and read an agent inbox. Always <see langword="true"/>
+    /// for an interactive session; for a token session, whether it holds the <c>agents</c> scope.
     /// </summary>
-    public bool MayPetSend { get; private set; } = true;
+    public bool MayAgents { get; private set; } = true;
 
     /// <summary>
     /// Whether the acting credential is a person's browser session. Fail-closed: <see langword="false"/>
@@ -91,8 +91,8 @@ public sealed class AccessTokenSessionContext
     /// <param name="mayWrite">Whether the token holds the write scope.</param>
     /// <param name="mayAdminister">Whether the token holds the admin scope.</param>
     /// <exception cref="InvalidOperationException">The ceiling was already recorded.</exception>
-    /// <param name="mayPetSend">Whether the token holds the pets:send scope.</param>
-    public void SetTokenCeiling(bool mayWrite, bool mayAdminister, bool mayPetSend = false)
+    /// <param name="mayAgents">Whether the token holds the agents scope.</param>
+    public void SetTokenCeiling(bool mayWrite, bool mayAdminister, bool mayAgents = false)
     {
         if (_set)
         {
@@ -106,6 +106,6 @@ public sealed class AccessTokenSessionContext
         IsTokenSession = true;
         MayWrite = mayWrite;
         MayAdminister = mayAdminister;
-        MayPetSend = mayPetSend;
+        MayAgents = mayAgents;
     }
 }

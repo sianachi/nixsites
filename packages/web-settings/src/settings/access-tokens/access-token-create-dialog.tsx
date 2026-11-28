@@ -12,7 +12,7 @@ import type { CreatedAccessToken, CreateTokenOutcome } from './use-access-tokens
  * into an import. The server validates scopes regardless, so a drift here is a rejected mint
  * rendered honestly, never a token with a scope the API does not grant.
  */
-const ACCESS_TOKEN_SCOPES = ['read', 'write', 'admin', 'pets:send'] as const;
+const ACCESS_TOKEN_SCOPES = ['read', 'write', 'admin', 'agents'] as const;
 
 /**
  * Minting a token: the form, and then - once - the secret.
@@ -39,7 +39,7 @@ const SCOPE_DESCRIPTIONS: Readonly<Record<(typeof ACCESS_TOKEN_SCOPES)[number], 
   read: 'Read items and search',
   write: 'Create and change items',
   admin: 'Administrative endpoints',
-  'pets:send': 'Message your pets (needs write, and the workspace setting)',
+  agents: 'Act as an agent: message your pets and agents, read its own inbox (needs write)',
 };
 
 /** The expiries offered as one press, in days. Anything else is the custom field. */

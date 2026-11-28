@@ -259,6 +259,7 @@ public static class NixPersistenceServiceCollectionExtensions
         services.AddScoped<ConversationRunner>();
         services.AddScoped<Nix.Features.Messages.MessagePetRunner>();
         services.AddScoped<Nix.Persistence.Content.MessagePetTurnStore>();
+        services.AddScoped<Nix.Persistence.Content.MessageAgentStore>();
         services.AddScoped<Nix.Features.Pets.PetUsageService>();
         services.AddScoped<ICommandHandler<CreateConversation, ConversationResponse>, ConversationHandlers>();
         services.AddScoped<ICommandHandler<ConfigureConversation, ConversationResponse>, ConversationHandlers>();

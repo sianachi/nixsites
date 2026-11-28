@@ -88,7 +88,7 @@ export function OAuthAuthorizePage(): ReactNode {
           ...(decision === 'approve'
             ? {
                 token: {
-                  scopes: ['read', 'write', 'admin', 'pets:send'].filter((s) => scopes.has(s)),
+                  scopes: ['read', 'write', 'admin', 'agents'].filter((s) => scopes.has(s)),
                 },
               }
             : {}),

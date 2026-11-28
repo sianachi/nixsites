@@ -30,8 +30,11 @@ public enum AccessTokenScope
     /// <summary>May administer: sharing, permission entries, public exposure of views.</summary>
     Admin,
 
-    /// <summary>May post a message that addresses one of the principal's pets, and nothing else new.</summary>
-    PetsSend,
+    /// <summary>
+    /// Makes the token an agent: it may post a message that addresses the principal's pets or other agents and
+    /// read its own inbox, and the principal's other agents can address it. Nothing else new.
+    /// </summary>
+    Agents,
 }
 
 /// <summary>
@@ -48,11 +51,11 @@ public static class AccessTokenScopes
     /// <summary>The storage spelling of <see cref="AccessTokenScope.Admin"/>.</summary>
     public const string Admin = "admin";
 
-    /// <summary>The storage spelling of <see cref="AccessTokenScope.PetsSend"/>.</summary>
-    public const string PetsSend = "pets:send";
+    /// <summary>The storage spelling of <see cref="AccessTokenScope.Agents"/>. Tokens minted as <c>pets:send</c> were migrated to it.</summary>
+    public const string Agents = "agents";
 
     /// <summary>Every scope, in the order the API lists them.</summary>
-    public static IReadOnlyList<string> All { get; } = [Read, Write, Admin, PetsSend];
+    public static IReadOnlyList<string> All { get; } = [Read, Write, Admin, Agents];
 
     /// <summary>
     /// Parses a stored or requested spelling.
@@ -77,8 +80,8 @@ public static class AccessTokenScopes
             case Admin:
                 scope = AccessTokenScope.Admin;
                 return true;
-            case PetsSend:
-                scope = AccessTokenScope.PetsSend;
+            case Agents:
+                scope = AccessTokenScope.Agents;
                 return true;
             default:
                 scope = default;
@@ -96,7 +99,7 @@ public static class AccessTokenScopes
         AccessTokenScope.Read => Read,
         AccessTokenScope.Write => Write,
         AccessTokenScope.Admin => Admin,
-        AccessTokenScope.PetsSend => PetsSend,
+        AccessTokenScope.Agents => Agents,
         _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unknown scope."),
     };
 }

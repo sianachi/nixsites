@@ -53,7 +53,7 @@ internal static class TokenEndpoints
             .WithDescription(
                 "Mints a token that authenticates a non-browser client as the calling principal, "
                 + "within the ceiling the request chooses: scopes from 'read', 'write', "
-                + "'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. "
+                + "'admin' and 'agents' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. "
                 + "The response is the only place the secret ever appears; store it or lose it. "
                 + "A token only narrows: every request it authenticates still resolves the "
                 + "principal's own permissions, so it can never do what its issuer cannot. Fails "

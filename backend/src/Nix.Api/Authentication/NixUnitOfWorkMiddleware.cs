@@ -751,7 +751,7 @@ public sealed class NixUnitOfWorkMiddleware(RequestDelegate next)
         scopeContext.SetTokenCeiling(
             mayWrite: AccessTokenScopePolicy.Satisfies(state.Scopes, AccessTokenScopePolicy.Requirement.Write),
             mayAdminister: AccessTokenScopePolicy.Satisfies(state.Scopes, AccessTokenScopePolicy.Requirement.Admin),
-            mayPetSend: state.Scopes.Contains(AccessTokenScopes.PetsSend));
+            mayAgents: state.Scopes.Contains(AccessTokenScopes.Agents));
 
         // The watch long-poll can hold this request open for up to 20 s. Touching last_used_at
         // would hold ExecuteUpdateAsync's row lock on the token for that whole wait, which stalls

@@ -78,8 +78,9 @@ public sealed class MessageAddressingTests
         Assert.Equal("token:token", PetUsageSources.Token(null));
         Assert.Equal(100, PetUsageSources.Token(new string('x', 300)).Length);
         Assert.True(PetUsageSources.IsValid(PetUsageSources.Token("a\u0007b")));
-        Assert.True(AccessTokenScopes.TryParse("pets:send", out var scope));
-        Assert.Equal("pets:send", AccessTokenScopes.Format(scope));
-        Assert.Contains("pets:send", AccessTokenScopes.All);
+        Assert.True(AccessTokenScopes.TryParse("agents", out var scope));
+        Assert.Equal("agents", AccessTokenScopes.Format(scope));
+        Assert.Contains("agents", AccessTokenScopes.All);
+        Assert.False(AccessTokenScopes.TryParse("pets:send", out _));
     }
 }

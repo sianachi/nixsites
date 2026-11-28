@@ -31,6 +31,8 @@ public sealed class MessageHandler(
     IWorkspaceLocks workspaceLocks,
     WorkspaceAdministrationStore workspaces,
     MessagePetTurnStore turns,
+    MessageAgentStore agents,
+    IItemTree tree,
     PetUsageService usage,
     INotificationWriter notifications,
     IPetPreferencesStore preferences,
@@ -41,6 +43,11 @@ public sealed class MessageHandler(
 
     /// <summary>The most pet turns one token may start in a day.</summary>
     public const int TokenTurnsPerDay = 50;
+
+    /// <summary>How many agent or pet messages in a row a thread takes before a token may address agents or pets again.</summary>
+    public const int ThreadAgentRunLimit = 30;
+
+    private const int InboxPage = 25;
 
     private static NixError NotFound => new("items.not_found", "No such item is visible.");
 
@@ -58,9 +65,9 @@ public sealed class MessageHandler(
             return Result.Failure<PostedMessage>(Invalid($"A message is 1 to {MessageItem.MaxTextLength:N0} characters."));
         }
 
-        if (to.Length > MessageItem.MaxRecipients || to.Any(address => address.Kind is not ("person" or "pet") || address.Id == Guid.Empty))
+        if (to.Length > MessageItem.MaxRecipients || to.Any(address => address.Kind is not ("person" or "pet" or "agent") || address.Id == Guid.Empty))
         {
-            return Result.Failure<PostedMessage>(Invalid($"Address at most {MessageItem.MaxRecipients} people or pets, each as person or pet."));
+            return Result.Failure<PostedMessage>(Invalid($"Address at most {MessageItem.MaxRecipients} people, pets or agents, each as person, pet or agent."));
         }
 
         // A pet-turn credential is an agent working for the person, not the person writing.
@@ -69,14 +76,15 @@ public sealed class MessageHandler(
             return Result.Failure<PostedMessage>(new NixError("messages.interactive_only", "Pets cannot post messages."));
         }
 
-        // A token may address a pet only with the pets:send scope; the workspace switch decides what happens next.
+        // A token may address a pet or an agent only with the agents scope; for a pet the workspace switch decides what happens next.
         var petIds = to.Where(address => address.Kind == "pet").Select(address => address.Id).ToArray();
+        var addressesAgents = petIds.Length > 0 || to.Any(address => address.Kind == "agent");
         var agent = !scope.IsInteractive;
-        if (petIds.Length > 0 && agent && !(scope.IsTokenSession && scope.MayPetSend))
+        if (addressesAgents && agent && !(scope.IsTokenSession && scope.MayAgents))
         {
             return Result.Failure<PostedMessage>(scope.IsTokenSession
-                ? new NixError("messages.pets_scope_required", "Addressing a pet needs a token with the pets:send scope.")
-                : new NixError("messages.pets_interactive_only", "Only the app or a token with the pets:send scope can address a pet."));
+                ? new NixError("messages.pets_scope_required", "Addressing a pet or an agent needs a token with the agents scope.")
+                : new NixError("messages.pets_interactive_only", "Only the app or a token with the agents scope can address a pet or an agent."));
         }
 
         var context = session.Current ?? throw new InvalidOperationException("No session context; the pipeline must establish one.");
@@ -94,12 +102,25 @@ public sealed class MessageHandler(
 
         var author = await identities.FindPrincipalByIdAsync(context.TenantId, context.PrincipalId, cancellationToken).ConfigureAwait(false);
         string? via = null;
-        if (scope.IsTokenSession && credential.CredentialId is { } tokenId)
+        Guid? postingToken = scope.IsTokenSession ? credential.CredentialId : null;
+        if (postingToken is { } tokenId)
         {
             via = (await accessTokens.FindOwnAsync(PersonalAccessTokenId.From(tokenId), cancellationToken).ConfigureAwait(false))?.Name;
+            if (await agents.PostedByTokenAsync(tokenId, cancellationToken).ConfigureAwait(false) >= MessageAgentStore.TokenPostsPerDay)
+            {
+                return Result.Failure<PostedMessage>(new NixError("messages.token_message_limit", $"A token may post {MessageAgentStore.TokenPostsPerDay} messages a day. Try again later."));
+            }
         }
 
-        var recipients = await ResolveAsync(parent.WorkspaceId, to, cancellationToken).ConfigureAwait(false);
+        // An agent-and-pet exchange with no person writing from the app stops after a run; the app's own message starts it again.
+        if (scope.IsTokenSession && addressesAgents && parent.Type == MessageItem.Type
+            && await ThreadAgentRunAsync(parent, true, cancellationToken).ConfigureAwait(false) >= ThreadAgentRunLimit)
+        {
+            return Result.Failure<PostedMessage>(new NixError("messages.thread_agent_limit",
+                $"The last {ThreadAgentRunLimit} messages in this thread came from agents or pets. A person must write in the app before agents or pets are addressed again."));
+        }
+
+        var recipients = await ResolveAsync(parent.WorkspaceId, to, postingToken, cancellationToken).ConfigureAwait(false);
         if (recipients.IsFailure)
         {
             return Result.Failure<PostedMessage>(recipients.Error);
@@ -124,7 +145,7 @@ public sealed class MessageHandler(
             }
         }
 
-        var posted = await Post(parent, text, new MessageAuthor(context.PrincipalId.Value, "person", author?.DisplayName ?? "Someone", via), recipients.Value, cancellationToken).ConfigureAwait(false);
+        var posted = await Post(parent, text, new MessageAuthor(context.PrincipalId.Value, "person", author?.DisplayName ?? "Someone", via, postingToken), recipients.Value, cancellationToken).ConfigureAwait(false);
         if (posted.IsFailure)
         {
             return Result.Failure<PostedMessage>(posted.Error);
@@ -163,6 +184,53 @@ public sealed class MessageHandler(
 
         return Result.Success(new PostedMessage(posted.Value, await StatesAsync(posted.Value.Id.Value, cancellationToken).ConfigureAwait(false),
             await usage.BudgetAsync(cancellationToken).ConfigureAwait(false)));
+    }
+
+    private static NixError AgentsOnly => new("messages.agents_only", "Only a token with the agents scope has an inbox.");
+
+    /// <summary>The calling agent token's unread messages, newest first, after the message id <paramref name="after"/>. Only that token reads them.</summary>
+    public async Task<Result<MessageInboxResponse>> InboxAsync(Guid? after, int? limit, CancellationToken cancellationToken)
+    {
+        if (!(scope.IsTokenSession && scope.MayAgents && credential.CredentialId is { } tokenId))
+        {
+            return Result.Failure<MessageInboxResponse>(AgentsOnly);
+        }
+
+        var size = Math.Clamp(limit ?? InboxPage, 1, 100);
+        var rows = await agents.UnreadAsync(tokenId, after, size, cancellationToken).ConfigureAwait(false);
+        var entries = new List<MessageInboxEntry>(rows.Count);
+        foreach (var row in rows)
+        {
+            // What the owner can no longer read (moved to the trash, locked) is left out and stays unread.
+            if (await visible.FindAsync(ItemId.From(row.MessageId), ItemAccess.Read, cancellationToken, lockedDetail: "locked").ConfigureAwait(false) is not { IsSuccess: true } found
+                || MessagePetRunner.Parse(found.Value) is not { } message)
+            {
+                continue;
+            }
+
+            var rootId = await MessagePetRunner.ThreadRootAsync(tree, found.Value, cancellationToken).ConfigureAwait(false);
+            var root = await tree.FindAsync(rootId, cancellationToken).ConfigureAwait(false);
+            entries.Add(new MessageInboxEntry(found.Value.Id.Value, rootId.Value, root?.ParentId?.Value, found.Value.WorkspaceId.Value, message.Author, message.Text, found.Value.CreatedAt));
+        }
+
+        return Result.Success(new MessageInboxResponse(entries, rows.Count == size ? rows[^1].MessageId : null));
+    }
+
+    /// <summary>Marks messages read in the calling agent token's inbox. Returns how many were unread.</summary>
+    public async Task<Result<MarkMessagesReadResponse>> MarkReadAsync(IReadOnlyList<Guid>? messageIds, CancellationToken cancellationToken)
+    {
+        if (!(scope.IsTokenSession && scope.MayAgents && credential.CredentialId is { } tokenId))
+        {
+            return Result.Failure<MarkMessagesReadResponse>(AgentsOnly);
+        }
+
+        var ids = messageIds?.Distinct().ToArray() ?? [];
+        if (ids.Length is 0 or > 100)
+        {
+            return Result.Failure<MarkMessagesReadResponse>(Invalid("Name 1 to 100 messages."));
+        }
+
+        return Result.Success(new MarkMessagesReadResponse(await agents.MarkReadAsync(tokenId, ids, cancellationToken).ConfigureAwait(false)));
     }
 
     /// <summary>Where each pet a message addressed stands. Only the pets' owner sees any.</summary>
@@ -339,6 +407,7 @@ public sealed class MessageHandler(
     {
         ArgumentNullException.ThrowIfNull(parent);
         ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(author);
         var body = new JsonObject
         {
             ["text"] = text,
@@ -346,11 +415,80 @@ public sealed class MessageHandler(
             ["to"] = JsonSerializer.SerializeToNode(to, MessageJson.Default.Options),
         };
         var line = text.ReplaceLineEndings(" ");
-        return await dispatcher.SendAsync<CreateItem, Item>(
+        var created = await dispatcher.SendAsync<CreateItem, Item>(
             new CreateItem(parent.WorkspaceId, MessageItem.Type, line.Length > 80 ? line[..80] : line, parent.Id,
                 new JsonObject { [MessageItem.Key] = body.ToJsonString() })
             { MessageWrite = true },
             cancellationToken).ConfigureAwait(false);
+        if (created.IsSuccess)
+        {
+            // An agent is told by its inbox, which it polls; nothing starts.
+            foreach (var recipient in to.Where(recipient => recipient.Kind == "agent"))
+            {
+                await agents.AddInboxAsync(created.Value.Id.Value, recipient.Id, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (author.TokenId is { } token)
+            {
+                await agents.RecordPostAsync(created.Value.Id.Value, token, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return created;
+    }
+
+    /// <summary>
+    /// How many of the newest messages of the thread <paramref name="message"/> belongs to came from an agent or a pet,
+    /// counting back until a person's message from the app. With <paramref name="lockThread"/> the thread's lock is held
+    /// to the end of the unit, so two posts cannot both count below the limit.
+    /// </summary>
+    public async Task<int> ThreadAgentRunAsync(Item message, bool lockThread, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        var root = await MessagePetRunner.ThreadRootAsync(tree, message, cancellationToken).ConfigureAwait(false);
+        if (lockThread)
+        {
+            await turns.LockThreadAsync(root.Value, cancellationToken).ConfigureAwait(false);
+        }
+
+        // shortcut: the walk keeps the 500 oldest messages, so in a thread larger than that the newest are missed; upgrade to a recursive query if threads grow.
+        var walked = new List<Item>();
+        var pending = new Stack<Item>();
+        if (await tree.FindAsync(root, cancellationToken).ConfigureAwait(false) is { } first)
+        {
+            pending.Push(first);
+        }
+
+        while (pending.Count > 0 && walked.Count < 500)
+        {
+            var current = pending.Pop();
+            walked.Add(current);
+            foreach (var child in await tree.ListChildrenAsync(current.WorkspaceId, current.Id, false, null, 100, cancellationToken).ConfigureAwait(false))
+            {
+                if (child.Type == MessageItem.Type)
+                {
+                    pending.Push(child);
+                }
+            }
+        }
+
+        var run = 0;
+        foreach (var item in walked.OrderByDescending(item => item.CreatedAt).ThenByDescending(item => item.Id.Value))
+        {
+            if (MessagePetRunner.Parse(item) is not { } parsed)
+            {
+                continue;
+            }
+
+            if (parsed.Author is { Kind: "person", Via: null })
+            {
+                break;
+            }
+
+            run++;
+        }
+
+        return run;
     }
 
     /// <inheritdoc />
@@ -365,13 +503,16 @@ public sealed class MessageHandler(
 
         var search = query.Search?.Trim();
         var list = new List<MessageAddressee>();
-        // The app, or a token that may address pets (pets:send), sees the person's own pets; any other token sees people only.
-        if (scope.IsInteractive || scope.IsTokenSession && scope.MayPetSend)
+        // The app, or a token that may address pets and agents (the agents scope), sees the person's own pets and agents; any other token sees people only.
+        if (scope.IsInteractive || scope.IsTokenSession && scope.MayAgents)
         {
             var settings = await dispatcher.QueryAsync<GetPetSettings, PetSettingsResponse>(new(), cancellationToken).ConfigureAwait(false);
             list.AddRange(settings.Settings.Profiles
                 .Where(pet => string.IsNullOrEmpty(search) || pet.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
                 .Select(pet => new MessageAddressee(pet.Id, pet.Name, "pet")));
+            list.AddRange((await LiveAgentsAsync(scope.IsTokenSession ? credential.CredentialId : null, cancellationToken).ConfigureAwait(false))
+                .Where(token => string.IsNullOrEmpty(search) || token.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                .Select(token => new MessageAddressee(token.Id.Value, token.Name, "agent")));
         }
 
         var people = await dispatcher.QueryAsync<ListWorkspaceAssignablePrincipals, IReadOnlyList<Nix.Persistence.Workspaces.WorkspacePrincipalSnapshot>>(
@@ -380,8 +521,16 @@ public sealed class MessageHandler(
         return Result.Success(new MessageDirectoryResponse(list));
     }
 
+    /// <summary>The caller's own agent tokens: unrevoked, unexpired, holding the agents scope, and not the caller itself.</summary>
+    private async Task<IReadOnlyList<PersonalAccessToken>> LiveAgentsAsync(Guid? self, CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow();
+        return [.. (await accessTokens.ListOwnAsync(cancellationToken).ConfigureAwait(false))
+            .Where(token => token.RevokedAt is null && token.ExpiresAt > now && token.Scopes.Contains(AccessTokenScopes.Agents) && token.Id.Value != self)];
+    }
+
     private async Task<Result<IReadOnlyList<MessageRecipient>>> ResolveAsync(
-        Nix.Domain.Tenancy.WorkspaceId workspaceId, MessageAddress[] to, CancellationToken cancellationToken)
+        Nix.Domain.Tenancy.WorkspaceId workspaceId, MessageAddress[] to, Guid? self, CancellationToken cancellationToken)
     {
         var recipients = new List<MessageRecipient>(to.Length);
         var peopleIds = to.Where(address => address.Kind == "person").Select(address => address.Id).ToArray();
@@ -415,6 +564,22 @@ public sealed class MessageHandler(
                 }
 
                 recipients.Add(new MessageRecipient(id, "pet", pet.Name));
+            }
+        }
+
+        var agentIds = to.Where(address => address.Kind == "agent").Select(address => address.Id).ToArray();
+        if (agentIds.Length > 0)
+        {
+            var live = (await LiveAgentsAsync(self, cancellationToken).ConfigureAwait(false)).ToDictionary(token => token.Id.Value);
+            foreach (var id in agentIds)
+            {
+                // Only the poster's own live agents; anyone else's, a revoked one and a missing one get the same answer.
+                if (!live.TryGetValue(id, out var token))
+                {
+                    return Result.Failure<IReadOnlyList<MessageRecipient>>(Invalid("You can only address your own agents."));
+                }
+
+                recipients.Add(new MessageRecipient(id, "agent", token.Name));
             }
         }
 

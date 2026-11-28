@@ -38,7 +38,7 @@ export const listAccessTokens = (): QueryEndpoint<AccessTokenList> =>
 export interface CreateAccessTokenInput {
   /** What the token is for, so the list reads as intentions. */
   readonly name: string;
-  /** At least one of `read`, `write`, `admin`, `pets:send`. Independent - `write` does not imply `read`. */
+  /** At least one of `read`, `write`, `admin`, `agents`. Independent - `write` does not imply `read`. */
   readonly scopes: readonly string[];
   /** How long it lives, 1 to 365 days. Required: expiry is chosen, never defaulted. */
   readonly expiresInDays: number;

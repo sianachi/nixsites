@@ -152,7 +152,7 @@ export function SharingSwitches(): ReactElement {
       </div>
       <Field
         label="Agents may address pets"
-        hint="Needs a token with the pets:send scope. Ask holds each turn for the pet's owner."
+        hint="Needs a token with the agents scope. Ask holds each turn for the pet's owner."
       >
         {(control) => (
           <Select

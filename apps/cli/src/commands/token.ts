@@ -79,7 +79,7 @@ export async function rotateToken(
   printResult(await executeRotateToken(session, tokenId, deps), output);
 }
 
-const SCOPES = ['read', 'write', 'admin', 'pets:send'] as const;
+const SCOPES = ['read', 'write', 'admin', 'agents'] as const;
 
 /** Mints a token. Core refuses this from a token session, so it needs a browser sign-in. */
 export async function createToken(
@@ -92,7 +92,7 @@ export async function createToken(
   const scopes = options.scopes.split(',').map((scope) => scope.trim());
   const days = Number(options.days);
   if (scopes.some((scope) => !(SCOPES as readonly string[]).includes(scope)))
-    throw new Error(`Scopes are from: ${SCOPES.join(', ')}. pets:send also needs write.`);
+    throw new Error(`Scopes are from: ${SCOPES.join(', ')}. agents also needs write.`);
   if (!Number.isInteger(days) || days < 1 || days > 365) throw new Error('--days is 1 to 365.');
   const session = await resolveSession(profileName, deps);
   if (session.authKind === 'token') {

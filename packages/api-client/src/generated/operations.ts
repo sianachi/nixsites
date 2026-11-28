@@ -778,7 +778,7 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     area: 'AccessTokens',
     summary: 'Mint a personal access token',
     detail:
-      "Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expi...",
+      "Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'agents' (posting a message that addresses one of your pets), and an expiry ...",
     pathParams: [],
     uuidParams: [],
     queryParams: [],
@@ -1667,10 +1667,25 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     area: 'Messages',
     summary: '',
     detail:
-      "The people who can read the item and, for the app or a token with the pets:send scope, the caller's own pets.",
+      "The people who can read the item and, for the app or a token with the agents scope, the caller's own pets and its other live agent tokens (kind agent).",
     pathParams: ['itemId'],
     uuidParams: ['itemId'],
     queryParams: [{ name: 'query', required: false, type: 'string' }],
+  },
+  {
+    id: 'GetMessageInbox',
+    method: 'GET',
+    path: '/api/v1/me/message-inbox',
+    area: 'Messages',
+    summary: "The calling agent token's unread messages",
+    detail:
+      "Unread messages addressed to the token that makes the call, newest first, each with its thread's first message, the item the thread sits under, its author and text.",
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [
+      { name: 'after', required: false, type: 'string' },
+      { name: 'limit', required: false, type: ['integer', 'string'] },
+    ],
   },
   {
     id: 'GetMessagePetTurns',
@@ -2642,6 +2657,22 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     queryParams: [],
   },
   {
+    id: 'MarkMessagesRead',
+    method: 'POST',
+    path: '/api/v1/me/message-inbox/read',
+    area: 'Messages',
+    summary: "Mark messages read in the calling agent token's inbox",
+    detail: '',
+    pathParams: [],
+    uuidParams: [],
+    queryParams: [],
+    body: {
+      type: 'object',
+      required: ['messageIds'],
+      properties: { messageIds: { type: 'array', items: { type: 'string', format: 'uuid' } } },
+    },
+  },
+  {
     id: 'MarkNotificationRead',
     method: 'POST',
     path: '/api/v1/me/notifications/{notificationId}/read',
@@ -2834,7 +2865,8 @@ export const OPERATION_ENTRIES: readonly OperationEntry[] = [
     path: '/api/v1/items/{itemId}/messages',
     area: 'Messages',
     summary: 'Post a message under an item, or a reply under a message',
-    detail: "'to' lists people and pets by id; the text is never parsed.",
+    detail:
+      "'to' lists people, pets and agents by id (kind person, pet or agent); the text is never parsed.",
     pathParams: ['itemId'],
     uuidParams: ['itemId'],
     queryParams: [],

@@ -325,6 +325,12 @@ internal static class M0SchemaSeed
                 INSERT INTO message_pet_turn (tenant_id, message_id, pet_id, principal_id, status)
                 VALUES ({Literal(rows.TenantId)}, {Literal(rows.ItemId)}, {Literal(rows.ItemId)}, {Literal(rows.PrincipalId)}, 'working');
 
+                INSERT INTO message_agent_inbox (tenant_id, message_id, token_id, principal_id)
+                VALUES ({Literal(rows.TenantId)}, {Literal(rows.ItemId)}, {Literal(rows.ItemId)}, {Literal(rows.PrincipalId)});
+
+                INSERT INTO message_token_post (tenant_id, message_id, token_id, principal_id)
+                VALUES ({Literal(rows.TenantId)}, {Literal(rows.ItemId)}, {Literal(rows.ItemId)}, {Literal(rows.PrincipalId)});
+
                 INSERT INTO pet_plan_decision_context
                     (id, tenant_id, owner_id, workspace_id, run_id, plan_id, plan_version, review_digest,
                      grantee_credential_id, client_name, approve, secret_hash, expires_at)

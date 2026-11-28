@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { readMessage } from '../schemas/messages.js';
-import { approvePetTurn, directory, dismissPetTurn, petTurns, post } from './messages.js';
+import {
+  approvePetTurn,
+  directory,
+  dismissPetTurn,
+  inbox,
+  markRead,
+  petTurns,
+  post,
+} from './messages.js';
+import { messageInboxSchema } from '../schemas/messages.js';
 
 const WORKSPACE = '22222222-2222-4222-8222-222222222222';
 const ITEM = '11111111-1111-4111-8111-111111111111';
@@ -37,6 +46,37 @@ describe('the messages resource', () => {
   it('reads the directory with an optional search', () => {
     expect(directory(ITEM)).toMatchObject({ path: `/api/v1/items/${ITEM}/message-directory` });
     expect(directory(ITEM, 'ad')).toMatchObject({ query: { query: 'ad' } });
+  });
+});
+
+describe('the agent inbox', () => {
+  it('reads one page of unread messages and marks some read', () => {
+    expect(inbox()).toMatchObject({ path: '/api/v1/me/message-inbox' });
+    expect(inbox({ after: ITEM, limit: 10 })).toMatchObject({
+      query: { after: ITEM, limit: '10' },
+    });
+    expect(markRead([ITEM])).toMatchObject({
+      method: 'POST',
+      path: '/api/v1/me/message-inbox/read',
+      body: { messageIds: [ITEM] },
+    });
+  });
+
+  it('parses an entry with its thread, parent item and token author', () => {
+    const entry = {
+      messageId: ITEM,
+      threadId: ITEM,
+      parentId: null,
+      workspaceId: WORKSPACE,
+      author: { id: PERSON, kind: 'person', name: 'Ada', via: 'Claude', tokenId: PERSON },
+      text: 'hi',
+      createdAt: '2026-11-28T10:00:00+00:00',
+    };
+    expect(
+      messageInboxSchema.parse({ messages: [entry], next: null }).messages[0]?.author,
+    ).toMatchObject({
+      tokenId: PERSON,
+    });
   });
 });
 

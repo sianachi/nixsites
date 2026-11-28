@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Nix.Abstractions;
+using Nix.Domain.Identity;
 using Nix.Domain.Items;
 using Nix.Domain.Primitives;
 using Nix.Features.Conversations;
@@ -21,7 +22,8 @@ public sealed record MessageTurnOrigin(string Source, Guid? TokenId);
 /// budget check and usage source, and no new runtime.
 /// </summary>
 /// <remarks>
-/// A reply may address the owner's other pets and people (a last line <c>To: Name, Name</c>); the pets it
+/// A reply may address the owner's other pets, agents and people (a last line <c>To: Name, Name</c>); an agent only
+/// gets it in its inbox. The pets it
 /// names answer in turn only while the thread has started fewer than <see cref="HopLimit"/> pet turns since a
 /// person last wrote from the app, and the launch has <see cref="LaunchBudget"/> turns left, however the pets
 /// address each other. Chained turns of a token's message count against that token's daily cap.
@@ -246,7 +248,9 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
 
             // People are always addressed; pets only while the thread, the launch and the token have room, in the order named.
             var petsLeft = Math.Max(0, room);
-            var addressed = recipients.Where(recipient => recipient.Kind == "person" || petsLeft-- > 0).ToArray();
+            // Agents are named only while the thread has not run 30 agent or pet messages in a row.
+            var agentsOpen = await services.GetRequiredService<MessageHandler>().ThreadAgentRunAsync(message, false, token).ConfigureAwait(false) < MessageHandler.ThreadAgentRunLimit;
+            var addressed = recipients.Where(recipient => recipient.Kind == "person" || recipient.Kind == "agent" && agentsOpen || recipient.Kind == "pet" && petsLeft-- > 0).ToArray();
             var posted = await services.GetRequiredService<MessageHandler>().Post(
                 message, text.Length > MessageItem.MaxTextLength ? text[..MessageItem.MaxTextLength] : text,
                 new MessageAuthor(petId, "pet", pet.Name, null), addressed, token).ConfigureAwait(false);
@@ -350,6 +354,11 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
             candidates.AddRange(settings.Settings.Profiles.Where(pet => pet.Id != petId).Select(pet => new MessageRecipient(pet.Id, "pet", Clip(pet.Name, 40))));
         }
 
+        // The owner's agents may be named too: the reply lands in their inbox and nothing starts.
+        var now = services.GetRequiredService<TimeProvider>().GetUtcNow();
+        candidates.AddRange((await services.GetRequiredService<IPersonalAccessTokens>().ListOwnAsync(cancellationToken).ConfigureAwait(false))
+            .Where(token => token.RevokedAt is null && token.ExpiresAt > now && token.Scopes.Contains(AccessTokenScopes.Agents))
+            .Select(token => new MessageRecipient(token.Id.Value, "agent", Clip(token.Name, 40))));
         var people = await dispatcher.QueryAsync<ListWorkspaceAssignablePrincipals, IReadOnlyList<Nix.Persistence.Workspaces.WorkspacePrincipalSnapshot>>(
             new(workspaceId, null, null, 30), cancellationToken).ConfigureAwait(false);
         candidates.AddRange(people.Where(person => person.Kind == "user").Select(person => new MessageRecipient(person.PrincipalId.Value, "person", Clip(person.DisplayName, 40))));

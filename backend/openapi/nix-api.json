@@ -12177,7 +12177,7 @@
           "Messages"
         ],
         "summary": "Post a message under an item, or a reply under a message",
-        "description": "'to' lists people and pets by id; the text is never parsed. A token that addresses a pet needs the pets:send scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'.",
+        "description": "'to' lists people, pets and agents by id (kind person, pet or agent); the text is never parsed. A token that addresses a pet or an agent needs the agents scope and the workspace's 'agents may address pets' switch: off posts the message and starts no turn, ask holds each pet's turn until its owner approves it in the app (7 days), on starts it at once (50 pet turns per token per day, 429 'messages.pet_turn_limit'). The response says where each addressed pet's turn stands (pending, working, answered, failed, declined or expired) and the poster's monthly pet budget; a used-up budget is 403 'pets.budget_exhausted'. An agent is one of your own live tokens holding the agents scope (not the posting token); the message lands in its inbox and nothing starts. A token may post 500 messages a day (429 'messages.token_message_limit'), and once the last 30 messages of a thread all came from agents or pets, a token's message that addresses agents or pets is refused (409 'messages.thread_agent_limit') until a person writes in the app.",
         "operationId": "PostMessage",
         "parameters": [
           {
@@ -12443,7 +12443,7 @@
         "tags": [
           "Messages"
         ],
-        "description": "The people who can read the item and, for the app or a token with the pets:send scope, the caller's own pets. A token without pets:send sees people only.",
+        "description": "The people who can read the item and, for the app or a token with the agents scope, the caller's own pets and its other live agent tokens (kind agent). A token without the agents scope sees people only.",
         "operationId": "GetMessageDirectory",
         "parameters": [
           {
@@ -12476,6 +12476,111 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/message-inbox": {
+      "get": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "The calling agent token's unread messages",
+        "description": "Unread messages addressed to the token that makes the call, newest first, each with its thread's first message, the item the thread sits under, its author and text. Only a token with the agents scope has an inbox (403 'messages.agents_only'); nobody else reads it. 'after' is the 'next' of the previous page.",
+        "operationId": "GetMessageInbox",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageInboxResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/message-inbox/read": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Mark messages read in the calling agent token's inbox",
+        "operationId": "MarkMessagesRead",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkMessagesReadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkMessagesReadResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13546,7 +13651,7 @@
           "AccessTokens"
         ],
         "summary": "Mint a personal access token",
-        "description": "Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'pets:send' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.",
+        "description": "Mints a token that authenticates a non-browser client as the calling principal, within the ceiling the request chooses: scopes from 'read', 'write', 'admin' and 'agents' (posting a message that addresses one of your pets), and an expiry of 1 to 365 days - both required, neither defaulted. The response is the only place the secret ever appears; store it or lose it. A token only narrows: every request it authenticates still resolves the principal's own permissions, so it can never do what its issuer cannot. Fails with 'tokens.invalid' when the name, scopes or expiry cannot mint a token, and 'tokens.limit_reached' when the caller already holds the most live tokens one principal may.",
         "operationId": "CreateAccessToken",
         "requestBody": {
           "content": {
@@ -21572,6 +21677,37 @@
           }
         }
       },
+      "MarkMessagesReadRequest": {
+        "required": [
+          "messageIds"
+        ],
+        "type": "object",
+        "properties": {
+          "messageIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "MarkMessagesReadResponse": {
+        "required": [
+          "marked"
+        ],
+        "type": "object",
+        "properties": {
+          "marked": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "MentionResponse": {
         "required": [
           "item",
@@ -21674,6 +21810,40 @@
           }
         }
       },
+      "MessageAuthor": {
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "via"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "via": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tokenId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "MessageDirectoryResponse": {
         "required": [
           "addressees"
@@ -21685,6 +21855,71 @@
             "items": {
               "$ref": "#/components/schemas/MessageAddressee"
             }
+          }
+        }
+      },
+      "MessageInboxEntry": {
+        "required": [
+          "messageId",
+          "threadId",
+          "parentId",
+          "workspaceId",
+          "author",
+          "text",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "threadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "author": {
+            "$ref": "#/components/schemas/MessageAuthor"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MessageInboxResponse": {
+        "required": [
+          "messages",
+          "next"
+        ],
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageInboxEntry"
+            }
+          },
+          "next": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
