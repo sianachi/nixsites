@@ -7,6 +7,7 @@ import {
   readMessage,
   type Item,
   type Message,
+  type MessageAddressee,
   type MessagePetState,
   type PetProfile,
 } from '@nix/api-client';
@@ -375,6 +376,36 @@ function ChatMessage({
   );
 }
 
+/**
+ * Everyone in the chat besides the viewer, as a reply addresses them by default: people who wrote or were
+ * addressed, the viewer's agents (a token's posts), and the viewer's own pets (another person's pet cannot be
+ * addressed). Order is first appearance.
+ */
+export function chatParticipants(
+  thread: readonly Item[],
+  viewerId: string | null,
+  pets: readonly PetProfile[],
+): MessageAddressee[] {
+  const own = new Set(pets.map((pet) => pet.id));
+  const found = new Map<string, MessageAddressee>();
+  const add = (entry: MessageAddressee): void => {
+    if (entry.id === viewerId || found.has(entry.id)) return;
+    if (entry.kind === 'pet' && !own.has(entry.id)) return;
+    found.set(entry.id, entry);
+  };
+  for (const item of thread) {
+    const message = readMessage(item);
+    if (message === null) continue;
+    const { author } = message;
+    if (author.kind === 'pet') add({ id: author.id, name: author.name, kind: 'pet' });
+    else if (author.tokenId && author.via)
+      add({ id: author.tokenId, name: author.via, kind: 'agent' });
+    else add({ id: author.id, name: author.name, kind: 'person' });
+    for (const entry of message.to) add(entry);
+  }
+  return [...found.values()];
+}
+
 /** The thread as one chronological column. `root` is the thread's first message; replies post under it. */
 function Chat({
   root,
@@ -405,6 +436,10 @@ function Chat({
   }, []);
   const replies = useThread(root.workspaceId, root.id, version, shouldPoll);
   const thread = useMemo(() => [root, ...(replies ?? [])], [root, replies]);
+  const participants = useMemo(
+    () => chatParticipants(thread, viewerId, pets),
+    [thread, viewerId, pets],
+  );
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' });
@@ -461,6 +496,7 @@ function Chat({
             workspaceId={root.workspaceId}
             parentId={root.id}
             label="Message"
+            replyTo={participants}
             onPosted={(_posted, addressedPet) => {
               if (addressedPet) startPolling();
               else setVersion((current) => current + 1);

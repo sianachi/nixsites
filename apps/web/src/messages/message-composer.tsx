@@ -35,17 +35,22 @@ export function MessageComposer({
   parentId,
   label = 'Message',
   focusOnMount = false,
+  replyTo = [],
   onPosted,
 }: {
   readonly workspaceId: string;
   readonly parentId: string;
   readonly label?: string;
   readonly focusOnMount?: boolean;
+  /** Who a reply goes to unless removed: the chat's other participants. */
+  readonly replyTo?: readonly MessageAddressee[];
   readonly onPosted: (message: Item, addressedPet: boolean) => void;
 }): ReactNode {
   const client = useApiClient();
   const [text, setText] = useState('');
   const [to, setTo] = useState<readonly MessageAddressee[]>([]);
+  const [dropped, setDropped] = useState<ReadonlySet<string>>(new Set());
+  const replying = replyTo.filter((entry) => !dropped.has(entry.id));
   const [picking, setPicking] = useState(false);
   const [query, setQuery] = useState('');
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
@@ -82,8 +87,14 @@ export function MessageComposer({
     setBusy(true);
     setError(null);
     try {
-      // Only people and pets still named in the text are addressed.
-      const named = to.filter((entry) => body.includes(`@${entry.name}`));
+      // The chat's participants (unless removed), plus anyone picked and still named in the text.
+      const named = [
+        ...replying,
+        ...to.filter(
+          (entry) =>
+            body.includes(`@${entry.name}`) && !replying.some((item) => item.id === entry.id),
+        ),
+      ];
       const posted = await client.execute(
         messages.post(workspaceId, parentId, {
           text: body,
@@ -165,6 +176,31 @@ export function MessageComposer({
 
   return (
     <div className="flex flex-col gap-2">
+      {replying.length === 0 ? null : (
+        <div className="flex flex-wrap items-center gap-1" aria-label="Replying to">
+          <Text as="span" variant="note" tone="muted">
+            To
+          </Text>
+          {replying.map((entry) => (
+            <span
+              key={entry.id}
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-sm"
+            >
+              {kindLabel(entry)}
+              <button
+                type="button"
+                className={`rounded-full px-1 text-muted hover:text-foreground ${focusRing}`}
+                aria-label={`Don't send to ${entry.name}`}
+                onClick={() => {
+                  setDropped((current) => new Set([...current, entry.id]));
+                }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="flex items-end gap-1">
         <Textarea
           ref={input}

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MessageComposer } from '../../messages/message-composer';
+import { chatParticipants } from '../../messages/message-view';
 
 const PET = '33333333-3333-4333-8333-333333333333';
 const AGENT = '55555555-5555-4555-8555-555555555555';
@@ -15,6 +16,57 @@ vi.mock('@nix/web-platform/api/api-client-provider', () => ({
 }));
 
 describe('the message composer', () => {
+  it('sends a reply to the chat participants unless one is removed', async () => {
+    execute.mockReset();
+    execute.mockResolvedValue({ message: { id: 'new' }, pets: [], budget: null });
+    const onPosted = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MessageComposer
+        workspaceId="w"
+        parentId="p"
+        onPosted={onPosted}
+        replyTo={[
+          { id: PET, name: 'Pip', kind: 'pet' },
+          { id: PERSON, name: 'Ada', kind: 'person' },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: "Don't send to Ada" }));
+    await user.type(screen.getByRole('textbox', { name: 'Message' }), 'are you there?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => {
+      expect(onPosted).toHaveBeenCalledWith({ id: 'new' }, true);
+    });
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({
+      body: { text: 'are you there?', to: [{ id: PET, kind: 'pet' }] },
+    });
+    execute.mockClear();
+  });
+
+  it('takes the participants from the thread: not the viewer, only their own pets, a token post as its agent', () => {
+    const msg = (author: object, to: object[] = []) => ({
+      type: 'message',
+      properties: { $message: JSON.stringify({ text: 'x', author, to }) },
+    });
+    const viewer = '11111111-1111-4111-8111-111111111111';
+    const otherPet = '66666666-6666-4666-8666-666666666666';
+    const thread = [
+      msg({ id: viewer, kind: 'person', name: 'Me', via: 'Claude', tokenId: AGENT }, [
+        { id: PET, kind: 'pet', name: 'Pip' },
+      ]),
+      msg({ id: PET, kind: 'pet', name: 'Pip' }, [{ id: viewer, kind: 'person', name: 'Me' }]),
+      msg({ id: PERSON, kind: 'person', name: 'Ada' }, [
+        { id: otherPet, kind: 'pet', name: 'Rex' },
+      ]),
+    ];
+    expect(
+      chatParticipants(thread as never, viewer, [{ id: PET } as never]).map((entry) => entry.id),
+    ).toEqual([AGENT, PET, PERSON]);
+  });
+
   it('turns an address pick into the explicit to list and sends only those still named', async () => {
     query.mockResolvedValue({
       addressees: [
