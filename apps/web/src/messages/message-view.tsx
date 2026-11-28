@@ -16,7 +16,6 @@ import { Link } from 'react-router';
 
 import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
-import { useSharingConsent } from '@nix/web-platform/api/use-pet-sharing-consent';
 import { PetAvatar } from '@nix/web-pets/pets/pet-avatar';
 import { PetMessageText } from '@nix/web-pets/pets/pet-message-text';
 
@@ -230,8 +229,7 @@ function PetTurns({
 }
 
 /**
- * One pet's turn. Working is the pet's typing bubble; a turn refused for sharing consent shows the
- * review inline and starts again once it is approved; one with no provider key points to Settings.
+ * One pet's turn. Working is the pet's typing bubble; one with no provider key points to Settings.
  */
 function PetTurn({
   row,
@@ -244,14 +242,6 @@ function PetTurn({
   readonly pet: PetProfile | undefined;
   readonly onDecide: (approve: boolean) => Promise<void>;
 }): ReactNode {
-  const client = useApiClient();
-  // Core checks workspace sharing for a message turn, the scope the app's chat approves with workspace context.
-  const sharing = useSharingConsent({
-    client,
-    workspaceId: item.workspaceId,
-    petId: row.petId,
-    selectionKey: `message:${item.id}`,
-  });
   if (row.status === 'working') {
     return (
       <div className="flex items-end gap-2" role="status" aria-label={`${row.name} is answering`}>
@@ -274,7 +264,6 @@ function PetTurn({
       </div>
     );
   }
-  const needsSharing = row.status === 'failed' && row.code === 'pets.sharing_required';
   const needsKey = row.status === 'failed' && row.code === 'pets.no_provider_key';
   return (
     <div className="flex flex-col gap-1 pl-12">
@@ -308,18 +297,6 @@ function PetTurn({
             </Button>
           </>
         ) : null}
-        {needsSharing ? (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              void sharing.ensure({ kind: 'workspace' }).then((approved) => {
-                if (approved) void onDecide(true);
-              });
-            }}
-          >
-            Review sharing
-          </Button>
-        ) : null}
         {needsKey ? (
           <Link
             to={`/w/${item.workspaceId}/settings?tab=pets`}
@@ -329,7 +306,6 @@ function PetTurn({
           </Link>
         ) : null}
       </div>
-      {sharing.panel}
     </div>
   );
 }

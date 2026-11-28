@@ -106,8 +106,6 @@ export function usePetDialogJobs({
   const [sending, setSending] = useState(false);
   const startPending = useRef(false);
   const startRequests = useRef(new Map<string, string>());
-  const pendingSharing = useRef(new Map<string, ConversationJobMessage>());
-  const [waitingSharing, setWaitingSharing] = useState(false);
   const [planSelection, setPlanSelection] = useState<{
     readonly key: string;
     readonly kind: 'workspace' | 'selected' | 'subtree';
@@ -133,19 +131,6 @@ export function usePetDialogJobs({
   );
   const plans = usePetPlanFeed(workspaceId, petId !== undefined, activeRunId);
   const planEnabled = plans.feed.status === 'ready' && plans.feed.data.enabled;
-  useEffect(() => {
-    if (plans.feed.status !== 'ready') return;
-    for (const run of plans.feed.data.runs) {
-      const message = pendingSharing.current.get(run.id);
-      if (message === undefined || run.sharingQuestion != null) continue;
-      pendingSharing.current.delete(run.id);
-      if (run.status !== 'cancelled' && run.status !== 'failed') message.onStarted();
-      message.focusComposer();
-      queueMicrotask(() => {
-        setWaitingSharing(pendingSharing.current.size > 0);
-      });
-    }
-  }, [plans.feed]);
   const enabled = planEnabled || (feed.status === 'ready' && feed.data.enabled);
   const availabilityKnown = feed.status === 'ready' || feed.status === 'unavailable';
   const runs =
@@ -292,10 +277,7 @@ export function usePetDialogJobs({
         }),
       );
       plans.update(run);
-      if (run.sharingQuestion != null) {
-        pendingSharing.current.set(run.id, message);
-        setWaitingSharing(true);
-      } else message.onStarted();
+      message.onStarted();
       setQuote(null);
       message.focusComposer();
     } catch (reason) {
@@ -394,7 +376,7 @@ export function usePetDialogJobs({
     ...(planEnabled ? { consentMode: 'plan' as const } : {}),
     ...(planEnabled ? { adoptTools } : {}),
     ready: enabled,
-    busy: sending || needsTarget !== null || waitingSharing,
+    busy: sending || needsTarget !== null,
     canSubmit: (text) => enabled && isJob(text),
     submit,
     timeline,
@@ -449,7 +431,7 @@ export function usePetDialogJobs({
                   <Select
                     {...control}
                     value={planScope.kind}
-                    disabled={sending || waitingSharing}
+                    disabled={sending}
                     onChange={(event) => {
                       const value = event.currentTarget.value;
                       if (value === 'workspace' || value === 'selected' || value === 'subtree')
@@ -473,7 +455,7 @@ export function usePetDialogJobs({
                   setSources={(sources) => {
                     setPlanSelection({ ...planScope, sources });
                   }}
-                  disabled={sending || waitingSharing}
+                  disabled={sending}
                 />
               ) : null}
             </div>

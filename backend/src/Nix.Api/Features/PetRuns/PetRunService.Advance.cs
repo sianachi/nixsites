@@ -247,14 +247,8 @@ internal sealed partial class PetRunService
         var pin = await sharing.PinAsync(step.Run.WorkspaceId.Value, step.State.PetId, scope, work.Job.Job.Id, cancellationToken).ConfigureAwait(false);
         if (pin.IsFailure)
         {
-            var question = await sharing.PrepareAsync(step.Run.WorkspaceId.Value, step.State.PetId, scope, cancellationToken).ConfigureAwait(false);
-            var paused = step.State with
-            {
-                ActiveJobId = null,
-                SharingQuestion = step.State.PlanRequest is not null && question.IsSuccess ? question.Value : null,
-                Failure = new("sharing", "pet_plans.sharing_required", "Review sharing with the selected model service before continuing.")
-            };
-            var saved = await StopAsync(step.Run, paused, step.State.PlanRequest is null ? "review_required" : "waiting_for_input", cancellationToken).ConfigureAwait(false);
+            var paused = step.State with { ActiveJobId = null, Failure = new("sharing", pin.Error.Code, pin.Error.Message) };
+            var saved = await StopAsync(step.Run, paused, "review_required", cancellationToken).ConfigureAwait(false);
             return new IsolatedOutcome<PreparedTurn?>(null, saved);
         }
 

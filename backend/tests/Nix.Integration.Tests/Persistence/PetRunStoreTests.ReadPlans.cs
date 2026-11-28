@@ -88,15 +88,7 @@ public sealed partial class PetRunStoreTests
         adapter.Host = host;
         var browser = await SignInAsync(host);
         var route = await StartReadBatchAsync(host, browser, adapter, prepared.Run.State.GetProperty("petId").GetGuid());
-        var stopped = await WaitForRunAsync(host, browser, route, "waiting_for_input");
-        var question = stopped.GetProperty("sharingQuestion");
-        Assert.Equal("selected", question.GetProperty("sourceScope").GetProperty("kind").GetString());
-        Assert.Equal(prepared.First.Value, Assert.Single(question.GetProperty("sourceScope").GetProperty("itemIds").EnumerateArray()).GetGuid());
-        Assert.Equal(JsonValueKind.Null, stopped.GetProperty("plan").ValueKind);
-        Assert.Equal(0, adapter.ReadCalls);
-        Assert.Equal(0, adapter.WriteDispatches);
-        Assert.Equal(0, adapter.ModelCalls);
-        Assert.Equal("Second prepared note", await ReadPreparedTitleAsync(prepared.Second));
+        var completed = await WaitForRunAsync(host, browser, route, "completed");
         await InSessionAsync(TestTenants.AlphaContext, async store =>
         {
             var current = (await store.ListAsync(AlphaWorkspace, null, Cancellation)).Single(run => route.EndsWith(run.Id.ToString("D"), StringComparison.Ordinal));
@@ -105,29 +97,6 @@ public sealed partial class PetRunStoreTests
             Assert.Equal(prepared.First.Value, Assert.Single(scope.GetProperty("itemIds").EnumerateArray()).GetGuid());
             return true;
         });
-        JsonElement selectedQuestion;
-        using (var asked = await host.SendAsync(HttpMethod.Post, $"/api/v1/workspaces/{AlphaWorkspace.Value:D}/pet-sharing/question", browser,
-            new { petId = prepared.Run.State.GetProperty("petId").GetGuid(), sourceScope = question.GetProperty("sourceScope"), forDecision = true }))
-        {
-            asked.EnsureSuccessStatusCode();
-            using var response = await SiteHttpHost.JsonAsync(asked);
-            selectedQuestion = response.RootElement.GetProperty("question").Clone();
-        }
-        Assert.Equal(question.GetProperty("scopeDigest").GetString(), selectedQuestion.GetProperty("scopeDigest").GetString());
-        using (var accepted = await host.SendAsync(HttpMethod.Post, route + "/sharing/decision", browser,
-            new
-            {
-                expectedRunRevision = stopped.GetProperty("revision").GetInt64(),
-                recipientRevision = selectedQuestion.GetProperty("recipientRevision").GetString(),
-                scopeDigest = selectedQuestion.GetProperty("scopeDigest").GetString(),
-                decisionNonce = selectedQuestion.GetProperty("decisionNonce").GetString(),
-                approve = true,
-                requestId = Guid.NewGuid()
-            }))
-        {
-            accepted.EnsureSuccessStatusCode();
-        }
-        var completed = await WaitForRunAsync(host, browser, route, "completed");
         Assert.Equal("selected", completed.GetProperty("sourceScope").GetProperty("kind").GetString());
         Assert.Equal(prepared.First.Value, Assert.Single(completed.GetProperty("sourceScope").GetProperty("itemIds").EnumerateArray()).GetGuid());
         Assert.Equal(1, adapter.ReadCalls);
@@ -236,7 +205,7 @@ public sealed partial class PetRunStoreTests
             services.AddHttpClient<PetWorkerClient>().ConfigurePrimaryHttpMessageHandler(() => adapter);
         });
 
-    private static async Task<string> StartReadBatchAsync(SiteHttpHost host, string browser, ReadBatchAdapter adapter, Guid pet, bool approveSharing = true)
+    private static async Task<string> StartReadBatchAsync(SiteHttpHost host, string browser, ReadBatchAdapter adapter, Guid pet)
     {
         JsonElement created;
         using (var response = await host.SendAsync(HttpMethod.Post, $"/api/v1/workspaces/{AlphaWorkspace.Value:D}/pet-plans", browser,
@@ -254,18 +223,6 @@ public sealed partial class PetRunStoreTests
             created = body.RootElement.Clone();
         }
         var route = $"/api/v1/workspaces/{AlphaWorkspace.Value:D}/pet-plans/{created.GetProperty("id").GetGuid():D}";
-        var sharing = created.GetProperty("sharingQuestion");
-        using var accepted = await host.SendAsync(HttpMethod.Post, route + "/sharing/decision", browser,
-            new
-            {
-                expectedRunRevision = created.GetProperty("revision").GetInt64(),
-                recipientRevision = sharing.GetProperty("recipientRevision").GetString(),
-                scopeDigest = sharing.GetProperty("scopeDigest").GetString(),
-                decisionNonce = sharing.GetProperty("decisionNonce").GetString(),
-                approve = approveSharing,
-                requestId = Guid.NewGuid()
-            });
-        accepted.EnsureSuccessStatusCode();
         return route;
     }
 

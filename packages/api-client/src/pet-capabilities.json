@@ -374,11 +374,6 @@
     "method": "POST",
     "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/plans/{planId}/decision"
   },
-  "DecidePetPlanSharing": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision"
-  },
   "DecidePetRunProposal": {
     "mode": "human",
     "method": "POST",
@@ -388,11 +383,6 @@
     "mode": "human",
     "method": "POST",
     "path": "/api/v1/items/{itemId}/pet-runs/{runId}/scope"
-  },
-  "DecidePetSharing": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/workspaces/{workspaceId}/pet-sharing/decision"
   },
   "DeclineWorkspaceInvitation": {
     "mode": "human",
@@ -628,11 +618,6 @@
     "mode": "human",
     "method": "GET",
     "path": "/api/v1/me/pets/settings"
-  },
-  "GetPetSharingQuestion": {
-    "mode": "human",
-    "method": "POST",
-    "path": "/api/v1/workspaces/{workspaceId}/pet-sharing/question"
   },
   "GetPetUsage": {
     "mode": "human",

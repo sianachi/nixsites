@@ -8220,56 +8220,6 @@
         }
       }
     },
-    "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision": {
-      "post": {
-        "tags": [
-          "Pet Plans"
-        ],
-        "operationId": "DecidePetPlanSharing",
-        "parameters": [
-          {
-            "name": "workspaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DecidePetPlanSharingRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PetPlanResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs": {
       "post": {
         "tags": [
@@ -8459,88 +8409,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PetPlanDecisionHandoffStatus"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workspaces/{workspaceId}/pet-sharing/question": {
-      "post": {
-        "tags": [
-          "Pet Sharing"
-        ],
-        "operationId": "GetPetSharingQuestion",
-        "parameters": [
-          {
-            "name": "workspaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PetSharingQuestionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PetSharingQuestionResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workspaces/{workspaceId}/pet-sharing/decision": {
-      "post": {
-        "tags": [
-          "Pet Sharing"
-        ],
-        "operationId": "DecidePetSharing",
-        "parameters": [
-          {
-            "name": "workspaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PetSharingDecisionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PetSharingQuestionResponse"
                 }
               }
             }
@@ -12443,7 +12311,7 @@
         "tags": [
           "Messages"
         ],
-        "summary": "Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)",
+        "summary": "Start a pet's waiting turn or save the fact it wants remembered (the app only)",
         "operationId": "ApproveMessagePetTurn",
         "parameters": [
           {
@@ -19363,45 +19231,6 @@
           }
         }
       },
-      "DecidePetPlanSharingRequest": {
-        "required": [
-          "expectedRunRevision",
-          "recipientRevision",
-          "scopeDigest",
-          "approve",
-          "requestId",
-          "decisionNonce"
-        ],
-        "type": "object",
-        "properties": {
-          "expectedRunRevision": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
-          "recipientRevision": {
-            "type": "string"
-          },
-          "scopeDigest": {
-            "type": "string"
-          },
-          "approve": {
-            "type": "boolean"
-          },
-          "requestId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "decisionNonce": {
-            "type": "string",
-            "format": "uuid",
-            "default": "00000000-0000-0000-0000-000000000000"
-          }
-        }
-      },
       "DecidePetProposalRequest": {
         "required": [
           "approve"
@@ -23478,29 +23307,6 @@
           }
         }
       },
-      "PetPlanRecipientDescriptor": {
-        "required": [
-          "provider",
-          "destination",
-          "routingPolicy",
-          "connectionRevision"
-        ],
-        "type": "object",
-        "properties": {
-          "provider": {
-            "type": "string"
-          },
-          "destination": {
-            "type": "string"
-          },
-          "routingPolicy": {
-            "type": "string"
-          },
-          "connectionRevision": {
-            "type": "string"
-          }
-        }
-      },
       "PetPlanResponse": {
         "required": [
           "id",
@@ -23511,7 +23317,6 @@
           "sourceScope",
           "status",
           "revision",
-          "sharingQuestion",
           "question",
           "plan",
           "results",
@@ -23555,16 +23360,6 @@
               "string"
             ],
             "format": "int64"
-          },
-          "sharingQuestion": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/PetPlanSharingQuestion"
-              }
-            ]
           },
           "question": {
             "oneOf": [
@@ -23682,40 +23477,6 @@
                 "$ref": "#/components/schemas/PetPlanDecisionRecord"
               }
             ]
-          }
-        }
-      },
-      "PetPlanSharingQuestion": {
-        "required": [
-          "scopeDigest",
-          "recipientRevision",
-          "sourceScope",
-          "recipient",
-          "message"
-        ],
-        "type": "object",
-        "properties": {
-          "scopeDigest": {
-            "type": "string"
-          },
-          "recipientRevision": {
-            "type": "string"
-          },
-          "sourceScope": {
-            "$ref": "#/components/schemas/PetPlanSourceScope"
-          },
-          "recipient": {
-            "$ref": "#/components/schemas/PetPlanRecipientDescriptor"
-          },
-          "message": {
-            "type": "string"
-          },
-          "decisionNonce": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
           }
         }
       },
@@ -24496,83 +24257,6 @@
           },
           "settings": {
             "$ref": "#/components/schemas/PetSettings"
-          }
-        }
-      },
-      "PetSharingDecisionRequest": {
-        "required": [
-          "petId",
-          "sourceScope",
-          "recipientRevision",
-          "scopeDigest",
-          "approve",
-          "requestId",
-          "decisionNonce"
-        ],
-        "type": "object",
-        "properties": {
-          "petId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sourceScope": {
-            "$ref": "#/components/schemas/PetPlanSourceScope"
-          },
-          "recipientRevision": {
-            "type": "string"
-          },
-          "scopeDigest": {
-            "type": "string"
-          },
-          "approve": {
-            "type": "boolean"
-          },
-          "requestId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "decisionNonce": {
-            "type": "string",
-            "format": "uuid",
-            "default": "00000000-0000-0000-0000-000000000000"
-          }
-        }
-      },
-      "PetSharingQuestionRequest": {
-        "required": [
-          "petId",
-          "sourceScope"
-        ],
-        "type": "object",
-        "properties": {
-          "petId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sourceScope": {
-            "$ref": "#/components/schemas/PetPlanSourceScope"
-          },
-          "forDecision": {
-            "type": "boolean",
-            "default": false
-          }
-        }
-      },
-      "PetSharingQuestionResponse": {
-        "required": [
-          "question"
-        ],
-        "type": "object",
-        "properties": {
-          "question": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/PetPlanSharingQuestion"
-              }
-            ]
           }
         }
       },
@@ -31144,9 +30828,6 @@
     },
     {
       "name": "Pet Plans"
-    },
-    {
-      "name": "Pet Sharing"
     },
     {
       "name": "Pet peers"

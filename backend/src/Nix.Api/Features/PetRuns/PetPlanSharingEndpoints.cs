@@ -30,8 +30,6 @@ internal static class PetPlanSharingEndpoints
     internal static void MapPetPlanSharingEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/v1/workspaces/{workspaceId:guid}/pet-plans/{runId:guid}").WithTags("Pet Plans");
-        group.MapPost("/sharing/decision", DecideSharing).WithName("DecidePetPlanSharing").WithRequestBodyLimit(2048)
-            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         group.MapPost("/decision-handoffs", CreateHandoff).WithName("CreatePetPlanDecisionHandoff").WithRequestBodyLimit(2048)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         group.MapGet("/decision-handoffs/{handoffId:guid}", ReadHandoff).WithName("GetPetPlanDecisionHandoff");
@@ -39,48 +37,11 @@ internal static class PetPlanSharingEndpoints
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
         group.MapPost("/decision-contexts", AuthorizeHandoff).WithName("AuthorizePetPlanDecisionContext").WithRequestBodyLimit(2048)
             .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
-        var sharing = endpoints.MapGroup("/api/v1/workspaces/{workspaceId:guid}/pet-sharing").WithTags("Pet Sharing");
-        sharing.MapPost("/question", SharingQuestion).WithName("GetPetSharingQuestion").WithRequestBodyLimit(16 * 1024)
-            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
-        sharing.MapPost("/decision", SharingDecision).WithName("DecidePetSharing").WithRequestBodyLimit(16 * 1024)
-            .RequireRateLimiting(RateLimitRefusal.WritesPolicyName);
     }
 
     internal static void MapPetSharingInternalEndpoints(this IEndpointRouteBuilder endpoints) =>
         endpoints.MapPost("/internal/pets/sharing/validate", ValidateSharing)
             .ExcludeFromDescription().WithRequestBodyLimit(20 * 1024);
-
-    private static async Task<Results<Ok<PetSharingQuestionResponse>, ProblemHttpResult>> SharingQuestion(
-        Guid workspaceId, PetSharingQuestionRequest request, HttpContext http, [FromServices] PetPlanSharingService sharing)
-    {
-        var result = await sharing.PrepareAsync(workspaceId, request.PetId, request.SourceScope, http.RequestAborted, request.ForDecision).ConfigureAwait(false);
-        return result.Match<Results<Ok<PetSharingQuestionResponse>, ProblemHttpResult>>(
-            value => TypedResults.Ok(new PetSharingQuestionResponse(value)), error => Problem(http, error));
-    }
-
-    private static async Task<Results<Ok<PetSharingQuestionResponse>, ProblemHttpResult>> SharingDecision(
-        Guid workspaceId, PetSharingDecisionRequest request, HttpContext http, [FromServices] PetPlanSharingService sharing)
-    {
-        var result = await sharing.DecideAsync(workspaceId, request.PetId, request.SourceScope,
-            new(0, request.RecipientRevision, request.ScopeDigest, request.Approve, request.RequestId, request.DecisionNonce), http.RequestAborted).ConfigureAwait(false);
-        if (result.IsFailure)
-        {
-            return Problem(http, result.Error);
-        }
-
-        var question = await sharing.PrepareAsync(workspaceId, request.PetId, request.SourceScope, http.RequestAborted,
-            issueDecisionNonce: false).ConfigureAwait(false);
-        return question.Match<Results<Ok<PetSharingQuestionResponse>, ProblemHttpResult>>(
-            value => TypedResults.Ok(new PetSharingQuestionResponse(value)), error => Problem(http, error));
-    }
-
-    private static async Task<Results<Ok<PetPlanResponse>, ProblemHttpResult>> DecideSharing(
-        Guid workspaceId, Guid runId, DecidePetPlanSharingRequest request, HttpContext http, [FromServices] NixDispatcher dispatcher)
-    {
-        var result = await dispatcher.SendAsync<DecidePetPlanSharing, PetPlanResponse>(
-            new(WorkspaceId.From(workspaceId), runId, request), http.RequestAborted).ConfigureAwait(false);
-        return Respond(http, result);
-    }
 
     private static async Task<Results<Ok<PetPlanDecisionHandoffResponse>, ProblemHttpResult>> CreateHandoff(
         Guid workspaceId, Guid runId, CreatePetPlanDecisionHandoffRequest request, HttpContext http, [FromServices] PetPlanDecisionContextService contexts) =>

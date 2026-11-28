@@ -198,7 +198,9 @@ export async function inlineStart(
     }
   }
   if (!(await account.canDisclose(r)))
-    throw new Error('Sharing consent must be reviewed before sending this content.');
+    throw new Error(
+      'This content could not be verified for sending. Check your provider key in Settings > Pets.',
+    );
   const started = await account.transport.call('thread/start', params, signal);
   const thread = isRecord(started) && isRecord(started.thread) ? str(started.thread.id) : '';
   if (thread === '') throw new Error('invalid thread response');

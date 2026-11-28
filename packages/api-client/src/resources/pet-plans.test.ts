@@ -2,52 +2,6 @@ import { describe, expect, it } from 'vitest';
 import * as plans from './pet-plans.js';
 
 describe('whole-plan operator contracts', () => {
-  it('carries only the displayed sharing nonce and the explicit fresh-question flag', () => {
-    const decisionNonce = '22222222-2222-4222-8222-222222222222';
-    expect(
-      plans.sharingQuestion('workspace', {
-        petId: 'pet',
-        sourceScope: { kind: 'workspace' },
-        forDecision: true,
-      }).body,
-    ).toMatchObject({ forDecision: true });
-    expect(
-      plans.sharingDecision('workspace', {
-        petId: 'pet',
-        sourceScope: { kind: 'workspace' },
-        recipientRevision: 'recipient',
-        scopeDigest: 'scope',
-        approve: true,
-        requestId: 'request',
-        decisionNonce,
-      }).body,
-    ).toMatchObject({ decisionNonce });
-    expect(
-      plans.decideSharing('workspace', 'run', {
-        expectedRunRevision: 3,
-        recipientRevision: 'recipient',
-        scopeDigest: 'scope',
-        approve: false,
-        requestId: 'request',
-        decisionNonce,
-      }).body,
-    ).toMatchObject({ decisionNonce });
-    expect(
-      plans.sharingQuestionSchema.parse({
-        scopeDigest: 'scope',
-        recipientRevision: 'recipient',
-        sourceScope: { kind: 'workspace' },
-        recipient: {
-          provider: 'anthropic',
-          destination: 'https://api.anthropic.com',
-          routingPolicy: 'direct',
-          connectionRevision: 'revision',
-        },
-        message: 'Share?',
-        decisionNonce,
-      }).decisionNonce,
-    ).toBe(decisionNonce);
-  });
   const identifier = '11111111-1111-4111-8111-111111111111';
   const responseWithStep = (receiptView?: unknown) => ({
     id: identifier,
@@ -155,16 +109,7 @@ describe('whole-plan operator contracts', () => {
     expect(plans.handoffStatus('workspace', 'run', 'handoff').retain).toBe(false);
   });
 
-  it('keeps recipient-bound sharing outside the generic runtime', () => {
-    expect(
-      plans.sharingQuestion('workspace', {
-        petId: 'pet',
-        sourceScope: { kind: 'selected', itemIds: [] },
-      }),
-    ).toMatchObject({
-      path: '/api/v1/workspaces/workspace/pet-sharing/question',
-      body: { petId: 'pet' },
-    });
+  it('revokes a handoff with DELETE', () => {
     expect(plans.revokeHandoff('workspace', 'run', 'handoff').method).toBe('DELETE');
   });
 });

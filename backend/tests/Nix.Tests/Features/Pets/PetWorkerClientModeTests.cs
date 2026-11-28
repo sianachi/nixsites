@@ -1678,7 +1678,7 @@ public sealed class PetWorkerClientModeTests(ContractHostFactory factory) : ICla
         var result = await gateway.ExecuteAsync(new(operation, WorkspaceGuid, PetGuid, Guid.NewGuid(), "Private text",
             WorkspaceAccess: true, ToolId: "tool-one", ToolResult: "Private result", ApprovedOperation: operation == "tool_approve" ? "rename_item" : ""), Cancellation);
         Assert.True(result.IsFailure);
-        Assert.Equal("pets.sharing_required", result.Error.Code);
+        Assert.Equal("pets.unavailable", result.Error.Code);
         Assert.Equal(0, handler.Calls);
         Assert.Empty(handler.Body);
     }

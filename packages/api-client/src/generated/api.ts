@@ -2265,22 +2265,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['DecidePetPlanSharing'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/decision-handoffs': {
     parameters: {
       query?: never;
@@ -2323,38 +2307,6 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['AuthorizePetPlanDecisionContext'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/workspaces/{workspaceId}/pet-sharing/question': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['GetPetSharingQuestion'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/workspaces/{workspaceId}/pet-sharing/decision': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['DecidePetSharing'];
     delete?: never;
     options?: never;
     head?: never;
@@ -3526,7 +3478,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only) */
+    /** Start a pet's waiting turn or save the fact it wants remembered (the app only) */
     post: operations['ApproveMessagePetTurn'];
     delete?: never;
     options?: never;
@@ -5216,20 +5168,6 @@ export interface components {
       requestId: string;
       decisionContext?: null | string;
     };
-    DecidePetPlanSharingRequest: {
-      /** Format: int64 */
-      expectedRunRevision: number | string;
-      recipientRevision: string;
-      scopeDigest: string;
-      approve: boolean;
-      /** Format: uuid */
-      requestId: string;
-      /**
-       * Format: uuid
-       * @default 00000000-0000-0000-0000-000000000000
-       */
-      decisionNonce: string;
-    };
     DecidePetProposalRequest: {
       approve: boolean;
     };
@@ -6250,12 +6188,6 @@ export interface components {
       details?: unknown;
       text?: null | string;
     };
-    PetPlanRecipientDescriptor: {
-      provider: string;
-      destination: string;
-      routingPolicy: string;
-      connectionRevision: string;
-    };
     PetPlanResponse: {
       /** Format: uuid */
       id: string;
@@ -6270,7 +6202,6 @@ export interface components {
       status: string;
       /** Format: int64 */
       revision: number | string;
-      sharingQuestion: null | components['schemas']['PetPlanSharingQuestion'];
       question: null | components['schemas']['PetRunQuestion'];
       plan: null | components['schemas']['PetPlanReview'];
       results: components['schemas']['PetRunResult'][];
@@ -6294,15 +6225,6 @@ export interface components {
       status: string;
       steps: components['schemas']['PetPlanStepResponse'][];
       decision?: null | components['schemas']['PetPlanDecisionRecord'];
-    };
-    PetPlanSharingQuestion: {
-      scopeDigest: string;
-      recipientRevision: string;
-      sourceScope: components['schemas']['PetPlanSourceScope'];
-      recipient: components['schemas']['PetPlanRecipientDescriptor'];
-      message: string;
-      /** Format: uuid */
-      decisionNonce?: null | string;
     };
     PetPlanSourceScope: {
       kind: string;
@@ -6519,31 +6441,6 @@ export interface components {
       /** Format: int64 */
       revision: number | string;
       settings: components['schemas']['PetSettings'];
-    };
-    PetSharingDecisionRequest: {
-      /** Format: uuid */
-      petId: string;
-      sourceScope: components['schemas']['PetPlanSourceScope'];
-      recipientRevision: string;
-      scopeDigest: string;
-      approve: boolean;
-      /** Format: uuid */
-      requestId: string;
-      /**
-       * Format: uuid
-       * @default 00000000-0000-0000-0000-000000000000
-       */
-      decisionNonce: string;
-    };
-    PetSharingQuestionRequest: {
-      /** Format: uuid */
-      petId: string;
-      sourceScope: components['schemas']['PetPlanSourceScope'];
-      /** @default false */
-      forDecision: boolean;
-    };
-    PetSharingQuestionResponse: {
-      question: null | components['schemas']['PetPlanSharingQuestion'];
     };
     PetSourceScopeDescriptor: {
       kind: string;
@@ -13919,33 +13816,6 @@ export interface operations {
       };
     };
   };
-  DecidePetPlanSharing: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-        runId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['DecidePetPlanSharingRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PetPlanResponse'];
-        };
-      };
-    };
-  };
   CreatePetPlanDecisionHandoff: {
     parameters: {
       query?: never;
@@ -14044,58 +13914,6 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PetPlanDecisionHandoffStatus'];
-        };
-      };
-    };
-  };
-  GetPetSharingQuestion: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PetSharingQuestionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PetSharingQuestionResponse'];
-        };
-      };
-    };
-  };
-  DecidePetSharing: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PetSharingDecisionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PetSharingQuestionResponse'];
         };
       };
     };

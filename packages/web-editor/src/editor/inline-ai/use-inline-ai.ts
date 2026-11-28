@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/react';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApiClient } from '@nix/web-platform/api/api-client-provider';
 import { announce } from '@nix/web-foundation/a11y/announcer';
@@ -19,7 +19,6 @@ import {
   type InlineKind,
 } from './inline-ai-stream';
 import { usePetSettings } from '@nix/web-platform/api/use-pet-settings';
-import { useSharingConsent } from '@nix/web-platform/api/use-pet-sharing-consent';
 
 /**
  * The inline writing panel's state machine.
@@ -34,8 +33,7 @@ import { useSharingConsent } from '@nix/web-platform/api/use-pet-sharing-consent
  * number rather than trusted to arrive in order.
  */
 
-export type InlinePhase =
-  'idle' | 'choosing' | 'composing' | 'sharing' | 'streaming' | 'done' | 'error';
+export type InlinePhase = 'idle' | 'choosing' | 'composing' | 'streaming' | 'done' | 'error';
 
 /** Why the panel is showing a failure, in the panel's own vocabulary rather than the wire's. */
 export type InlineFailure =
@@ -117,7 +115,6 @@ interface Session {
 }
 
 export interface InlineAiController {
-  readonly sharingPanel?: ReactNode;
   readonly state: InlinePanelState;
   /** Whether the entry points are on offer at all: pets enabled and inline writing switched on. */
   readonly available: boolean;
@@ -149,17 +146,6 @@ export function useInlineAi({
   const { saved } = usePetSettings();
   const available =
     saved?.settings.enabled === true && saved.settings.inlineWriting && workspaceId !== undefined;
-  const petId = saved?.settings.activePetId ?? '';
-  const {
-    ensure: ensureSharing,
-    cancel: cancelSharing,
-    panel: sharingPanel,
-  } = useSharingConsent({
-    client,
-    workspaceId: workspaceId ?? '',
-    petId,
-    selectionKey: `${workspaceId ?? ''}:${itemId}:${petId}`,
-  });
   const [state, setState] = useState<InlinePanelState>(IDLE);
 
   const session = useRef<Session | null>(null);
@@ -177,8 +163,7 @@ export function useInlineAi({
     abort.current = null;
     session.current?.anchor.dispose();
     session.current = null;
-    cancelSharing();
-  }, [cancelSharing]);
+  }, []);
 
   // A panel never outlives its editor: leaving the note cancels the request.
   useEffect(() => teardown, [teardown]);
@@ -186,13 +171,7 @@ export function useInlineAi({
   const generate = useCallback(() => {
     const current = session.current;
     const panel = latest.current;
-    if (
-      current === null ||
-      workspaceId === undefined ||
-      panel.kind === null ||
-      panel.phase === 'sharing'
-    )
-      return;
+    if (current === null || workspaceId === undefined || panel.kind === null) return;
 
     const instruction = panel.instruction.trim();
     const language = panel.language.trim();
@@ -213,66 +192,58 @@ export function useInlineAi({
 
     setState((previous) => ({
       ...previous,
-      phase: 'sharing',
+      phase: 'streaming',
+      text: '',
       stopped: false,
       failure: null,
     }));
-
-    void ensureSharing({ kind: 'subtree', itemIds: [itemId] }).then((allowed) => {
-      if (stale() || controller.signal.aborted) return;
-      if (!allowed) {
-        setState((previous) => ({ ...previous, phase: 'composing' }));
-        return;
-      }
-      setState((previous) => ({ ...previous, phase: 'streaming', text: '' }));
-      return streamInline(
-        client,
-        {
-          workspaceId,
-          itemId,
-          requestId: crypto.randomUUID(),
-          kind: current.kind,
-          ...(current.kind === 'custom' ? { instruction } : {}),
-          selection: current.material.text,
-          context: contextFor(editor),
-          ...(current.kind === 'translate' ? { language } : {}),
-        },
-        {
-          signal: controller.signal,
-          onDelta: (piece) => {
-            if (stale()) return;
-            setState((previous) => ({ ...previous, text: previous.text + piece }));
-          },
-        },
-      ).then(
-        ({ text }) => {
+    void streamInline(
+      client,
+      {
+        workspaceId,
+        itemId,
+        requestId: crypto.randomUUID(),
+        kind: current.kind,
+        ...(current.kind === 'custom' ? { instruction } : {}),
+        selection: current.material.text,
+        context: contextFor(editor),
+        ...(current.kind === 'translate' ? { language } : {}),
+      },
+      {
+        signal: controller.signal,
+        onDelta: (piece) => {
           if (stale()) return;
-          setState((previous) => ({ ...previous, phase: 'done', text }));
-          announce('Result ready.');
+          setState((previous) => ({ ...previous, text: previous.text + piece }));
         },
-        (cause: unknown) => {
-          if (stale()) return;
-          // The person's own Stop: what arrived stands.
-          if (controller.signal.aborted) return;
-          const code = cause instanceof InlineAiError ? cause.code : 'inline.provider_failed';
-          // The server's own cancel is a stop too, not a failure.
-          if (code === 'inline.cancelled') {
-            setState((previous) => ({ ...previous, phase: 'done', stopped: true }));
-            return;
-          }
-          const failure = FAILURE_BY_CODE[code] ?? 'provider_failed';
-          setState((previous) => ({
-            ...previous,
-            phase: 'error',
-            failure,
-            // A refusal's text is the refusal, not something to keep; a broken or over-long stream
-            // keeps what arrived, so it can still be accepted.
-            text: failure === 'refused' ? '' : previous.text,
-          }));
-        },
-      );
-    });
-  }, [client, editor, itemId, workspaceId, ensureSharing]);
+      },
+    ).then(
+      ({ text }) => {
+        if (stale()) return;
+        setState((previous) => ({ ...previous, phase: 'done', text }));
+        announce('Result ready.');
+      },
+      (cause: unknown) => {
+        if (stale()) return;
+        // The person's own Stop: what arrived stands.
+        if (controller.signal.aborted) return;
+        const code = cause instanceof InlineAiError ? cause.code : 'inline.provider_failed';
+        // The server's own cancel is a stop too, not a failure.
+        if (code === 'inline.cancelled') {
+          setState((previous) => ({ ...previous, phase: 'done', stopped: true }));
+          return;
+        }
+        const failure = FAILURE_BY_CODE[code] ?? 'provider_failed';
+        setState((previous) => ({
+          ...previous,
+          phase: 'error',
+          failure,
+          // A refusal's text is the refusal, not something to keep; a broken or over-long stream
+          // keeps what arrived, so it can still be accepted.
+          text: failure === 'refused' ? '' : previous.text,
+        }));
+      },
+    );
+  }, [client, editor, itemId, workspaceId]);
 
   const start = useCallback(
     (kind: InlineKind | null) => {
@@ -389,7 +360,6 @@ export function useInlineAi({
   }, [editor]);
 
   return {
-    sharingPanel,
     state,
     available,
     start,

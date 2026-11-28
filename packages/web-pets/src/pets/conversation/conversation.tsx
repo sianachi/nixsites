@@ -50,7 +50,6 @@ import { useResumeUndo } from './state/use-resume-undo';
 import { PetHistory } from '../pet-history';
 import { useTurns } from './state/use-turns';
 import { sharingScope } from './state/sharing-scope';
-import { useSharingConsent } from '@nix/web-platform/api/use-pet-sharing-consent';
 import { type ConversationJobDraft, type ConversationJobs } from './conversation-jobs';
 
 type ConversationPanel = 'chat' | 'settings' | 'history';
@@ -253,20 +252,6 @@ export function Conversation({
   const acceptedScope = useRef<PetPlanSourceScope | null>(null);
   const sourceScope = (access: boolean, fields: object): PetPlanSourceScope | null =>
     sharingScope(noteScope?.rootItemId, access, fields);
-  const sharing = useSharingConsent({
-    client,
-    workspaceId,
-    petId: pet.id,
-    selectionKey: JSON.stringify({
-      provider: pet.provider,
-      workspaceAccess,
-      noteScope: noteScope?.rootItemId,
-      sources: context.contexts.map((entry) => ({
-        itemId: entry.itemId,
-        sharedText: entry.sharedText,
-      })),
-    }),
-  });
   const { submit, resendTurn, retryLastTurn, retryLabel, retryError, loadErrorMessage, preparing } =
     useTurns({
       client,
@@ -288,9 +273,6 @@ export function Conversation({
       consentMode: jobs?.consentMode,
       onAccepted: ({ workspaceAccess: access, context: fields }) => {
         acceptedScope.current = sourceScope(access, fields);
-      },
-      beforeDisclosure: async ({ workspaceAccess: access, context: fields }) => {
-        return sharing.ensure(sourceScope(access, fields));
       },
     });
   useEffect(() => {
@@ -817,9 +799,6 @@ export function Conversation({
               </Button>
             </div>
           </div>
-        ) : null}
-        {panel === 'chat' ? (
-          <div className="min-h-0 shrink-0 overflow-y-auto px-3 pb-3">{sharing.panel}</div>
         ) : null}
       </div>
     </div>

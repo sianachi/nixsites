@@ -1,10 +1,9 @@
 import type { PetPlanSourceScope } from '@nix/api-client';
 
 /**
- * The sources a turn must have sharing consent for, or null when it carries the person's text
- * alone. It has to name the same scope Core checks on send (`PetWorkerClient`): a note chat is its
+ * The sources a turn discloses, or null when it carries the person's text alone: a note chat is its
  * subtree, workspace context is the whole workspace whatever is attached, and otherwise it is the
- * attached items. A different scope here asks a question whose answer Core never looks at.
+ * attached items. Plan adoption uses it as the scope the plan reads.
  */
 export function sharingScope(
   noteRootItemId: string | undefined,

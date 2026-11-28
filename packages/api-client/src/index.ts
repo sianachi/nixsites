@@ -309,7 +309,6 @@ export * as petRuns from './resources/pet-runs.js';
 export * as petPlans from './resources/pet-plans.js';
 export type {
   PetPlanSourceScope,
-  PetPlanSharingQuestion,
   PetPlanResponse,
   PetPlanPrepared,
   PetPlanPreparedStep,
@@ -319,7 +318,6 @@ export type {
   StartPetPlan,
   PetPlanRevision,
   PetPlanDecision,
-  PetPlanSharingDecision,
   PetPlanDecisionHandoffStatus,
   PetPlanDecisionContextRequest,
   PetPlanStepClaim,

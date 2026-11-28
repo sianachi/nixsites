@@ -77,18 +77,8 @@ internal sealed partial class PetRunService
                     || inspected.Value.TryGetProperty("readOnly", out var readOnly) && readOnly.ValueKind == JsonValueKind.True
                 }
             };
-            if (PetPlanExecution.Canonical(JsonSerializer.SerializeToElement(state.PlanRequest.SourceScope, PetPlanJsonContext.Default.PetPlanSourceScope))
-                != PetPlanExecution.Canonical(JsonSerializer.SerializeToElement(originalScope, PetPlanJsonContext.Default.PetPlanSourceScope)))
-            {
-                state = state with { PlanRequest = state.PlanRequest with { SourceScope = originalScope! } };
-                var sharing = await handler.Services.GetRequiredService<PetPlanSharingService>().PrepareAsync(current.Run.WorkspaceId.Value,
-                    state.PetId, state.PlanRequest.SourceScope, ct).ConfigureAwait(false);
-                if (sharing.IsFailure || sharing.Value is not null)
-                {
-                    var paused = await handler.StopAsync(current.Run, state with { SharingQuestion = sharing.IsSuccess ? sharing.Value : null }, "waiting_for_input", ct).ConfigureAwait(false);
-                    return new IsolatedOutcome<bool>(paused, paused);
-                }
-            }
+            // The adopted plan keeps the conversation's own source scope; a workspace task request cannot widen it.
+            state = state with { PlanRequest = state.PlanRequest with { SourceScope = originalScope! } };
             var candidates = tools.EnumerateArray().ToDictionary(tool => tool.GetProperty("id").GetString()!, StringComparer.Ordinal);
             var proposed = new List<PetTaskPlanStep>();
             foreach (var id in source.ToolCallIds)

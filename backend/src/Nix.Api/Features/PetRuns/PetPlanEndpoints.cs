@@ -23,7 +23,6 @@ internal static class PetPlanEndpoints
         services.AddScoped<ICommandHandler<StartPetPlan, PetPlanResponse>, PetRunService>();
         services.AddScoped<ICommandHandler<RevisePetPlan, PetPlanResponse>, PetRunService>();
         services.AddScoped<ICommandHandler<DecidePetPlan, PetPlanResponse>, PetRunService>();
-        services.AddScoped<ICommandHandler<DecidePetPlanSharing, PetPlanResponse>, PetRunService>();
         services.AddScoped<ICommandHandler<AnswerPetPlan, PetPlanResponse>, PetRunService>();
         services.AddScoped<ICommandHandler<CancelPetPlan, PetPlanResponse>, PetRunService>();
         services.AddScoped<ICommandHandler<ClaimPetPlanStep, PetPlanStepClaimResponse>, PetRunService>();

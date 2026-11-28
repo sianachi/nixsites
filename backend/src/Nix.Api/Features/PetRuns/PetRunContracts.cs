@@ -82,7 +82,6 @@ internal sealed record PetRunCheckpoint(
     PetRunFailure? Failure = null,
     PetPlanRequestState? PlanRequest = null,
     PetPlanPrepared? Plan = null,
-    PetPlanSharingQuestion? SharingQuestion = null,
     IReadOnlyList<Guid>? HandledRequests = null,
     PetPlanDiscovery? Discovery = null);
 

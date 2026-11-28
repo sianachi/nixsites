@@ -11,7 +11,7 @@ const providerContextSchema = z.strictObject({
 });
 export type ProviderContextProvenance = z.infer<typeof providerContextSchema>;
 export const HISTORY_SHARING_RECOVERY =
-  'Sharing consent for this history could not be confirmed. Start a new conversation; your existing messages remain available.';
+  'This history could not be verified for sending. Start a new conversation; your existing messages remain available.';
 
 export function readProviderContext(value: unknown): ProviderContextProvenance | undefined {
   const parsed = providerContextSchema.safeParse(value);

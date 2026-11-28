@@ -165,7 +165,7 @@ export function PetProviderKeys({
           More<span className="sr-only"> about the {label} key</span>
         </summary>
         <Text variant="note" tone="muted">
-          {`Your key is kept protected on this Nix server. Messages and shared context go to ${label} and are billed to this key. Your other ${label} pets share it.`}
+          {`Your key is kept protected on this Nix server. Saving it means your pets send the workspace content they work with, and your messages, to ${label}, and it is billed to this key. Your other ${label} pets share it.`}
         </Text>
       </details>
       {error ? <Text role="alert">{error}</Text> : null}

@@ -73,15 +73,7 @@
       "types": "./src/*.ts",
       "default": "./src/*.ts"
     },
-    "./package.json": "./package.json",
-    "./api/pet-sharing-question": {
-      "types": "./src/api/pet-sharing-question.tsx",
-      "default": "./src/api/pet-sharing-question.tsx"
-    },
-    "./api/use-pet-sharing-consent": {
-      "types": "./src/api/use-pet-sharing-consent.tsx",
-      "default": "./src/api/use-pet-sharing-consent.tsx"
-    }
+    "./package.json": "./package.json"
   },
   "scripts": {
     "lint": "eslint .",

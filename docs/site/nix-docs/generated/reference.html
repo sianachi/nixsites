@@ -24,7 +24,7 @@
 <p>Generated from <code>backend/openapi/nix-api.json</code>. Summaries and descriptions are the server's text. Can and Cannot say what each route changes. No route in this document replaces a note, canvas, or spreadsheet body.</p>
 <p>The guide to tokens, the first request, identifiers, resources, pagination, errors, rate limits, and versioning is <a href="../markdown/api/index.md">the API guide</a>.</p>
 <label>Filter <input id="filter" type="search" placeholder="Path, summary, or operation id"></label>
-<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#localsecurity">LocalSecurity</a><a href="#me">Me</a><a href="#messages">Messages</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#oauth">OAuth</a><a href="#operations">Operations</a><a href="#people">People</a><a href="#pet-connections">Pet Connections</a><a href="#pet-peers">Pet peers</a><a href="#pet-plans">Pet Plans</a><a href="#pet-runs">Pet Runs</a><a href="#pet-sharing">Pet Sharing</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
+<nav><a href="#accesstokens">AccessTokens</a><a href="#admin">Admin</a><a href="#attachments">Attachments</a><a href="#automations">Automations</a><a href="#bookmarks">Bookmarks</a><a href="#calendar">Calendar</a><a href="#calendarsync">CalendarSync</a><a href="#canvas">Canvas</a><a href="#charts">Charts</a><a href="#comments">Comments</a><a href="#conversations">Conversations</a><a href="#exports">Exports</a><a href="#files">Files</a><a href="#forms">Forms</a><a href="#graph">Graph</a><a href="#habits">Habits</a><a href="#health">Health</a><a href="#imports">Imports</a><a href="#item-locks">Item locks</a><a href="#items">Items</a><a href="#localsecurity">LocalSecurity</a><a href="#me">Me</a><a href="#messages">Messages</a><a href="#nativesync">NativeSync</a><a href="#notifications">Notifications</a><a href="#oauth">OAuth</a><a href="#operations">Operations</a><a href="#people">People</a><a href="#pet-connections">Pet Connections</a><a href="#pet-peers">Pet peers</a><a href="#pet-plans">Pet Plans</a><a href="#pet-runs">Pet Runs</a><a href="#pets">Pets</a><a href="#publiclinks">PublicLinks</a><a href="#query">Query</a><a href="#records">Records</a><a href="#recurrence">Recurrence</a><a href="#references">References</a><a href="#roles">Roles</a><a href="#search">Search</a><a href="#sites">Sites</a><a href="#structure">Structure</a><a href="#sync">Sync</a><a href="#template-imports">Template imports</a><a href="#templates">Templates</a><a href="#workspace-passwords">Workspace passwords</a><a href="#workspaces">Workspaces</a></nav>
 </header>
 <main>
 <section id="accesstokens"><h2>AccessTokens</h2><article id="listaccesstokens" data-search="get /api/v1/me/tokens listaccesstokens the caller's personal access tokens returns every token the calling principal has issued, newest first, revoked and expired ones included: the list is an audit of what has been able to act as this principal, and an audit that forgets is not one. the secret is never here - it was shown once, at creation, and only its hash is stored. accesstokens">
@@ -1527,9 +1527,9 @@
 
 <p>Responses: <code>200</code>, <code>404</code>.</p>
 </article>
-<article id="approvemessagepetturn" data-search="post /api/v1/items/{itemid}/pet-turns/{petid}/approve approvemessagepetturn start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)  messages">
+<article id="approvemessagepetturn" data-search="post /api/v1/items/{itemid}/pet-turns/{petid}/approve approvemessagepetturn start a pet's waiting turn or save the fact it wants remembered (the app only)  messages">
 <h3><span class="verb">POST</span> <code>/api/v1/items/{itemId}/pet-turns/{petId}/approve</code></h3>
-<p>Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)</p>
+<p>Start a pet's waiting turn or save the fact it wants remembered (the app only)</p>
 <p class="id">Operation id: <code>ApproveMessagePetTurn</code></p>
 <p><strong>Can.</strong> Write what the summary names.</p>
 <p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
@@ -2067,18 +2067,6 @@
 <p>Request body: <code>UndoPetPlanStepRequest</code>.</p>
 <p>Responses: <code>200</code>.</p>
 </article>
-<article id="decidepetplansharing" data-search="post /api/v1/workspaces/{workspaceid}/pet-plans/{runid}/sharing/decision decidepetplansharing   pet plans">
-<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision</code></h3>
-<p></p>
-<p class="id">Operation id: <code>DecidePetPlanSharing</code></p>
-<p><strong>Can.</strong> Write what the summary names.</p>
-<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
-
-<ul><li><code>workspaceId</code> in path (required, string (uuid))</li><li><code>runId</code> in path (required, string (uuid))</li></ul>
-<p>Request body: <code>DecidePetPlanSharingRequest</code>.</p>
-<p>Responses: <code>200</code>.</p>
-</article>
 <article id="watchpetplan" data-search="get /api/v1/workspaces/{workspaceid}/pet-plans/{runid}/watch watchpetplan poll the current plan revision.  pet plans">
 <h3><span class="verb">GET</span> <code>/api/v1/workspaces/{workspaceId}/pet-plans/{runId}/watch</code></h3>
 <p>Poll the current plan revision.</p>
@@ -2233,30 +2221,6 @@
 
 <ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
 
-<p>Responses: <code>200</code>.</p>
-</article></section>
-<section id="pet-sharing"><h2>Pet Sharing</h2><article id="decidepetsharing" data-search="post /api/v1/workspaces/{workspaceid}/pet-sharing/decision decidepetsharing   pet sharing">
-<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/pet-sharing/decision</code></h3>
-<p></p>
-<p class="id">Operation id: <code>DecidePetSharing</code></p>
-<p><strong>Can.</strong> Write what the summary names.</p>
-<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
-
-<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
-<p>Request body: <code>PetSharingDecisionRequest</code>.</p>
-<p>Responses: <code>200</code>.</p>
-</article>
-<article id="getpetsharingquestion" data-search="post /api/v1/workspaces/{workspaceid}/pet-sharing/question getpetsharingquestion   pet sharing">
-<h3><span class="verb">POST</span> <code>/api/v1/workspaces/{workspaceId}/pet-sharing/question</code></h3>
-<p></p>
-<p class="id">Operation id: <code>GetPetSharingQuestion</code></p>
-<p><strong>Can.</strong> Write what the summary names.</p>
-<p><strong>Cannot.</strong> Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.</p>
-<p><strong>Token.</strong> Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.</p>
-
-<ul><li><code>workspaceId</code> in path (required, string (uuid))</li></ul>
-<p>Request body: <code>PetSharingQuestionRequest</code>.</p>
 <p>Responses: <code>200</code>.</p>
 </article></section>
 <section id="pets"><h2>Pets</h2><article id="petinlinewrite" data-search="post /api/v1/me/pets/inline petinlinewrite stream an inline writing result for text selected in a note sends the selected text to the companion and streams the answer back as server-sent events, unchanged from the worker. 'delta' events carry {&quot;text&quot;: &quot;...&quot;} for each piece as it is written; the stream then ends with exactly one 'done' event carrying {&quot;text&quot;: &quot;&lt;the whole text&gt;&quot;} or one 'error' event carrying {&quot;code&quot;: &quot;inline.provider_failed | inline.timeout | inline.too_long | inline.refused | inline.cancelled&quot;, &quot;message&quot;: &quot;...&quot;}. comment lines ': keep-alive' arrive after 15 seconds of silence. closing the connection cancels the model's turn. the request is refused before anything is sent when it is malformed (422 'pets.invalid_request', byte limits apply to the utf-8 encoding), when inline writing is not turned on in the caller's pet settings (409 'pets.inline_disabled'), when the item is not readable in that workspace (404 'pets.not_found'), when the item is locked or under a locked ancestor even if this credential has it unlocked (409 'pets.inline_item_locked'), or when two requests are already open (429 'pets.inline_busy'). a companion that cannot answer is 503 'pets.unavailable'. the server does not read the item's body: 'selection' and 'context' come from the client and are not verified to belong to 'itemid'. pets">

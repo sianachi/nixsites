@@ -113,8 +113,6 @@ function showTask(
   vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
     const { pathname, searchParams } = new URL(requestUrl(input), globalThis.location.origin);
     const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
-    if (pathname === `/api/v1/workspaces/${task.workspaceId}/pet-sharing/question`)
-      return json({ question: null });
     if (renameProposal && pathname === `/api/v1/items/${task.id}` && method === 'GET') {
       return json({ ...task, title: persistedTitle, properties: { title: persistedTitle } });
     }

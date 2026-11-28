@@ -16,7 +16,7 @@ public sealed partial class PetPlanSharingHttpTests
 
     [Fact]
     [Trait("Category", "PetPlanHistory")]
-    public async Task Plain_owner_text_and_plain_followup_need_no_source_grant_and_send_no_saved_memories()
+    public async Task Plain_owner_text_and_plain_followup_send_no_saved_memories()
     {
         using var worker = new RecordingWorker();
         await using var host = CreateHost(worker);
@@ -41,12 +41,6 @@ public sealed partial class PetPlanSharingHttpTests
         Assert.DoesNotContain(privateMemory, worker.Body, StringComparison.Ordinal);
         Assert.True(await Validate(host, Cached(second, first, [])));
         Assert.Equal(2, worker.Calls);
-        var route = $"/api/v1/workspaces/{Workspace:D}/pet-sharing";
-        using var question = await host.SendAsync(HttpMethod.Post, route + "/question", browser,
-            new { petId = pet, sourceScope = new { kind = "selected", itemIds = Array.Empty<Guid>() } });
-        question.EnsureSuccessStatusCode();
-        using var noGrant = await SiteHttpHost.JsonAsync(question);
-        Assert.Equal(JsonValueKind.Object, noGrant.RootElement.GetProperty("question").ValueKind);
     }
 
     [Theory]
@@ -79,14 +73,13 @@ public sealed partial class PetPlanSharingHttpTests
 
     [Fact]
     [Trait("Category", "PetPlanHistory")]
-    public async Task An_existing_source_grant_does_not_let_an_owner_text_only_turn_reuse_source_history()
+    public async Task An_owner_text_only_turn_cannot_reuse_source_history()
     {
         using var worker = new RecordingWorker();
         await using var host = CreateHost(worker);
         var browser = await SignIn(host);
         var pet = Guid.NewGuid();
         await Configure(host, browser, pet, "anthropic");
-        await GrantHistoryScopeAsync(host, browser, pet, new { kind = "workspace" });
         var sourceTurn = await CaptureTurnAsync(host, browser, pet, worker);
         var ownerTextTurn = await CaptureTurnAsync(host, browser, pet, worker, workspaceAccess: false);
         Assert.False(await Validate(host, Cached(ownerTextTurn, sourceTurn, [M0SchemaSeed.Alpha.ItemId])));
@@ -102,7 +95,6 @@ public sealed partial class PetPlanSharingHttpTests
         var browser = await SignIn(host);
         var pet = Guid.NewGuid();
         await Configure(host, browser, pet, "anthropic");
-        await GrantHistoryScopeAsync(host, browser, pet, new { kind = "workspace" });
         var first = await CaptureTurnAsync(host, browser, pet, worker);
         var followup = await CaptureTurnAsync(host, browser, pet, worker);
         Assert.True(await Validate(host, Cached(followup, first, [M0SchemaSeed.Alpha.ItemId])));
@@ -122,7 +114,6 @@ public sealed partial class PetPlanSharingHttpTests
         var browser = await SignIn(host);
         var pet = Guid.NewGuid();
         await Configure(host, browser, pet, "anthropic");
-        await GrantHistoryScopeAsync(host, browser, pet, new { kind = "workspace" });
         var first = await CaptureTurnAsync(host, browser, pet, worker);
         Guid? selected = null;
         if (changed == "narrowed")
@@ -133,14 +124,12 @@ public sealed partial class PetPlanSharingHttpTests
             Assert.True(created.IsSuccess);
             selected = created.Value.Id.Value;
             await work.CommitAsync(Cancellation);
-            await GrantHistoryScopeAsync(host, browser, pet, new { kind = "selected", itemIds = new[] { selected.Value } });
         }
         if (changed == "recipient")
         {
             using var replaced = await host.SendAsync(HttpMethod.Put, "/api/v1/me/pets/providers/anthropic/key", browser,
                 new { key = "fixture-new-history-key-abcdefghijklmnopqrstuvwxyz" });
             replaced.EnsureSuccessStatusCode();
-            await GrantHistoryScopeAsync(host, browser, pet, new { kind = "workspace" });
         }
         var followup = await CaptureTurnAsync(host, browser, pet, worker, workspaceAccess: selected is null, itemId: selected);
         if (changed is "withheld" or "locked")
@@ -168,7 +157,6 @@ public sealed partial class PetPlanSharingHttpTests
         var browser = await SignIn(host);
         var pet = Guid.NewGuid();
         await Configure(host, browser, pet, "anthropic");
-        await GrantHistoryScopeAsync(host, browser, pet, new { kind = "workspace" });
         var first = await CaptureTurnAsync(host, browser, pet, worker);
         var aggregate = Cached(first, first, []);
         aggregate["contextUnbounded"] = true;
@@ -181,14 +169,6 @@ public sealed partial class PetPlanSharingHttpTests
             new { withholdFromPets = true });
         withheld.EnsureSuccessStatusCode();
         Assert.False(await Validate(host, aggregate));
-    }
-
-    private static async Task GrantHistoryScopeAsync(SiteHttpHost host, string browser, Guid pet, object scope)
-    {
-        var route = $"/api/v1/workspaces/{Workspace:D}/pet-sharing";
-        var question = await Question(host, browser, route, pet, scope, forDecision: true);
-        using var granted = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, Decision(pet, scope, question, true));
-        granted.EnsureSuccessStatusCode();
     }
 
     private static async Task<HistoryTurn> CaptureTurnAsync(SiteHttpHost host, string browser, Guid pet,

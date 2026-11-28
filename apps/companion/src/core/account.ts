@@ -862,7 +862,7 @@ export class Account {
       const message =
         current !== undefined && (current.messages.length > 0 || current.threadId !== '')
           ? HISTORY_SHARING_RECOVERY
-          : 'Sharing consent must be reviewed before sending this content.';
+          : 'This content could not be verified for sending. Check your provider key in Settings > Pets.';
       if (current !== undefined) {
         current.state = 'error';
         current.reason = message;
@@ -1363,17 +1363,17 @@ export class Account {
           id,
           allowed && active
             ? result
-            : toolOutput(false, 'Sharing consent changed. The stored result was not sent.', ''),
+            : toolOutput(
+                false,
+                'The provider key or sources changed. The stored result was not sent.',
+                '',
+              ),
         );
       })
       .catch(() => {
         this.reply(
           id,
-          toolOutput(
-            false,
-            'Sharing consent could not be confirmed. The stored result was not sent.',
-            '',
-          ),
+          toolOutput(false, 'The stored result could not be verified. It was not sent.', ''),
         );
       });
     return true;
@@ -2030,7 +2030,9 @@ export class Account {
   private async resolveDisclosedTool(key: string, r: Request): Promise<void> {
     const c = this.conversations.get(key);
     if (r.operation === 'tool_result' && c !== undefined && !(await this.canDisclose(c.actor)))
-      throw new Error('Sharing consent changed. The result was not sent to the provider.');
+      throw new Error(
+        'The provider key or sources changed. The result was not sent to the provider.',
+      );
     this.resolveTool(key, r);
   }
 

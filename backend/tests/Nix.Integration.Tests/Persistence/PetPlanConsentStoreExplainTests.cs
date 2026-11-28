@@ -16,38 +16,17 @@ public sealed class PetPlanConsentStoreExplainTests(NixPostgresFixture fixture) 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
-    public async Task Bounded_owner_lookup_decision_context_CAS_and_cleanup_have_real_Postgres_plans()
+    public async Task Bounded_decision_context_CAS_has_a_real_Postgres_plan()
     {
         var tenant = TestTenants.Alpha;
         var owner = TestTenants.AlphaPrincipal;
         var workspace = TestTenants.AlphaWorkspace;
-        var targetPet = Guid.NewGuid();
         var runId = Guid.NewGuid();
         var planId = Guid.NewGuid();
         var credential = Guid.NewGuid();
-        var decisionNonce = Guid.NewGuid();
         await using (var seed = await fixture.OpenMigratorConnectionAsync())
         {
             await RawSql.ExecuteAsync(seed, null, $"""
-                INSERT INTO principal(principal_id,tenant_id,external_subject,kind,display_name,email,status)
-                SELECT md5('consent-owner-' || n)::uuid, '{tenant:D}', 'consent-owner-' || n, 'user',
-                    'Fixture owner ' || n, 'consent-owner-' || n || '@fixture.test', 'active'
-                FROM generate_series(1,25) n;
-                INSERT INTO pet_plan_consent(id,tenant_id,owner_id,workspace_id,pet_id,scope_digest,recipient_revision,
-                    request_id,authority_id,granted_at,expires_at)
-                SELECT gen_random_uuid(), '{tenant:D}', md5('consent-owner-' || owner_number)::uuid,
-                    '{workspace:D}', gen_random_uuid(), repeat('a',64), repeat('b',64), gen_random_uuid(),
-                    gen_random_uuid(), now(), now()+interval '1 day'
-                FROM generate_series(1,25) owner_number CROSS JOIN generate_series(1,100) grant_number;
-                INSERT INTO pet_plan_consent(id,tenant_id,owner_id,workspace_id,pet_id,scope_digest,recipient_revision,
-                    request_id,authority_id,granted_at,expires_at)
-                SELECT gen_random_uuid(), '{tenant:D}', '{owner:D}', '{workspace:D}',
-                    CASE WHEN n=1 THEN '{targetPet:D}'::uuid ELSE gen_random_uuid() END,
-                    repeat('a',64), repeat('b',64), gen_random_uuid(), gen_random_uuid(), now(), now()+interval '1 day'
-                FROM generate_series(1,100) n;
-                UPDATE pet_plan_consent SET decision_nonce='{decisionNonce:D}',
-                    question_expires_at=now()+interval '30 minutes',updated_at=now()
-                WHERE tenant_id='{tenant:D}' AND owner_id='{owner:D}' AND pet_id='{targetPet:D}';
                 INSERT INTO pet_run(id,tenant_id,actor_id,workspace_id,item_id,brief,source_item_ids,workspace_scope,
                     abilities,status,revision,state,created_at,updated_at)
                 VALUES('{runId:D}','{tenant:D}','{owner:D}','{workspace:D}','{M0SchemaSeed.Alpha.ItemId:D}',
@@ -59,7 +38,6 @@ public sealed class PetPlanConsentStoreExplainTests(NixPostgresFixture fixture) 
                     CASE WHEN n=1 THEN repeat('c',64) ELSE md5('context-' || n) || md5('context-tail-' || n) END,
                     now()+interval '4 minutes',gen_random_uuid(),now()
                 FROM generate_series(1,100) n;
-                ANALYZE pet_plan_consent;
                 ANALYZE pet_plan_decision_context;
                 """);
         }
@@ -71,11 +49,6 @@ public sealed class PetPlanConsentStoreExplainTests(NixPostgresFixture fixture) 
             SELECT set_config('nix.tenant_id','{tenant:D}',true),
                 set_config('nix.principal_id','{owner:D}',true),set_config('nix.workspace_id','{workspace:D}',true);
             """);
-        var lookup = await Explain(connection, transaction, $"""
-            SELECT id FROM pet_plan_consent WHERE tenant_id='{tenant:D}' AND owner_id='{owner:D}'
-                AND workspace_id='{workspace:D}' AND pet_id='{targetPet:D}'
-                AND scope_digest=repeat('a',64) AND recipient_revision=repeat('b',64)
-            """);
         var consume = await Explain(connection, transaction, $"""
             UPDATE pet_plan_decision_context SET consumed_request_id='{Guid.NewGuid():D}', consumed_at=now()
             WHERE tenant_id='{tenant:D}' AND owner_id='{owner:D}' AND workspace_id='{workspace:D}'
@@ -84,24 +57,7 @@ public sealed class PetPlanConsentStoreExplainTests(NixPostgresFixture fixture) 
                 AND expires_at>now() AND revoked_at IS NULL AND authority_id IS NOT NULL AND consumed_request_id IS NULL
             RETURNING id
             """);
-        var decision = await Explain(connection, transaction, $"""
-            UPDATE pet_plan_consent SET request_id='{Guid.NewGuid():D}',authority_id='{Guid.NewGuid():D}',
-                granted_at=now(),expires_at=now()+interval '30 days',revoked_at=NULL,
-                last_decision_nonce=decision_nonce,decision_nonce=NULL,question_expires_at=NULL,updated_at=now()
-            WHERE tenant_id='{tenant:D}' AND owner_id='{owner:D}' AND workspace_id='{workspace:D}'
-                AND pet_id='{targetPet:D}' AND scope_digest=repeat('a',64) AND recipient_revision=repeat('b',64)
-                AND decision_nonce='{decisionNonce:D}' AND question_expires_at>now()
-                AND request_id<>'{Guid.NewGuid():D}'
-            """);
-        var cleanup = await Explain(connection, transaction, $"""
-            DELETE FROM pet_plan_consent WHERE id IN(SELECT id FROM pet_plan_consent
-                WHERE tenant_id='{tenant:D}' AND owner_id='{owner:D}'
-                ORDER BY updated_at DESC,id OFFSET 100 LIMIT 100)
-            """);
-        Assert.Contains("Index", lookup, StringComparison.Ordinal);
         Assert.Contains("Index", consume, StringComparison.Ordinal);
-        Assert.Contains("Index", decision, StringComparison.Ordinal);
-        Assert.Contains("Index", cleanup, StringComparison.Ordinal);
         if (Environment.GetEnvironmentVariable("NIX_PLAN_SQL_EVIDENCE") is { Length: > 0 } directory)
         {
             Directory.CreateDirectory(directory);
@@ -109,13 +65,8 @@ public sealed class PetPlanConsentStoreExplainTests(NixPostgresFixture fixture) 
                 JsonSerializer.Serialize(new
                 {
                     fixture = "isolated Postgres16",
-                    consentRows = 2600,
-                    ownerRows = 100,
                     contextRows = 100,
-                    lookup = JsonSerializer.Deserialize<JsonElement>(lookup),
-                    consume = JsonSerializer.Deserialize<JsonElement>(consume),
-                    decision = JsonSerializer.Deserialize<JsonElement>(decision),
-                    cleanup = JsonSerializer.Deserialize<JsonElement>(cleanup)
+                    consume = JsonSerializer.Deserialize<JsonElement>(consume)
                 }), Cancellation);
         }
         await transaction.RollbackAsync(Cancellation);

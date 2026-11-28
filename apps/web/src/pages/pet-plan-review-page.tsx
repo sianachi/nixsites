@@ -207,7 +207,7 @@ function PlanReview({
           </Text>
           <Text>
             Continuing lets this named client {handoff.approve ? 'approve' : 'decline'} the exact
-            plan shown below once. Your sharing choices are separate.
+            plan shown below once.
           </Text>
           <div ref={requestStatus} role="status" aria-label="Client request status" tabIndex={-1}>
             <Text variant="note" tone="muted">

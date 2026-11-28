@@ -237,7 +237,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
                     : request.WorkspaceAccess ? [] : disclosureItems;
                 if (disclosure is null)
                 {
-                    return Result.Failure<PetConnectionResponse>(new("pets.sharing_required", "Review sharing before sending content to this provider."));
+                    return Result.Failure<PetConnectionResponse>(new("pets.unavailable", "The companion could not verify this request. Try again."));
                 }
                 ownerTextOnly = request.Operation == "send" && request.RequestId is { } textTurn && textTurn != Guid.Empty
                     && !request.WorkspaceAccess && request.RootItemId is null && request.ItemId is null
@@ -616,7 +616,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         ArgumentNullException.ThrowIfNull(pet);
         if (disclosure is null)
         {
-            return Result.Failure<PetInlineWorkerRequest>(new("pets.sharing_required", "Review sharing before sending content to this provider."));
+            return Result.Failure<PetInlineWorkerRequest>(new("pets.unavailable", "The companion could not verify this request. Try again."));
         }
         var grant = await disclosure.RequireAsync(request.WorkspaceId, pet.Id, "subtree", [request.ItemId],
             request.RequestId, cancellationToken).ConfigureAwait(false);
@@ -636,7 +636,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         if (disclosure is null || string.IsNullOrEmpty(sharingAttestation)
             || !await disclosure.ValidateAsync(sharingAttestation, cancellationToken).ConfigureAwait(false))
         {
-            return Result.Failure<PetInlineWorkerRequest>(new("pets.sharing_required", "Review sharing before sending content to this provider."));
+            return Result.Failure<PetInlineWorkerRequest>(new("pets.unavailable", "The companion could not verify this request. Try again."));
         }
         var context = session.Current ?? throw new InvalidOperationException("A session is required.");
         var resolved = await ProviderFor(pet, context, cancellationToken).ConfigureAwait(false);
@@ -669,7 +669,7 @@ public sealed partial class PetWorkerClient(HttpClient http, IConfiguration conf
         if (disclosure is null || string.IsNullOrEmpty(request.SharingAttestation)
             || !await disclosure.ValidateAsync(request.SharingAttestation, cancellationToken).ConfigureAwait(false))
         {
-            return Result.Failure<HttpResponseMessage>(new("pets.sharing_required", "Review sharing before sending content to this provider."));
+            return Result.Failure<HttpResponseMessage>(new("pets.unavailable", "The companion could not verify this request. Try again."));
         }
         var address = configuration["Nix:Pets:WorkerUrl"];
         var secret = configuration["Nix:InternalSecret"];

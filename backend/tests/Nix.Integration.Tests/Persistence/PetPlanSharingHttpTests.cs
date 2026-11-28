@@ -27,83 +27,7 @@ public sealed partial class PetPlanSharingHttpTests(NixPostgresFixture fixture) 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
-    public async Task A_revoked_sharing_decision_cannot_be_replayed_and_retries_do_not_renew_authority()
-    {
-        using var worker = new RecordingWorker();
-        await using var host = CreateHost(worker);
-        var browser = await SignIn(host);
-        var pet = Guid.NewGuid();
-        await Configure(host, browser, pet, "anthropic");
-        var route = $"/api/v1/workspaces/{Workspace:D}/pet-sharing";
-        var scope = new { kind = "workspace" };
-        var first = await Question(host, browser, route, pet, scope);
-        Assert.NotEqual(Guid.Empty, first.GetProperty("decisionNonce").GetGuid());
-        Assert.Null(await Consent(pet, first));
-        using (var held = await Runtime(host, browser, pet))
-        {
-            Assert.Equal(HttpStatusCode.Conflict, held.StatusCode);
-        }
-        var requestA = Guid.NewGuid();
-        var approval = Decision(pet, scope, first, true, requestA);
-        using (var granted = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, approval))
-        {
-            granted.EnsureSuccessStatusCode();
-        }
-        var original = await Consent(pet, first);
-        Assert.NotNull(original);
-        using (var retry = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, approval))
-        {
-            retry.EnsureSuccessStatusCode();
-        }
-        Assert.Equal(original, await Consent(pet, first));
-        Assert.Equal(JsonValueKind.Null, (await Question(host, browser, route, pet, scope)).ValueKind);
-        Assert.Equal(original, await Consent(pet, first));
-        var pat = await host.TokenAsync(TestTenants.AlphaContext);
-        var inert = await Question(host, pat, route, pet, scope, forDecision: true);
-        Assert.Equal(JsonValueKind.Null, inert.GetProperty("decisionNonce").ValueKind);
-        Assert.Equal(original, await Consent(pet, first));
-        var second = await Question(host, browser, route, pet, scope, forDecision: true);
-        Assert.NotEqual(first.GetProperty("decisionNonce").GetGuid(), second.GetProperty("decisionNonce").GetGuid());
-        Assert.Equal(original, await Consent(pet, first));
-        using (var opposite = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, Decision(pet, scope, first, false, requestA)))
-        {
-            Assert.False(opposite.IsSuccessStatusCode);
-        }
-        var refusal = Decision(pet, scope, second, false);
-        using (var revoked = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, refusal))
-        {
-            revoked.EnsureSuccessStatusCode();
-        }
-        var stopped = await Consent(pet, first);
-        Assert.NotNull(stopped);
-        Assert.NotNull(stopped.RevokedAt);
-        using (var replay = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, approval))
-        {
-            Assert.False(replay.IsSuccessStatusCode);
-            Assert.Equal("pets.sharing_changed", await SiteHttpHost.ProblemCodeAsync(replay));
-        }
-        using (var retry = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, refusal))
-        {
-            retry.EnsureSuccessStatusCode();
-        }
-        Assert.Equal(stopped, await Consent(pet, first));
-        using (var held = await Runtime(host, browser, pet))
-        {
-            Assert.Equal(HttpStatusCode.Conflict, held.StatusCode);
-        }
-        Assert.Equal(0, worker.Calls);
-    }
-
-    private async Task<PetPlanConsentRecord?> Consent(Guid pet, JsonElement question)
-    {
-        var owner = Nix.Abstractions.NixSessionContext.ForTenant(TenantId.From(TestTenants.Alpha), PrincipalId.From(TestTenants.AlphaPrincipal));
-        await using var work = await fixture.Application.BeginUnitOfWorkAsync(owner, Cancellation);
-        return await work.Resolve<IPetPlanConsentStore>().FindAsync(WorkspaceId.From(Workspace), pet,
-            question.GetProperty("scopeDigest").GetString()!, question.GetProperty("recipientRevision").GetString()!, Cancellation);
-    }
-
-    [Fact]
-    public async Task Unknown_recipient_cannot_be_granted_or_disclose_content()
+    public async Task A_saved_key_is_the_only_consent_a_turn_needs_and_no_key_sends_nothing()
     {
         using var worker = new RecordingWorker();
         await using var host = CreateHost(worker);
@@ -118,37 +42,33 @@ public sealed partial class PetPlanSharingHttpTests(NixPostgresFixture fixture) 
         {
             saved.EnsureSuccessStatusCode();
         }
-        var route = $"/api/v1/workspaces/{Workspace:D}/pet-sharing";
-        var scope = new { kind = "workspace", itemIds = Array.Empty<Guid>() };
-        var question = await Question(host, browser, route, pet, scope);
-        Assert.Equal("unknown", question.GetProperty("recipient").GetProperty("connectionRevision").GetString());
-        using (var denied = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, Decision(pet, scope, question, true)))
-        {
-            Assert.False(denied.IsSuccessStatusCode);
-        }
         using (var denied = await Runtime(host, browser, pet))
         {
-            Assert.Equal(HttpStatusCode.Conflict, denied.StatusCode);
+            Assert.False(denied.IsSuccessStatusCode);
+            Assert.Equal("pets.no_provider_key", await SiteHttpHost.ProblemCodeAsync(denied));
         }
         Assert.Equal(0, worker.Calls);
         Assert.Empty(worker.Body);
+        using (var key = await host.SendAsync(HttpMethod.Put, "/api/v1/me/pets/providers/anthropic/key", browser,
+            new { key = "fixture-provider-key-abcdefghijklmnopqrstuvwxyz" }))
+        {
+            key.EnsureSuccessStatusCode();
+        }
+        using (var sent = await Runtime(host, browser, pet))
+        {
+            sent.EnsureSuccessStatusCode();
+        }
+        Assert.Equal(1, worker.Calls);
     }
 
     [Fact]
-    public async Task Private_turn_attestation_checks_every_posted_identity_and_stops_after_revocation()
+    public async Task Private_turn_attestation_checks_every_posted_identity_and_stops_after_the_key_changes()
     {
         using var worker = new RecordingWorker();
         await using var host = CreateHost(worker);
         var browser = await SignIn(host);
         var pet = Guid.NewGuid();
         await Configure(host, browser, pet, "anthropic");
-        var route = $"/api/v1/workspaces/{Workspace:D}/pet-sharing";
-        var scope = new { kind = "workspace", itemIds = Array.Empty<Guid>() };
-        var question = await Question(host, browser, route, pet, scope);
-        using (var granted = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, Decision(pet, scope, question, true)))
-        {
-            granted.EnsureSuccessStatusCode();
-        }
         using (var sent = await Runtime(host, browser, pet))
         {
             sent.EnsureSuccessStatusCode();
@@ -174,10 +94,10 @@ public sealed partial class PetPlanSharingHttpTests(NixPostgresFixture fixture) 
         }
         var forged = new Dictionary<string, object?>(values) { ["attestation"] = "forged" };
         Assert.False(await Validate(host, forged));
-        question = await Question(host, browser, route, pet, scope, forDecision: true);
-        using (var revoked = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, Decision(pet, scope, question, false)))
+        using (var replaced = await host.SendAsync(HttpMethod.Put, "/api/v1/me/pets/providers/anthropic/key", browser,
+            new { key = "fixture-replacement-key-abcdefghijklmnopqrstuvwxyz" }))
         {
-            revoked.EnsureSuccessStatusCode();
+            replaced.EnsureSuccessStatusCode();
         }
         Assert.False(await Validate(host, values));
         Assert.Equal(1, worker.Calls);
@@ -277,95 +197,46 @@ public sealed partial class PetPlanSharingHttpTests(NixPostgresFixture fixture) 
     }
 
     [Fact]
-    public async Task Old_boolean_cannot_disclose_and_scope_key_provider_and_revocation_changes_hold_later_content()
+    public async Task Key_replacement_and_provider_changes_need_no_new_consent_but_a_missing_provider_key_holds_content()
     {
         using var worker = new RecordingWorker();
         await using var host = CreateHost(worker);
         var browser = await SignIn(host);
         var pet = Guid.NewGuid();
         await Configure(host, browser, pet, "anthropic");
-        var route = $"/api/v1/workspaces/{Workspace:D}/pet-sharing";
-        var scope = new { kind = "workspace", itemIds = Array.Empty<Guid>() };
-        var question = await Question(host, browser, route, pet, scope);
-        Assert.NotEqual("unknown", question.GetProperty("recipient").GetProperty("connectionRevision").GetString());
-        using (var refused = await Runtime(host, browser, pet))
-        {
-            Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
-        }
-        Assert.Equal(0, worker.Calls);
-        var pat = await host.TokenAsync(TestTenants.AlphaContext);
-        var approval = Decision(pet, scope, question, approve: true);
-        using (var refused = await host.SendAsync(HttpMethod.Post, route + "/decision", pat, approval))
-        {
-            Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
-        }
-        host.Client.DefaultRequestHeaders.Remove("Origin");
-        host.Client.DefaultRequestHeaders.Add("Origin", "https://cross-origin.test");
-        using (var refused = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, approval))
-        {
-            Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
-        }
-        host.Client.DefaultRequestHeaders.Remove("Origin");
-        host.Client.DefaultRequestHeaders.Add("Origin", Origin);
-        using (var granted = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, approval))
-        {
-            granted.EnsureSuccessStatusCode();
-        }
         using (var sent = await Runtime(host, browser, pet))
         {
             sent.EnsureSuccessStatusCode();
         }
-
-        Assert.Equal(1, worker.Calls);
         Assert.Contains("fixture private message", worker.Body, StringComparison.Ordinal);
-        var oldQuestion = question;
         using (var replaced = await host.SendAsync(HttpMethod.Put, "/api/v1/me/pets/providers/anthropic/key", browser,
             new { key = "fixture-replacement-key-abcdefghijklmnopqrstuvwxyz" }))
         {
             replaced.EnsureSuccessStatusCode();
         }
-
-        question = await Question(host, browser, route, pet, scope);
-        Assert.NotEqual(oldQuestion.GetProperty("recipientRevision").GetString(), question.GetProperty("recipientRevision").GetString());
-        using (var held = await Runtime(host, browser, pet, "tool_result"))
+        using (var sent = await Runtime(host, browser, pet, "tool_result"))
         {
-            Assert.Equal(HttpStatusCode.Conflict, held.StatusCode);
+            sent.EnsureSuccessStatusCode();
         }
-
-        Assert.Equal(1, worker.Calls);
-        using (var granted = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, Decision(pet, scope, question, true)))
+        using (var sent = await Runtime(host, browser, pet, workspaceAccess: false, itemId: M0SchemaSeed.Alpha.ItemId))
         {
-            granted.EnsureSuccessStatusCode();
+            sent.EnsureSuccessStatusCode();
         }
+        Assert.Equal(3, worker.Calls);
 
-        var selectedScope = new { kind = "selected", itemIds = new[] { M0SchemaSeed.Alpha.ItemId } };
-        var selected = await Question(host, browser, route, pet, selectedScope);
-        Assert.NotEqual(question.GetProperty("scopeDigest").GetString(), selected.GetProperty("scopeDigest").GetString());
-        using (var held = await Runtime(host, browser, pet, workspaceAccess: false, itemId: M0SchemaSeed.Alpha.ItemId))
+        using var settingsResponse = await host.SendAsync(HttpMethod.Get, "/api/v1/me/pets/settings", browser);
+        using var settings = await SiteHttpHost.JsonAsync(settingsResponse);
+        using (var saved = await host.SendAsync(HttpMethod.Put, "/api/v1/me/pets/settings", browser,
+            new SavePetSettingsRequest(settings.RootElement.GetProperty("revision").GetInt64(),
+                new PetSettings(true, pet, [new(pet, "Fixture", "owl", "", Provider: "openrouter")]))))
         {
-            Assert.Equal(HttpStatusCode.Conflict, held.StatusCode);
+            saved.EnsureSuccessStatusCode();
         }
-
-        question = await Question(host, browser, route, pet, scope, forDecision: true);
-        using (var revoked = await host.SendAsync(HttpMethod.Post, route + "/decision", browser, Decision(pet, scope, question, false)))
-        {
-            revoked.EnsureSuccessStatusCode();
-        }
-
         using (var held = await Runtime(host, browser, pet))
         {
-            Assert.Equal(HttpStatusCode.Conflict, held.StatusCode);
+            Assert.Equal("pets.no_provider_key", await SiteHttpHost.ProblemCodeAsync(held));
         }
-
-        await Configure(host, browser, pet, "openrouter");
-        var changedProvider = await Question(host, browser, route, pet, scope);
-        Assert.NotEqual(question.GetProperty("recipientRevision").GetString(), changedProvider.GetProperty("recipientRevision").GetString());
-        using (var held = await Runtime(host, browser, pet))
-        {
-            Assert.Equal(HttpStatusCode.Conflict, held.StatusCode);
-        }
-
-        Assert.Equal(1, worker.Calls);
+        Assert.Equal(3, worker.Calls);
     }
 
     private SiteHttpHost CreateHost(RecordingWorker worker) => SiteHttpHost.Create(fixture,
@@ -441,23 +312,6 @@ public sealed partial class PetPlanSharingHttpTests(NixPostgresFixture fixture) 
         key.EnsureSuccessStatusCode();
     }
 
-    private static async Task<JsonElement> Question(SiteHttpHost host, string bearer, string route, Guid pet, object scope, bool forDecision = false)
-    {
-        using var response = await host.SendAsync(HttpMethod.Post, route + "/question", bearer, new { petId = pet, sourceScope = scope, forDecision });
-        response.EnsureSuccessStatusCode();
-        using var json = await SiteHttpHost.JsonAsync(response);
-        return json.RootElement.GetProperty("question").Clone();
-    }
-    private static object Decision(Guid pet, object scope, JsonElement question, bool approve, Guid? requestId = null) => new
-    {
-        petId = pet,
-        sourceScope = scope,
-        recipientRevision = question.GetProperty("recipientRevision").GetString(),
-        scopeDigest = question.GetProperty("scopeDigest").GetString(),
-        approve,
-        requestId = requestId ?? Guid.NewGuid(),
-        decisionNonce = question.GetProperty("decisionNonce"),
-    };
     private static Task<HttpResponseMessage> Runtime(SiteHttpHost host, string bearer, Guid pet,
         string operation = "send", bool workspaceAccess = true, Guid? itemId = null) => host.SendAsync(HttpMethod.Post,
         "/api/v1/me/pets/runtime", bearer, new PetRuntimeRequest(operation, Workspace, pet, Guid.NewGuid(),

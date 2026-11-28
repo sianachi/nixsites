@@ -16,7 +16,6 @@ internal sealed partial class PetRunService :
     ICommandHandler<StartPetPlan, PetPlanResponse>,
     ICommandHandler<RevisePetPlan, PetPlanResponse>,
     ICommandHandler<DecidePetPlan, PetPlanResponse>,
-    ICommandHandler<DecidePetPlanSharing, PetPlanResponse>,
     ICommandHandler<AnswerPetPlan, PetPlanResponse>,
     ICommandHandler<CancelPetPlan, PetPlanResponse>,
     ICommandHandler<ClaimPetPlanStep, PetPlanStepClaimResponse>,
@@ -80,28 +79,28 @@ internal sealed partial class PetRunService :
         {
             return Result.Failure<PetPlanResponse>(new NixError("pet_runs.disabled", "Enable this pet in the selected workspace before starting a plan."));
         }
-        var sharing = await services.GetRequiredService<PetPlanSharingService>().PrepareAsync(
+        var sharing = await services.GetRequiredService<PetPlanSharingService>().DescribeAsync(
             command.WorkspaceId.Value, pet.Id, request.SourceScope, cancellationToken).ConfigureAwait(false);
         if (sharing.IsFailure)
         {
             return Result.Failure<PetPlanResponse>(sharing.Error);
+        }
+        if (sharing.Value.Recipient.ConnectionRevision == "unknown")
+        {
+            return Result.Failure<PetPlanResponse>(new("pets.no_provider_key", PetWorkerClient.NoKeyMessage));
         }
         var preferences = await services.GetRequiredService<Nix.Abstractions.IPrincipalPreferencesStore>()
             .FindAsync(Caller.TenantId, Caller.PrincipalId, cancellationToken).ConfigureAwait(false);
         var now = clock.GetUtcNow();
         var state = new PetRunCheckpoint(pet.Id, null, null, [], [], [], 0, Provider: pet.Provider,
             AfterMessageId: request.AfterMessageId, PlanRequest: new(request.RequestId, request.SourceScope, request.ChatSource,
-                TimeZone: preferences?.TimeZone, StartFingerprint: PetPlanExecution.StartFingerprint(request)),
-            SharingQuestion: sharing.Value);
+                TimeZone: preferences?.TimeZone, StartFingerprint: PetPlanExecution.StartFingerprint(request)));
         var run = new PetRunRecord(Guid.NewGuid(), anchor, command.WorkspaceId, Caller.TenantId, Caller.PrincipalId,
             request.Brief!.Trim(), scopeIds, request.SourceScope.Kind == "workspace",
             [.. _capabilities.Keys.Where(name => !name.StartsWith("peer.", StringComparison.Ordinal)).Order(StringComparer.Ordinal)],
-            sharing.Value is null ? "queued" : "waiting_for_input", 1, Serialize(state), now, now, RequestId: request.RequestId);
-        if (sharing.Value is null)
-        {
-            state = state with { ActiveJobId = await QueueJobAsync(run, 1, cancellationToken).ConfigureAwait(false) };
-            run = run with { State = Serialize(state) };
-        }
+            "queued", 1, Serialize(state), now, now, RequestId: request.RequestId);
+        state = state with { ActiveJobId = await QueueJobAsync(run, 1, cancellationToken).ConfigureAwait(false) };
+        run = run with { State = Serialize(state) };
         if (await runs.CreateAsync(run, cancellationToken).ConfigureAwait(false))
         {
             return Result.Success(RespondPlan(run, state));
@@ -109,41 +108,6 @@ internal sealed partial class PetRunService :
         var duplicate = await runs.GetByRequestAsync(command.WorkspaceId, request.RequestId, cancellationToken).ConfigureAwait(false);
         return duplicate is not null && PetPlanExecution.SameStart(duplicate, Checkpoint(duplicate), request)
             ? Result.Success(RespondPlan(duplicate, Checkpoint(duplicate))) : PlanConflict();
-    }
-
-    public async ValueTask<Result<PetPlanResponse>> HandleAsync(DecidePetPlanSharing command, CancellationToken cancellationToken)
-    {
-        var found = await FindPlanAsync(command.WorkspaceId, command.RunId, cancellationToken).ConfigureAwait(false);
-        if (found.IsFailure)
-        {
-            return Result.Failure<PetPlanResponse>(found.Error);
-        }
-        var run = found.Value;
-        var state = Checkpoint(run);
-        if (WasHandled(state, command.Request.RequestId))
-        {
-            return Result.Success(RespondPlan(run, state));
-        }
-        if (command.Request.RequestId == Guid.Empty || run.Revision != command.Request.ExpectedRunRevision
-            || state.SharingQuestion is null || run.Status != "waiting_for_input")
-        {
-            return PlanConflict();
-        }
-        var decided = await services.GetRequiredService<PetPlanSharingService>().DecideAsync(
-            run.WorkspaceId.Value, state.PetId, state.PlanRequest!.SourceScope, command.Request, cancellationToken).ConfigureAwait(false);
-        if (decided.IsFailure)
-        {
-            return Result.Failure<PetPlanResponse>(decided.Error);
-        }
-        state = Handled(state with { SharingQuestion = null }, command.Request.RequestId);
-        if (command.Request.Approve)
-        {
-            return await QueuePlanAsync(run, state, cancellationToken).ConfigureAwait(false);
-        }
-        state = CancelUndispatched(state);
-        return state.PlanRequest is { ChatSource: not null, SourceResolved: false } source
-            ? await QueuePlanAsync(run, state with { PlanRequest = source with { PendingFinalStatus = "cancelled" } }, cancellationToken).ConfigureAwait(false)
-            : await SavePlanAsync(run, state, "cancelled", cancellationToken).ConfigureAwait(false);
     }
 
     public async ValueTask<Result<PetPlanResponse>> HandleAsync(DecidePetPlan command, CancellationToken cancellationToken)
@@ -202,7 +166,7 @@ internal sealed partial class PetRunService :
             return Result.Success(RespondPlan(run, state));
         }
         if (run.Status != "waiting_for_input" || run.Revision != command.Request.ExpectedRunRevision
-            || state.SharingQuestion is not null || state.Question is not { Scope: null } question
+            || state.Question is not { Scope: null } question
             || question.Id != command.Request.QuestionId || command.Request.RequestId == Guid.Empty
             || !ValidText(command.Request.Answer, 2_000, 8_000))
         {
@@ -363,7 +327,7 @@ internal sealed partial class PetRunService :
 
     private PetPlanResponse RespondPlan(PetRunRecord run, PetRunCheckpoint state) => new(
         run.Id, run.WorkspaceId.Value, run.ItemId?.Value, state.PetId, run.Brief, state.PlanRequest!.SourceScope,
-        run.Status, run.Revision, state.SharingQuestion, state.Question,
+        run.Status, run.Revision, state.Question,
         state.Plan is { } plan ? new PetPlanReview(plan.Id, plan.Version, plan.Summary, plan.ReviewDigest,
             plan.ScopeDigest, plan.RecipientRevision, plan.Status,
             [.. plan.Steps.Select(step => new PetPlanStepResponse(step.Id, step.Capability, PublicArguments(step), PublicEffect(step),
@@ -466,7 +430,6 @@ internal sealed partial class PetRunService :
     private static PetRunCheckpoint CancelUndispatched(PetRunCheckpoint state) => state with
     {
         Question = null,
-        SharingQuestion = null,
         Plan = state.Plan is { } plan ? plan with
         {
             Status = "cancelled",

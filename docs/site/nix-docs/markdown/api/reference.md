@@ -40,7 +40,6 @@ Paths are Core's paths. A deployed Nix forwards `/api/*` and `POST /public/v1/au
 - [Pet peers](#pet-peers)
 - [Pet Plans](#pet-plans)
 - [Pet Runs](#pet-runs)
-- [Pet Sharing](#pet-sharing)
 - [Pets](#pets)
 - [PublicLinks](#publiclinks)
 - [Query](#query)
@@ -2648,7 +2647,7 @@ Responses: `200`, `404`.
 
 <a id="approvemessagepetturn"></a>
 
-Start a pet's waiting turn, retry one that failed for want of sharing consent (code pets.sharing_required), or save the fact it wants remembered (the app only)
+Start a pet's waiting turn or save the fact it wants remembered (the app only)
 
 Operation id: `ApproveMessagePetTurn`.
 
@@ -3572,27 +3571,6 @@ Request body: `UndoPetPlanStepRequest`.
 
 Responses: `200`.
 
-### POST /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/sharing/decision
-
-<a id="decidepetplansharing"></a>
-
-Operation id: `DecidePetPlanSharing`.
-
-**Can.** Write what the summary names.
-
-**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
-
-**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
-
-Parameters:
-
-- `workspaceId` in path (required, string (uuid))
-- `runId` in path (required, string (uuid))
-
-Request body: `DecidePetPlanSharingRequest`.
-
-Responses: `200`.
-
 ### GET /api/v1/workspaces/{workspaceId}/pet-plans/{runId}/watch
 
 <a id="watchpetplan"></a>
@@ -3879,50 +3857,6 @@ Operation id: `ListWorkspacePetRuns`.
 Parameters:
 
 - `workspaceId` in path (required, string (uuid))
-
-Responses: `200`.
-
-## Pet Sharing
-
-<a id="pet-sharing"></a>
-
-### POST /api/v1/workspaces/{workspaceId}/pet-sharing/decision
-
-<a id="decidepetsharing"></a>
-
-Operation id: `DecidePetSharing`.
-
-**Can.** Write what the summary names.
-
-**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
-
-**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
-
-Parameters:
-
-- `workspaceId` in path (required, string (uuid))
-
-Request body: `PetSharingDecisionRequest`.
-
-Responses: `200`.
-
-### POST /api/v1/workspaces/{workspaceId}/pet-sharing/question
-
-<a id="getpetsharingquestion"></a>
-
-Operation id: `GetPetSharingQuestion`.
-
-**Can.** Write what the summary names.
-
-**Cannot.** Replace a note, canvas, or spreadsheet body. Moving an item, sharing it, and editing its body are separate operations, and no REST route edits a note body yet.
-
-**Token.** Requires a personal access token with the write scope, or an interactive session. Holding write does not imply read.
-
-Parameters:
-
-- `workspaceId` in path (required, string (uuid))
-
-Request body: `PetSharingQuestionRequest`.
 
 Responses: `200`.
 

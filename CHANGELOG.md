@@ -146,11 +146,17 @@ follows semantic versioning (`0.x` pre-1.0).
 - The installers print a setup link for the first account. Opening it does not ask for the setup
   code; the plain setup page still does.
 - Companion workspace context defaults to on for a new pet and workspace. An explicit off choice
-  stays off; Core access checks and provider-sharing decisions still apply.
-- **Breaking:** Sharing Nix content with a companion now requires consent for the selected
-  provider and sources. Open the companion and confirm the sharing question again after upgrading;
-  the old device preference no longer grants access. Scripts using pet runtime or inline API
-  endpoints must complete this browser sharing step before sending source content.
+  stays off; Core access checks still apply.
+- **Saving a provider key is the consent to share.** A pet sends the workspace content it works
+  with, and your messages, to its provider as soon as you have saved that provider's key; there is no
+  separate review of sources and provider. Without a key a turn answers "Add a Claude or OpenRouter
+  key in Settings > Pets." (`pets.no_provider_key`). Everything that withholds content still holds:
+  items withheld from pets, locked items, password-protected workspaces, read permissions, the
+  budget and the agent-policy switches, and a plan's exact steps are still approved before they
+  apply. Removed: the sharing question and decision routes (`/pet-sharing/question`,
+  `/pet-sharing/decision`, `/pet-plans/{runId}/sharing/decision`), `pets.sharing_required`, the
+  `sharingQuestion` field of a plan, and `nixctl pet-plans share-handoff`. Settings > Pets now says
+  that saving a key sends the pet's selected workspace content to that provider.
 - Enabled companion workspaces review a whole prepared plan in labelled forms. Continue approves
   its exact steps once; changed values or scope require a fresh review. Progress and receipts show
   what applied, what stopped, and what needs checking. App-only steps wait for an open client.
@@ -252,7 +258,7 @@ follows semantic versioning (`0.x` pre-1.0).
 
 ### Fixed
 
-- A pet addressed in a message that could not start because sharing was not reviewed no longer leaves "I could not answer" in the thread. The turn shows the sharing review inline to the pet's owner and starts again once it is approved (`POST /api/v1/items/{itemId}/pet-turns/{petId}/approve` now also retries such a turn); a pet with no provider key links to Settings > Pets. The turn state carries the stable code (`code`: `pets.sharing_required` or `pets.no_provider_key`).
+- A pet addressed in a message that has no provider key no longer leaves "I could not answer" in the thread. The turn links to Settings > Pets. The turn state carries the stable code (`code`: `pets.no_provider_key`).
 - A fact a pet held from a message now saves when your stored pet settings still carry a retired appearance or more than one companion, instead of being dropped with no error; if the settings are invalid the request fails and the fact stays held.
 - Messages to pets: the daily turn cap holds under parallel posts from one token, approving a waiting turn is refused after the workspace switch is turned off, and a turn does not run in a workspace that has since been given a password. `nixctl message post` and the MCP tool refuse to address a pet on a browser-approved login. A memory's "learned in" source is recorded for chat memories and can no longer be set or changed through an access token.
 - A pet addressed in a message thread now replies to the message that addressed it, not to whichever message comes last in the thread, and long threads no longer hide it.
@@ -264,9 +270,6 @@ follows semantic versioning (`0.x` pre-1.0).
   Claude model's price instead of the dearest one. The sending line no longer lingers when the pet
   or provider key changes mid-send, and a sent message no longer shows twice once the server holds it.
 - **Saved chats no longer save the model's reasoning as the reply.** Core now skips the companion's transient reasoning line when it reads the running turn text.
-- Companion chat asks for sharing consent on the sources the message really sends. With workspace
-  context on and a page open, it asked about the page alone and then refused every message with
-  "Review the selected sources and provider before sharing content".
 - Ordinary requests and event streams no longer initialize companion plan-dispatch services;
   requests carrying plan credentials still enforce the exact dispatch checks.
 

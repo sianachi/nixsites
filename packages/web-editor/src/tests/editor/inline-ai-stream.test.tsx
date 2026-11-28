@@ -2,7 +2,7 @@ import { createNixClient, type NixClient } from '@nix/api-client';
 import { nixEditingExtensions } from '@nix/editor-schema';
 import { requestUrl } from '@nix/web-foundation/testing/request-url';
 import { Editor } from '@tiptap/core';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -50,23 +50,6 @@ function setup() {
       const body: unknown =
         typeof init?.body === 'string' ? await new Response(init.body).json() : undefined;
       calls.push({ path, body });
-      if (path.endsWith('/pet-sharing/question'))
-        return Response.json({
-          question: {
-            decisionNonce: '11111111-1111-4111-8111-111111111111',
-            scopeDigest: 'note-scope',
-            recipientRevision: 'recipient-one',
-            sourceScope: { kind: 'subtree', itemIds: [itemId] },
-            recipient: {
-              provider: 'Claude',
-              destination: 'https://api.anthropic.com',
-              routingPolicy: 'Direct',
-              connectionRevision: 'connection-one',
-            },
-            message: 'May I share this note context for writing?',
-          },
-        });
-      if (path.endsWith('/pet-sharing/decision')) return Response.json({ question: null });
       return new Response('event: done\ndata: {"text":"Prepared writing result."}\n\n', {
         headers: { 'content-type': 'text/event-stream' },
       });
@@ -95,7 +78,7 @@ function setup() {
   return { calls, user: userEvent.setup() };
 }
 
-it('retains inline selection and instruction when the owner keeps note context private', async () => {
+it('reads inline context and streams the result with no sharing prompt', async () => {
   const { calls, user } = setup();
   await user.click(screen.getByRole('button', { name: 'Choose writing command' }));
   await user.type(
@@ -103,38 +86,12 @@ it('retains inline selection and instruction when the owner keeps note context p
     'Rewrite this carefully.',
   );
   await user.click(screen.getByRole('button', { name: 'Generate' }));
-  expect(
-    await screen.findByRole('region', { name: 'Share context with the companion' }),
-  ).toBeVisible();
-  expect(contextRead).not.toHaveBeenCalled();
-  expect(calls).toHaveLength(1);
-  await user.click(screen.getByRole('button', { name: 'Keep context private' }));
-  expect(await screen.findByRole('textbox', { name: 'What should the AI write?' })).toHaveValue(
-    'Rewrite this carefully.',
-  );
-  expect(editor.getText()).toBe('Keep these selected words.');
-  expect(contextRead).not.toHaveBeenCalled();
-  expect(calls).toHaveLength(2);
-});
-
-it('constructs inline context and starts streaming only after the exact owner sharing decision', async () => {
-  const { calls, user } = setup();
-  await user.click(screen.getByRole('button', { name: 'Choose writing command' }));
-  await user.type(
-    screen.getByRole('textbox', { name: 'What should the AI write?' }),
-    'Rewrite this carefully.',
-  );
-  await user.click(screen.getByRole('button', { name: 'Generate' }));
-  expect(contextRead).not.toHaveBeenCalled();
-  await user.click(await screen.findByRole('button', { name: 'Continue' }));
-  await waitFor(() => {
-    expect(contextRead).toHaveBeenCalledTimes(1);
-  });
   expect(await screen.findByRole('region', { name: 'AI writing result' })).toHaveTextContent(
     'Prepared writing result.',
   );
-  expect(calls[0]?.body).toEqual({ petId, sourceScope: { kind: 'subtree', itemIds: [itemId] } });
-  expect(calls[2]?.body).toMatchObject({
+  expect(contextRead).toHaveBeenCalledTimes(1);
+  expect(calls).toHaveLength(1);
+  expect(calls[0]?.body).toMatchObject({
     workspaceId,
     itemId,
     instruction: 'Rewrite this carefully.',

@@ -84,7 +84,7 @@ describe('authoritative direct-chat plan adoption', () => {
       const app = harness({ validateSharing });
       await expect(
         app.account.handle(app.signal, request({ operation: 'send', consentMode: 'plan' })),
-      ).rejects.toThrow('Sharing consent');
+      ).rejects.toThrow('could not be verified for sending');
       expect(app.transport.methods()).not.toContain('turn/start');
       expect(app.transport.methods()).not.toContain('thread/start');
     },

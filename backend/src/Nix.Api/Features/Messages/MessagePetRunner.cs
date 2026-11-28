@@ -172,9 +172,9 @@ public sealed class MessagePetRunner(IIsolatedUnitOfWork units, IHostApplication
                 sent = true;
                 if (response.IsFailure)
                 {
-                    if (response.Error.Code is "pets.sharing_required" or "pets.no_provider_key")
+                    if (response.Error.Code == "pets.no_provider_key")
                     {
-                        // The owner can fix these in the app, and an approval retries the turn; the thread gets no reply.
+                        // The owner adds a key in Settings; the thread gets no reply.
                         failure = "";
                         await services.GetRequiredService<MessagePetTurnStore>().FinishAsync(messageId, petId, "failed", response.Error.Message, token, null, response.Error.Code).ConfigureAwait(false);
                         return new IsolatedOutcome<bool>(false, true);

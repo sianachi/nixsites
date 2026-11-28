@@ -2,14 +2,6 @@ using Nix.Domain.Tenancy;
 
 namespace Nix.Abstractions.PetRuns;
 
-/// <summary>A bounded, owner-private sharing grant for one canonical source and recipient.</summary>
-public sealed record PetPlanConsentRecord(Guid Id, WorkspaceId WorkspaceId, Guid PetId, string ScopeDigest,
-    string RecipientRevision, Guid RequestId, Guid AuthorityId, DateTimeOffset GrantedAt,
-    DateTimeOffset ExpiresAt, DateTimeOffset? RevokedAt = null);
-
-/// <summary>An inert, bounded owner question. Its nonce can be consumed by one exact BFF decision.</summary>
-public sealed record PetPlanConsentQuestion(Guid Id, Guid DecisionNonce, DateTimeOffset ExpiresAt);
-
 /// <summary>A pending or browser-authorized exact delegation. Only its secret hash is stored.</summary>
 public sealed record PetPlanDecisionContextRecord(Guid Id, WorkspaceId WorkspaceId, Guid RunId, Guid PlanId,
     int PlanVersion, string ReviewDigest, Guid GranteeCredentialId, string ClientName, bool Approve,
@@ -17,14 +9,9 @@ public sealed record PetPlanDecisionContextRecord(Guid Id, WorkspaceId Workspace
     DateTimeOffset? AuthorizedAt = null, DateTimeOffset? RevokedAt = null,
     Guid? ConsumedRequestId = null, DateTimeOffset? ConsumedAt = null);
 
-/// <summary>Persists consent and exact one-use delegation in the current tenant transaction.</summary>
+/// <summary>Persists exact one-use plan decision delegation in the current tenant transaction.</summary>
 public interface IPetPlanConsentStore
 {
-    public Task<PetPlanConsentRecord?> FindAsync(WorkspaceId workspaceId, Guid petId, string scopeDigest,
-        string recipientRevision, CancellationToken cancellationToken);
-    public Task<PetPlanConsentQuestion> PrepareQuestionAsync(WorkspaceId workspaceId, Guid petId, string scopeDigest,
-        string recipientRevision, DateTimeOffset now, CancellationToken cancellationToken);
-    public Task<bool> DecideAsync(PetPlanConsentRecord consent, Guid decisionNonce, CancellationToken cancellationToken);
     public Task<bool> CreateContextAsync(PetPlanDecisionContextRecord context, CancellationToken cancellationToken);
     public Task<PetPlanDecisionContextRecord?> ReadContextAsync(Guid contextId, CancellationToken cancellationToken);
     public Task<bool> AuthorizeContextAsync(PetPlanDecisionContextRecord context, Guid authorityId,

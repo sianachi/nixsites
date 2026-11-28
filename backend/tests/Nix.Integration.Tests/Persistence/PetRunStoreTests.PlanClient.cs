@@ -337,20 +337,6 @@ public sealed partial class PetRunStoreTests
             created = body.RootElement.Clone();
         }
         var client = hosted with { Route = $"/api/v1/workspaces/{AlphaWorkspace.Value:D}/pet-plans/{created.GetProperty("id").GetGuid():D}" };
-        var sharing = created.GetProperty("sharingQuestion");
-        using (var allowed = await client.Host.SendAsync(HttpMethod.Post, client.Route + "/sharing/decision", client.Browser,
-            new
-            {
-                expectedRunRevision = created.GetProperty("revision").GetInt64(),
-                recipientRevision = sharing.GetProperty("recipientRevision").GetString(),
-                scopeDigest = sharing.GetProperty("scopeDigest").GetString(),
-                decisionNonce = sharing.GetProperty("decisionNonce").GetString(),
-                approve = true,
-                requestId = Guid.NewGuid()
-            }))
-        {
-            allowed.EnsureSuccessStatusCode();
-        }
         var review = await WaitForRunAsync(client.Host, client.Browser, client.Route, "waiting_for_approval");
         var reviewed = review.GetProperty("plan");
         await ApproveClientPlanAsync(client, prepared with { PlanId = reviewed.GetProperty("id").GetGuid(), Digest = reviewed.GetProperty("reviewDigest").GetString()! });

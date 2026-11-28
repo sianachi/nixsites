@@ -4,9 +4,8 @@ import { expect, it, vi } from 'vitest';
 import { useTurns } from '../../../pets/conversation/state/use-turns';
 import type { UsePetRuntimeResult } from '../../../pets/use-pet-runtime';
 
-function setup({ allowed = false, sent = true } = {}) {
+function setup({ sent = true } = {}) {
   const reads = vi.fn(() => Promise.resolve(Response.json({ items: [], nextCursor: null })));
-  const beforeDisclosure = vi.fn(() => Promise.resolve(allowed));
   const send = vi.fn(() => Promise.resolve(sent));
   const setDraft = vi.fn();
   const onSent = vi.fn();
@@ -51,33 +50,20 @@ function setup({ allowed = false, sent = true } = {}) {
     messages: [],
     contextFields: () => ({}),
     onSent,
-    beforeDisclosure,
   };
   const { result } = renderHook(() => useTurns(input));
-  return { result, reads, beforeDisclosure, send, setDraft, onSent };
+  return { result, reads, send, setDraft, onSent };
 }
 
-it('does not read workspace context or send a message before destination-bound sharing consent', async () => {
-  const { result, reads, beforeDisclosure, send, setDraft } = setup();
-  await act(() => result.current.submit());
-  expect(beforeDisclosure).toHaveBeenCalledTimes(1);
-  expect(reads).not.toHaveBeenCalled();
-  expect(send).not.toHaveBeenCalled();
-  expect(setDraft).not.toHaveBeenCalled();
-});
-
-it.each([
-  { allowed: false, sent: true },
-  { allowed: true, sent: false },
-])('keeps the edited message open when replacement is not accepted: %j', async (options) => {
-  const { result, send, onSent } = setup(options);
+it('keeps the edited message open when replacement is not accepted', async () => {
+  const { result, send, onSent } = setup({ sent: false });
   await act(() => result.current.resendTurn('Preserve this edited message.', 'previous-message'));
   expect(onSent).not.toHaveBeenCalled();
-  expect(send).toHaveBeenCalledTimes(options.allowed ? 1 : 0);
+  expect(send).toHaveBeenCalledTimes(1);
 });
 
 it('does not consume an external creation request until the message starts successfully', async () => {
-  const { result, send } = setup({ allowed: true, sent: false });
+  const { result, send } = setup({ sent: false });
   const onStarted = vi.fn();
   await act(() => result.current.submit('Create the launch tracker.', onStarted));
   expect(send).toHaveBeenCalledTimes(1);

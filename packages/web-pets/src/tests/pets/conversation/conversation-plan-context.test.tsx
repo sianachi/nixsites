@@ -30,20 +30,6 @@ const settings = petSettingsSchema.parse({
 const profile = settings.profiles[0];
 if (profile === undefined) throw new Error('Fixture requires a companion');
 const pet = profile;
-const question = {
-  decisionNonce: '11111111-1111-4111-8111-111111111111',
-  scopeDigest: 'scope-one',
-  recipientRevision: 'recipient-one',
-  sourceScope: { kind: 'workspace' },
-  recipient: {
-    provider: 'Claude',
-    destination: 'https://api.anthropic.com',
-    routingPolicy: 'Direct',
-    connectionRevision: 'connection-one',
-  },
-  message: 'Share the current readable workspace with Claude?',
-};
-
 beforeEach(() => {
   clearPetDrafts();
   localStorage.clear();
@@ -76,17 +62,6 @@ function setup(initialPlanMode = true, currentItemId?: string) {
       const body: unknown =
         typeof init?.body === 'string' ? await new Response(init.body).json() : undefined;
       requests(path, body);
-      if (path.endsWith('/pet-sharing/question'))
-        return Response.json({
-          question: {
-            ...question,
-            sourceScope:
-              typeof body === 'object' && body !== null && 'sourceScope' in body
-                ? body.sourceScope
-                : question.sourceScope,
-          },
-        });
-      if (path.endsWith('/pet-sharing/decision')) return Response.json({ question: null });
       throw new Error('Unexpected synthetic request');
     },
   });
@@ -147,33 +122,18 @@ function setup(initialPlanMode = true, currentItemId?: string) {
   };
 }
 
-it('defaults new-plan chat to current-workspace sharing after availability resolves, despite the old device preference', async () => {
+it('defaults new-plan chat to current-workspace context after availability resolves, despite the old device preference', async () => {
   const { user, send, requests, rerenderMode } = setup(false);
   const input = screen.getByRole('textbox', { name: 'Message Pip' });
   await user.type(input, 'Help me prepare the next steps.');
   rerenderMode(true);
   await user.click(screen.getByRole('button', { name: 'Send' }));
-  expect(
-    await screen.findByRole('region', { name: 'Share context with the companion' }),
-  ).toBeVisible();
-  expect(requests).toHaveBeenCalledWith(expect.stringMatching(/\/pet-sharing\/question$/u), {
-    petId,
-    sourceScope: { kind: 'workspace' },
-  });
-  expect(contextReads).not.toHaveBeenCalled();
-  expect(send).not.toHaveBeenCalled();
-  expect(screen.queryByRole('searchbox', { name: 'Find a target' })).not.toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: 'Keep context private' }));
-  expect(input).toHaveValue('Help me prepare the next steps.');
-  expect(contextReads).not.toHaveBeenCalled();
-  expect(send).not.toHaveBeenCalled();
-  await user.click(screen.getByRole('button', { name: 'Send' }));
-  await user.click(await screen.findByRole('button', { name: 'Continue' }));
   await waitFor(() => {
     expect(send).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ workspaceAccess: true, consentMode: 'plan' }),
     );
   });
+  expect(requests).not.toHaveBeenCalled();
   expect(contextReads).toHaveBeenCalledTimes(1);
   expect(readWorkspaceAccess(workspaceId, petId)).toBe(false);
 });
@@ -196,37 +156,27 @@ it('preserves an explicit message-only choice when new-plan availability changes
 });
 
 it('keeps the workspace default when an unrelated item is open in the same pane', async () => {
-  const { user, requests, send } = setup(true, '44444444-4444-4444-8444-444444444444');
+  const { user, send } = setup(true, '44444444-4444-4444-8444-444444444444');
   await user.type(
     screen.getByRole('textbox', { name: 'Message Pip' }),
     'Plan changes across this workspace.',
   );
   await user.click(screen.getByRole('button', { name: 'Send' }));
-  expect(
-    await screen.findByRole('region', { name: 'Share context with the companion' }),
-  ).toBeVisible();
-  expect(requests).toHaveBeenCalledWith(expect.stringMatching(/\/pet-sharing\/question$/u), {
-    petId,
-    sourceScope: { kind: 'workspace' },
+  await waitFor(() => {
+    expect(send).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ workspaceAccess: true, consentMode: 'plan' }),
+    );
   });
-  expect(send).not.toHaveBeenCalled();
-  expect(contextReads).not.toHaveBeenCalled();
 });
 
-// The turn is sent with workspace context on, so Core checks consent for the workspace.
-it('asks for workspace sharing when a page is attached with workspace context on', async () => {
+it('sends with workspace context when a page is attached with workspace context on', async () => {
   const sourceId = '44444444-4444-4444-8444-444444444444';
-  const { user, requests, send } = setup(true, sourceId);
+  const { user, send } = setup(true, sourceId);
   await user.click(screen.getByRole('button', { name: 'Add to message' }));
   await user.click(screen.getByRole('menuitem', { name: 'Add this page' }));
   await user.type(screen.getByRole('textbox', { name: 'Message Pip' }), 'Use this selected page.');
   await user.click(screen.getByRole('button', { name: 'Send' }));
-  expect(
-    await screen.findByRole('region', { name: 'Share context with the companion' }),
-  ).toBeVisible();
-  expect(requests).toHaveBeenCalledWith(expect.stringMatching(/\/pet-sharing\/question$/u), {
-    petId,
-    sourceScope: { kind: 'workspace' },
+  await waitFor(() => {
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ workspaceAccess: true }));
   });
-  expect(send).not.toHaveBeenCalled();
 });

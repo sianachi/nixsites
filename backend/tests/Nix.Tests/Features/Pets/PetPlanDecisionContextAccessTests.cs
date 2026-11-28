@@ -82,9 +82,6 @@ public sealed class PetPlanDecisionContextAccessTests
                 planVersion, reviewDigest, granteeCredentialId, "Fixture CLI", approve, secretHash,
                 now.AddMinutes(1), Guid.NewGuid(), now, ConsumedRequestId: requestId, ConsumedAt: now));
         }
-        public Task<PetPlanConsentRecord?> FindAsync(WorkspaceId workspaceId, Guid petId, string scopeDigest, string recipientRevision, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task<PetPlanConsentQuestion> PrepareQuestionAsync(WorkspaceId workspaceId, Guid petId, string scopeDigest, string recipientRevision, DateTimeOffset now, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task<bool> DecideAsync(PetPlanConsentRecord consent, Guid decisionNonce, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> CreateContextAsync(PetPlanDecisionContextRecord context, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<PetPlanDecisionContextRecord?> ReadContextAsync(Guid contextId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> AuthorizeContextAsync(PetPlanDecisionContextRecord context, Guid authorityId, DateTimeOffset now, CancellationToken cancellationToken) => throw new NotSupportedException();

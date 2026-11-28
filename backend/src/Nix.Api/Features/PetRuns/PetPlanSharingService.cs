@@ -16,14 +16,14 @@ using Nix.Messaging;
 namespace Nix.Features.PetRuns;
 
 [SuppressMessage("Performance", "CA1812", Justification = "Created by dependency injection.")]
-internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSessionContextAccessor session,
+internal sealed class PetPlanSharingService(INixSessionContextAccessor session,
     NixDispatcher dispatcher, IPermissionResolver permissions, IPetProviderCredentialStore credentials,
     IDataProtectionProvider protection, BrowserAccess browser,
     IHttpContextAccessor httpContext, TimeProvider clock, IIsolatedUnitOfWork isolated, IIdentityDirectory identities)
 {
     private readonly IDataProtector _protector = protection.CreateProtector("Nix.PetDisclosure.v1");
     private NixSessionContext Caller => session.Current ?? throw new InvalidOperationException("An owner transaction is required.");
-    internal static NixError ConsentRequired => new("pets.sharing_required", "Review the selected sources and provider before sharing content.");
+    private static NixError NoKey => new("pets.no_provider_key", PetWorkerClient.NoKeyMessage);
 
     internal static string ScopeDigest(Guid workspaceId, Guid petId, PetPlanSourceScope scope)
     {
@@ -37,7 +37,7 @@ internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSess
         Hash(string.Join('\n', "recipient-v1", recipient.Provider, recipient.Destination, recipient.RoutingPolicy, recipient.ConnectionRevision));
     internal static string Hash(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
-    internal async Task<Result<PetPlanSharingQuestion>> DescribeAsync(Guid workspaceId, Guid petId,
+    internal async Task<Result<PetPlanDisclosure>> DescribeAsync(Guid workspaceId, Guid petId,
         PetPlanSourceScope scope, CancellationToken cancellationToken)
     {
         if (workspaceId == Guid.Empty || petId == Guid.Empty || scope is null
@@ -48,13 +48,13 @@ internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSess
             || scope.Kind == "workspace" && scope.ItemIds is { Count: > 0 }
             || !await permissions.CanReadWorkspaceAsync(WorkspaceId.From(workspaceId), cancellationToken).ConfigureAwait(false))
         {
-            return Result.Failure<PetPlanSharingQuestion>(new("pets.invalid_scope", "Choose readable sources in a workspace."));
+            return Result.Failure<PetPlanDisclosure>(new("pets.invalid_scope", "Choose readable sources in a workspace."));
         }
         foreach (var sourceWorkspace in scope.ReadOnlyWorkspaceIds ?? [])
         {
             if (!await permissions.CanReadWorkspaceAsync(WorkspaceId.From(sourceWorkspace), cancellationToken).ConfigureAwait(false))
             {
-                return Result.Failure<PetPlanSharingQuestion>(new("pets.invalid_scope", "A selected source workspace is unavailable."));
+                return Result.Failure<PetPlanDisclosure>(new("pets.invalid_scope", "A selected source workspace is unavailable."));
             }
         }
 
@@ -62,7 +62,7 @@ internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSess
         var pet = settings.Settings.Profiles.FirstOrDefault(value => value.Id == petId);
         if (pet is null)
         {
-            return Result.Failure<PetPlanSharingQuestion>(new("pets.invalid_request", "Choose a saved pet."));
+            return Result.Failure<PetPlanDisclosure>(new("pets.invalid_request", "Choose a saved pet."));
         }
 
         var provider = pet.Provider;
@@ -83,107 +83,16 @@ internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSess
             ItemIds = (scope.ItemIds ?? []).Distinct().Order().ToArray(),
             ReadOnlyWorkspaceIds = (scope.ReadOnlyWorkspaceIds ?? []).Distinct().Order().ToArray()
         };
-        var label = scope.Kind switch { "workspace" => "readable workspace content", "subtree" => "this item and its readable children", _ => "the selected sources" };
-        if (normalized.ReadOnlyWorkspaceIds is { Count: > 0 })
-        {
-            label += " and the selected read-only source workspaces";
-        }
-        return Result.Success(new PetPlanSharingQuestion(ScopeDigest(workspaceId, petId, normalized), RecipientRevision(recipient), normalized,
-            recipient, revision == "unknown" ? "Connect the selected provider before reviewing content sharing."
-                : provider == PetProviders.OpenRouter
-                    ? $"May I share {label} with OpenRouter at {destination} and the model providers it routes requests to, to help with this task?"
-                    : $"May I share {label} with {provider} at {destination} to help with this task?"));
-    }
-
-    internal async Task<Result<PetPlanSharingQuestion?>> PrepareAsync(Guid workspaceId, Guid petId,
-        PetPlanSourceScope scope, CancellationToken cancellationToken, bool forDecision = false, bool issueDecisionNonce = true)
-    {
-        var described = await DescribeAsync(workspaceId, petId, scope, cancellationToken).ConfigureAwait(false);
-        if (described.IsFailure)
-        {
-            return Result.Failure<PetPlanSharingQuestion?>(described.Error);
-        }
-
-        var question = described.Value;
-        var consent = await store.FindAsync(WorkspaceId.From(workspaceId), petId, question.ScopeDigest,
-            question.RecipientRevision, cancellationToken).ConfigureAwait(false);
-        if (!forDecision && question.Recipient.ConnectionRevision != "unknown"
-            && consent is { RevokedAt: null } && consent.ExpiresAt > clock.GetUtcNow())
-        {
-            return Result.Success<PetPlanSharingQuestion?>(null);
-        }
-        var http = httpContext.HttpContext;
-        if (!issueDecisionNonce || question.Recipient.ConnectionRevision == "unknown" || http is null || http.Request.Method != HttpMethods.Post
-            || await browser.VerifyAsync(http, requireOrigin: true).ConfigureAwait(false) is null)
-        {
-            return Result.Success<PetPlanSharingQuestion?>(question);
-        }
-        var owner = NixSessionContext.ForTenant(Caller.TenantId, Caller.PrincipalId);
-        var pending = await isolated.RunAsync(owner, async (services, token) =>
-            new IsolatedOutcome<PetPlanConsentQuestion>(await services.GetRequiredService<IPetPlanConsentStore>()
-                .PrepareQuestionAsync(WorkspaceId.From(workspaceId), petId, question.ScopeDigest,
-                    question.RecipientRevision, clock.GetUtcNow(), token).ConfigureAwait(false), true), cancellationToken).ConfigureAwait(false);
-        return Result.Success<PetPlanSharingQuestion?>(question with { DecisionNonce = pending.DecisionNonce });
-    }
-
-    internal async Task<Result<bool>> DecideAsync(Guid workspaceId, Guid petId, PetPlanSourceScope scope,
-        DecidePetPlanSharingRequest request, CancellationToken cancellationToken)
-    {
-        var http = httpContext.HttpContext;
-        var verified = http is null ? null : await browser.VerifyAsync(http, requireOrigin: true).ConfigureAwait(false);
-        if (verified is null)
-        {
-            return Result.Failure<bool>(new("pet_plans.owner_decision_required", "Use your signed-in Nix browser to decide sharing."));
-        }
-
-        var described = await DescribeAsync(workspaceId, petId, scope, cancellationToken).ConfigureAwait(false);
-        if (described.IsFailure)
-        {
-            return Result.Failure<bool>(described.Error);
-        }
-
-        if (request.RequestId == Guid.Empty || request.DecisionNonce == Guid.Empty || described.Value.ScopeDigest != request.ScopeDigest
-            || described.Value.RecipientRevision != request.RecipientRevision || described.Value.Recipient.ConnectionRevision == "unknown")
-        {
-            return Result.Failure<bool>(new("pets.sharing_changed", "The sources or provider changed. Review sharing again."));
-        }
-
-        var now = clock.GetUtcNow();
-        var saved = await store.DecideAsync(new(Guid.Empty, WorkspaceId.From(workspaceId), petId,
-            described.Value.ScopeDigest, described.Value.RecipientRevision, request.RequestId, verified.Id.Value,
-            now, now.AddDays(30), request.Approve ? null : now), request.DecisionNonce, cancellationToken).ConfigureAwait(false);
-        if (!saved)
-        {
-            return Result.Failure<bool>(new("pets.sharing_changed", "This sharing question expired or changed. Review sharing again."));
-        }
-        return Result.Success(true);
+        return Result.Success(new PetPlanDisclosure(ScopeDigest(workspaceId, petId, normalized), RecipientRevision(recipient), normalized, recipient));
     }
 
     internal async Task<Result<string>> PinAsync(Guid workspaceId, Guid petId, PetPlanSourceScope scope,
         Guid turnId, CancellationToken cancellationToken)
     {
-        var prepared = await PrepareAsync(workspaceId, petId, scope, cancellationToken, issueDecisionNonce: false).ConfigureAwait(false);
-        if (prepared.IsFailure)
-        {
-            return Result.Failure<string>(prepared.Error);
-        }
-
-        if (prepared.Value is not null || turnId == Guid.Empty)
-        {
-            return Result.Failure<string>(ConsentRequired);
-        }
-
         var described = await DescribeAsync(workspaceId, petId, scope, cancellationToken).ConfigureAwait(false);
-        if (described.IsFailure)
+        if (described.IsFailure || turnId == Guid.Empty || described.Value.Recipient.ConnectionRevision == "unknown")
         {
-            return Result.Failure<string>(described.Error);
-        }
-
-        var consent = await store.FindAsync(WorkspaceId.From(workspaceId), petId, described.Value.ScopeDigest,
-            described.Value.RecipientRevision, cancellationToken).ConfigureAwait(false);
-        if (consent is not { RevokedAt: null } || consent.ExpiresAt <= clock.GetUtcNow())
-        {
-            return Result.Failure<string>(ConsentRequired);
+            return Result.Failure<string>(described.IsFailure ? described.Error : NoKey);
         }
 
         var attestation = new PetSharingAttestation(Caller.TenantId.Value, Caller.PrincipalId.Value, workspaceId, petId,
@@ -198,12 +107,12 @@ internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSess
         var http = httpContext.HttpContext;
         if (http is null || turnId == Guid.Empty || await browser.VerifyAsync(http, requireOrigin: true).ConfigureAwait(false) is null)
         {
-            return Result.Failure<string>(ConsentRequired);
+            return Result.Failure<string>(NoKey);
         }
         var described = await DescribeAsync(workspaceId, petId, new("selected", []), cancellationToken).ConfigureAwait(false);
         if (described.IsFailure || described.Value.Recipient.ConnectionRevision == "unknown")
         {
-            return Result.Failure<string>(described.IsFailure ? described.Error : ConsentRequired);
+            return Result.Failure<string>(described.IsFailure ? described.Error : NoKey);
         }
         var attestation = new PetSharingAttestation(Caller.TenantId.Value, Caller.PrincipalId.Value, workspaceId, petId,
             described.Value.Recipient.Provider, described.Value.SourceScope, described.Value.ScopeDigest,
@@ -249,15 +158,8 @@ internal sealed class PetPlanSharingService(IPetPlanConsentStore store, INixSess
             return false;
         }
 
-        if (bound.OwnerTextOnly)
-        {
-            return bound.SourceScope is { Kind: "selected" } && bound.SourceScope.ItemIds is not { Count: > 0 }
-                && bound.SourceScope.ReadOnlyWorkspaceIds is not { Count: > 0 }
-                && described.Value.Recipient.ConnectionRevision != "unknown";
-        }
-
-        var grant = await store.FindAsync(WorkspaceId.From(bound.WorkspaceId), bound.PetId, bound.ScopeDigest,
-            bound.RecipientRevision, cancellationToken).ConfigureAwait(false);
-        return grant is { RevokedAt: null } && grant.ExpiresAt > clock.GetUtcNow();
+        return described.Value.Recipient.ConnectionRevision != "unknown"
+            && (!bound.OwnerTextOnly || bound.SourceScope is { Kind: "selected" } && bound.SourceScope.ItemIds is not { Count: > 0 }
+                && bound.SourceScope.ReadOnlyWorkspaceIds is not { Count: > 0 });
     }
 }

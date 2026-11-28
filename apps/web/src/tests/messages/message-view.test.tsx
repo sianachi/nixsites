@@ -184,33 +184,6 @@ describe('the chat', () => {
     expect(await screen.findByRole('status', { name: 'Pip is answering' })).toBeTruthy();
   });
 
-  it('reviews sharing inline for a refused turn and starts it again once approved', async () => {
-    const user = userEvent.setup();
-    open(
-      [
-        {
-          petId: PET,
-          name: 'Pip',
-          status: 'failed',
-          reason: 'Review the selected sources and provider before sharing content.',
-          expiresAt: null,
-          code: 'pets.sharing_required',
-        },
-      ],
-      [],
-    );
-    await user.click(await screen.findByRole('button', { name: 'Review sharing' }));
-    await waitFor(() => {
-      expect(execute).toHaveBeenCalledTimes(2);
-    });
-    expect(execute.mock.calls[0]?.[0]).toMatchObject({
-      body: { petId: PET, sourceScope: { kind: 'workspace' } },
-    });
-    expect(execute.mock.calls[1]?.[0]).toMatchObject({
-      path: `/api/v1/items/${ITEM}/pet-turns/${PET}/approve`,
-    });
-  });
-
   it('points to Settings when the pet has no provider key', async () => {
     open(
       [
@@ -227,7 +200,6 @@ describe('the chat', () => {
     );
     const link = await screen.findByRole('link', { name: /provider key/ });
     expect(link.getAttribute('href')).toBe(`/w/${message.workspaceId}/settings?tab=pets`);
-    expect(screen.queryByRole('button', { name: 'Review sharing' })).toBeNull();
   });
 
   it('opens a reply as the whole thread, from its first message', async () => {

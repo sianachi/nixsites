@@ -28,14 +28,6 @@ internal sealed partial class PetRunService
             {
                 return new IsolatedOutcome<Step?>(null, false);
             }
-            var sharing = await handler.Services.GetRequiredService<PetPlanSharingService>().PrepareAsync(current.Run.WorkspaceId.Value,
-                current.State.PetId, current.State.PlanRequest!.SourceScope, ct).ConfigureAwait(false);
-            if (sharing.IsFailure || sharing.Value is not null)
-            {
-                var saved = await handler.StopAsync(current.Run, current.State with { SharingQuestion = sharing.IsSuccess ? sharing.Value : null },
-                    "waiting_for_input", ct).ConfigureAwait(false);
-                return new IsolatedOutcome<Step?>(null, saved);
-            }
             return new IsolatedOutcome<Step?>(current, false);
         }, cancellationToken).ConfigureAwait(false);
         if (ready is null)
@@ -119,14 +111,6 @@ internal sealed partial class PetRunService
                 || !await handler.AvailableAsync(current, ct).ConfigureAwait(false))
             {
                 return new IsolatedOutcome<Step?>(null, false);
-            }
-            var sharing = await handler.Services.GetRequiredService<PetPlanSharingService>().PrepareAsync(current.Run.WorkspaceId.Value,
-                current.State.PetId, current.State.PlanRequest!.SourceScope, ct).ConfigureAwait(false);
-            if (sharing.IsFailure || sharing.Value is not null)
-            {
-                var saved = await handler.StopAsync(current.Run, current.State with { SharingQuestion = sharing.IsSuccess ? sharing.Value : null },
-                    "waiting_for_input", ct).ConfigureAwait(false);
-                return new IsolatedOutcome<Step?>(null, saved);
             }
             return new IsolatedOutcome<Step?>(current, false);
         }, cancellationToken).ConfigureAwait(false);

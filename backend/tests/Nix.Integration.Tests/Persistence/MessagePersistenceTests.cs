@@ -209,7 +209,7 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_turn_refused_for_sharing_keeps_its_code_posts_no_reply_and_the_owner_can_retry_it_but_not_other_failures()
+    public async Task A_turn_refused_for_want_of_a_key_keeps_its_code_posts_no_reply_and_no_failure_can_be_retried()
     {
         await SavePetsAsync(("Pip", PetId));
         var refused = (await PostAsync(Editor, Note, "hello")).Value;
@@ -219,19 +219,17 @@ public sealed class MessagePersistenceTests : IAsyncLifetime
         await using var scope = _fixture.Application.CreateUnscopedScope();
         var runner = new MessagePetRunner(scope.ServiceProvider.GetRequiredService<IIsolatedUnitOfWork>())
         {
-            Converse = (_, _, _, _, _, _) => Task.FromResult(Result.Failure<PetConnectionResponse>(new NixError("pets.sharing_required", "Review sharing."))),
+            Converse = (_, _, _, _, _, _) => Task.FromResult(Result.Failure<PetConnectionResponse>(new NixError("pets.no_provider_key", "Add a key."))),
         };
         await runner.Run(As(Editor), refused.Id.Value, [PetId]);
 
         var state = Assert.Single((await StatesAsync(refused.Id.Value)).Pets);
-        Assert.Equal(("failed", "pets.sharing_required"), (state.Status, state.Code));
+        Assert.Equal(("failed", "pets.no_provider_key"), (state.Status, state.Code));
         Assert.Empty(await RepliesAsync(refused.Id.Value));
 
-        // Claiming is what a retry does (the approve route launches the turn after it): only the sharing refusal can be taken again.
+        // Only a waiting turn can be claimed; a failed one is final.
         Assert.Null(await ClaimAsync(broken.Id.Value, Editor));
-        Assert.Null(await ClaimAsync(refused.Id.Value, Friend));
-        var retried = Assert.IsType<MessagePetTurnRow>(await ClaimAsync(refused.Id.Value, Editor));
-        Assert.Equal(("working", null, null), (retried.Status, retried.Reason, retried.Code));
+        Assert.Null(await ClaimAsync(refused.Id.Value, Editor));
     }
 
     private async Task<MessagePetTurnRow?> ClaimAsync(Guid message, Guid who)

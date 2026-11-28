@@ -99,11 +99,7 @@ describe('note chat page', () => {
     localStorage.clear();
     sessionStorage.clear();
     mock.send.mockResolvedValue(true);
-    mock.execute.mockImplementation((endpoint: { path: string }) =>
-      Promise.resolve(
-        endpoint.path.includes('/pet-sharing/') ? { question: null } : { history: [] },
-      ),
-    );
+    mock.execute.mockImplementation(() => Promise.resolve({ history: [] }));
     mock.query.mockImplementation((endpoint: { operation: string }) =>
       Promise.resolve(
         endpoint.operation === 'locks.get'
@@ -144,91 +140,51 @@ describe('note chat page', () => {
     });
   });
 
-  it.each(['private', 'refused'])(
-    'retains a %s structured request without automatically attempting it again',
-    async (outcome) => {
-      let granted = false;
-      mock.execute.mockImplementation(
-        (endpoint: { path: string; body?: { approve?: boolean } }) => {
-          if (endpoint.path.endsWith('/pet-sharing/question'))
-            return Promise.resolve({
-              question:
-                outcome === 'private' && !granted
-                  ? {
-                      scopeDigest: 'scope-one',
-                      recipientRevision: 'recipient-one',
-                      decisionNonce: '11111111-1111-4111-8111-111111111111',
-                      sourceScope: { kind: 'workspace' },
-                      recipient: {
-                        provider: 'Claude',
-                        destination: 'https://api.anthropic.com',
-                        routingPolicy: 'Direct',
-                        connectionRevision: 'connection-one',
-                      },
-                      message: 'Share the current readable workspace with Claude?',
-                    }
-                  : null,
-            });
-          if (endpoint.path.endsWith('/pet-sharing/decision')) {
-            granted = endpoint.body?.approve === true;
-            return Promise.resolve({ question: null });
-          }
-          return Promise.resolve({ history: [] });
-        },
-      );
-      if (outcome === 'refused') mock.send.mockResolvedValueOnce(false).mockResolvedValue(true);
-      const user = userEvent.setup();
-      render(
-        <MemoryRouter
-          initialEntries={[
-            {
-              pathname: `/w/${WORKSPACE}/pet`,
-              state: {
-                structuredRequest: {
-                  id: '55555555-5555-4555-8555-555555555555',
-                  parentId: ROOT,
-                  prompt: 'A BMI calculator',
-                },
+  it('retains a refused structured request without automatically attempting it again', async () => {
+    mock.send.mockResolvedValueOnce(false).mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: `/w/${WORKSPACE}/pet`,
+            state: {
+              structuredRequest: {
+                id: '55555555-5555-4555-8555-555555555555',
+                parentId: ROOT,
+                prompt: 'A BMI calculator',
               },
             },
-          ]}
-        >
-          <PetPage />
-          <CreationState />
-        </MemoryRouter>,
-      );
-      if (outcome === 'private') {
-        await user.click(await screen.findByRole('button', { name: 'Keep context private' }));
-      } else
-        await waitFor(() => {
-          expect(mock.send).toHaveBeenCalledTimes(1);
-        });
-      await act(() => Promise.resolve());
-      await act(() => Promise.resolve());
+          },
+        ]}
+      >
+        <PetPage />
+        <CreationState />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(mock.send).toHaveBeenCalledTimes(1);
+    });
+    await act(() => Promise.resolve());
+    await act(() => Promise.resolve());
+    expect(screen.getByRole('status', { name: 'Creation request state' })).toHaveTextContent(
+      'pending',
+    );
+    expect(mock.send).toHaveBeenCalledTimes(1);
+    const draft = screen.getByRole('textbox', { name: 'Message Pip' });
+    await user.type(draft, 'Keep this newer draft.');
+    await user.click(screen.getByRole('button', { name: 'Retry creation request' }));
+    await waitFor(() => {
       expect(screen.getByRole('status', { name: 'Creation request state' })).toHaveTextContent(
-        'pending',
+        'consumed',
       );
-      expect(mock.send).toHaveBeenCalledTimes(outcome === 'private' ? 0 : 1);
-      expect(
-        screen.queryByRole('region', { name: 'Share context with the companion' }),
-      ).not.toBeInTheDocument();
-      const draft = screen.getByRole('textbox', { name: 'Message Pip' });
-      await user.type(draft, 'Keep this newer draft.');
-      await user.click(screen.getByRole('button', { name: 'Retry creation request' }));
-      if (outcome === 'private')
-        await user.click(await screen.findByRole('button', { name: 'Continue' }));
-      await waitFor(() => {
-        expect(screen.getByRole('status', { name: 'Creation request state' })).toHaveTextContent(
-          'consumed',
-        );
-      });
-      expect(draft).toHaveValue('Keep this newer draft.');
-      expect(mock.send).toHaveBeenCalledTimes(outcome === 'private' ? 1 : 2);
-      expect(mock.send).toHaveBeenLastCalledWith(
-        expect.objectContaining({ requestId: '55555555-5555-4555-8555-555555555555' }),
-      );
-    },
-  );
+    });
+    expect(draft).toHaveValue('Keep this newer draft.');
+    expect(mock.send).toHaveBeenCalledTimes(2);
+    expect(mock.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({ requestId: '55555555-5555-4555-8555-555555555555' }),
+    );
+  });
 
   it('defaults to read-only retrieval for the note and lets the user require approved edits', async () => {
     const user = userEvent.setup();

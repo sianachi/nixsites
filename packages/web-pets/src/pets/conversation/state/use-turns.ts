@@ -20,7 +20,6 @@ export function useTurns({
   messages,
   contextFields,
   onSent,
-  beforeDisclosure,
   consentMode,
   onAccepted,
 }: {
@@ -42,9 +41,6 @@ export function useTurns({
   readonly consentMode?: 'plan' | undefined;
   readonly onAccepted?:
     ((scope: { readonly workspaceAccess: boolean; readonly context: object }) => void) | undefined;
-  readonly beforeDisclosure?:
-    | ((input: { readonly workspaceAccess: boolean; readonly context: object }) => Promise<boolean>)
-    | undefined;
 }): {
   readonly submit: (
     creationRequest?: string,
@@ -74,18 +70,6 @@ export function useTurns({
     const access = workspaceAccess || creationRequest !== undefined;
     lastCreation.current = creationRequest;
     const context = creationRequest === undefined ? contextFields() : {};
-    preparationPending.current = true;
-    setPreparing(true);
-    try {
-      if (
-        beforeDisclosure !== undefined &&
-        !(await beforeDisclosure({ workspaceAccess: access, context }))
-      )
-        return false;
-    } finally {
-      preparationPending.current = false;
-      setPreparing(false);
-    }
     if (onStarted !== undefined && creationRequestId === undefined) regenerateRequestId();
     // Plan B.2: a conversation's first message carries a map of the workspace's main
     // containers, so the pet can use their ids without listing the tree first. Only with
@@ -132,11 +116,6 @@ export function useTurns({
     const creation = text === lastCreation.current;
     const context = creation ? {} : contextFields();
     try {
-      if (
-        beforeDisclosure !== undefined &&
-        !(await beforeDisclosure({ workspaceAccess: workspaceAccess || creation, context }))
-      )
-        return false;
       regenerateRequestId();
       const accepted = await send({
         text,

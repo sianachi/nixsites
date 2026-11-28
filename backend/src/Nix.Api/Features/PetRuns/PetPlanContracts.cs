@@ -29,7 +29,7 @@ internal sealed record PetPlanStepClaimResponse(PetPlanResponse Run, Guid ClaimI
 internal sealed record PetPlansResponse(bool Enabled, IReadOnlyList<PetRunAbility> Abilities, IReadOnlyList<PetPlanResponse> Runs);
 internal sealed record PetPlanResponse(Guid Id, Guid WorkspaceId, Guid? AnchorItemId, Guid PetId,
     string Brief, PetPlanSourceScope SourceScope, string Status, long Revision,
-    PetPlanSharingQuestion? SharingQuestion, PetRunQuestion? Question, PetPlanReview? Plan,
+    PetRunQuestion? Question, PetPlanReview? Plan,
     IReadOnlyList<PetRunResult> Results, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt,
     string? AfterMessageId = null, PetRunFailure? Failure = null, IReadOnlyList<PetPlanObservation>? Observations = null);
 internal sealed record PetPlanRequestState(Guid RequestId, PetPlanSourceScope SourceScope, PetPlanChatSource? ChatSource = null,
@@ -102,7 +102,6 @@ internal sealed record ReadPetPlan(WorkspaceId WorkspaceId, Guid RunId) : IQuery
 internal sealed record StartPetPlan(WorkspaceId WorkspaceId, StartPetPlanRequest Request) : ICommand<PetPlanResponse>;
 internal sealed record RevisePetPlan(WorkspaceId WorkspaceId, Guid RunId, RevisePetPlanRequest Request) : ICommand<PetPlanResponse>;
 internal sealed record DecidePetPlan(WorkspaceId WorkspaceId, Guid RunId, Guid PlanId, DecidePetPlanRequest Request) : ICommand<PetPlanResponse>;
-internal sealed record DecidePetPlanSharing(WorkspaceId WorkspaceId, Guid RunId, DecidePetPlanSharingRequest Request) : ICommand<PetPlanResponse>;
 internal sealed record AnswerPetPlan(WorkspaceId WorkspaceId, Guid RunId, AnswerPetPlanRequest Request) : ICommand<PetPlanResponse>;
 internal sealed record CancelPetPlan(WorkspaceId WorkspaceId, Guid RunId, CancelPetPlanRequest Request) : ICommand<PetPlanResponse>;
 internal sealed record ClaimPetPlanStep(WorkspaceId WorkspaceId, Guid RunId, Guid PlanId, Guid StepId,

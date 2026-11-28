@@ -141,10 +141,7 @@ function OpenPanel({
   const hasText = state.text !== '';
   // Something a stray click would lose: a result, a request in flight, or words already typed.
   const worthKeeping =
-    hasText ||
-    streaming ||
-    state.phase === 'sharing' ||
-    (state.phase === 'composing' && state.instruction.trim() !== '');
+    hasText || streaming || (state.phase === 'composing' && state.instruction.trim() !== '');
 
   const { discard, stop, anchorRect } = controller;
 
@@ -383,7 +380,6 @@ function OpenPanel({
       <Text variant="kicker" tone="muted">
         {title}
       </Text>
-      {controller.sharingPanel}
 
       {confirming ? (
         <div className="flex flex-col gap-2" role="group" aria-label="Discard this text?">

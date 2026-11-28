@@ -19,7 +19,6 @@ export const preparedPlanFixture: PetPlanResponse = {
   status: 'waiting_for_approval',
   revision: 3,
   question: null,
-  sharingQuestion: null,
   plan: {
     id: '8eadd6a1-e91a-4be5-b3c4-a37d341b6d51',
     version: 1,
@@ -105,53 +104,31 @@ export const preparedPlanFixture: PetPlanResponse = {
 };
 
 function Review({
-  sharing = false,
   uncertain = false,
   initial = preparedPlanFixture,
 }: {
-  readonly sharing?: boolean;
   readonly uncertain?: boolean;
   readonly initial?: PetPlanResponse;
 }): ReactElement {
   const [run, setRun] = useState<PetPlanResponse>(() =>
-    sharing
+    uncertain && preparedPlanFixture.plan != null
       ? {
           ...preparedPlanFixture,
-          status: 'waiting_for_input',
-          plan: null,
-          sharingQuestion: {
-            decisionNonce: '11111111-1111-4111-8111-111111111111',
-            scopeDigest: 'b'.repeat(64),
-            recipientRevision: 'recipient-one',
-            sourceScope: { kind: 'workspace' },
-            recipient: {
-              provider: 'Claude',
-              destination: 'https://api.anthropic.com',
-              routingPolicy: 'Direct connection',
-              connectionRevision: 'connection-one',
-            },
-            message:
-              'May I use the readable content in Product team to prepare this plan? Relevant content will be shared with Claude.',
+          status: 'review_required',
+          plan: {
+            ...preparedPlanFixture.plan,
+            status: 'review_required',
+            steps: preparedPlanFixture.plan.steps.map((step, index) => ({
+              ...step,
+              status: index === 0 ? 'applied' : 'unknown',
+              receipt:
+                index === 0
+                  ? 'Renamed Project brief to Release brief.'
+                  : 'The request was dispatched, but its outcome could not be confirmed.',
+            })),
           },
         }
-      : uncertain && preparedPlanFixture.plan != null
-        ? {
-            ...preparedPlanFixture,
-            status: 'review_required',
-            plan: {
-              ...preparedPlanFixture.plan,
-              status: 'review_required',
-              steps: preparedPlanFixture.plan.steps.map((step, index) => ({
-                ...step,
-                status: index === 0 ? 'applied' : 'unknown',
-                receipt:
-                  index === 0
-                    ? 'Renamed Project brief to Release brief.'
-                    : 'The request was dispatched, but its outcome could not be confirmed.',
-              })),
-            },
-          }
-        : initial,
+      : initial,
   );
   const client = createNixClient({
     baseUrl: 'http://nix.invalid',
@@ -161,36 +138,32 @@ function Review({
     },
     fetch: () =>
       Promise.resolve(
-        Response.json(
-          run.sharingQuestion != null
-            ? preparedPlanFixture
-            : {
-                ...run,
-                revision: run.revision + 1,
-                status: 'completed',
-                plan:
-                  run.plan == null
-                    ? null
-                    : {
-                        ...run.plan,
-                        status: 'completed',
-                        steps: run.plan.steps.map((step, index) =>
-                          step.status === 'cancelled'
-                            ? step
-                            : {
-                                ...step,
-                                status: 'applied',
-                                receipt:
-                                  step.capability === 'workspace.read_note'
-                                    ? 'Read Daily plan.'
-                                    : index === 0
-                                      ? 'Renamed Project brief to Release brief.'
-                                      : 'Added the release checklist to Daily plan.',
-                              },
-                        ),
-                      },
-              },
-        ),
+        Response.json({
+          ...run,
+          revision: run.revision + 1,
+          status: 'completed',
+          plan:
+            run.plan == null
+              ? null
+              : {
+                  ...run.plan,
+                  status: 'completed',
+                  steps: run.plan.steps.map((step, index) =>
+                    step.status === 'cancelled'
+                      ? step
+                      : {
+                          ...step,
+                          status: 'applied',
+                          receipt:
+                            step.capability === 'workspace.read_note'
+                              ? 'Read Daily plan.'
+                              : index === 0
+                                ? 'Renamed Project brief to Release brief.'
+                                : 'Added the release checklist to Daily plan.',
+                        },
+                  ),
+                },
+        }),
       ),
   });
   return (
@@ -218,7 +191,6 @@ export const CompletedPlan = {
     await canvas.findByText('Added the release checklist to Daily plan.');
   },
 };
-export const FirstSharingQuestion = { render: (): ReactElement => <Review sharing /> };
 export const UncertainSecondChange = { render: (): ReactElement => <Review uncertain /> };
 
 function readFixture(): PetPlanResponse {

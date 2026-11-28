@@ -16,7 +16,6 @@ import { PetMessageText } from '../pet-message-text';
 import { earlierPieces } from '../../openui/fence';
 import { useAccessibleWorkspaces } from '@nix/web-workspaces/workspaces/workspace-context';
 import { isAborted } from '@nix/web-foundation/lib/guards';
-import { useSharingConsent } from '@nix/web-platform/api/use-pet-sharing-consent';
 
 export function ChatView({
   itemId,
@@ -45,12 +44,6 @@ export function ChatView({
   const [sources, setSources] = useState<readonly string[] | null>(null);
   const lifetime = useRef<AbortController | null>(null);
   const pending = useRef<{ text: string; requestId: string; sourceKey: string } | null>(null);
-  const sharing = useSharingConsent({
-    client,
-    workspaceId,
-    petId: chat?.petId ?? '',
-    selectionKey: JSON.stringify([itemId, chat?.petId, chat?.sourceWorkspaceIds]),
-  });
   const tail = useRef<string | undefined>(undefined);
   const running = chat?.turn?.status === 'running';
   const streamedText = running ? (chat.turn?.text ?? '') : '';
@@ -122,7 +115,6 @@ export function ChatView({
       const submittedDraft = draft;
       const text = draft.trim();
       const sourceIds = [...chat.sourceWorkspaceIds].sort();
-      if (!(await sharing.ensure({ kind: 'workspace', readOnlyWorkspaceIds: sourceIds }))) return;
       const sourceKey = sourceIds.join(',');
       const request =
         pending.current?.text === text && pending.current.sourceKey === sourceKey
@@ -411,7 +403,6 @@ export function ChatView({
                   <Text variant="caption" tone="muted">
                     Chat note · {currentSources.map(nameOf).join(', ') || 'No available sources'}
                   </Text>
-                  {sharing.panel}
                   <div className="flex min-w-0 items-end gap-2">
                     <Textarea
                       aria-label="Message"

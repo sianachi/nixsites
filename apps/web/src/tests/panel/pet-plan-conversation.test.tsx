@@ -15,7 +15,6 @@ const brief = 'Rename the brief and add the launch checklist.';
 
 function setup({
   refuse = false,
-  sharing = false,
   adoptionRoot = null,
   currentItemId = null,
   readOnly = false,
@@ -23,7 +22,6 @@ function setup({
   planAnchorItemId,
 }: {
   readonly refuse?: boolean;
-  readonly sharing?: boolean;
   readonly adoptionRoot?: string | null;
   readonly currentItemId?: string | null;
   readonly readOnly?: boolean;
@@ -59,22 +57,6 @@ function setup({
           sourceScope: { kind: 'workspace' },
           status: 'waiting_for_input',
           revision: 1,
-          sharingQuestion:
-            sharing && !path.endsWith('/sharing/decision')
-              ? {
-                  decisionNonce: '11111111-1111-4111-8111-111111111111',
-                  scopeDigest: 'scope-one',
-                  recipientRevision: 'recipient-one',
-                  sourceScope: { kind: 'workspace' },
-                  recipient: {
-                    provider: 'Claude',
-                    destination: 'https://api.anthropic.com',
-                    routingPolicy: 'Direct',
-                    connectionRevision: 'connection-one',
-                  },
-                  message: 'May I share the current readable workspace with Claude?',
-                }
-              : null,
           question: null,
           plan: null,
           results: [],
@@ -236,25 +218,4 @@ it('keeps a workspace plan visible with a null anchor while another pane item re
   });
   expect(calls[0]?.body).toMatchObject({ anchorItemId: null, sourceScope: { kind: 'workspace' } });
   expect(await screen.findByRole('region', { name: 'Companion plan' })).toBeVisible();
-});
-
-it('holds the original message until the first sharing choice is confirmed', async () => {
-  const { calls, onStarted, user } = setup({ sharing: true });
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Prepare plan' })).toBeEnabled();
-  });
-  await user.click(screen.getByRole('button', { name: 'Prepare plan' }));
-  expect(
-    await screen.findByRole('region', { name: 'Share context with the companion' }),
-  ).toBeVisible();
-  expect(onStarted).not.toHaveBeenCalled();
-  expect(calls).toHaveLength(1);
-  await user.click(screen.getByRole('button', { name: 'Continue' }));
-  await waitFor(() => {
-    expect(onStarted).toHaveBeenCalledTimes(1);
-  });
-  expect(calls[1]).toMatchObject({
-    path: `${planRoute}/49b80577-9ad4-46aa-ad2c-5988fda36abf/sharing/decision`,
-    body: { recipientRevision: 'recipient-one', scopeDigest: 'scope-one', approve: true },
-  });
 });

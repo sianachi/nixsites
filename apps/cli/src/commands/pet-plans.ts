@@ -178,7 +178,6 @@ export function printPlan(run: PetPlanResponse, output: OutputOptions): void {
   process.stdout.write(
     `${run.brief}\n${run.status}, revision ${String(run.revision)}\nRun ${run.id}\n`,
   );
-  if (run.sharingQuestion) process.stdout.write(`${run.sharingQuestion.message}\n`);
   if (run.question) process.stdout.write(`${run.question.text}\n`);
   if (run.observations?.length)
     printTable(
@@ -275,18 +274,6 @@ export function registerPetPlanCommands(program: Command, act: Act): void {
           ),
         ),
       );
-  plans
-    .command('share-handoff <workspaceId> <runId>')
-    .description('Show the browser review path for source and provider sharing.')
-    .action((workspaceId: string, runId: string, _options: unknown, command: Command) =>
-      act(command, (_profile, output) => {
-        const browserPath = `/w/${parseUuid(workspaceId, 'workspace ID')}/pet/plans/${parseUuid(runId, 'run ID')}/review`;
-        if (output.json) printResult({ browserPath }, output);
-        else
-          process.stdout.write(`Review sharing in your signed-in Nix browser:\n${browserPath}\n`);
-        return Promise.resolve();
-      }),
-    );
   plans
     .command('decision-handoff <workspaceId> <runId>')
     .requiredOption('--client-name <name>', 'name the client receiving this exact decision')

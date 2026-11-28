@@ -50,23 +50,6 @@ function setup() {
         const body: unknown =
           typeof init.body === 'string' ? await new Response(init.body).json() : undefined;
         calls.push({ path, body });
-        if (path.endsWith('/pet-sharing/question'))
-          return Response.json({
-            question: {
-              decisionNonce: '11111111-1111-4111-8111-111111111111',
-              scopeDigest: chat.sourceWorkspaceIds.join(','),
-              recipientRevision: 'recipient-one',
-              sourceScope: { kind: 'workspace', readOnlyWorkspaceIds: chat.sourceWorkspaceIds },
-              recipient: {
-                provider: 'Claude',
-                destination: 'https://api.anthropic.com',
-                routingPolicy: 'Direct',
-                connectionRevision: 'connection-one',
-              },
-              message: 'May I use the selected read-only workspaces to answer?',
-            },
-          });
-        if (path.endsWith('/pet-sharing/decision')) return Response.json({ question: null });
         if (
           path.endsWith('/sources') &&
           typeof body === 'object' &&
@@ -110,44 +93,21 @@ function setup() {
   return { calls, user: userEvent.setup() };
 }
 
-it('holds the saved read-only analysis draft and history until its exact sharing choice', async () => {
-  const { calls, user } = setup();
-  expect(await screen.findByText('Keep this existing analysis.')).toBeVisible();
-  const draft = screen.getByRole('textbox', { name: 'Message' });
-  await user.type(draft, 'Compare the selected sources.');
-  await user.click(screen.getByRole('button', { name: 'Send' }));
-  expect(
-    await screen.findByRole('region', { name: 'Share context with the companion' }),
-  ).toBeVisible();
-  expect(calls).toHaveLength(1);
-  expect(calls[0]?.body).toEqual({
-    petId,
-    sourceScope: { kind: 'workspace', readOnlyWorkspaceIds: [workspaceId, secondWorkspace] },
-  });
-  await user.click(screen.getByRole('button', { name: 'Keep context private' }));
-  expect(draft).toHaveValue('Compare the selected sources.');
-  expect(screen.getByText('Keep this existing analysis.')).toBeVisible();
-  expect(calls.some((call) => call.path.endsWith('/turns'))).toBe(false);
-});
-
-it('checks the changed read-only source set before another saved-analysis send', async () => {
+it('sends a saved read-only analysis turn without a sharing prompt, also after the sources change', async () => {
   const { calls, user } = setup();
   const draft = await screen.findByRole('textbox', { name: 'Message' });
   await user.type(draft, 'First question');
   await user.click(screen.getByRole('button', { name: 'Send' }));
-  await user.click(await screen.findByRole('button', { name: 'Continue' }));
   await waitFor(() => {
     expect(calls.filter((call) => call.path.endsWith('/turns'))).toHaveLength(1);
   });
+  expect(screen.queryByRole('region', { name: 'Share context with the companion' })).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Change sources' }));
   await user.click(screen.getByRole('checkbox', { name: 'Planning' }));
   await user.click(screen.getByRole('button', { name: 'Apply sources' }));
   await user.type(draft, 'Question from Research only');
   await user.click(screen.getByRole('button', { name: 'Send' }));
-  expect(await screen.findByRole('button', { name: 'Continue' })).toBeVisible();
-  expect(calls.filter((call) => call.path.endsWith('/turns'))).toHaveLength(1);
-  expect(calls.filter((call) => call.path.endsWith('/pet-sharing/question')).at(-1)?.body).toEqual({
-    petId,
-    sourceScope: { kind: 'workspace', readOnlyWorkspaceIds: [workspaceId] },
+  await waitFor(() => {
+    expect(calls.filter((call) => call.path.endsWith('/turns'))).toHaveLength(2);
   });
 });

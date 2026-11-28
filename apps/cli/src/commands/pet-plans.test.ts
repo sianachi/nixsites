@@ -229,7 +229,6 @@ describe('private exact plan handoffs', () => {
           sourceScope: { kind: 'selected', itemIds: [] },
           status: 'waiting_for_approval',
           revision: 4,
-          sharingQuestion: null,
           question: null,
           plan: {
             id: planId,

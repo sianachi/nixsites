@@ -9,20 +9,6 @@ import {
 } from '../endpoints.js';
 
 const id = z.uuid();
-const recipientSchema = z.object({
-  provider: z.string(),
-  destination: z.string(),
-  routingPolicy: z.string(),
-  connectionRevision: z.string(),
-});
-export const sharingQuestionSchema = z.object({
-  scopeDigest: z.string(),
-  recipientRevision: z.string(),
-  sourceScope: sourceScopeSchema,
-  recipient: recipientSchema,
-  message: z.string(),
-  decisionNonce: z.uuid().nullish(),
-});
 const fieldSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -89,7 +75,6 @@ export const petPlanResponseSchema = z.object({
   sourceScope: sourceScopeSchema,
   status: z.string(),
   revision: z.number().int(),
-  sharingQuestion: sharingQuestionSchema.nullish(),
   question: z
     .object({ id, text: z.string(), scope: z.string().nullish(), ability: z.string().nullish() })
     .nullish(),
@@ -133,7 +118,6 @@ const handoffSchema = z.object({
   expiresAt: z.string(),
 });
 export type PetPlanSourceScope = z.infer<typeof sourceScopeSchema>;
-export type PetPlanSharingQuestion = z.infer<typeof sharingQuestionSchema>;
 export type PetPlanResponse = z.infer<typeof petPlanResponseSchema>;
 export type PetPlanPrepared = z.infer<typeof planSchema>;
 export type PetPlanPreparedStep = z.infer<typeof stepSchema>;
@@ -197,14 +181,6 @@ export interface PetPlanDecision {
   approve: boolean;
   requestId: string;
   decisionContext?: string;
-}
-export interface PetPlanSharingDecision {
-  expectedRunRevision: number;
-  recipientRevision: string;
-  scopeDigest: string;
-  approve: boolean;
-  requestId: string;
-  decisionNonce: string;
 }
 export interface PetPlanDecisionHandoffRequest {
   planId: string;
@@ -288,17 +264,6 @@ export const decide = (
     petPlanResponseSchema,
     body,
   );
-export const decideSharing = (
-  workspaceId: string,
-  runId: string,
-  body: PetPlanSharingDecision,
-): CommandEndpoint<PetPlanResponse> =>
-  command(
-    'decideSharing',
-    `${path(workspaceId, runId)}/sharing/decision`,
-    petPlanResponseSchema,
-    body,
-  );
 export const cancel = (
   workspaceId: string,
   runId: string,
@@ -364,35 +329,6 @@ export const revokeHandoff = (
     schema: handoffStatusSchema,
     invalidates: [cacheKey],
   });
-export const sharingQuestion = (
-  workspaceId: string,
-  body: { petId: string; sourceScope: PetPlanSourceScope; forDecision?: boolean },
-): CommandEndpoint<{ question: PetPlanSharingQuestion | null }> =>
-  command(
-    'sharingQuestion',
-    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/pet-sharing/question`,
-    z.object({ question: sharingQuestionSchema.nullable() }),
-    body,
-  );
-export const sharingDecision = (
-  workspaceId: string,
-  body: {
-    petId: string;
-    sourceScope: PetPlanSourceScope;
-    recipientRevision: string;
-    scopeDigest: string;
-    approve: boolean;
-    requestId: string;
-    decisionNonce: string;
-  },
-): CommandEndpoint<{ question: PetPlanSharingQuestion | null }> =>
-  command(
-    'sharingDecision',
-    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/pet-sharing/decision`,
-    z.object({ question: sharingQuestionSchema.nullable() }),
-    body,
-  );
-
 export const claim = (
   workspaceId: string,
   runId: string,

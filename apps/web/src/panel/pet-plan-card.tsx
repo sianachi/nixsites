@@ -4,12 +4,10 @@ import {
   type CommandEndpoint,
   type NixClient,
   type PetPlanResponse,
-  type PetPlanSharingQuestion,
 } from '@nix/api-client';
 import { Button, Checkbox, Field, Input, Select, Text, Textarea, Toast, focusRing } from '@nix/ui';
 import { ValueFields } from '@nix/web-pets/pets/approval/value-fields';
 import { READ_ONLY_OPERATION_NAMES } from '@nix/structure-spec';
-import { PetSharingQuestion } from '@nix/web-platform/api/pet-sharing-question';
 import {
   useEffect,
   useEffectEvent,
@@ -52,7 +50,7 @@ export function PetPlanCard(props: Props): ReactElement {
   const root = useRef<HTMLDivElement>(null);
   const restoreFocus = useRef(false);
   const focusIntent = useRef<{ readonly owned: boolean; movedOutside: boolean } | null>(null);
-  const identity = `${props.run.id}:${props.run.plan?.reviewDigest ?? ''}:${props.run.question?.id ?? ''}:${props.run.sharingQuestion?.scopeDigest ?? ''}:${props.run.sharingQuestion?.recipientRevision ?? ''}:${props.run.sharingQuestion?.decisionNonce ?? ''}`;
+  const identity = `${props.run.id}:${props.run.plan?.reviewDigest ?? ''}:${props.run.question?.id ?? ''}`;
   useLayoutEffect(() => {
     if (restoreFocus.current) {
       root.current?.querySelector<HTMLElement>('section')?.focus();
@@ -124,14 +122,6 @@ function PlanReview({
   const [answer, setAnswer] = useState('');
   const [nativeReady, setNativeReady] = useState<Readonly<Record<string, boolean>>>({});
   const [notice, setNotice] = useState<string | null>(null);
-  const [sharingRefresh, setSharingRefresh] = useState(0);
-  const sharingFocusAttempt = useRef<number | null>(null);
-  const [sharingChallenge, setSharingChallenge] = useState<{
-    readonly identity: string;
-    readonly attempt: number;
-    readonly question: PetPlanSharingQuestion | null;
-    readonly failed: boolean;
-  } | null>(null);
   const lock = useRef(false);
   const requestIds = useRef(new Map<string, string>());
   const region = useRef<HTMLElement>(null);
@@ -146,77 +136,7 @@ function PlanReview({
   const progressSteps = readPhase ? activeSteps : (plan?.steps ?? []);
   const decisionLabel = readPhase ? 'Read shared sources' : continueLabel;
   const terminal = ['completed', 'failed', 'cancelled'].includes(run.status);
-  const sharingIdentity = JSON.stringify([
-    run.id,
-    run.revision,
-    run.status,
-    run.sourceScope,
-    run.sharingQuestion,
-  ]);
-  const needsChallenge =
-    run.sharingQuestion != null &&
-    (run.sharingQuestion.decisionNonce == null || sharingRefresh > 0);
-  const challengeCurrent =
-    sharingChallenge?.identity === sharingIdentity && sharingChallenge.attempt === sharingRefresh;
-  useLayoutEffect(() => {
-    if (challengeCurrent && sharingFocusAttempt.current === sharingRefresh) {
-      sharingFocusAttempt.current = null;
-      onActionEnd?.();
-    }
-  }, [challengeCurrent, sharingRefresh, onActionEnd]);
-  const currentSharingQuestion = needsChallenge
-    ? challengeCurrent && sharingChallenge.question != null
-      ? sharingChallenge.question
-      : run.sharingQuestion == null
-        ? null
-        : { ...run.sharingQuestion, decisionNonce: null }
-    : run.sharingQuestion;
-  const sharingState = useEffectEvent(() => ({ run, terminal, needsChallenge, sharingRefresh }));
-  useEffect(() => {
-    const { run, terminal, needsChallenge, sharingRefresh } = sharingState();
-    if (
-      !needsChallenge ||
-      terminal ||
-      run.sharingQuestion == null ||
-      run.sharingQuestion.recipient.connectionRevision === 'unknown'
-    )
-      return;
-    const controller = new AbortController();
-    void client
-      .execute(
-        petPlans.sharingQuestion(run.workspaceId, {
-          petId: run.petId,
-          sourceScope: run.sourceScope,
-          forDecision: true,
-        }),
-        { signal: controller.signal },
-      )
-      .then((reply) => {
-        if (!controller.signal.aborted)
-          setSharingChallenge({
-            identity: sharingIdentity,
-            attempt: sharingRefresh,
-            question: reply.question,
-            failed: reply.question == null,
-          });
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setSharingChallenge({
-            identity: sharingIdentity,
-            attempt: sharingRefresh,
-            question: null,
-            failed: true,
-          });
-      });
-    return () => {
-      controller.abort();
-    };
-  }, [client, sharingIdentity, sharingRefresh]);
-  const reviewable =
-    run.status === 'waiting_for_approval' &&
-    plan?.status === 'awaiting_review' &&
-    run.sharingQuestion == null;
+  const reviewable = run.status === 'waiting_for_approval' && plan?.status === 'awaiting_review';
   const validPreview =
     plan != null &&
     activeSteps.length > 0 &&
@@ -288,9 +208,6 @@ function PlanReview({
       plan?.version,
       plan?.reviewDigest,
       run.question?.id,
-      currentSharingQuestion?.scopeDigest,
-      currentSharingQuestion?.recipientRevision,
-      currentSharingQuestion?.decisionNonce,
       payload,
     ]);
     const saved = requestIds.current.get(identity);
@@ -322,7 +239,6 @@ function PlanReview({
           : 'This request could not be confirmed. Refresh the plan before trying again.',
       );
       setHeld(true);
-      if (action === 'sharing') setSharingRefresh((value) => value + 1);
     } finally {
       lock.current = false;
       setBusy(null);
@@ -375,56 +291,7 @@ function PlanReview({
           : ''}
         .
       </Text>
-      {currentSharingQuestion == null || terminal ? null : (
-        <PetSharingQuestion
-          question={currentSharingQuestion}
-          busy={busy !== null}
-          onDecision={(approve) => {
-            const decisionNonce = currentSharingQuestion.decisionNonce;
-            if (decisionNonce == null) {
-              if (!approve)
-                void perform(
-                  'cancel',
-                  petPlans.cancel(run.workspaceId, run.id, {
-                    expectedRunRevision: run.revision,
-                    requestId: requestId('cancel'),
-                  }),
-                );
-              return;
-            }
-            void perform(
-              'sharing',
-              petPlans.decideSharing(run.workspaceId, run.id, {
-                expectedRunRevision: run.revision,
-                recipientRevision: currentSharingQuestion.recipientRevision,
-                scopeDigest: currentSharingQuestion.scopeDigest,
-                decisionNonce,
-                approve,
-                requestId: requestId('sharing', approve),
-              }),
-            );
-          }}
-        />
-      )}
-      {challengeCurrent && sharingChallenge.failed && !terminal ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Text role="alert" variant="note">
-            The sharing choice could not be refreshed. Your current request is still held.
-          </Text>
-          <Button
-            variant="ghost"
-            disabled={busy !== null}
-            onClick={() => {
-              onActionStart?.();
-              sharingFocusAttempt.current = sharingRefresh + 1;
-              setSharingRefresh((value) => value + 1);
-            }}
-          >
-            Refresh sharing choice
-          </Button>
-        </div>
-      ) : null}
-      {run.question != null && run.sharingQuestion == null ? (
+      {run.question != null ? (
         <form
           className="flex min-w-0 flex-col gap-2"
           onSubmit={(event) => {
