@@ -11,7 +11,7 @@ import {
   type PetProfile,
 } from '@nix/api-client';
 import { Button, Skeleton, Text, focusRing, initialsOf } from '@nix/ui';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 
 import { formatRelativeTime } from '@nix/web-foundation/lib/date-format';
@@ -28,9 +28,17 @@ const POLL_FOR_MS = 3 * 60_000;
 /** Messages further apart than this start a new group, even from the same author. */
 const GROUP_MS = 5 * 60_000;
 const MAX_MESSAGES = 300;
+/** Safety bound on one walk of the thread; the newest MAX_MESSAGES of what it finds are shown. */
+const MAX_WALK = 3000;
+const MAX_DEPTH = 50;
 
-/** Every message under `rootId` (the root first), oldest first. Re-read until `pollUntil` passes. */
-function useThread(workspaceId: string, rootId: string, version: number, pollUntil: number) {
+/** Every message under `rootId` (the root first), oldest first. Re-read while `shouldPoll` says so. */
+function useThread(
+  workspaceId: string,
+  rootId: string,
+  version: number,
+  shouldPoll: () => boolean,
+) {
   const client = useApiClient();
   const [rows, setRows] = useState<readonly Item[] | null>(null);
   useEffect(() => {
@@ -50,27 +58,29 @@ function useThread(workspaceId: string, rootId: string, version: number, pollUnt
         const all: Item[] = [];
         const seen = new Set([rootId]);
         let level = await children(rootId);
-        while (level.length > 0 && all.length < MAX_MESSAGES) {
+        while (level.length > 0 && all.length < MAX_WALK) {
           level = level.filter((row) => !seen.has(row.id));
           for (const row of level) seen.add(row.id);
           all.push(...level);
           level = (await Promise.all(level.map((row) => children(row.id)))).flat();
         }
         all.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
-        if (!controller.signal.aborted) setRows(all.slice(0, MAX_MESSAGES));
+        if (!controller.signal.aborted) setRows(all.slice(-MAX_MESSAGES));
       } catch {
         if (!controller.signal.aborted) setRows((current) => current ?? []);
       }
     };
     void load();
     const timer = setInterval(() => {
-      if (Date.now() < pollUntil) void load();
+      if (shouldPoll()) void load();
     }, POLL_MS);
     return () => {
       controller.abort();
       clearInterval(timer);
     };
-  }, [client, workspaceId, rootId, version, pollUntil]);
+    // shouldPoll reads refs, so it is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, workspaceId, rootId, version]);
   return rows;
 }
 
@@ -138,20 +148,35 @@ function ChatAvatar({
 /** Where each pet this message addressed stands. Only the pets' owner gets rows, so others see nothing. */
 function PetTurns({
   item,
-  version,
   pollUntil,
   pets,
   onStarted,
+  onWorking,
 }: {
   readonly item: Item;
-  readonly version: number;
   readonly pollUntil: number;
   readonly pets: readonly PetProfile[];
   readonly onStarted: () => void;
+  readonly onWorking: (itemId: string, working: boolean) => void;
 }): ReactNode {
   const client = useApiClient();
   const [rows, setRows] = useState<readonly MessagePetState[]>([]);
   const [tick, setTick] = useState(0);
+  // Only a turn still running (or a pending one right after a post) is re-read; settled turns are read once.
+  const latest = useRef<readonly MessagePetState[]>([]);
+  useEffect(() => {
+    latest.current = rows;
+  }, [rows]);
+  const working = rows.some((row) => row.status === 'working');
+  useEffect(() => {
+    onWorking(item.id, working);
+  }, [item.id, working, onWorking]);
+  useEffect(
+    () => () => {
+      onWorking(item.id, false);
+    },
+    [item.id, onWorking],
+  );
   useEffect(() => {
     const controller = new AbortController();
     const load = (): void => {
@@ -164,13 +189,18 @@ function PetTurns({
     };
     load();
     const timer = setInterval(() => {
-      if (Date.now() < pollUntil) load();
+      const now = latest.current;
+      if (
+        now.some((row) => row.status === 'working') ||
+        (Date.now() < pollUntil && now.some((row) => row.status === 'pending'))
+      )
+        load();
     }, POLL_MS);
     return () => {
       controller.abort();
       clearInterval(timer);
     };
-  }, [client, item.id, version, pollUntil, tick]);
+  }, [client, item.id, pollUntil, tick]);
 
   async function decide(petId: string, approve: boolean): Promise<void> {
     try {
@@ -357,7 +387,7 @@ function ChatMessage({
   );
 }
 
-/** The thread as one chronological column. Replies post under the thread's first message. */
+/** The thread as one chronological column. `root` is the thread's first message; replies post under it. */
 function Chat({
   root,
   unread,
@@ -371,7 +401,21 @@ function Chat({
 }): ReactNode {
   const [version, setVersion] = useState(0);
   const [pollUntil, setPollUntil] = useState(0);
-  const replies = useThread(root.workspaceId, root.id, version, pollUntil);
+  // Turns still working keep the thread re-read, past the window after a post; when one ends, read once more.
+  const working = useRef(new Set<string>());
+  const pollUntilRef = useRef(0);
+  useEffect(() => {
+    pollUntilRef.current = pollUntil;
+  }, [pollUntil]);
+  const shouldPoll = useCallback(
+    () => working.current.size > 0 || Date.now() < pollUntilRef.current,
+    [],
+  );
+  const onWorking = useCallback((itemId: string, isWorking: boolean) => {
+    if (isWorking) working.current.add(itemId);
+    else if (working.current.delete(itemId)) setVersion((current) => current + 1);
+  }, []);
+  const replies = useThread(root.workspaceId, root.id, version, shouldPoll);
   const thread = useMemo(() => [root, ...(replies ?? [])], [root, replies]);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -411,10 +455,10 @@ function Chat({
                 {message?.to.some((entry) => entry.kind === 'pet') ? (
                   <PetTurns
                     item={item}
-                    version={version}
                     pollUntil={pollUntil}
                     pets={pets}
                     onStarted={startPolling}
+                    onWorking={onWorking}
                   />
                 ) : null}
               </div>
@@ -479,8 +523,17 @@ export function MessageView({ itemId }: { readonly itemId: string }): ReactNode 
     marked.current = false;
     client
       .query(items.itemById(itemId), { signal: controller.signal, forceRefresh: true })
-      .then((loaded) => {
-        if (!controller.signal.aborted) setItem(loaded);
+      .then(async (opened) => {
+        // A notice can link to a reply deep in a thread; the chat is the whole thread, so start at its first message.
+        let top = opened;
+        for (let depth = 0; top.parentId && depth < MAX_DEPTH; depth += 1) {
+          const parent = await client.query(items.itemById(top.parentId), {
+            signal: controller.signal,
+          });
+          if (parent.type !== 'message') break;
+          top = parent;
+        }
+        if (!controller.signal.aborted) setItem(top);
       })
       .catch(() => {
         if (!controller.signal.aborted) setItem(null);

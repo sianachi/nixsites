@@ -10,13 +10,14 @@ const ITEM = '11111111-1111-4111-8111-111111111111';
 const execute = vi.fn();
 const query = vi.fn();
 const paginate = vi.fn();
+const client = { execute, query, paginate };
 
 vi.mock('@nix/web-pets/pets/pet-avatar', () => ({
   PetAvatar: ({ label }: { label: string }) => <span data-testid="pet-avatar">{label}</span>,
 }));
 
 vi.mock('@nix/web-platform/api/api-client-provider', () => ({
-  useApiClient: () => ({ execute, query, paginate }),
+  useApiClient: () => client,
 }));
 
 const message = {
@@ -227,5 +228,74 @@ describe('the chat', () => {
     const link = await screen.findByRole('link', { name: /provider key/ });
     expect(link.getAttribute('href')).toBe(`/w/${message.workspaceId}/settings?tab=pets`);
     expect(screen.queryByRole('button', { name: 'Review sharing' })).toBeNull();
+  });
+
+  it('opens a reply as the whole thread, from its first message', async () => {
+    const REPLY = '55555555-5555-4555-8555-555555555555';
+    const opened = { ...message, id: REPLY, parentId: ITEM };
+    const first = { ...message, id: ITEM, parentId: null };
+    open([], [], (path) => {
+      if (path === `/api/v1/items/${REPLY}`) return opened;
+      if (path === `/api/v1/items/${ITEM}`) return first;
+      return undefined;
+    });
+    // Opened by the reply's id, the chat still starts at ITEM: the composer posts under it.
+    render(<MessageView itemId={REPLY} />);
+    await waitFor(() => {
+      expect(
+        query.mock.calls.some(([e]) => (e as { path?: string }).path?.endsWith(`/${ITEM}`)),
+      ).toBe(true);
+    });
+    await waitFor(() => {
+      expect(JSON.stringify(paginate.mock.calls)).toContain(ITEM);
+    });
+    expect(JSON.stringify(paginate.mock.calls)).not.toContain(REPLY);
+  });
+
+  it('keeps the newest 300 messages of a long chat', async () => {
+    const thread = Array.from({ length: 350 }, (_, n) =>
+      reply(
+        `r${String(n).padStart(3, '0')}`,
+        { id: ME, kind: 'person', name: 'Ada' },
+        `msg-${String(n)}`,
+        new Date(Date.UTC(2026, 10, 28, 0, n)).toISOString(),
+      ),
+    );
+    open([], thread);
+    expect(await screen.findByText('msg-349')).toBeTruthy();
+    expect(screen.queryByText('msg-0')).toBeNull();
+  });
+
+  describe('polling', () => {
+    const turn = (status: string) => [
+      { petId: PET, name: 'Pip', status, reason: null, expiresAt: null },
+    ];
+    const turnReads = () =>
+      query.mock.calls.filter(([e]) => (e as { path?: string }).path?.endsWith('/pet-turns'))
+        .length;
+
+    it('re-reads a working turn and the thread, even with no recent post', async () => {
+      open(turn('working'), []);
+      await screen.findByRole('status', { name: 'Pip is answering' });
+      const reads = turnReads();
+      const lists = paginate.mock.calls.length;
+      await waitFor(
+        () => {
+          expect(turnReads()).toBeGreaterThan(reads);
+          expect(paginate.mock.calls.length).toBeGreaterThan(lists);
+        },
+        { timeout: 6000 },
+      );
+    });
+
+    it('reads a settled turn once', async () => {
+      open(turn('answered'), []);
+      await screen.findByText(/Pip answered/);
+      const reads = turnReads();
+      const lists = paginate.mock.calls.length;
+      await new Promise((resolve) => setTimeout(resolve, 3500));
+      expect(turnReads()).toBe(reads);
+      expect(paginate.mock.calls.length).toBe(lists);
+    });
   });
 });
