@@ -68,7 +68,7 @@
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.154.0" />
     <PackageVersion Include="Svg.Skia" Version="5.2.3" />
     <!-- Transitive of PdfSharp; 8.0.1 carries GHSA-846f-f764-76mx. Lifted to a direct reference to force the patched version. -->
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="11.0.0" />
     <!-- Test-only: PDF text extraction for export parity. -->
     <PackageVersion Include="PdfPig" Version="0.1.16" />
   </ItemGroup>
