@@ -6,24 +6,24 @@
   </PropertyGroup>
 
   <ItemGroup Label="Testing">
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
-    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
-    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.1" />
   </ItemGroup>
 
   <!-- G6a: API vertical slice (minimal APIs, OpenAPI contract, WebApplicationFactory tests).
        Pinned to 10.0.0 to match the ASP.NET Core shared framework the pinned SDK ships;
        the host rolls forward to newer 10.0.x runtimes automatically. -->
   <ItemGroup Label="Api">
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
     <!-- Transitive of Microsoft.AspNetCore.OpenApi, lifted to a direct reference in
          Nix.Api.csproj: the 2.0.0 that 10.0.0 resolves to carries GHSA-v5pm-xwqc-g5wc
          (high), patched in 2.7.5. Drop the direct reference once an ASP.NET Core
          10.0.x floors it above the advisory. -->
-    <PackageVersion Include="Microsoft.OpenApi" Version="2.13.0" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.13.1" />
   </ItemGroup>
 
   <!-- ==========================================================================
@@ -37,18 +37,18 @@
        the EF Core versions below must never be lowered past that floor.
        ========================================================================== -->
   <ItemGroup Label="Persistence">
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
-    <PackageVersion Include="Npgsql" Version="10.0.3" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
+    <PackageVersion Include="Npgsql" Version="10.0.4" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.4" />
   </ItemGroup>
 
   <!-- G8 - authentication. Multi-issuer JWT validation; the issuer is resolved per request from
        identity_provider rather than configured, so the handler is configured with a dynamic
        configuration manager rather than a fixed authority. -->
   <ItemGroup Label="Authentication">
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
   </ItemGroup>
 
   <ItemGroup Label="Migration runner host">
@@ -57,18 +57,18 @@
 
   <!-- Local text embeddings for pet retrieval: bge-small-en-v1.5 run in-process on the CPU. -->
   <ItemGroup Label="Embeddings">
-    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.0" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.32.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="3.0.0" />
   </ItemGroup>
 
   <ItemGroup Label="Messaging">
     <!-- Export renderers (Nix.Workers): PDF writing, raster decoding and SVG rasterisation. -->
-    <PackageVersion Include="PdfSharp" Version="6.2.4" />
-    <PackageVersion Include="SkiaSharp" Version="4.154.0" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.154.0" />
-    <PackageVersion Include="Svg.Skia" Version="5.2.3" />
+    <PackageVersion Include="PdfSharp" Version="6.5.0" />
+    <PackageVersion Include="SkiaSharp" Version="4.157.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.157.0" />
+    <PackageVersion Include="Svg.Skia" Version="5.2.4" />
     <!-- Transitive of PdfSharp; 8.0.1 carries GHSA-846f-f764-76mx. Lifted to a direct reference to force the patched version. -->
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
     <!-- Test-only: PDF text extraction for export parity. -->
     <PackageVersion Include="PdfPig" Version="0.1.16" />
   </ItemGroup>
@@ -86,16 +86,16 @@
     text, so Npgsql never sees a NodaTime type and its type-mapping plugin would map nothing.
   -->
   <ItemGroup Label="Time">
-    <PackageVersion Include="NodaTime" Version="3.3.6" />
+    <PackageVersion Include="NodaTime" Version="3.3.7" />
   </ItemGroup>
 
   <ItemGroup Label="Integration test harness">
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
     <!-- Transitive of Testcontainers.PostgreSql; 2025.1.0 carries GHSA-q939-rpr3-3284
          (high). Lifted here to force the patched version. -->
-    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
+    <PackageVersion Include="SSH.NET" Version="2026.0.1" />
   </ItemGroup>
 
   <!-- Local sign-in: Argon2id for new password hashes, bcrypt to verify imported ones, WebAuthn for passkeys. All MIT. -->
