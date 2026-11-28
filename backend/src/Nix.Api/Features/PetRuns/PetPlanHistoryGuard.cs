@@ -17,12 +17,14 @@ internal sealed class PetPlanHistoryGuard(IItemTree items, IItemLocks itemLocks,
             return request.ContextSourceItemIds is null && !request.ContextProtected && !request.ContextUnbounded
                 && request.PriorRecipientRevision is null && request.PriorSourceScope is null;
         }
-        if (request.PriorTurnId == Guid.Empty || request.PriorRecipientRevision != bound.RecipientRevision
+        // A saved key is the consent to share (owner decision, 28 November), so history may continue after the key or
+        // provider changed; what it read must still be readable by pets now.
+        if (request.PriorTurnId == Guid.Empty || request.PriorRecipientRevision is null
             || request.PriorSourceScope is not { } previous || !ValidScope(previous)
             || request.ContextSourceItemIds is not { Count: <= 128 } sources
             || sources.Any(id => id == Guid.Empty) || sources.Distinct().Count() != sources.Count
             || request.ContextProtected
-            || request.ContextUnbounded && (request.PriorTurnId != bound.TurnId || bound.OwnerTextOnly))
+            || request.ContextUnbounded && bound.OwnerTextOnly)
         {
             return false;
         }

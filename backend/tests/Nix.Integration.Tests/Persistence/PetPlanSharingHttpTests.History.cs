@@ -106,8 +106,7 @@ public sealed partial class PetPlanSharingHttpTests
     [InlineData("narrowed")]
     [InlineData("withheld")]
     [InlineData("locked")]
-    [InlineData("recipient")]
-    public async Task Cached_sources_stop_after_scope_protection_or_recipient_changes(string changed)
+    public async Task Cached_sources_stop_after_scope_or_protection_changes(string changed)
     {
         using var worker = new RecordingWorker();
         await using var host = CreateHost(worker);
@@ -125,12 +124,6 @@ public sealed partial class PetPlanSharingHttpTests
             selected = created.Value.Id.Value;
             await work.CommitAsync(Cancellation);
         }
-        if (changed == "recipient")
-        {
-            using var replaced = await host.SendAsync(HttpMethod.Put, "/api/v1/me/pets/providers/anthropic/key", browser,
-                new { key = "fixture-new-history-key-abcdefghijklmnopqrstuvwxyz" });
-            replaced.EnsureSuccessStatusCode();
-        }
         var followup = await CaptureTurnAsync(host, browser, pet, worker, workspaceAccess: selected is null, itemId: selected);
         if (changed is "withheld" or "locked")
         {
@@ -141,16 +134,32 @@ public sealed partial class PetPlanSharingHttpTests
             protectedItem.EnsureSuccessStatusCode();
         }
         Assert.False(await Validate(host, Cached(followup, first, [M0SchemaSeed.Alpha.ItemId])));
-        if (changed == "recipient")
-        {
-            Assert.False(await Validate(host, first.Validation));
-        }
         Assert.Equal(2, worker.Calls);
     }
 
     [Fact]
     [Trait("Category", "PetPlanHistory")]
-    public async Task An_unbounded_result_is_revalidated_within_its_turn_and_cannot_be_replayed_in_a_fresh_turn()
+    public async Task Cached_sources_continue_after_the_key_changes_but_an_old_turn_cannot_use_the_new_key()
+    {
+        using var worker = new RecordingWorker();
+        await using var host = CreateHost(worker);
+        var browser = await SignIn(host);
+        var pet = Guid.NewGuid();
+        await Configure(host, browser, pet, "anthropic");
+        var first = await CaptureTurnAsync(host, browser, pet, worker);
+        using var replaced = await host.SendAsync(HttpMethod.Put, "/api/v1/me/pets/providers/anthropic/key", browser,
+            new { key = "fixture-new-history-key-abcdefghijklmnopqrstuvwxyz" });
+        replaced.EnsureSuccessStatusCode();
+        var followup = await CaptureTurnAsync(host, browser, pet, worker);
+        // A saved key is the consent: history continues under the new key.
+        Assert.True(await Validate(host, Cached(followup, first, [M0SchemaSeed.Alpha.ItemId])));
+        // A turn started under the old key cannot finish under the new one.
+        Assert.False(await Validate(host, first.Validation));
+    }
+
+    [Fact]
+    [Trait("Category", "PetPlanHistory")]
+    public async Task Unbounded_history_continues_in_a_fresh_turn_until_something_in_the_workspace_is_withheld()
     {
         using var worker = new RecordingWorker();
         await using var host = CreateHost(worker);
@@ -164,11 +173,12 @@ public sealed partial class PetPlanSharingHttpTests
         var followup = await CaptureTurnAsync(host, browser, pet, worker);
         var replayed = Cached(followup, first, []);
         replayed["contextUnbounded"] = true;
-        Assert.False(await Validate(host, replayed));
+        Assert.True(await Validate(host, replayed));
         using var withheld = await host.SendAsync(HttpMethod.Put, $"/api/v1/items/{M0SchemaSeed.Alpha.ItemId:D}/pet-protection", browser,
             new { withholdFromPets = true });
         withheld.EnsureSuccessStatusCode();
         Assert.False(await Validate(host, aggregate));
+        Assert.False(await Validate(host, replayed));
     }
 
     private static async Task<HistoryTurn> CaptureTurnAsync(SiteHttpHost host, string browser, Guid pet,
